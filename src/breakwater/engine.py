@@ -25,7 +25,7 @@ from breakwater.market import (
 )
 from breakwater.models import Candle, Lifecycle, PairType
 from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
-from breakwater.paper_trade import read_positions, run_paper_cycle
+from breakwater.paper_trade import append_log, read_positions, run_paper_cycle
 from breakwater.perpdata import fetch_perp_candles_for_pair
 from breakwater.promotion import PromotionRegistry
 from breakwater.research_lifecycle import read_book
@@ -224,9 +224,17 @@ class BreakwaterEngine:
             for pair in universe.ranked(kind, max_pairs)
         ]
         frames, frame_errors = self._frames(targets, server_time)
+        frames_by_kind: dict[str, dict] = {"SPOT": {}, "PERP": {}}
+        for pair, kind in targets:
+            frame = frames.get(pair.upper())
+            if frame is not None:
+                frames_by_kind[kind][pair.upper()] = frame
         signals: list[SliceSignal] = []
+        blocked: list[dict] = []
         if book_rows:
-            signals = monitor_book(book_rows, frames, server_time=server_time)
+            signals, blocked = monitor_book(
+                book_rows, frames_by_kind, server_time=server_time
+            )
         else:
             signals = self._big_wave_fallback(targets, frames, server_time)
 
@@ -250,6 +258,26 @@ class BreakwaterEngine:
                 book_slice_ids=book_slice_ids,
                 server_time=server_time,
             )
+            for entry in blocked:
+                append_log(self.settings.paper_log_path, {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": "",
+                    "pair": entry["pair"],
+                    "kind": entry["kind"],
+                    "slice_id": entry["slice_id"],
+                    "side": entry["side"],
+                    "entry_price": "",
+                    "exit_price": "",
+                    "stop_price": "",
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "regime",
+                    "entry_guard": "regime_blocked",
+                    "regime": entry["regime"],
+                })
+            paper_result["regime_blocked"] = len(blocked)
 
         payloads = []
         for signal in signals:
@@ -278,6 +306,7 @@ class BreakwaterEngine:
             "pairs_checked": len(frames),
             "pair_errors": errors,
             "signals": payloads,
+            "regime_blocked": len(blocked),
             "paper": paper_result,
             "mode": self.settings.mode,
         }
@@ -285,6 +314,7 @@ class BreakwaterEngine:
             "pairs_checked": len(frames),
             "signals": len(signals),
             "errors": len(errors),
+            "regime_blocked": len(blocked),
         }
         if paper_result is not None:
             status_detail["paper"] = paper_result

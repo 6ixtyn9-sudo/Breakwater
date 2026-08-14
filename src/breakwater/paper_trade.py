@@ -6,6 +6,10 @@ a time-stop closes the position, and the realised result is logged,
 journaled and fed back into the slice book so decay gates see honest paper
 results.
 
+Paper is simulation only: it holds at most one position per kind (SPOT,
+PERP) so evidence accumulates in both markets. The live-account mandate
+(one position) is untouched.
+
 Entry-side guards inherited from the predecessor system's lessons:
 
 - book-only: only slices present in the monitored book are paper-traded;
@@ -51,6 +55,7 @@ PAPER_LOG_HEADERS = [
     "bars_held",
     "exit_reason",
     "entry_guard",
+    "regime",
 ]
 
 TARGET_R_MULTIPLE = Decimal("2")
@@ -58,7 +63,8 @@ TIME_STOP_BARS = 48
 MISSING_BARS_EXIT = 24
 SPOT_FEE_BPS = Decimal("20")
 PERP_FEE_BPS = Decimal("26")
-MAX_PAPER_POSITIONS = 1
+MAX_PAPER_POSITIONS = 2
+MAX_PAPER_POSITIONS_PER_KIND = 1
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
@@ -318,8 +324,11 @@ def run_paper_cycle(
 
     skipped = 0
     for signal in signals:
+        kind_open = sum(1 for position in surviving if position.get("kind") == signal.kind)
         if len(surviving) >= MAX_PAPER_POSITIONS:
             break
+        if kind_open >= MAX_PAPER_POSITIONS_PER_KIND:
+            continue
         if signal.slice_id not in book_slice_ids:
             append_log(log_path, {
                 "closed_at": server_time.isoformat(),

@@ -88,11 +88,18 @@ def _latest_state(
 
 def monitor_book(
     book_rows: list[dict],
-    frames: dict[str, pd.DataFrame],
+    frames_by_kind: dict[str, dict],
     *,
     server_time: datetime,
-) -> list[SliceSignal]:
+) -> tuple[list[SliceSignal], list[dict]]:
+    """Scan monitored book rows against frames of the SAME kind only.
+
+    Returns (signals, regime_blocked). Regime-blocked matches are reported
+    rather than silently dropped, so the audit trail shows why a slice did
+    not fire.
+    """
     signals: list[SliceSignal] = []
+    blocked: list[dict] = []
     seen = set()
     for row in book_rows:
         if row.get("status") != "monitored":
@@ -109,15 +116,22 @@ def monitor_book(
             stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
         if stop_atr_mult <= 0:
             stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
-        for pair, frame in frames.items():
+        for pair, frame in (frames_by_kind.get(kind) or {}).items():
             if frame is None or frame.empty or len(frame) < 60:
                 continue
             regime = regime_of(frame)
-            if regime_blocks(side, regime):
-                continue
             featured = compute_price_features(frame)
             latest_state, latest_row = _latest_state(featured, feature)
             if latest_state != state:
+                continue
+            if regime_blocks(side, regime):
+                blocked.append({
+                    "pair": pair.upper(),
+                    "kind": kind,
+                    "slice_id": slice_id,
+                    "side": side.value,
+                    "regime": regime,
+                })
                 continue
             close = Decimal(str(latest_row["close"]))
             atr_raw = _atr(featured)
@@ -152,7 +166,8 @@ def monitor_book(
                 stop_atr_mult=stop_atr_mult,
                 regime=regime,
             ))
-    return signals
+    return signals, blocked
+
 
 
 def _atr(frame: pd.DataFrame) -> float:

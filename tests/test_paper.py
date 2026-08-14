@@ -237,3 +237,27 @@ def test_perp_signal_below_minimum_notional_is_skipped(tmp_path):
         frames={"TINYUSDC": frame_with_bar(close=Decimal("0.001"))},
     )
     assert result["open"] == 0
+
+
+def test_one_paper_slot_per_kind(tmp_path):
+    """Paper holds at most one position per kind, so both spot and perp
+    evidence accumulate without the spot slot starving perps. Extra spot
+    signals after the spot slot is full must not abort the loop before
+    perp signals are considered."""
+    spot_a = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:0:LONG")
+    spot_b = signal(pair="ETHZAR", kind="SPOT", slice_id="feat:1:LONG")
+    perp = signal(pair="BTCUSDC", kind="PERP", entry="1500", stop="1485", atr="3")
+    result = cycle(
+        tmp_path,
+        signals=[spot_a, spot_b, perp],
+        frames={
+            "BTCZAR": spot_frame(close=100),
+            "ETHZAR": spot_frame(close=100),
+            "BTCUSDC": frame_with_bar(close=1500),
+        },
+        book={"feat:0:LONG", "feat:1:LONG", "feat:0:SHORT"},
+    )
+    assert result["open"] == 2
+    positions = read_positions(tmp_path / "positions.json")
+    kinds = {position["kind"] for position in positions}
+    assert kinds == {"SPOT", "PERP"}

@@ -77,6 +77,14 @@ Deliberate deviations (recorded honestly):
 
 ## Incidents
 
+- 2026-08-14, cross-kind signal contamination: monitor_book tested every
+  book slice against every frame regardless of market, so spot slices
+  emitted fake signals on perp pairs (kind SPOT, pair BTCUSDC) while the
+  real perp slices could not be distinguished. Fixed by scoping frames by
+  kind (frames_by_kind), plus regime-blocked matches are now reported and
+  journaled instead of silently dropped (visibility, per doctrine).
+  Paper additionally holds one slot per kind (SPOT + PERP) so perp
+  evidence accumulates; the live mandate (one position) is untouched.
 - 2026-08-14, state-commit push race (paper run #2 failed): the guardian and
   paper cron jobs both dispatch at 14:00:00 UTC. Two workflow_dispatch
   events created in the same instant can both pass the concurrency-group

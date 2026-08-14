@@ -21,10 +21,10 @@ def trending_frame(n=260, drift=0.01, seed=3):
     return frame
 
 
-def book_row(state, feature="feat_ret_1", side="LONG", status="monitored"):
+def book_row(state, feature="feat_ret_1", side="LONG", status="monitored", kind="PERP"):
     return {
         "slice_id": f"{feature}:{state}:{side}",
-        "kind": "PERP",
+        "kind": kind,
         "feature": feature,
         "state": str(state),
         "side": side,
@@ -33,30 +33,69 @@ def book_row(state, feature="feat_ret_1", side="LONG", status="monitored"):
     }
 
 
+def frames_by_kind(**kinds):
+    return {"SPOT": kinds.get("SPOT", {}), "PERP": kinds.get("PERP", {})}
+
+
 def test_monitor_emits_signal_when_latest_state_matches():
     frame = trending_frame(drift=0.02, seed=1)
     rows = [
         book_row(2, feature="feat_ret_20"),
         book_row(0, feature="feat_ret_20"),
     ]
-    signals = monitor_book(rows, {"BTCUSDC": frame}, server_time=datetime.now(timezone.utc))
+    signals, blocked = monitor_book(
+        rows,
+        frames_by_kind(PERP={"BTCUSDC": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
     assert signals
     assert all(signal.pair == "BTCUSDC" for signal in signals)
+    assert all(signal.kind == "PERP" for signal in signals)
     assert all(signal.side.value in {"BUY", "SELL"} for signal in signals)
+
+
+def test_monitor_never_mixes_kinds():
+    """A spot slice must not emit signals against perp frames and vice
+    versa: frames are market-specific."""
+    frame = trending_frame(drift=0.02, seed=1)
+    spot_rows = [book_row(2, feature="feat_ret_20", kind="SPOT")]
+    perp_rows = [book_row(2, feature="feat_ret_20", kind="PERP")]
+    perp_signals, _ = monitor_book(
+        spot_rows,
+        frames_by_kind(PERP={"BTCUSDC": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
+    assert perp_signals == []
+    spot_signals, _ = monitor_book(
+        perp_rows,
+        frames_by_kind(SPOT={"BTCZAR": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
+    assert spot_signals == []
 
 
 def test_monitor_skips_non_monitored_rows():
     frame = trending_frame()
     rows = [book_row(2, feature="feat_ret_20", status="cooldown")]
-    signals = monitor_book(rows, {"BTCUSDC": frame}, server_time=datetime.now(timezone.utc))
+    signals, blocked = monitor_book(
+        rows,
+        frames_by_kind(PERP={"BTCUSDC": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
     assert signals == []
+    assert blocked == []
 
 
 def test_monitor_needs_enough_history():
     frame = trending_frame(n=20)
     rows = [book_row(2, feature="feat_ret_20")]
-    signals = monitor_book(rows, {"BTCUSDC": frame}, server_time=datetime.now(timezone.utc))
+    signals, blocked = monitor_book(
+        rows,
+        frames_by_kind(PERP={"BTCUSDC": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
     assert signals == []
+    assert blocked == []
 
 
 def test_regime_of_and_side_aware_blocking():
@@ -75,7 +114,7 @@ def test_regime_of_and_side_aware_blocking():
     assert regime_blocks(Side.SELL, "unknown") is False
 
 
-def test_monitor_skips_longs_in_confirmed_bear():
+def test_monitor_reports_blocked_long_in_confirmed_bear():
     from breakwater.models import Side
 
     falling = trending_frame(n=260, drift=-0.05, seed=4)
@@ -83,13 +122,20 @@ def test_monitor_skips_longs_in_confirmed_bear():
         book_row(0, feature="feat_ret_1", side="LONG"),
         book_row(0, feature="feat_ret_1", side="SHORT"),
     ]
-    signals = monitor_book(rows, {"BTCUSDC": falling}, server_time=datetime.now(timezone.utc))
+    signals, blocked = monitor_book(
+        rows,
+        frames_by_kind(PERP={"BTCUSDC": falling}),
+        server_time=datetime.now(timezone.utc),
+    )
     assert signals
     assert all(signal.side is Side.SELL for signal in signals)
     assert all(signal.regime == "bear" for signal in signals)
+    assert any(
+        entry["side"] == "BUY" and entry["regime"] == "bear" for entry in blocked
+    )
 
 
-def test_monitor_skips_shorts_in_confirmed_bull():
+def test_monitor_reports_blocked_short_in_confirmed_bull():
     from breakwater.models import Side
 
     rising = trending_frame(n=260, drift=0.05, seed=4)
@@ -97,7 +143,14 @@ def test_monitor_skips_shorts_in_confirmed_bull():
         book_row(2, feature="feat_ret_20", side="LONG"),
         book_row(2, feature="feat_ret_20", side="SHORT"),
     ]
-    signals = monitor_book(rows, {"BTCUSDC": rising}, server_time=datetime.now(timezone.utc))
+    signals, blocked = monitor_book(
+        rows,
+        frames_by_kind(PERP={"BTCUSDC": rising}),
+        server_time=datetime.now(timezone.utc),
+    )
     assert signals
     assert all(signal.side is Side.BUY for signal in signals)
     assert all(signal.regime == "bull" for signal in signals)
+    assert any(
+        entry["side"] == "SELL" and entry["regime"] == "bull" for entry in blocked
+    )
