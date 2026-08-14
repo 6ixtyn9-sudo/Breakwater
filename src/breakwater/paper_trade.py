@@ -63,8 +63,8 @@ TIME_STOP_BARS = 48
 MISSING_BARS_EXIT = 24
 SPOT_FEE_BPS = Decimal("20")
 PERP_FEE_BPS = Decimal("26")
-MAX_PAPER_POSITIONS = 2
-MAX_PAPER_POSITIONS_PER_KIND = 1
+MAX_PAPER_POSITIONS = 6
+MAX_PAPER_POSITIONS_PER_KIND = 3
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
@@ -323,11 +323,20 @@ def run_paper_cycle(
         append_log(log_path, row)
 
     skipped = 0
-    for signal in signals:
-        kind_open = sum(1 for position in surviving if position.get("kind") == signal.kind)
+    slot_full = 0
+    pair_held = 0
+    open_pairs = {str(position["pair"]).upper() for position in surviving}
+    candidates = sorted(signals, key=lambda s: (-abs(s.edge), s.pair))
+    for signal in candidates:
         if len(surviving) >= MAX_PAPER_POSITIONS:
-            break
+            slot_full += 1
+            continue
+        kind_open = sum(1 for position in surviving if position.get("kind") == signal.kind)
         if kind_open >= MAX_PAPER_POSITIONS_PER_KIND:
+            slot_full += 1
+            continue
+        if signal.pair.upper() in open_pairs:
+            pair_held += 1
             continue
         if signal.slice_id not in book_slice_ids:
             append_log(log_path, {
@@ -411,6 +420,7 @@ def run_paper_cycle(
             "missing_bars": "0",
             "entry_guard": guard,
         })
+        open_pairs.add(signal.pair.upper())
 
     write_positions(positions_path, surviving)
     return {
@@ -418,4 +428,6 @@ def run_paper_cycle(
         "open": len(surviving),
         "new_signals": len(signals),
         "skipped": skipped,
+        "slot_full": slot_full,
+        "pair_held": pair_held,
     }

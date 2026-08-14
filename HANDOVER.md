@@ -75,6 +75,19 @@ Deliberate deviations (recorded honestly):
 - The predecessor system's yfinance/Tiingo/Alpaca warehouse stack is replaced by VALR +
   Hyperliquid public feeds.
 
+## Decisions
+
+- 2026-08-14, paper concurrency raised (operator call): paper exists to
+  accumulate evidence, not to respect capital scarcity, so it now holds
+  up to three positions per kind (SPOT, PERP; six total). New entries are
+  selected by validated-edge strength (top |edge| first), one position
+  per pair, so slots go to the best evidence rather than iteration order.
+  The live-account mandate remains one position, unchanged. Recorded
+  caveat for the evidence review: simultaneous paper positions resolve in
+  the same market windows, so per-slice round-trip counts are correlated
+  observations, not independent ones — the review must weigh that before
+  treating accumulated counts as proof.
+
 ## Incidents
 
 - 2026-08-14, cross-kind signal contamination: monitor_book tested every

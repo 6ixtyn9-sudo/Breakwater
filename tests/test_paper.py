@@ -60,10 +60,10 @@ def open_position(side="BUY", entry="100", stop="95", bars="3"):
     }]
 
 
-def signal(pair="BTCZAR", slice_id="feat:0:LONG", side=Side.BUY, entry="100", stop="95", atr="1", kind="SPOT"):
+def signal(pair="BTCZAR", slice_id="feat:0:LONG", side=Side.BUY, entry="100", stop="95", atr="1", kind="SPOT", edge=0.001):
     now = datetime.now(timezone.utc)
     return SliceSignal(
-        signal_id=f"sig-{slice_id}",
+        signal_id=f"sig-{slice_id}-{pair}",
         pair=pair,
         kind=kind,
         slice_id=slice_id,
@@ -75,7 +75,7 @@ def signal(pair="BTCZAR", slice_id="feat:0:LONG", side=Side.BUY, entry="100", st
         entry_price=Decimal(entry),
         stop_price=Decimal(stop),
         atr=Decimal(atr),
-        edge=0.001,
+        edge=float(edge),
         stop_atr_mult=2.0,
         regime="neutral",
     )
@@ -240,9 +240,9 @@ def test_perp_signal_below_minimum_notional_is_skipped(tmp_path):
 
 
 def test_one_paper_slot_per_kind(tmp_path):
-    """Paper holds at most one position per kind, so both spot and perp
+    """Paper holds up to three positions per kind, so both spot and perp
     evidence accumulate without the spot slot starving perps. Extra spot
-    signals after the spot slot is full must not abort the loop before
+    signals after the spot slots are full must not abort the loop before
     perp signals are considered."""
     spot_a = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:0:LONG")
     spot_b = signal(pair="ETHZAR", kind="SPOT", slice_id="feat:1:LONG")
@@ -257,7 +257,71 @@ def test_one_paper_slot_per_kind(tmp_path):
         },
         book={"feat:0:LONG", "feat:1:LONG", "feat:0:SHORT"},
     )
-    assert result["open"] == 2
+    assert result["open"] == 3
     positions = read_positions(tmp_path / "positions.json")
     kinds = {position["kind"] for position in positions}
     assert kinds == {"SPOT", "PERP"}
+
+
+def test_per_kind_paper_cap_is_enforced(tmp_path):
+    """Three slots per kind: a fourth eligible spot signal must be counted
+    as slot_full and not open a position."""
+    frames = {
+        "BTCZAR": spot_frame(close=100),
+        "ETHZAR": spot_frame(close=100),
+        "XRPZAR": spot_frame(close=100),
+        "SOLZAR": spot_frame(close=100),
+    }
+    signals = [
+        signal(pair=pair, kind="SPOT", slice_id=f"feat:{i}:LONG", edge=0.004 - i * 0.001)
+        for i, pair in enumerate(frames)
+    ]
+    result = cycle(
+        tmp_path,
+        signals=signals,
+        frames=frames,
+        book={f"feat:{i}:LONG" for i in range(4)},
+    )
+    assert result["open"] == 3
+    assert result["slot_full"] >= 1
+
+
+def test_weakest_edge_is_excluded_when_slots_are_limited(tmp_path):
+    """Selection is by edge strength, not iteration order: the lowest-edge
+    candidate loses the slot even if it appears first."""
+    frames = {
+        "BTCZAR": spot_frame(close=100),
+        "ETHZAR": spot_frame(close=100),
+        "XRPZAR": spot_frame(close=100),
+        "SOLZAR": spot_frame(close=100),
+    }
+    weakest = signal(pair="SOLZAR", kind="SPOT", slice_id="feat:weak:LONG", edge=0.0001)
+    strong = [
+        signal(pair=pair, kind="SPOT", slice_id=f"feat:{i}:LONG", edge=0.004 - i * 0.001)
+        for i, pair in enumerate(["BTCZAR", "ETHZAR", "XRPZAR"])
+    ]
+    result = cycle(
+        tmp_path,
+        signals=[weakest] + strong,
+        frames=frames,
+        book={signal_.slice_id for signal_ in [weakest] + strong},
+    )
+    positions = read_positions(tmp_path / "positions.json")
+    assert result["open"] == 3
+    assert all(position["pair"] != "SOLZAR" for position in positions)
+
+
+def test_one_position_per_pair(tmp_path):
+    """Two signals for the same pair must not open two positions on it."""
+    first = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:0:LONG")
+    second = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:1:LONG")
+    result = cycle(
+        tmp_path,
+        signals=[first, second],
+        frames={"BTCZAR": spot_frame(close=100)},
+        book={"feat:0:LONG", "feat:1:LONG"},
+    )
+    positions = read_positions(tmp_path / "positions.json")
+    assert result["pair_held"] >= 1
+    assert len(positions) == 1
+    assert positions[0]["pair"] == "BTCZAR"
