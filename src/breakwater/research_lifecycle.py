@@ -76,12 +76,28 @@ def sync_book(
     book_path: Path,
     now: datetime | None = None,
 ) -> dict:
+    """Rebuild the monitored book from this run's validated slices.
+
+    Price lesson (crypto rerun wipe + green != live): the validated file
+    only contains slices discovered by the current run, which researches a
+    subset of the universe. Rebuilding every kind from it would silently
+    wipe whole books when one kind's data failed. Kinds that produced no
+    validated rows this run therefore keep their existing book rows.
+    """
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
     validated = [row for row in read_validated(validated_path) if row.validated]
-    existing = {row["slice_id"]: row for row in read_book(book_path)}
+    existing_rows = read_book(book_path)
+    existing = {row["slice_id"]: row for row in existing_rows}
+    validated_kinds = {row.kind for row in validated}
     rows: list[dict] = []
-    summary = {"validated": len(validated), "monitored": 0, "decayed": 0, "cooldown": 0}
+    summary = {
+        "validated": len(validated),
+        "monitored": 0,
+        "decayed": 0,
+        "cooldown": 0,
+        "carried_kinds": [],
+    }
     for row in validated:
         prior = existing.get(row.slice_id)
         if row.n < MIN_BOOK_ROWS or not _directional_edge(row):
@@ -129,6 +145,18 @@ def sync_book(
             "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
             "source": PROVENANCE_VALIDATED,
         })
+    carried = [
+        row for row in existing_rows
+        if row.get("kind") not in validated_kinds
+    ]
+    if carried:
+        summary["carried_kinds"] = sorted({str(row["kind"]) for row in carried})
+        rows.extend(carried)
+        for row in carried:
+            summary[row.get("status") or MONITORED] = summary.get(
+                row.get("status") or MONITORED, 0
+            ) + 1
+
     book_path.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=book_path.name + ".", suffix=".tmp", dir=book_path.parent

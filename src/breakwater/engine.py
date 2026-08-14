@@ -25,7 +25,7 @@ from breakwater.market import (
 )
 from breakwater.models import Candle, Lifecycle, PairType
 from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
-from breakwater.paper_trade import run_paper_cycle
+from breakwater.paper_trade import read_positions, run_paper_cycle
 from breakwater.perpdata import fetch_perp_candles_for_pair
 from breakwater.promotion import PromotionRegistry
 from breakwater.research_lifecycle import read_book
@@ -280,15 +280,18 @@ class BreakwaterEngine:
             "paper": paper_result,
             "mode": self.settings.mode,
         }
+        status_detail = {
+            "pairs_checked": len(frames),
+            "signals": len(signals),
+            "errors": len(errors),
+        }
+        if paper_result is not None:
+            status_detail["paper"] = paper_result
         append_status(
             self.settings.status_path,
             "shadow_scan_done",
             self.settings.mode,
-            json.dumps({
-                "pairs_checked": len(frames),
-                "signals": len(signals),
-                "errors": len(errors),
-            }, sort_keys=True),
+            json.dumps(status_detail, sort_keys=True),
         )
         return result
 
@@ -428,6 +431,11 @@ class BreakwaterEngine:
         perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
         all_targets = spot_targets + perp_targets
         frames, frame_errors = self._frames(all_targets, server_time)
+        if not frames:
+            raise GuardianHalt(
+                "no research frames could be fetched; refusing to overwrite "
+                "research artifacts with empty results"
+            )
         discovered = []
         validated = []
         for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
@@ -474,6 +482,57 @@ class BreakwaterEngine:
             self.settings.mode,
             json.dumps(result, sort_keys=True),
         )
+        return result
+
+    def health(self) -> dict:
+        """Local one-glance heartbeat; performs no network calls.
+
+        Price lesson (green != live): a green workflow run is not proof
+        that anything traded or that the book is alive. This digest
+        surfaces universe freshness, book composition and paper activity
+        from the committed state files.
+        """
+        from collections import Counter
+
+        result: dict = {"mode": self.settings.mode}
+        snapshot = read_universe(self.settings.universe_path)
+        if snapshot is None:
+            result["universe"] = {"status": "missing"}
+        else:
+            age_hours = None
+            try:
+                as_of = datetime.fromisoformat(snapshot.as_of)
+                age_hours = round(
+                    (datetime.now(timezone.utc) - as_of).total_seconds() / 3600, 1
+                )
+            except (TypeError, ValueError):
+                pass
+            result["universe"] = {
+                "status": (
+                    "ok" if age_hours is not None and age_hours < 168 else "stale"
+                ),
+                "age_hours": age_hours,
+                "spot_symbols": len(snapshot.symbols("SPOT")),
+                "perp_symbols": len(snapshot.symbols("PERP")),
+            }
+        book_rows = read_book(self.settings.book_path)
+        result["book"] = {
+            "rows": len(book_rows),
+            "statuses": dict(Counter(row.get("status") for row in book_rows)),
+            "kinds": dict(Counter(row.get("kind") for row in book_rows)),
+        }
+        positions = read_positions(
+            self.settings.data_dir / "research" / "paper_positions.json"
+        )
+        result["paper_open_positions"] = len(positions)
+        result["paper_positions"] = [
+            {
+                "pair": position.get("pair"),
+                "side": position.get("side"),
+                "bars_held": position.get("bars_held"),
+            }
+            for position in positions
+        ]
         return result
 
     def startup_assertions(self) -> None:

@@ -91,3 +91,80 @@ def test_book_carries_stop_calibration_and_provenance(tmp_path):
     assert rows[0]["stop_atr_mult"]
     assert float(rows[0]["stop_atr_mult"]) >= 1.5
     assert rows[0]["source"] == PROVENANCE_VALIDATED
+
+
+def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
+    """Price lesson (rerun wipe): a run that produces no validated rows for
+    a kind must not wipe that kind's existing book rows."""
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    from breakwater.research_lifecycle import _write_book
+
+    perp_row = {
+        "slice_id": "perp:0:SHORT",
+        "kind": "PERP",
+        "feature": "feat",
+        "state": "0",
+        "side": "SHORT",
+        "status": "monitored",
+        "validated_at": "",
+        "last_signal_bar": "",
+        "paper_trades": "2",
+        "paper_wins": "1",
+        "paper_losses": "1",
+        "paper_pnl_zar": "-0.50",
+        "cooldown_until": "",
+        "mean_ret_costadj": "-0.001000",
+        "n": "120",
+        "p_value": "0.000001",
+        "horizon_bars": "1",
+        "stop_atr_mult": "2.500",
+        "source": "validated_walk_forward",
+    }
+    _write_book(book_path, [perp_row])
+    write_validated(validated_path, [validated_row()])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["carried_kinds"] == ["PERP"]
+    rows = read_book(book_path)
+    assert {row["slice_id"] for row in rows} == {"feat:0:LONG", "perp:0:SHORT"}
+    carried = next(row for row in rows if row["slice_id"] == "perp:0:SHORT")
+    assert carried["paper_trades"] == "2"
+    assert carried["status"] == "monitored"
+
+
+def test_sync_book_never_wipes_on_empty_validated(tmp_path):
+    """A totally empty validated file (data failure) leaves the book intact."""
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    from breakwater.research_lifecycle import _write_book
+
+    existing_row = {
+        "slice_id": "feat:0:LONG",
+        "kind": "SPOT",
+        "feature": "feat",
+        "state": "0",
+        "side": "LONG",
+        "status": "monitored",
+        "validated_at": "",
+        "last_signal_bar": "",
+        "paper_trades": "1",
+        "paper_wins": "0",
+        "paper_losses": "1",
+        "paper_pnl_zar": "-1.20",
+        "cooldown_until": "",
+        "mean_ret_costadj": "0.001000",
+        "n": "100",
+        "p_value": "0.000001",
+        "horizon_bars": "1",
+        "stop_atr_mult": "2.000",
+        "source": "validated_walk_forward",
+    }
+    _write_book(book_path, [existing_row])
+    write_validated(validated_path, [])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["validated"] == 0
+    rows = read_book(book_path)
+    assert len(rows) == 1
+    assert rows[0]["slice_id"] == "feat:0:LONG"
+    assert rows[0]["paper_trades"] == "1"
+

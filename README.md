@@ -10,6 +10,9 @@ The venue remains authoritative for balances, orders, positions and fills.
 The system is designed for periodic cloud execution through GitHub Actions
 and does not depend on a local computer remaining powered.
 
+`HANDOVER.md` is the living record: current posture, the lessons audit
+against its predecessor system, known placeholders and the process rules.
+
 ## What it does, end to end
 
 ```text
@@ -222,6 +225,7 @@ PYTHONPATH=src python scripts/breakwater.py guardian
 PYTHONPATH=src python scripts/breakwater.py research
 BREAKWATER_MODE=shadow PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 BREAKWATER_MODE=readonly PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
+PYTHONPATH=src python scripts/breakwater.py health
 ```
 
 No credentials are needed for public market checks and the spot slice

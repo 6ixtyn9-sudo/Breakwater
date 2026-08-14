@@ -114,3 +114,45 @@ def test_live_mode_requires_promoted_strategy(tmp_path):
     engine = BreakwaterEngine(configured, client=PublicClient())
     with pytest.raises(GuardianHalt, match="no strategy"):
         engine.startup_assertions()
+
+
+class ResearchClient(PublicClient):
+    def market_summaries(self):
+        from breakwater.models import MarketSummary
+
+        return [MarketSummary(
+            "ETHZAR", Decimal("0.05"), Decimal("0.0501"), Decimal("0.05"),
+            Decimal("0.05"), Decimal("100000"), datetime.now(timezone.utc),
+        )]
+
+    def perps_symbol_info(self):
+        from breakwater.models import PerpSymbol
+
+        return [PerpSymbol(
+            pair="BTCUSDC", base_asset="BTC", max_leverage=Decimal("10"),
+            min_notional=Decimal("11"), min_margin=Decimal("2"),
+            mark_price=Decimal("1500"), price_decimal_places=6,
+        )]
+
+
+def test_research_halts_instead_of_writing_empty_artifacts(tmp_path, monkeypatch):
+    engine = BreakwaterEngine(
+        settings(tmp_path, mode="readonly"),
+        client=ResearchClient(),
+    )
+    monkeypatch.setattr(engine, "_frames", lambda targets, server_time: ({}, {}))
+    with pytest.raises(GuardianHalt, match="no research frames"):
+        engine.research_pass()
+
+
+def test_health_reports_committed_state(tmp_path):
+    engine = BreakwaterEngine(
+        settings(tmp_path, mode="readonly"),
+        client=ResearchClient(),
+    )
+    report = engine.health()
+    assert report["mode"] == "readonly"
+    assert report["universe"]["status"] == "missing"
+    assert report["book"]["rows"] == 0
+    assert report["paper_open_positions"] == 0
+

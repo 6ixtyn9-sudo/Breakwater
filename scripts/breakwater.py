@@ -18,23 +18,26 @@ from breakwater.status import append_status  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "command", choices=["guardian", "shadow-scan", "operate", "research"]
+        "command", choices=["guardian", "shadow-scan", "operate", "research", "health"]
     )
     parser.add_argument("--max-pairs", type=int, default=12)
     args = parser.parse_args()
     settings = None
     try:
         settings = get_settings()
-        engine = BreakwaterEngine(settings)
-        engine.startup_assertions()
-        if args.command == "guardian":
-            result = engine.guardian()
-        elif args.command == "operate":
-            result = engine.operational_pass(max_pairs=args.max_pairs)
-        elif args.command == "research":
-            result = engine.research_pass(max_pairs=30)
+        if args.command == "health":
+            result = BreakwaterEngine(settings).health()
         else:
-            result = engine.shadow_scan(max_pairs=args.max_pairs)
+            engine = BreakwaterEngine(settings)
+            engine.startup_assertions()
+            if args.command == "guardian":
+                result = engine.guardian()
+            elif args.command == "operate":
+                result = engine.operational_pass(max_pairs=args.max_pairs)
+            elif args.command == "research":
+                result = engine.research_pass(max_pairs=30)
+            else:
+                result = engine.shadow_scan(max_pairs=args.max_pairs)
     except Exception as exc:
         detail = f"{type(exc).__name__}: {exc}"
         if settings is not None:
