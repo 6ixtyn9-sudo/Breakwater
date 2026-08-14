@@ -1,13 +1,13 @@
 [
   {
-    "bars_held": "2",
-    "entry_price": "5.4455",
+    "bars_held": "0",
+    "entry_price": "9865.0",
     "kind": "SPOT",
     "notional_zar": "200.00",
-    "pair": "TRXZAR",
+    "pair": "BNBZAR",
     "side": "SELL",
-    "signal_id": "662de084bb095260",
-    "slice_id": "feat_ret_3:0:SHORT",
-    "stop_price": "5.46950000000000002"
+    "signal_id": "2849c6c4c065bf2f",
+    "slice_id": "feat_ret_1:0:SHORT",
+    "stop_price": "9953.714285714285708"
   }
 ]

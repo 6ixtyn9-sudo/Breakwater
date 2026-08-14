@@ -1,0 +1,2 @@
+closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,notional_zar,pnl_zar,outcome,bars_held
+2026-08-14T12:02:42+00:00,662de084bb095260,TRXZAR,SPOT,feat_ret_3:0:SHORT,SELL,5.4455,5.46950000000000002,5.46950000000000002,200.00,-1.2815,loss,3
