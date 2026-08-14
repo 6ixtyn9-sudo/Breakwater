@@ -7,6 +7,7 @@ import pandas as pd
 from breakwater.models import Side
 from breakwater.monitor import SliceSignal
 from breakwater.paper_trade import (
+    append_log,
     read_positions,
     run_paper_cycle,
 )
@@ -325,3 +326,86 @@ def test_one_position_per_pair(tmp_path):
     assert result["pair_held"] >= 1
     assert len(positions) == 1
     assert positions[0]["pair"] == "BTCZAR"
+
+
+def test_log_header_migration_preserves_audit_columns(tmp_path):
+    """A legacy 13-column log must be migrated to the 16-column header with
+    no data lost, so exit_reason / entry_guard / regime become readable."""
+    legacy_header = (
+        "closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,"
+        "stop_price,notional_zar,pnl_zar,outcome,bars_held"
+    )
+    path = tmp_path / "log.csv"
+    with path.open("w", newline="") as handle:
+        handle.write(legacy_header + "\n")
+        handle.write("t0,id1,TRXZAR,SPOT,s:0:LONG,SELL,5,5.5,5.5,200,-1.2,loss,3\n")
+        handle.write(
+            "t1,id2,SHIBZAR,SPOT,s:1:LONG,SELL,1,1.01,1.01,200,-3.5,loss,2,"
+            "stop,passed,bear\n"
+        )
+    append_log(path, {
+        "closed_at": "t2",
+        "signal_id": "id3",
+        "pair": "ETHZAR",
+        "kind": "SPOT",
+        "slice_id": "s:2:LONG",
+        "side": "SELL",
+        "entry_price": "",
+        "exit_price": "",
+        "stop_price": "",
+        "notional_zar": "0",
+        "pnl_zar": "0",
+        "outcome": "skipped",
+        "bars_held": "0",
+        "exit_reason": "regime",
+        "entry_guard": "regime_blocked",
+        "regime": "bull",
+    })
+    import csv
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames == [
+            "closed_at", "signal_id", "pair", "kind", "slice_id", "side",
+            "entry_price", "exit_price", "stop_price", "notional_zar",
+            "pnl_zar", "outcome", "bars_held", "exit_reason",
+            "entry_guard", "regime",
+        ]
+        rows = list(reader)
+    assert len(rows) == 3
+    assert rows[0]["exit_reason"] == ""
+    assert rows[1]["exit_reason"] == "stop"
+    assert rows[1]["entry_guard"] == "passed"
+    assert rows[1]["regime"] == "bear"
+    assert rows[2]["entry_guard"] == "regime_blocked"
+    assert rows[2]["regime"] == "bull"
+
+
+def test_log_header_migration_is_idempotent(tmp_path):
+    path = tmp_path / "log.csv"
+    append_log(path, {
+        "closed_at": "t0", "signal_id": "x", "pair": "A", "kind": "SPOT",
+        "slice_id": "s", "side": "SELL", "entry_price": "", "exit_price": "",
+        "stop_price": "", "notional_zar": "0", "pnl_zar": "0",
+        "outcome": "skipped", "bars_held": "0", "exit_reason": "",
+        "entry_guard": "", "regime": "",
+    })
+    import csv
+    with path.open(newline="") as handle:
+        first = next(csv.reader(handle))
+    assert first == [
+        "closed_at", "signal_id", "pair", "kind", "slice_id", "side",
+        "entry_price", "exit_price", "stop_price", "notional_zar",
+        "pnl_zar", "outcome", "bars_held", "exit_reason",
+        "entry_guard", "regime",
+    ]
+    append_log(path, {
+        "closed_at": "t1", "signal_id": "y", "pair": "B", "kind": "PERP",
+        "slice_id": "s", "side": "SELL", "entry_price": "", "exit_price": "",
+        "stop_price": "", "notional_zar": "0", "pnl_zar": "0",
+        "outcome": "skipped", "bars_held": "0", "exit_reason": "",
+        "entry_guard": "", "regime": "",
+    })
+    with path.open(newline="") as handle:
+        lines = handle.read().strip().splitlines()
+    assert len(lines) == 3
+    assert lines[0].split(",")[0] == "closed_at"

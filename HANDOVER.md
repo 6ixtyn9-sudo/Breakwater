@@ -90,6 +90,13 @@ Deliberate deviations (recorded honestly):
 
 ## Incidents
 
+- 2026-08-14, legacy log header hid audit columns: paper_trade_log.csv was
+  created before exit_reason/entry_guard/regime existed, so its header
+  names 13 columns while every row written since carries 16. The audit
+  values are in the raw file but invisible to any csv.DictReader, which
+  silently drops the extras — a quiet audit gap. Fix: append_log now
+  migrates the header once (rewrites with the current 16-column header,
+  padding legacy rows) before appending; idempotent and data-preserving.
 - 2026-08-14, cross-kind signal contamination: monitor_book tested every
   book slice against every frame regardless of market, so spot slices
   emitted fake signals on perp pairs (kind SPOT, pair BTCUSDC) while the

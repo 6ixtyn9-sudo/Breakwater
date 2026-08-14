@@ -101,9 +101,53 @@ def write_positions(path: Path, positions: list[dict]) -> None:
         raise
 
 
+def _migrate_log_header(path: Path) -> None:
+    """Rewrite a log file whose header predates the audit columns.
+
+    Rows written after the audit columns shipped carry 16 fields while the
+    legacy header names only 13, so any csv.DictReader silently drops
+    exit_reason, entry_guard and regime. This migration rewrites the file
+    with the current header, padding legacy rows with empty strings.
+    Idempotent: a file with the current header is left untouched.
+    """
+    with path.open(newline="") as handle:
+        reader = csv.reader(handle)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return
+        if header == PAPER_LOG_HEADERS:
+            return
+        rows = list(reader)
+    width = len(PAPER_LOG_HEADERS)
+    migrated = [PAPER_LOG_HEADERS]
+    for row in rows:
+        if len(row) > width:
+            row = row[:width]
+        migrated.append(row + [""] * (width - len(row)))
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(file_descriptor, "w", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerows(migrated)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+
+
 def append_log(path: Path, row: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists()
+    if exists:
+        _migrate_log_header(path)
     with path.open("a", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=PAPER_LOG_HEADERS)
         if not exists:
