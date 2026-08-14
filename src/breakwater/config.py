@@ -62,6 +62,27 @@ def _decimal(name: str, value: str) -> Decimal:
     return number
 
 
+def _clean_credential(name: str, value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise RuntimeError(f"{name} is empty after trimming whitespace")
+    if any(character.isspace() for character in cleaned):
+        raise RuntimeError(
+            f"{name} contains internal whitespace or newlines; "
+            "re-export it cleanly before uploading it"
+        )
+    if (
+        name == "VALR_API_KEY"
+        and len(cleaned) == 64
+        and all(character in "0123456789abcdefABCDEF" for character in cleaned)
+    ):
+        raise RuntimeError(
+            "VALR_API_KEY looks like an API secret; "
+            "VALR_API_KEY and VALR_API_SECRET may be swapped"
+        )
+    return cleaned
+
+
 def mandate_from_env() -> RiskPolicy | None:
     present = {
         key: os.getenv(env_name)
@@ -173,6 +194,9 @@ def get_settings() -> Settings:
     api_secret = os.getenv("VALR_API_SECRET") or None
     if bool(api_key) != bool(api_secret):
         raise RuntimeError("VALR_API_KEY and VALR_API_SECRET must be configured together")
+    if api_key is not None:
+        api_key = _clean_credential("VALR_API_KEY", api_key)
+        api_secret = _clean_credential("VALR_API_SECRET", api_secret or "")
     settings = Settings(
         api_key=api_key,
         api_secret=api_secret,

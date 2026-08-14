@@ -66,6 +66,11 @@ class ValrClient:
     def _headers(self, verb: str, path: str, body: str) -> dict[str, str]:
         if not self.api_key or not self.api_secret:
             raise ValrAuthenticationError("authenticated VALR request requires credentials")
+        if any(character.isspace() for character in self.api_key):
+            raise ValrAuthenticationError(
+                "VALR API key contains whitespace or newlines and cannot be sent; "
+                "re-upload the VALR_API_KEY secret cleanly"
+            )
         timestamp = int(time.time() * 1000)
         headers = {
             "Content-Type": "application/json",

@@ -37,6 +37,12 @@ class Session:
         return item
 
 
+def test_key_with_whitespace_is_rejected_before_sending():
+    client = ValrClient("some\nkey", "secret", session=Session([]))
+    with pytest.raises(ValrAuthenticationError, match="whitespace"):
+        client.current_api_key()
+
+
 def test_public_request_needs_no_credentials():
     session = Session([Response(payload={"status": "online"})])
     client = ValrClient(session=session)

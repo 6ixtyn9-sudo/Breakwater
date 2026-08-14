@@ -41,6 +41,8 @@ jobs:
 
       - name: Run VALR-native shadow scan
         env:
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: shadow
           BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
           BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR: ${{ secrets.BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR }}
