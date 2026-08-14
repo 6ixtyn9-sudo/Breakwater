@@ -87,8 +87,9 @@ class BreakwaterEngine:
         write_universe(self.settings.universe_path, snapshot)
         return snapshot
 
-    def _frames(self, targets: list[tuple[str, str]], server_time: datetime) -> dict:
+    def _frames(self, targets: list[tuple[str, str]], server_time: datetime):
         frames = {}
+        errors = {}
         for pair, kind in targets:
             try:
                 if kind == "PERP":
@@ -98,9 +99,9 @@ class BreakwaterEngine:
                 frame = candle_frame(candles)
                 frame["symbol"] = pair.upper()
                 frames[pair.upper()] = frame
-            except Exception:
-                continue
-        return frames
+            except Exception as exc:
+                errors[pair.upper()] = f"{type(exc).__name__}: {exc}"[:140]
+        return frames, errors
 
     def guardian(self) -> dict:
         server_time, exchange_status = self._server_state()
@@ -211,7 +212,7 @@ class BreakwaterEngine:
             for kind in ("SPOT", "PERP")
             for pair in universe.ranked(kind, max_pairs)
         ]
-        frames = self._frames(targets, server_time)
+        frames, frame_errors = self._frames(targets, server_time)
         signals: list[SliceSignal] = []
         if book_rows:
             signals = monitor_book(book_rows, frames, server_time=server_time)
@@ -251,7 +252,10 @@ class BreakwaterEngine:
                 strategy_id=signal.slice_id,
                 pair=signal.pair,
             )
-        errors = [pair for pair, _ in targets if pair.upper() not in frames]
+        errors = [
+            {"pair": pair, "error": error}
+            for pair, error in sorted(frame_errors.items())
+        ]
         result = {
             "server_time": server_time.isoformat(),
             "universe_symbols": {
@@ -411,7 +415,7 @@ class BreakwaterEngine:
         spot_targets = [(pair, "SPOT") for pair in universe.ranked("SPOT", max_pairs)]
         perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
         all_targets = spot_targets + perp_targets
-        frames = self._frames(all_targets, server_time)
+        frames, frame_errors = self._frames(all_targets, server_time)
         discovered = []
         validated = []
         for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
@@ -441,6 +445,10 @@ class BreakwaterEngine:
                 kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
             },
             "pairs_researched": len(frames),
+            "frame_errors": [
+                {"pair": pair, "error": error}
+                for pair, error in sorted(frame_errors.items())
+            ],
             "discovered_slices": len(discovered),
             "validated_slices": len([row for row in validated if row.validated]),
             "book": book_summary,

@@ -23,7 +23,9 @@ def validate_api_key_permissions(key_info: dict, *, live: bool) -> set[str]:
     forbidden = permissions & {"withdraw", "internal transfer", "link bank account"}
     if forbidden:
         raise AccountStateError(
-            f"VALR API key has forbidden permissions: {', '.join(sorted(forbidden))}"
+            "VALR API key has forbidden permissions: "
+            f"{', '.join(sorted(forbidden))}. "
+            "Create a new VALR key with only View access and Trade enabled"
         )
     if live and permissions != {"view access", "trade"}:
         raise AccountStateError("live key must have exactly View access and Trade")

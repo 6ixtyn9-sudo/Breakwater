@@ -164,6 +164,24 @@ No credentials are needed for public market checks and the spot slice
 research pass. Perp candle research and account reconciliation require the
 API key.
 
+### Connectivity canary
+
+After creating or replacing the VALR key, probe every endpoint Breakwater
+uses from your own machine. It performs no writes:
+
+```bash
+cd Breakwater
+source .venv/bin/activate
+set -a
+source .env
+set +a
+PYTHONPATH=src python scripts/perps_canary.py
+```
+
+The output shows the key permissions VALR reports and the exact response
+of each perp endpoint, which is what the system verifies before any live
+path is considered.
+
 ## GitHub configuration
 
 ```bash
