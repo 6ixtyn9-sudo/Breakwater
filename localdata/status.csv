@@ -1,3 +1,5 @@
 timestamp_utc,stage,mode,detail
 2026-08-14T09:50:21.130793+00:00,public_ok,readonly,"{""active_futures_pairs"": 6, ""active_spot_pairs"": 205, ""authenticated"": false, ""exchange_status"": ""online"", ""mode"": ""readonly"", ""server_time"": ""2026-08-14T09:50:20+00:00""}"
 2026-08-14T09:50:23.153262+00:00,shadow_scan_done,readonly,"{""errors"": 0, ""pairs_checked"": 6, ""signals"": 1}"
+2026-08-14T09:56:13.730074+00:00,risk_halted,readonly,"{""active_futures_pairs"": 6, ""active_spot_pairs"": 205, ""authenticated"": true, ""equity_zar"": ""0.00"", ""exchange_status"": ""online"", ""exposure_slots"": 0, ""high_water_zar"": ""331.45"", ""key_ip_restricted"": false, ""key_is_subaccount"": true, ""key_permissions"": [""view access""], ""mode"": ""readonly"", ""open_orders"": 0, ""positions"": 0, ""risk_allowed"": false, ""risk_reasons"": [""absolute equity floor reached"", ""maximum lifetime loss reached"", ""high-water drawdown limit reached""], ""server_time"": ""2026-08-14T09:56:12+00:00""}"
+2026-08-14T09:56:16.063716+00:00,shadow_scan_done,readonly,"{""errors"": 0, ""pairs_checked"": 6, ""signals"": 1}"

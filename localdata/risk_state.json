@@ -1,1 +1,5 @@
-{"schema_version":"breakwater.risk.v1","high_water_zar":"331.45","realized_pnl_events":[]}
+{
+  "high_water_zar": "331.45",
+  "realized_pnl_events": [],
+  "schema_version": "breakwater.risk.v1"
+}
