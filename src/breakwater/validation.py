@@ -4,6 +4,12 @@ Pooled research rows are split into contiguous time folds. A slice passes a
 fold when that fold carries enough rows and its mean cost-adjusted forward
 return keeps the slice's sign. A slice is validated only when most folds
 pass and the most recent fold passes, so the evidence includes recency.
+
+Price lesson (KLAC regime confound): chronological folds cannot tell a
+durable price-state edge from a regime artifact. Every slice is therefore
+also tested against HOSTILE regime rows: bear rows for long slices, bull
+rows for short slices. A slice whose hostile-regime mean return opposes
+its side is marked regime-confounded and is not validated.
 """
 
 from __future__ import annotations
@@ -34,10 +40,14 @@ VALIDATED_HEADERS = [
     "validated",
     "horizon_bars",
     "stop_atr_mult",
+    "hostile_n",
+    "hostile_mean_ret",
+    "regime_confounded",
 ]
 
 MIN_ROWS_PER_FOLD = 20
 FOLD_COUNT = 5
+HOSTILE_MIN_ROWS = 20
 STOP_ATR_FLOOR = 1.5
 STOP_ATR_CEIL = 3.5
 
@@ -60,6 +70,9 @@ class ValidatedSlice:
     validated: bool
     horizon_bars: int
     stop_atr_mult: float = 2.0
+    hostile_n: int = 0
+    hostile_mean_ret: float = 0.0
+    regime_confounded: bool = False
 
 
 def _fold_pass(returns: np.ndarray, side: str) -> bool:
@@ -69,6 +82,45 @@ def _fold_pass(returns: np.ndarray, side: str) -> bool:
     if side == "LONG":
         return mean > 0
     return mean < 0
+
+
+def _regime_series(frame: pd.DataFrame) -> pd.Series:
+    """Per-row bull / bear / neutral / unknown from the SMA-50/200 prior."""
+    close = frame["close"].astype(float)
+    sma50 = close.rolling(50).mean()
+    sma200 = close.rolling(200).mean()
+    labels = pd.Series("neutral", index=frame.index)
+    labels[(sma50 > sma200) & (close > sma50)] = "bull"
+    labels[(sma50 < sma200) & (close < sma50)] = "bear"
+    labels[sma200.isna()] = "unknown"
+    return labels
+
+
+def _attach_regime_labels(prepared: pd.DataFrame) -> pd.DataFrame:
+    if prepared.empty or "symbol" not in prepared.columns:
+        return prepared
+    parts = []
+    for _, group in prepared.groupby("symbol", sort=False):
+        labelled = group.sort_values("start").copy()
+        labelled["regime_row"] = _regime_series(labelled)
+        parts.append(labelled)
+    return pd.concat(parts, ignore_index=True)
+
+
+def _hostile_regime_check(side: str, hostile_returns: np.ndarray) -> tuple[int, float, bool]:
+    """Return (hostile_n, hostile_mean, confounded).
+
+    A slice is confounded when it has at least HOSTILE_MIN_ROWS hostile rows
+    and the hostile-regime mean return opposes the slice's side: the edge
+    does not survive the regime it would lose money in.
+    """
+    hostile_n = len(hostile_returns)
+    hostile_mean = float(np.mean(hostile_returns)) if hostile_n else 0.0
+    if hostile_n < HOSTILE_MIN_ROWS:
+        return hostile_n, hostile_mean, False
+    if side == "LONG":
+        return hostile_n, hostile_mean, hostile_mean <= 0
+    return hostile_n, hostile_mean, hostile_mean >= 0
 
 
 def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
@@ -95,7 +147,8 @@ def validate_slices(
 ) -> list[ValidatedSlice]:
     if prepared.empty or not candidates:
         return []
-    rows = prepared.dropna(subset=["fwd_ret"]).sort_values("start").reset_index(drop=True)
+    labelled = _attach_regime_labels(prepared)
+    rows = labelled.dropna(subset=["fwd_ret"]).sort_values("start").reset_index(drop=True)
     validated: list[ValidatedSlice] = []
     for candidate in candidates:
         state_column = f"state_{candidate.feature}"
@@ -120,11 +173,19 @@ def validate_slices(
         pattern = "".join(fold_results)
         pass_count = pattern.count("1")
         latest_passes = pattern[-1] == "1"
-        passed = (
+        temporal_pass = (
             pass_count >= max(3, int(0.75 * FOLD_COUNT))
             and latest_passes
             and candidate.bonferroni_pass
         )
+
+        hostile_label = "bear" if candidate.side == "LONG" else "bull"
+        hostile_mask = mask & (subset["regime_row"].to_numpy() == hostile_label)
+        hostile_returns = subset.loc[hostile_mask, "fwd_ret"].to_numpy()
+        hostile_n, hostile_mean, confounded = _hostile_regime_check(
+            candidate.side, hostile_returns
+        )
+
         validated.append(ValidatedSlice(
             slice_id=candidate.slice_id,
             kind=candidate.kind,
@@ -139,9 +200,12 @@ def validate_slices(
             n=candidate.n,
             mean_ret_costadj=candidate.mean_ret_costadj,
             p_value=candidate.p_value,
-            validated=passed,
+            validated=temporal_pass and not confounded,
             horizon_bars=candidate.horizon_bars,
             stop_atr_mult=_calibrate_stop_atr_mult(prepared, candidate, state_column),
+            hostile_n=hostile_n,
+            hostile_mean_ret=hostile_mean,
+            regime_confounded=confounded,
         ))
     return sorted(validated, key=lambda row: (not row.validated, -row.mean_ret_costadj))
 
@@ -151,11 +215,13 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         return []
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        if not reader.fieldnames or not set(VALIDATED_HEADERS[:-1]).issubset(
-            set(reader.fieldnames)
-        ):
+        required = set(VALIDATED_HEADERS) - {
+            "stop_atr_mult", "hostile_n", "hostile_mean_ret", "regime_confounded"
+        }
+        if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise RuntimeError("validated slices file has an unsupported schema")
         has_stop = "stop_atr_mult" in reader.fieldnames
+        has_hostile = "hostile_n" in reader.fieldnames
         return [
             ValidatedSlice(
                 slice_id=str(row["slice_id"]),
@@ -174,6 +240,11 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                 validated=row["validated"] == "True",
                 horizon_bars=int(row["horizon_bars"]),
                 stop_atr_mult=float(row["stop_atr_mult"]) if has_stop else 2.0,
+                hostile_n=int(row["hostile_n"]) if has_hostile else 0,
+                hostile_mean_ret=float(row["hostile_mean_ret"]) if has_hostile else 0.0,
+                regime_confounded=(
+                    row["regime_confounded"] == "True" if has_hostile else False
+                ),
             )
             for row in reader
         ]

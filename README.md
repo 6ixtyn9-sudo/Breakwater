@@ -72,6 +72,13 @@ hard-won operational lessons as first-class safeguards:
   unknown regimes never block. This mirrors Price's lesson that
   regime-conditional edges are tradeable only when the regime is
   detected and gated.
+- **Regime-stratified validation (the KLAC safeguard).** Chronological
+  walk-forward folds cannot distinguish a durable price-state edge from
+  a regime artifact. Every slice is therefore also measured on its
+  hostile-regime rows: bear rows for longs, bull rows for shorts. A
+  slice whose hostile-regime mean return opposes its side (at least 20
+  hostile rows) is marked `regime_confounded` and is not validated,
+  with `hostile_n` and `hostile_mean_ret` recorded in the evidence.
 - **Book-only paper trading.** Only slices promoted into the monitored
   book by walk-forward validation are paper-traded. Unvalidated
   fallback signals are research-only.

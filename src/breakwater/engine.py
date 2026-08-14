@@ -463,6 +463,9 @@ class BreakwaterEngine:
             ],
             "discovered_slices": len(discovered),
             "validated_slices": len([row for row in validated if row.validated]),
+            "regime_confounded_slices": len(
+                [row for row in validated if row.regime_confounded]
+            ),
             "book": book_summary,
         }
         append_status(
