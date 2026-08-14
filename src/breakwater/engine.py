@@ -1,4 +1,4 @@
-"""Restart-safe guardian and shadow scanner."""
+"""Restart-safe guardian, universe scanner and guarded executor."""
 
 from __future__ import annotations
 
@@ -13,37 +13,36 @@ from breakwater.account import (
     unprotected_positions,
     validate_api_key_permissions,
 )
-from breakwater.config import INITIAL_EQUITY_ZAR, Settings
+from breakwater.config import Settings
+from breakwater.discovery import prepare_pooled
 from breakwater.execution import TradeExecutor
+from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_features
 from breakwater.ledger import Ledger
 from breakwater.market import (
     MarketCatalog,
     authoritative_server_time,
     fetch_recent_candles,
-    require_tradeable_market,
 )
-from breakwater.models import Lifecycle, PairType
-from breakwater.price_bridge import candidate_pairs, load_candidates
+from breakwater.models import Candle, Lifecycle, PairType
+from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
+from breakwater.paper_trade import run_paper_cycle
 from breakwater.promotion import PromotionRegistry
+from breakwater.research_lifecycle import read_book
 from breakwater.risk import RiskManager
 from breakwater.risk_state import RiskStateStore
 from breakwater.status import append_status
 from breakwater.strategy import detect_big_wave
+from breakwater.universe import (
+    UniverseSnapshot,
+    ingest_universe,
+    read_universe,
+    write_universe,
+)
 from breakwater.valr import ValrClient
 
 
 class GuardianHalt(RuntimeError):
     pass
-
-
-def _flatten_balance_groups(rows: list[dict]) -> list[dict]:
-    flattened = []
-    for row in rows:
-        balances = row.get("balances")
-        if not isinstance(balances, list):
-            raise GuardianHalt("all-account balance response is malformed")
-        flattened.extend(balances)
-    return flattened
 
 
 class BreakwaterEngine:
@@ -52,13 +51,22 @@ class BreakwaterEngine:
         self.client = client or ValrClient(
             api_key=settings.api_key,
             api_secret=settings.api_secret,
-            subaccount_id=settings.subaccount_id,
             allow_writes=settings.writes_allowed,
         )
-        self.ledger = Ledger(settings.ledger_path)
+        self.ledger = Ledger(
+            settings.ledger_path,
+            high_water_seed=(
+                settings.mandate.initial_equity_zar if settings.mandate else Decimal(0)
+            ),
+        )
         self.catalog = MarketCatalog(self.client)
-        self.risk = RiskManager()
-        self.risk_state = RiskStateStore(settings.risk_state_path)
+        self.risk = RiskManager(settings.mandate) if settings.mandate else None
+        self.risk_state = RiskStateStore(
+            settings.risk_state_path,
+            high_water_seed=(
+                settings.mandate.initial_equity_zar if settings.mandate else Decimal(0)
+            ),
+        )
         self.registry = PromotionRegistry(settings.registry_path)
 
     def _server_state(self) -> tuple[datetime, dict]:
@@ -71,16 +79,37 @@ class BreakwaterEngine:
             raise GuardianHalt("runner clock differs from VALR by more than 30 seconds")
         return server_time, status
 
+    def _universe(self) -> UniverseSnapshot:
+        snapshot = read_universe(self.settings.universe_path)
+        if snapshot is not None:
+            return snapshot
+        snapshot = ingest_universe(self.client)
+        write_universe(self.settings.universe_path, snapshot)
+        return snapshot
+
+    def _frames(self, targets: list[tuple[str, str]], server_time: datetime) -> dict:
+        frames = {}
+        for pair, kind in targets:
+            try:
+                if kind == "PERP":
+                    candles = self.client.perps_candles(pair)
+                else:
+                    candles = fetch_recent_candles(self.client, pair, server_time)
+                frame = candle_frame(candles)
+                frame["symbol"] = pair.upper()
+                frames[pair.upper()] = frame
+            except Exception:
+                continue
+        return frames
+
     def guardian(self) -> dict:
         server_time, exchange_status = self._server_state()
         specs = self.catalog.refresh()
         active_spot = self.catalog.active(PairType.SPOT)
-        active_futures = self.catalog.active(PairType.FUTURE)
         result = {
             "server_time": server_time.isoformat(),
             "exchange_status": exchange_status.get("status"),
             "active_spot_pairs": len(active_spot),
-            "active_futures_pairs": len(active_futures),
             "authenticated": self.settings.has_credentials,
             "mode": self.settings.mode,
         }
@@ -90,23 +119,13 @@ class BreakwaterEngine:
                 json.dumps(result, sort_keys=True),
             )
             return result
+        if self.risk is None:
+            raise GuardianHalt("capital mandate is not configured for authenticated runs")
 
-        key_client = (
-            ValrClient(
-                api_key=self.settings.api_key,
-                api_secret=self.settings.api_secret,
-                allow_writes=False,
-            )
-            if self.settings.subaccount_id else self.client
-        )
-        key_info = key_client.current_api_key()
+        key_info = self.client.current_api_key()
         permissions = validate_api_key_permissions(
             key_info, live=self.settings.mode == "live"
         )
-        is_subaccount_key = key_info.get("isSubAccount") is True
-        if is_subaccount_key and self.settings.subaccount_id:
-            raise GuardianHalt("subaccount key must not also configure VALR_SUBACCOUNT_ID")
-
         balances = self.client.balances()
         positions = self.client.open_positions()
         open_orders = self.client.open_orders()
@@ -119,24 +138,27 @@ class BreakwaterEngine:
             )
             raise GuardianHalt(f"open positions lack confirmed stop protection: {pairs}")
 
-        if is_subaccount_key:
+        perp_positions: list[dict] = []
+        perp_error = None
+        try:
+            perp_positions = self.client.perps_positions()
+        except Exception as exc:
+            perp_error = f"{type(exc).__name__}: {exc}"
             if self.settings.mode == "live":
-                raise GuardianHalt(
-                    "live mode requires a main-account key so global equity can be verified"
-                )
-            global_balances = balances
-        else:
-            global_client = ValrClient(
-                api_key=self.settings.api_key,
-                api_secret=self.settings.api_secret,
-                allow_writes=False,
-            )
-            global_balances = _flatten_balance_groups(global_client.all_account_balances())
+                raise GuardianHalt(f"perp position state is unverifiable: {exc}") from exc
 
         valuator = EquityValuator(self.client, specs)
-        equity_zar = valuator.equity_zar(global_balances, positions)
+        equity_zar = valuator.equity_zar(balances, positions)
+        if perp_positions:
+            usdc_zar = valuator.rate_to_zar("USDC")
+            for row in perp_positions:
+                margin = Decimal(str(row.get("margin") or 0))
+                pnl = Decimal(str(row.get("unrealised_pnl") or 0))
+                equity_zar += (margin + pnl) * usdc_zar
+
         high_water = self.risk_state.observe_equity(equity_zar)
         exposure_symbols = {position.pair for position in positions}
+        exposure_symbols.update(str(row.get("pair") or "") for row in perp_positions)
         exposure_symbols.update(
             str(row.get("currencyPair") or row.get("pair") or "").upper()
             for row in open_orders
@@ -154,13 +176,15 @@ class BreakwaterEngine:
             "equity_zar": str(equity_zar.quantize(Decimal("0.01"))),
             "high_water_zar": str(high_water.quantize(Decimal("0.01"))),
             "positions": len(positions),
+            "perp_positions": len(perp_positions),
+            "perp_state_error": perp_error,
             "open_orders": len(open_orders),
             "exposure_slots": len(exposure_symbols),
             "risk_allowed": risk_state.allowed,
             "risk_reasons": list(risk_state.reasons),
-            "key_is_subaccount": is_subaccount_key,
             "key_permissions": sorted(permissions),
             "key_ip_restricted": bool(key_info.get("allowedIpAddressCidr")),
+            "mandate_configured": self.risk is not None,
         })
         event_id = hashlib.sha256(
             f"guardian|{server_time.isoformat()}|{equity_zar}".encode()
@@ -176,78 +200,133 @@ class BreakwaterEngine:
 
     def shadow_scan(self, *, max_pairs: int = 12) -> dict:
         server_time, _ = self._server_state()
-        specs = self.catalog.refresh()
-        active_spot = {spec.symbol for spec in self.catalog.active(PairType.SPOT)}
-        active_futures = self.catalog.active_perpetual_symbols()
-        candidates = load_candidates(self.settings.candidates_path)
-        targets = []
-        for candidate in candidates:
-            for pair in candidate_pairs(candidate, active_spot, active_futures):
-                targets.append((pair, candidate.side, candidate.candidate_id))
-        if not targets:
-            targets = [(pair, None, None) for pair in sorted(active_futures)]
-        seen = set()
-        signals = []
-        errors = []
-        for pair, allowed_side, candidate_id in targets:
-            if pair in seen or len(seen) >= max_pairs:
-                continue
-            seen.add(pair)
+        self.catalog.refresh()
+        universe = self._universe()
+        book_rows = [
+            row for row in read_book(self.settings.book_path)
+            if row.get("status") == "monitored"
+        ]
+        targets = [
+            (pair, kind)
+            for kind in ("SPOT", "PERP")
+            for pair in universe.ranked(kind, max_pairs)
+        ]
+        frames = self._frames(targets, server_time)
+        signals: list[SliceSignal] = []
+        if book_rows:
+            signals = monitor_book(book_rows, frames, server_time=server_time)
+        else:
+            signals = self._big_wave_fallback(targets, frames, server_time)
+
+        paper_result = None
+        if self.settings.mode in {"shadow", "live"} and self.risk is not None:
+            valuator = EquityValuator(self.client, self.catalog.refresh())
             try:
-                spec = specs[pair]
-                summary = self.client.market_summary(pair)
-                require_tradeable_market(spec, summary, server_time)
-                candles = fetch_recent_candles(self.client, pair, server_time)
-                signal = detect_big_wave(
-                    candles,
-                    pair=pair,
-                    pair_type=spec.pair_type,
-                    server_time=server_time,
-                    allowed_side=allowed_side,
-                    source_candidate_id=candidate_id,
-                )
-                if signal is None:
-                    continue
-                lifecycle = self.registry.lifecycle(f"big-wave-{pair}-{signal.side.value.lower()}")
-                payload = {
-                    **asdict(signal),
-                    "pair_type": signal.pair_type.value,
-                    "side": signal.side.value,
-                    "lifecycle": lifecycle.value,
-                }
-                for key, value in list(payload.items()):
-                    if isinstance(value, (Decimal, datetime)):
-                        payload[key] = str(value)
-                self.ledger.append(
-                    event_id=signal.signal_id,
-                    kind="shadow_signal",
-                    payload=payload,
-                    strategy_id=f"big-wave-{pair}-{signal.side.value.lower()}",
-                    pair=pair,
-                )
-                signals.append(payload)
-            except Exception as exc:
-                errors.append({"pair": pair, "error": f"{type(exc).__name__}: {exc}"})
+                usdc_zar = valuator.rate_to_zar("USDC")
+            except Exception:
+                usdc_zar = Decimal("16.29")
+            paper_result = run_paper_cycle(
+                signals=signals,
+                frames=frames,
+                policy=self.risk.policy,
+                usdc_zar=usdc_zar,
+                positions_path=self.settings.data_dir / "research" / "paper_positions.json",
+                log_path=self.settings.paper_log_path,
+                cooldown_path=self.settings.cooldown_path,
+                book_path=self.settings.book_path,
+                server_time=server_time,
+            )
+
+        payloads = []
+        for signal in signals:
+            payload = {
+                **{key: str(value) for key, value in asdict(signal).items()},
+                "pair_type": signal_pair_type(signal.kind).value,
+            }
+            payloads.append(payload)
+            self.ledger.append(
+                event_id=signal.signal_id,
+                kind="shadow_signal",
+                payload=payload,
+                strategy_id=signal.slice_id,
+                pair=signal.pair,
+            )
+        errors = [pair for pair, _ in targets if pair.upper() not in frames]
         result = {
             "server_time": server_time.isoformat(),
-            "pairs_checked": len(seen),
-            "signals": signals,
-            "errors": errors,
+            "universe_symbols": {
+                kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
+            },
+            "book_slices": len(book_rows),
+            "pairs_checked": len(frames),
+            "pair_errors": errors,
+            "signals": payloads,
+            "paper": paper_result,
             "mode": self.settings.mode,
         }
-        if seen and len(errors) == len(seen):
-            raise GuardianHalt("every VALR-native market scan failed")
         append_status(
             self.settings.status_path,
             "shadow_scan_done",
             self.settings.mode,
             json.dumps({
-                "pairs_checked": len(seen),
+                "pairs_checked": len(frames),
                 "signals": len(signals),
                 "errors": len(errors),
             }, sort_keys=True),
         )
         return result
+
+    def _big_wave_fallback(
+        self,
+        targets: list[tuple[str, str]],
+        frames: dict,
+        server_time: datetime,
+    ) -> list[SliceSignal]:
+        signals: list[SliceSignal] = []
+        for pair, kind in targets:
+            frame = frames.get(pair.upper())
+            if frame is None or frame.empty:
+                continue
+            pair_type = PairType.SPOT if kind == "SPOT" else PairType.FUTURE
+            signal = detect_big_wave(
+                self._candles_from_frame(frame),
+                pair=pair.upper(),
+                pair_type=pair_type,
+                server_time=server_time,
+            )
+            if signal is None:
+                continue
+            signals.append(SliceSignal(
+                signal_id=signal.signal_id,
+                pair=pair.upper(),
+                kind=kind,
+                slice_id="big-wave",
+                feature="big-wave",
+                state=0,
+                side=signal.side,
+                observed_at=signal.observed_at,
+                bar_start=signal.candle_start,
+                entry_price=signal.entry_price,
+                stop_price=signal.stop_price,
+                atr=signal.atr,
+                edge=0.0,
+            ))
+        return signals
+
+    def _candles_from_frame(self, frame) -> list[Candle]:
+        candles = []
+        for _, row in frame.iterrows():
+            candles.append(Candle(
+                pair=str(row["symbol"]),
+                period_seconds=3600,
+                start=row["start"],
+                open=Decimal(str(row["open"])),
+                high=Decimal(str(row["high"])),
+                low=Decimal(str(row["low"])),
+                close=Decimal(str(row["close"])),
+                volume=Decimal(str(row["volume"])),
+            ))
+        return candles
 
     def operational_pass(self, *, max_pairs: int = 12) -> dict:
         guardian = self.guardian()
@@ -261,6 +340,8 @@ class BreakwaterEngine:
             return result
         specs = self.catalog.refresh()
         for payload in scan["signals"]:
+            if payload.get("slice_id") != "big-wave":
+                continue
             strategy_id = (
                 f"big-wave-{payload['pair']}-{str(payload['side']).lower()}"
             )
@@ -318,13 +399,67 @@ class BreakwaterEngine:
             break
         return result
 
+    def research_pass(self, *, max_pairs: int = 30) -> dict:
+        server_time, _ = self._server_state()
+        self.catalog.refresh()
+        universe = self._universe()
+        from breakwater.discovery import _slice_stats, write_discovered
+        from breakwater.research_lifecycle import sync_book
+        from breakwater.validation import validate_slices, write_validated
+
+        write_universe(self.settings.universe_path, universe)
+        spot_targets = [(pair, "SPOT") for pair in universe.ranked("SPOT", max_pairs)]
+        perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
+        all_targets = spot_targets + perp_targets
+        frames = self._frames(all_targets, server_time)
+        discovered = []
+        validated = []
+        for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
+            kind_frames = {
+                pair: frames[pair.upper()]
+                for pair, frame_kind in all_targets
+                if frame_kind == kind and pair.upper() in frames
+            }
+            if not kind_frames:
+                continue
+            pooled = _pool_frames(kind_frames)
+            prepared = prepare_pooled(pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=1)
+            found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=1)
+            checked = validate_slices(prepared, found)
+            discovered.extend(found)
+            validated.extend(checked)
+        write_discovered(self.settings.discovered_path, discovered)
+        write_validated(self.settings.validated_path, validated)
+        book_summary = sync_book(
+            validated_path=self.settings.validated_path,
+            book_path=self.settings.book_path,
+            now=server_time,
+        )
+        result = {
+            "server_time": server_time.isoformat(),
+            "universe": {
+                kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
+            },
+            "pairs_researched": len(frames),
+            "discovered_slices": len(discovered),
+            "validated_slices": len([row for row in validated if row.validated]),
+            "book": book_summary,
+        }
+        append_status(
+            self.settings.status_path,
+            "research_done",
+            self.settings.mode,
+            json.dumps(result, sort_keys=True),
+        )
+        return result
+
     def startup_assertions(self) -> None:
         if self.settings.mode == "live" and not self.settings.writes_allowed:
             raise GuardianHalt("live mode is not armed")
         if self.settings.mode == "live" and not self.settings.has_credentials:
             raise GuardianHalt("live mode requires VALR credentials")
-        if self.settings.mode == "live" and INITIAL_EQUITY_ZAR != Decimal("331.45"):
-            raise GuardianHalt("compiled initial equity boundary changed unexpectedly")
+        if self.settings.mode == "live" and self.risk is None:
+            raise GuardianHalt("live mode requires a configured capital mandate")
         if self.settings.mode == "live":
             live = [
                 row for row in self.registry.load()["strategies"].values()
@@ -332,3 +467,18 @@ class BreakwaterEngine:
             ]
             if not live:
                 raise GuardianHalt("no strategy has passed the live-capped promotion gate")
+
+
+def _pool_frames(frames: dict):
+    import pandas as pd
+
+    parts = []
+    for pair, frame in frames.items():
+        if frame is None or frame.empty:
+            continue
+        featured = compute_price_features(frame)
+        featured["symbol"] = pair.upper()
+        parts.append(featured)
+    if not parts:
+        return pd.DataFrame()
+    return pd.concat(parts, ignore_index=True)

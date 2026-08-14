@@ -1,4 +1,4 @@
-"""Price-style evidence gates for automatic strategy lifecycle changes."""
+"""Universe research evidence gates for automatic strategy lifecycle changes."""
 
 from __future__ import annotations
 

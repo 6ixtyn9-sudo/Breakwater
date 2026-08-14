@@ -1,40 +1,33 @@
-"""Immutable account-loss boundaries and order planning."""
+"""Account-loss boundaries, order planning and perp sizing.
+
+Policy values are supplied by the operator through environment variables and
+are never compiled into this repository. RiskManager only ever receives a
+fully-populated RiskPolicy.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
 
-from breakwater.config import (
-    ABSOLUTE_EQUITY_FLOOR_ZAR,
-    DAILY_LOSS_LIMIT_ZAR,
-    INITIAL_EQUITY_ZAR,
-    MAX_AGGREGATE_OPEN_RISK_ZAR,
-    MAX_EFFECTIVE_LEVERAGE,
-    MAX_POSITION_NOTIONAL_ZAR,
-    MAX_POSITIONS,
-    MAX_TOTAL_DRAWDOWN_FRACTION,
-    MAX_TOTAL_LOSS_ZAR,
-    RISK_PER_TRADE_ZAR,
-    SEVEN_DAY_LOSS_LIMIT_ZAR,
-)
 from breakwater.decimal_utils import ceil_to_step, floor_to_step
-from breakwater.models import MarketSummary, OrderPlan, PairSpec, PairType, Side, Signal
+from breakwater.models import MarketSummary, OrderPlan, PairSpec, PairType, PerpSymbol, Side, Signal
 
 
 @dataclass(frozen=True)
 class RiskPolicy:
-    initial_equity_zar: Decimal = INITIAL_EQUITY_ZAR
-    absolute_equity_floor_zar: Decimal = ABSOLUTE_EQUITY_FLOOR_ZAR
-    max_total_loss_zar: Decimal = MAX_TOTAL_LOSS_ZAR
-    max_drawdown_fraction: Decimal = MAX_TOTAL_DRAWDOWN_FRACTION
-    risk_per_trade_zar: Decimal = RISK_PER_TRADE_ZAR
-    daily_loss_limit_zar: Decimal = DAILY_LOSS_LIMIT_ZAR
-    seven_day_loss_limit_zar: Decimal = SEVEN_DAY_LOSS_LIMIT_ZAR
-    max_aggregate_open_risk_zar: Decimal = MAX_AGGREGATE_OPEN_RISK_ZAR
-    max_position_notional_zar: Decimal = MAX_POSITION_NOTIONAL_ZAR
-    max_effective_leverage: Decimal = MAX_EFFECTIVE_LEVERAGE
-    max_positions: int = MAX_POSITIONS
+    initial_equity_zar: Decimal
+    absolute_equity_floor_zar: Decimal
+    max_total_loss_zar: Decimal
+    max_drawdown_fraction: Decimal
+    risk_per_trade_zar: Decimal
+    daily_loss_limit_zar: Decimal
+    seven_day_loss_limit_zar: Decimal
+    max_aggregate_open_risk_zar: Decimal
+    max_position_notional_zar: Decimal
+    max_effective_leverage: Decimal
+    perp_leverage_cap: Decimal
+    max_positions: int
 
 
 @dataclass(frozen=True)
@@ -46,8 +39,8 @@ class RiskState:
 
 
 class RiskManager:
-    def __init__(self, policy: RiskPolicy | None = None):
-        self.policy = policy or RiskPolicy()
+    def __init__(self, policy: RiskPolicy):
+        self.policy = policy
 
     def check_account(
         self,
@@ -149,6 +142,74 @@ class RiskManager:
             stop_limit_price=stop_limit,
             notional_quote=notional_quote,
             notional_zar=notional_zar,
+            risk_zar=risk_zar,
+            customer_order_id=customer_order_id,
+        )
+
+    def plan_perp_order(
+        self,
+        signal: Signal,
+        perp: PerpSymbol,
+        *,
+        quote_to_zar: Decimal,
+        equity_zar: Decimal,
+    ) -> OrderPlan:
+        p = self.policy
+        if signal.pair != perp.pair:
+            raise ValueError("signal and perp symbol must match")
+        if signal.risk_per_unit <= 0 or quote_to_zar <= 0 or equity_zar <= 0:
+            raise ValueError("risk, conversion and equity must be positive")
+        if perp.min_notional <= 0 or perp.mark_price <= 0:
+            raise ValueError("perp symbol metadata is incomplete")
+
+        leverage = min(p.perp_leverage_cap, perp.max_leverage)
+        if leverage <= 0:
+            raise ValueError("perp pair has no valid leverage")
+
+        risk_notional_usdc = p.risk_per_trade_zar / quote_to_zar
+        notional_cap_usdc = min(
+            p.max_position_notional_zar / quote_to_zar,
+            equity_zar * p.max_effective_leverage / quote_to_zar,
+        )
+        if notional_cap_usdc < perp.min_notional:
+            raise ValueError("perp minimum notional exceeds the configured notional cap")
+
+        notional_usdc = min(risk_notional_usdc, notional_cap_usdc)
+        notional_usdc = max(notional_usdc, perp.min_notional)
+        margin_usdc = notional_usdc / leverage
+        if margin_usdc < perp.min_margin:
+            notional_usdc = perp.min_margin * leverage
+        if notional_usdc > notional_cap_usdc:
+            raise ValueError("minimum perp margin forces notional above the cap")
+
+        stop_fraction = signal.risk_per_unit / signal.entry_price
+        risk_zar = notional_usdc * stop_fraction * quote_to_zar
+        if risk_zar > p.risk_per_trade_zar:
+            raise ValueError("perp minimum order exceeds per-trade risk")
+
+        quantity = notional_usdc / signal.entry_price
+        quantity = Decimal(quantity).quantize(
+            Decimal(1).scaleb(-perp.price_decimal_places)
+        )
+        if quantity <= 0:
+            raise ValueError("perp quantity rounds to zero")
+
+        risk_zar = quantity * signal.risk_per_unit * quote_to_zar
+        if risk_zar > p.risk_per_trade_zar:
+            raise ValueError("perp minimum order exceeds per-trade risk")
+
+        customer_order_id = f"bw-{signal.signal_id}"[:50]
+        return OrderPlan(
+            signal_id=signal.signal_id,
+            pair=signal.pair,
+            pair_type=PairType.FUTURE,
+            side=signal.side,
+            quantity=quantity,
+            entry_price=signal.entry_price,
+            stop_price=signal.stop_price,
+            stop_limit_price=signal.stop_price,
+            notional_quote=notional_usdc,
+            notional_zar=notional_usdc * quote_to_zar,
             risk_zar=risk_zar,
             customer_order_id=customer_order_id,
         )

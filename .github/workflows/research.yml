@@ -17,7 +17,7 @@ defaults:
 jobs:
   refresh:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -32,14 +32,28 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.lock
 
-      - name: Import Price crypto candidates
+      - name: Ingest universe and run slice research
         env:
-          BREAKWATER_PRICE_CANDIDATES_URL: https://raw.githubusercontent.com/6ixtyn9-sudo/Price/main/localdata/research/crypto/monitored_candidates_crypto.csv
-        run: PYTHONPATH=src python scripts/breakwater.py refresh-price
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+          BREAKWATER_MODE: readonly
+        run: PYTHONPATH=src python scripts/breakwater.py research
 
       - name: Run VALR-native shadow scan
         env:
           BREAKWATER_MODE: shadow
+          BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
+          BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR: ${{ secrets.BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR }}
+          BREAKWATER_MAX_TOTAL_LOSS_ZAR: ${{ secrets.BREAKWATER_MAX_TOTAL_LOSS_ZAR }}
+          BREAKWATER_MAX_TOTAL_DRAWDOWN_FRACTION: ${{ secrets.BREAKWATER_MAX_TOTAL_DRAWDOWN_FRACTION }}
+          BREAKWATER_RISK_PER_TRADE_ZAR: ${{ secrets.BREAKWATER_RISK_PER_TRADE_ZAR }}
+          BREAKWATER_DAILY_LOSS_LIMIT_ZAR: ${{ secrets.BREAKWATER_DAILY_LOSS_LIMIT_ZAR }}
+          BREAKWATER_SEVEN_DAY_LOSS_LIMIT_ZAR: ${{ secrets.BREAKWATER_SEVEN_DAY_LOSS_LIMIT_ZAR }}
+          BREAKWATER_MAX_AGGREGATE_OPEN_RISK_ZAR: ${{ secrets.BREAKWATER_MAX_AGGREGATE_OPEN_RISK_ZAR }}
+          BREAKWATER_MAX_POSITION_NOTIONAL_ZAR: ${{ secrets.BREAKWATER_MAX_POSITION_NOTIONAL_ZAR }}
+          BREAKWATER_MAX_EFFECTIVE_LEVERAGE: ${{ secrets.BREAKWATER_MAX_EFFECTIVE_LEVERAGE }}
+          BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
+          BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 
       - name: Persist research inputs and status

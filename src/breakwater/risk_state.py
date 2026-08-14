@@ -7,21 +7,21 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from breakwater.config import INITIAL_EQUITY_ZAR
 from breakwater.decimal_utils import D
 
 SCHEMA = "breakwater.risk.v1"
 
 
 class RiskStateStore:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, high_water_seed: Decimal = Decimal(0)):
         self.path = path
+        self.high_water_seed = high_water_seed
 
     def load(self) -> dict:
         if not self.path.exists():
             return {
                 "schema_version": SCHEMA,
-                "high_water_zar": str(INITIAL_EQUITY_ZAR),
+                "high_water_zar": str(self.high_water_seed),
                 "realized_pnl_events": [],
             }
         try:

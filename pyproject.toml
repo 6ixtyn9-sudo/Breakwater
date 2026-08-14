@@ -1,7 +1,7 @@
 [project]
 name = "breakwater"
-version = "0.1.0"
-description = "VALR-native 24/7 crypto trend research and guarded execution system"
+version = "0.2.0"
+description = "VALR-native 24/7 crypto universe research and guarded execution system"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

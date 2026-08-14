@@ -134,6 +134,32 @@ class Candle:
 
 
 @dataclass(frozen=True)
+class PerpSymbol:
+    pair: str
+    base_asset: str
+    max_leverage: Decimal
+    min_notional: Decimal
+    min_margin: Decimal
+    mark_price: Decimal
+    price_decimal_places: int
+
+    @classmethod
+    def from_payload(cls, row: dict) -> "PerpSymbol":
+        pair = str(row.get("currencyPair") or row.get("symbol") or "").upper()
+        if not pair:
+            raise ValueError("perp symbol row is missing its pair")
+        return cls(
+            pair=pair,
+            base_asset=str(row.get("baseAsset") or pair.replace("USDC", "")).upper(),
+            max_leverage=D(row.get("maxLeverage") or 1, field="maxLeverage"),
+            min_notional=D(row.get("minNotional") or 0, field="minNotional"),
+            min_margin=D(row.get("minMarginAmount") or 0, field="minMarginAmount"),
+            mark_price=D(row.get("markPrice") or 0, field="markPrice"),
+            price_decimal_places=int(row.get("priceDecimalPlaces") or 6),
+        )
+
+
+@dataclass(frozen=True)
 class Position:
     pair: str
     side: Side

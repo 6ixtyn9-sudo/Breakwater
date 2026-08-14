@@ -8,13 +8,13 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from breakwater.config import INITIAL_EQUITY_ZAR
 from breakwater.decimal_utils import D
 
 
 class Ledger:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, high_water_seed: Decimal = Decimal(0)):
         self.path = path
+        self.high_water_seed = high_water_seed
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._initialise()
 
@@ -47,7 +47,7 @@ class Ledger:
             )
             connection.execute(
                 "INSERT OR IGNORE INTO metadata(key, value) VALUES('high_water_zar', ?)",
-                (str(INITIAL_EQUITY_ZAR),),
+                (str(self.high_water_seed),),
             )
 
     def append(

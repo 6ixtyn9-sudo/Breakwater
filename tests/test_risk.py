@@ -7,10 +7,30 @@ from breakwater.models import (
     MarketSummary,
     PairSpec,
     PairType,
+    PerpSymbol,
     Side,
     Signal,
 )
-from breakwater.risk import RiskManager
+from breakwater.risk import RiskManager, RiskPolicy
+
+
+def policy(**overrides):
+    values = dict(
+        initial_equity_zar=Decimal("331.45"),
+        absolute_equity_floor_zar=Decimal("222.07"),
+        max_total_loss_zar=Decimal("109.38"),
+        max_drawdown_fraction=Decimal("0.33"),
+        risk_per_trade_zar=Decimal("6.63"),
+        daily_loss_limit_zar=Decimal("9.94"),
+        seven_day_loss_limit_zar=Decimal("19.89"),
+        max_aggregate_open_risk_zar=Decimal("6.63"),
+        max_position_notional_zar=Decimal("200.00"),
+        max_effective_leverage=Decimal("1"),
+        perp_leverage_cap=Decimal("3"),
+        max_positions=1,
+    )
+    values.update(overrides)
+    return RiskPolicy(**values)
 
 
 def market(pair="ETHUSDTPERP"):
@@ -57,8 +77,20 @@ def signal(pair="ETHUSDTPERP", pair_type=PairType.FUTURE, side=Side.BUY):
     )
 
 
+def perp(pair="BTCUSDC"):
+    return PerpSymbol(
+        pair=pair,
+        base_asset="BTC",
+        max_leverage=Decimal("10"),
+        min_notional=Decimal("11"),
+        min_margin=Decimal("2"),
+        mark_price=Decimal("1500"),
+        price_decimal_places=5,
+    )
+
+
 def test_absolute_equity_floor_halts():
-    state = RiskManager().check_account(
+    state = RiskManager(policy()).check_account(
         equity_zar=Decimal("222.07"),
         high_water_zar=Decimal("331.45"),
         daily_pnl_zar=Decimal(0),
@@ -71,7 +103,7 @@ def test_absolute_equity_floor_halts():
 
 
 def test_high_water_drawdown_halts_after_growth():
-    state = RiskManager().check_account(
+    state = RiskManager(policy()).check_account(
         equity_zar=Decimal("268"),
         high_water_zar=Decimal("400"),
         daily_pnl_zar=Decimal(0),
@@ -84,7 +116,7 @@ def test_high_water_drawdown_halts_after_growth():
 
 
 def test_daily_and_position_limits_halt():
-    state = RiskManager().check_account(
+    state = RiskManager(policy()).check_account(
         equity_zar=Decimal("300"),
         high_water_zar=Decimal("331.45"),
         daily_pnl_zar=Decimal("-9.94"),
@@ -98,17 +130,17 @@ def test_daily_and_position_limits_halt():
 
 
 def test_order_plan_is_bounded_by_risk_and_notional():
-    plan = RiskManager().plan_order(
+    plan = RiskManager(policy()).plan_order(
         signal(), spec(), market(), quote_to_zar=Decimal("16"), equity_zar=Decimal("331.45")
     )
-    assert plan.risk_zar <= Decimal("3.31")
-    assert plan.notional_zar <= Decimal("99.43")
+    assert plan.risk_zar <= Decimal("6.63")
+    assert plan.notional_zar <= Decimal("200.00")
     assert plan.quantity >= Decimal("0.001")
 
 
 def test_minimum_order_that_breaks_risk_is_rejected():
     with pytest.raises(ValueError, match="exceeds"):
-        RiskManager().plan_order(
+        RiskManager(policy()).plan_order(
             signal(),
             spec(min_base="1", min_quote="100"),
             market(),
@@ -121,7 +153,7 @@ def test_spot_short_is_rejected():
     spot_signal = signal(pair="ETHZAR", pair_type=PairType.SPOT, side=Side.SELL)
     spot_market = market("ETHZAR")
     with pytest.raises(ValueError, match="spot short"):
-        RiskManager().plan_order(
+        RiskManager(policy()).plan_order(
             spot_signal, spec(PairType.SPOT), spot_market,
             quote_to_zar=Decimal(1), equity_zar=Decimal("331.45"),
         )
@@ -132,7 +164,57 @@ def test_chased_signal_is_rejected():
         **{**market().__dict__, "ask": Decimal("102"), "bid": Decimal("101.9")}
     )
     with pytest.raises(ValueError, match="moved"):
-        RiskManager().plan_order(
+        RiskManager(policy()).plan_order(
             signal(), spec(), moved,
             quote_to_zar=Decimal("16"), equity_zar=Decimal("331.45"),
+        )
+
+
+def tight_signal(pair="BTCUSDC", side=Side.BUY):
+    now = datetime.now(timezone.utc)
+    return Signal(
+        signal_id="perp1",
+        pair=pair,
+        pair_type=PairType.FUTURE,
+        side=side,
+        observed_at=now,
+        candle_start=now,
+        entry_price=Decimal("100"),
+        stop_price=Decimal("98") if side is Side.BUY else Decimal("102"),
+        atr=Decimal("1"),
+        score=Decimal("3"),
+    )
+
+
+def test_perp_plan_respects_minimum_notional_and_leverage_cap():
+    plan = RiskManager(policy()).plan_perp_order(
+        tight_signal(pair="BTCUSDC"), perp(),
+        quote_to_zar=Decimal("16.29"), equity_zar=Decimal("331.45"),
+    )
+    assert plan.notional_quote >= Decimal("11")
+    assert plan.notional_zar <= Decimal("200.00")
+    assert plan.risk_zar <= Decimal("6.63")
+
+
+def test_perp_plan_short_side_is_allowed():
+    plan = RiskManager(policy()).plan_perp_order(
+        tight_signal(pair="BTCUSDC", side=Side.SELL), perp(),
+        quote_to_zar=Decimal("16.29"), equity_zar=Decimal("331.45"),
+    )
+    assert plan.side is Side.SELL
+
+
+def test_perp_minimum_notional_above_cap_is_rejected():
+    with pytest.raises(ValueError, match="minimum notional"):
+        RiskManager(policy(max_position_notional_zar=Decimal("10"))).plan_perp_order(
+            tight_signal(pair="BTCUSDC"), perp(),
+            quote_to_zar=Decimal("16.29"), equity_zar=Decimal("331.45"),
+        )
+
+
+def test_perp_minimum_order_with_wide_stop_breaks_risk():
+    with pytest.raises(ValueError, match="exceeds per-trade risk"):
+        RiskManager(policy()).plan_perp_order(
+            signal(pair="BTCUSDC"), perp(),
+            quote_to_zar=Decimal("16.29"), equity_zar=Decimal("331.45"),
         )

@@ -1,110 +1,135 @@
 # Breakwater
 
-Breakwater is a VALR-native, lower-frequency crypto trend research and guarded
-execution system. It imports versioned crypto candidates from Price, rebuilds
-the decision using VALR-native market data, and manages account risk through
-broker-authoritative reconciliation.
+Breakwater is a VALR-native, self-contained crypto universe research and
+guarded execution system. It ingests the full VALR market universe, runs an
+end-to-end research cycle over price-state slices, monitors the validated
+book for signals, paper-trades those signals with stops and fees, and only
+then allows a strategy to approach live execution through layered gates.
 
-Breakwater is designed for periodic cloud execution through GitHub Actions and
-an external dispatcher. It does not depend on a local computer remaining
-powered. VALR remains authoritative for balances, orders, positions and fills.
+The venue remains authoritative for balances, orders, positions and fills.
+The system is designed for periodic cloud execution through GitHub Actions
+and does not depend on a local computer remaining powered.
 
-## Current release boundary
-
-Version 0.1 provides:
-
-- official VALR HMAC-SHA512 request signing;
-- public market, pair, candle, funding and risk-limit access;
-- authenticated balance, fee, order, position and conditional-order reads;
-- fixed-point price and quantity handling;
-- dynamic pair constraints and completed-candle filtering;
-- Price candidate import through a versioned boundary;
-- one-hour long and short trend-breakout shadow signals;
-- immutable account, drawdown, daily and seven-day limits;
-- a SQLite event ledger plus Git-durable bounded risk state;
-- strategy promotion stages from research to live-capped;
-- spot order planning with synchronous fill and stop confirmation;
-- workflows for CI, account guarding, shadow scanning and research refresh.
-
-The default mode is `readonly`. Spot writes require two independent live gates
-and a strategy promoted to `live_capped`. Perpetual market data, research,
-positions, leverage and shadow signals are supported, but perpetual live entry
-is deliberately locked until VALR's reduce-only `conditionalOrderData` contract
-has passed an authenticated canary and TPSL reconciliation checks. This avoids
-using an unverified protection payload with real funds.
-
-## Immutable capital mandate
-
-The compiled starting mandate is:
-
-| Boundary | Value |
-|---|---:|
-| Initial global equity | R331.45 |
-| Permanent loss limit | R109.38 |
-| Absolute equity floor | R222.07 |
-| High-water drawdown halt | 33% |
-| Risk per trade | R3.31 |
-| Daily loss halt | R9.94 |
-| Seven-day loss halt | R19.89 |
-| Maximum aggregate open risk | R6.63 |
-| Maximum position notional | R99.43 |
-| Maximum effective leverage | 1x |
-| Maximum simultaneous positions | 1 |
-
-The strategy cannot modify these values. Averaging down, martingale, grids,
-spot borrowing, withdrawals and transfers are not implemented.
-
-VALR perpetuals require a futures-enabled subaccount. A main-account API key
-with View and Trade permissions can be scoped to that subaccount using
-`VALR_SUBACCOUNT_ID`; it must not have Transfer, Withdraw or Link Bank Account
-permissions. A subaccount key can be used for read-only or shadow operation,
-but live mode requires global account visibility so the R222.07 global floor
-can be verified.
-
-## Strategy lifecycle
-
-Every strategy moves through:
+## What it does, end to end
 
 ```text
-research_only
-shadow_candidate
-shadow_validated
-canary_eligible
-live_capped
-suspended
-retired
+VALR spot pairs + VALR Perps symbols
+        |
+        v
+Universe ingestion (full universe, ranked, committed)
+        |
+        v
+OHLCV research bars per symbol
+        |
+        v
+Price-state features (extension, ATR, returns, volatility, trend)
+        |
+        v
+Slice discovery (binned feature states x forward returns,
+                  Bonferroni-controlled)
+        |
+        v
+Walk-forward validation (time folds, pass patterns, recency required)
+        |
+        v
+Monitored book (lifecycle gates, live decay, PnL decay, stopout cooldowns)
+        |
+        v
+Signal monitoring on completed bars
+        |
+        v
+Paper trading (ATR stops, 2R targets, time-stops, fees, journals)
+        |
+        v
+Risk-managed live execution (spot path; perps remain code-locked)
 ```
 
-Promotion requires VALR-native data, completed bars, costs and funding,
-chronological validation, walk-forward evidence, positive net expectancy,
-forward shadow observations, reconciliation passes, protection checks and no
-unresolved events. Arming the global live gate does not bypass these gates.
+Nothing in this pipeline is a hand-authored strategy. Features are
+descriptive price states; the system discovers which states carry stable
+forward behaviour and only promotes slices that survive validation.
 
-## Architecture
+## Instruments
 
-```text
-Price research output
-        |
-        v
-Price candidate importer
-        |
-        v
-VALR-native candles and market checks
-        |
-        v
-Big-wave detector and promotion registry
-        |
-        v
-Risk manager and execution planner
-        |
-        v
-VALR account, order and position reconciliation
-```
+- **VALR spot**: execution-capable after promotion, long side only.
+- **VALR Perps**: the USDC-quoted perpetual product on the main account.
+  Research, shadow signals, positions and paper trading are supported.
+  Live perp entry is deliberately code-locked until the order placement
+  and take-profit/stop-loss contracts have passed an authenticated canary.
+  Note that VALR Perps executes through third-party providers: order
+  execution, liquidation and mark prices are provider-managed, TPSL
+  execution is not guaranteed, and position data synchronisation can lag.
+- VALR-native sub-account futures are not targeted by this system.
 
-`localdata/breakwater.db` is a cached transactional event ledger and is not
-committed. `risk_state.json`, `promotion_registry.json`, `price_candidates.csv`
-and bounded `status.csv` are committed so loss and promotion state survive
-cache loss. Broker state is reconstructed every pass.
+## Capital mandate
+
+Every loss boundary is supplied by the operator through environment
+variables and is never compiled into the repository. The engine fails
+closed when any boundary is missing in an authenticated run. The mandate
+fields are:
+
+| Field | Environment variable |
+|---|---|
+| Initial equity (reference) | `BREAKWATER_INITIAL_EQUITY_ZAR` |
+| Absolute equity floor | `BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR` |
+| Maximum lifetime loss | `BREAKWATER_MAX_TOTAL_LOSS_ZAR` |
+| High-water drawdown fraction | `BREAKWATER_MAX_TOTAL_DRAWDOWN_FRACTION` |
+| Risk per trade | `BREAKWATER_RISK_PER_TRADE_ZAR` |
+| Daily loss limit | `BREAKWATER_DAILY_LOSS_LIMIT_ZAR` |
+| Seven-day loss limit | `BREAKWATER_SEVEN_DAY_LOSS_LIMIT_ZAR` |
+| Maximum aggregate open risk | `BREAKWATER_MAX_AGGREGATE_OPEN_RISK_ZAR` |
+| Maximum position notional | `BREAKWATER_MAX_POSITION_NOTIONAL_ZAR` |
+| Maximum effective leverage | `BREAKWATER_MAX_EFFECTIVE_LEVERAGE` |
+| Per-position exchange leverage cap | `BREAKWATER_PERP_LEVERAGE_CAP` |
+| Maximum simultaneous positions | `BREAKWATER_MAX_POSITIONS` |
+
+Perp sizing is bounded by the venue minimum notional and minimum margin.
+When the venue minimum forces notional above the risk-sized amount, the
+plan is rejected rather than silently enlarged. The strategy cannot modify
+these values at runtime. Averaging down, martingale, grids, spot borrowing,
+withdrawals and transfers are not implemented.
+
+## Security posture
+
+A single VALR API key is used for everything: it must have **View access
+plus Trade access only**. It must not have Withdraw, Internal Transfer or
+Link Bank Account permissions. The client has no withdrawal, transfer or
+banking methods, and every write request passes through a hard local gate
+that only opens when both live gates are deliberately armed.
+
+Modes:
+
+- `readonly`: authenticated reads and research only; no writes.
+- `shadow`: adds signal monitoring and paper trading; no broker writes.
+- `live`: requires the acknowledgement gate and a promoted strategy.
+
+Live mode additionally requires:
+
+- the capital mandate configured through the environment;
+- exactly View plus Trade permissions on the key;
+- clean account reconciliation and protected open positions;
+- a strategy promoted to `live_capped` by the promotion registry;
+- unverifiable perp position state halts live operation.
+
+The gates are `BREAKWATER_MODE=live` together with
+`BREAKWATER_LIVE_ACK=I_ACCEPT_BREAKWATER_LIVE_RISK`. Do not set them during
+initial deployment.
+
+## Research cycle details
+
+The atomic research row is one symbol, one bar timestamp, one forward
+window: OHLCV inputs, descriptive price-state features, and a cost-adjusted
+forward return. Feature states are binned per symbol on expanding windows,
+so a slice is a market state, not a rule.
+
+Discovery measures every (feature, state, side) slice across the pooled
+universe and applies a Bonferroni correction to the number of slices
+tested. Validation splits pooled rows into contiguous time folds; a slice
+must pass most folds, including the most recent one.
+
+The monitored book applies lifecycle gates on top of validation: a minimum
+row count, the correct directional edge, live decay for slices that stop
+firing, PnL decay for slices that lose on paper, and a cooldown after
+every paper stopout.
 
 ## Install
 
@@ -121,7 +146,7 @@ PYTHONPATH=src python -m pytest -q
 python -m ruff check .
 ```
 
-## Local read-only operation
+## Local operation
 
 ```bash
 cd Breakwater
@@ -130,25 +155,34 @@ set -a
 source .env
 set +a
 PYTHONPATH=src python scripts/breakwater.py guardian
-PYTHONPATH=src python scripts/breakwater.py refresh-price
+PYTHONPATH=src python scripts/breakwater.py research
 BREAKWATER_MODE=shadow PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 BREAKWATER_MODE=readonly PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
 ```
 
-No credentials are needed for public market checks and shadow scanning. Account
-reconciliation requires a VALR API key with View permission.
+No credentials are needed for public market checks and the spot slice
+research pass. Perp candle research and account reconciliation require the
+API key.
 
 ## GitHub configuration
-
-Configure a View-only key first:
 
 ```bash
 gh secret set VALR_API_KEY --repo 6ixtyn9-sudo/Breakwater
 gh secret set VALR_API_SECRET --repo 6ixtyn9-sudo/Breakwater
-gh secret set VALR_SUBACCOUNT_ID --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_INITIAL_EQUITY_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_MAX_TOTAL_LOSS_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_MAX_TOTAL_DRAWDOWN_FRACTION --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_RISK_PER_TRADE_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_DAILY_LOSS_LIMIT_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_SEVEN_DAY_LOSS_LIMIT_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_MAX_AGGREGATE_OPEN_RISK_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_MAX_POSITION_NOTIONAL_ZAR --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_MAX_EFFECTIVE_LEVERAGE --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_PERP_LEVERAGE_CAP --repo 6ixtyn9-sudo/Breakwater
+gh secret set BREAKWATER_MAX_POSITIONS --repo 6ixtyn9-sudo/Breakwater
 gh variable set BREAKWATER_MODE --body readonly --repo 6ixtyn9-sudo/Breakwater
 gh secret list --repo 6ixtyn9-sudo/Breakwater
-gh variable list --repo 6ixtyn9-sudo/Breakwater
 ```
 
 Dispatch the account guardian:
@@ -160,7 +194,7 @@ RUN_ID="$(gh run list --repo 6ixtyn9-sudo/Breakwater --workflow guardian.yml --b
 gh run watch "$RUN_ID" --repo 6ixtyn9-sudo/Breakwater --exit-status
 ```
 
-Dispatch the Price import and VALR-native research refresh:
+Dispatch the universe research refresh:
 
 ```bash
 gh workflow run research.yml --repo 6ixtyn9-sudo/Breakwater --ref main
@@ -169,44 +203,21 @@ RUN_ID="$(gh run list --repo 6ixtyn9-sudo/Breakwater --workflow research.yml --b
 gh run watch "$RUN_ID" --repo 6ixtyn9-sudo/Breakwater --exit-status
 ```
 
-An external scheduler may dispatch `guardian.yml` every 15 to 30 minutes and
-`research.yml` daily. GitHub Actions is not a continuous WebSocket process;
-server-side protection and broker reconciliation are therefore mandatory.
-
-## Live activation
-
-Live mode is intentionally unavailable until all of the following are true:
-
-- a dedicated API key has only View and Trade permissions;
-- global account equity is observable;
-- the target strategy is `live_capped`;
-- account and order reconciliation is clean;
-- the spot protection canary has passed;
-- the permanent loss boundary is unchanged;
-- the operator deliberately sets both live gates.
-
-The gates are:
-
-```text
-BREAKWATER_MODE=live
-BREAKWATER_LIVE_ACK=I_ACCEPT_BREAKWATER_LIVE_RISK
-```
-
-Do not set them during initial deployment. Perpetual live execution remains
-code-locked even when both gates are set until the reduce-only TPSL integration
-is proven against the authenticated VALR API.
+An external scheduler may dispatch the guardian every 15 to 30 minutes and
+the research refresh daily. GitHub Actions is not a continuous WebSocket
+process; broker reconciliation is therefore mandatory on every pass.
 
 ## Operational outcomes
 
 `localdata/status.csv` records bounded outcomes:
 
-- `public_ok` means public exchange, time and pair metadata were available;
-- `guardian_ok` means authenticated state and risk checks passed;
-- `risk_halted` means an immutable loss or exposure gate blocked entries;
-- `unprotected_position` means an open position lacked confirmed stop
-  protection and requires immediate operator attention;
-- `shadow_scan_done` records the number of pairs, signals and errors;
-- `failed` means required state was unavailable or malformed.
+- `public_ok`: public exchange, time and pair metadata available;
+- `guardian_ok`: authenticated state and risk checks passed;
+- `risk_halted`: an immutable loss or exposure gate blocked entries;
+- `unprotected_position`: an open position lacked confirmed protection;
+- `research_done`: universe ingestion and slice research completed;
+- `shadow_scan_done`: monitored-slice signal scan completed;
+- `failed`: required state was unavailable or malformed.
 
-A successful workflow is not proof of profitability, future fills or guaranteed
-stop execution. It proves only the checks performed by that run.
+A successful workflow is not proof of profitability, future fills or
+guaranteed stop execution. It proves only the checks performed by that run.

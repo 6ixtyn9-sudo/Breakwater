@@ -8,7 +8,13 @@ git config user.email "github-actions[bot]@users.noreply.github.com"
 
 files=(
   localdata/status.csv
-  localdata/price_candidates.csv
+  localdata/universe.csv
+  localdata/research/discovered_slices.csv
+  localdata/research/validated_slices.csv
+  localdata/research/monitored_slices.csv
+  localdata/research/paper_trade_log.csv
+  localdata/research/paper_positions.json
+  localdata/research/cooldown_journal.json
   localdata/promotion_registry.json
   localdata/risk_state.json
 )
