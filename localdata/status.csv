@@ -6,3 +6,4 @@ timestamp_utc,stage,mode,detail
 2026-08-14T11:04:06.323734+00:00,research_done,readonly,"{""book"": {""cooldown"": 0, ""decayed"": 0, ""monitored"": 7, ""validated"": 7}, ""discovered_slices"": 15, ""pairs_researched"": 30, ""server_time"": ""2026-08-14T11:03:38+00:00"", ""universe"": {""PERP"": 270, ""SPOT"": 202}, ""validated_slices"": 7}"
 2026-08-14T11:04:11.374202+00:00,shadow_scan_done,shadow,"{""errors"": 12, ""pairs_checked"": 12, ""signals"": 36}"
 2026-08-14T11:04:46.023135+00:00,failed,readonly,"ValrError: VALR request failed: Invalid leading whitespace, reserved character(s), or return character(s) in header value: '\n\n92b0171ae5a302a99245d2a59302334dbee80f0b663aa9d5862e64f9c267f0ed'"
+2026-08-14T11:24:53.658629+00:00,failed,readonly,"AccountStateError: VALR API key has forbidden permissions: internal transfer, link bank account"
