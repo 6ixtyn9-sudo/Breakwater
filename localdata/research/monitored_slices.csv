@@ -1,8 +1,8 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars
-feat_ret_3:0:SHORT,SPOT,feat_ret_3,0,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.001318,194,0.000085,1
-feat_ret_1:0:SHORT,SPOT,feat_ret_1,0,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.001508,246,0.000000,1
-feat_ret_5:0:SHORT,SPOT,feat_ret_5,0,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.001539,159,0.000013,1
-feat_ext_vs_ma_10:0:SHORT,SPOT,feat_ext_vs_ma_10,0,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.001559,127,0.000001,1
-feat_ret_1:1:SHORT,SPOT,feat_ret_1,1,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.002292,148,0.000000,1
-feat_ret_1:2:SHORT,SPOT,feat_ret_1,2,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.002405,157,0.000000,1
-feat_ret_3:1:SHORT,SPOT,feat_ret_3,1,SHORT,monitored,2026-08-14T11:03:38+00:00,,0,0,0,0,,-0.002428,147,0.000000,1
+feat_ret_3:0:SHORT,SPOT,feat_ret_3,0,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.001318,194,0.000085,1
+feat_ret_1:0:SHORT,SPOT,feat_ret_1,0,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.001508,246,0.000000,1
+feat_ret_5:0:SHORT,SPOT,feat_ret_5,0,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.001539,159,0.000013,1
+feat_ext_vs_ma_10:0:SHORT,SPOT,feat_ext_vs_ma_10,0,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.001559,127,0.000001,1
+feat_ret_1:1:SHORT,SPOT,feat_ret_1,1,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.002292,148,0.000000,1
+feat_ret_1:2:SHORT,SPOT,feat_ret_1,2,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.002405,157,0.000000,1
+feat_ret_3:1:SHORT,SPOT,feat_ret_3,1,SHORT,monitored,2026-08-14T11:25:21+00:00,,0,0,0,0,,-0.002428,147,0.000000,1
