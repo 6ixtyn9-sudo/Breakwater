@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from breakwater.account import (
@@ -83,7 +83,12 @@ class BreakwaterEngine:
     def _universe(self) -> UniverseSnapshot:
         snapshot = read_universe(self.settings.universe_path)
         if snapshot is not None:
-            return snapshot
+            try:
+                as_of = datetime.fromisoformat(snapshot.as_of)
+                if datetime.now(timezone.utc) - as_of < timedelta(days=7):
+                    return snapshot
+            except (TypeError, ValueError):
+                pass
         snapshot = ingest_universe(self.client)
         write_universe(self.settings.universe_path, snapshot)
         return snapshot
@@ -94,9 +99,11 @@ class BreakwaterEngine:
         for pair, kind in targets:
             try:
                 if kind == "PERP":
-                    candles = fetch_perp_candles_for_pair(pair)
+                    candles = fetch_perp_candles_for_pair(pair, count=300)
                 else:
-                    candles = fetch_recent_candles(self.client, pair, server_time)
+                    candles = fetch_recent_candles(
+                        self.client, pair, server_time, count=300
+                    )
                 frame = candle_frame(candles)
                 frame["symbol"] = pair.upper()
                 frames[pair.upper()] = frame
@@ -229,6 +236,7 @@ class BreakwaterEngine:
                 usdc_zar = valuator.rate_to_zar("USDC")
             except Exception:
                 usdc_zar = Decimal("16.29")
+            book_slice_ids = {str(row["slice_id"]) for row in book_rows}
             paper_result = run_paper_cycle(
                 signals=signals,
                 frames=frames,
@@ -238,6 +246,7 @@ class BreakwaterEngine:
                 log_path=self.settings.paper_log_path,
                 cooldown_path=self.settings.cooldown_path,
                 book_path=self.settings.book_path,
+                book_slice_ids=book_slice_ids,
                 server_time=server_time,
             )
 

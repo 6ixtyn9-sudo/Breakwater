@@ -78,3 +78,16 @@ def test_stopout_sets_cooldown_then_recovers(tmp_path):
     assert rows[0]["status"] == "cooldown"
     assert int(rows[0]["cooldown_until"]) > int(now.timestamp())
     assert rows[0]["paper_losses"] == "1"
+
+
+def test_book_carries_stop_calibration_and_provenance(tmp_path):
+    from breakwater.research_lifecycle import PROVENANCE_VALIDATED
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, [validated_row()])
+    sync_book(validated_path=validated_path, book_path=book_path)
+    rows = read_book(book_path)
+    assert rows[0]["stop_atr_mult"]
+    assert float(rows[0]["stop_atr_mult"]) >= 1.5
+    assert rows[0]["source"] == PROVENANCE_VALIDATED

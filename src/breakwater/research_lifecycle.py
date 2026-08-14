@@ -35,11 +35,15 @@ BOOK_HEADERS = [
     "n",
     "p_value",
     "horizon_bars",
+    "stop_atr_mult",
+    "source",
 ]
 
 MONITORED = "monitored"
 COOLDOWN = "cooldown"
 DECAYED = "decayed"
+
+PROVENANCE_VALIDATED = "validated_walk_forward"
 
 MIN_BOOK_ROWS = 60
 LIVE_DECAY_BARS = 96
@@ -53,7 +57,9 @@ def read_book(path: Path) -> list[dict]:
         return []
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        if reader.fieldnames != BOOK_HEADERS:
+        if not reader.fieldnames or not {
+            "slice_id", "kind", "feature", "state", "side", "status",
+        }.issubset(set(reader.fieldnames)):
             raise RuntimeError("monitored book has an unsupported schema")
         return list(reader)
 
@@ -120,6 +126,8 @@ def sync_book(
             "n": str(row.n),
             "p_value": f"{row.p_value:.6f}",
             "horizon_bars": str(row.horizon_bars),
+            "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
+            "source": PROVENANCE_VALIDATED,
         })
     book_path.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(

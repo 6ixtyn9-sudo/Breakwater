@@ -112,11 +112,14 @@ def prepare_pooled(
     cost = cost_bps / 10000.0
     if "symbol" not in frame.columns:
         raise ValueError("pooled frame must carry a symbol column")
+    from breakwater.features import forward_mae_atr
+
     parts = []
     for _, group in frame.groupby("symbol", sort=False):
         binned = bin_states(group, feature_columns)
         close = binned["close"]
         binned["fwd_ret"] = (close.shift(-horizon_bars) / close - 1.0) - cost
+        binned["fwd_mae_atr_5"] = forward_mae_atr(binned, horizon=5)
         parts.append(binned)
     if not parts:
         return frame.iloc[0:0].copy()

@@ -48,6 +48,53 @@ Nothing in this pipeline is a hand-authored strategy. Features are
 descriptive price states; the system discovers which states carry stable
 forward behaviour and only promotes slices that survive validation.
 
+## Lessons inherited from the Price system
+
+Breakwater is a successor to the Price research lab and carries its
+hard-won operational lessons as first-class safeguards:
+
+- **Falling-knife entry guard.** Entries are compared against the latest
+  price before opening: if the market has moved adversely beyond
+  min(1.0 ATR, 2 percent) of the signal close, the entry is skipped.
+  This is the guard that Price built after systematically buying
+  declines with limits resting on the signal close.
+- **Winner-capture entry premium.** The reference entry is adjusted by
+  min(0.25 ATR, 1 percent) in the trade's direction so modest
+  follow-through can fill instead of only adverse moves.
+- **Fail-open visibility.** Every skipped entry is journaled with its
+  reason (adverse, no price, hostile regime, not in book). A guard that
+  cannot see a price never silently pretends it blocked anything.
+- **MAE-calibrated per-slice stops.** Each slice's stop distance is the
+  90th percentile of its own adverse excursion in ATR units, clamped to
+  [1.5, 3.5] ATR. Percentiles, not in-sample optima.
+- **Side-aware regime gate.** Longs are blocked in a confirmed bear
+  (SMA50 below SMA200) and shorts in a confirmed bull. Neutral and
+  unknown regimes never block. This mirrors Price's lesson that
+  regime-conditional edges are tradeable only when the regime is
+  detected and gated.
+- **Book-only paper trading.** Only slices promoted into the monitored
+  book by walk-forward validation are paper-traded. Unvalidated
+  fallback signals are research-only.
+- **Immortal-trade guard.** Positions whose pair data has vanished are
+  closed at entry with fees after 24 missing bars instead of living
+  forever.
+- **Stale-data refusal.** The universe snapshot is re-ingested if it is
+  older than seven days.
+- **Provenance honesty.** Every book row records the gate that promoted
+  it (`validated_walk_forward`), so the audit trail never overstates the
+  evidence behind the book.
+- **Serialized state commits.** All workflows share one concurrency
+  group, so two runs can never commit research and trading state to
+  `main` at the same time.
+- **Research and paper execution are separate workflows**, following
+  Price's separation doctrine.
+
+Deliberate deviations from Price's anti-drift rules, recorded honestly:
+Price forbade leverage entirely; Breakwater permits per-position
+exchange leverage up to the mandate's cap (default 3x) on VALR Perps
+only, where the isolated-margin model bounds the worst-case loss of a
+position to its allocated margin.
+
 ## Instruments
 
 - **VALR spot**: execution-capable after promotion, long side only.
@@ -228,6 +275,16 @@ Dispatch the universe research refresh:
 gh workflow run research.yml --repo 6ixtyn9-sudo/Breakwater --ref main
 sleep 3
 RUN_ID="$(gh run list --repo 6ixtyn9-sudo/Breakwater --workflow research.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$RUN_ID" --repo 6ixtyn9-sudo/Breakwater --exit-status
+```
+
+Dispatch the paper trading cycle (shadow mode; simulated fills, no
+orders reach the venue):
+
+```bash
+gh workflow run paper.yml --repo 6ixtyn9-sudo/Breakwater --ref main
+sleep 3
+RUN_ID="$(gh run list --repo 6ixtyn9-sudo/Breakwater --workflow paper.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh run watch "$RUN_ID" --repo 6ixtyn9-sudo/Breakwater --exit-status
 ```
 

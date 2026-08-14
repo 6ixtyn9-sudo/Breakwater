@@ -69,3 +69,37 @@ def test_validated_roundtrip_through_csv(tmp_path):
     assert len(loaded) == len(rows)
     assert loaded[0].slice_id == rows[0].slice_id
     assert loaded[0].walk_forward_pass_pattern == rows[0].walk_forward_pass_pattern
+
+
+def test_stop_atr_mult_is_calibrated_within_bounds():
+    frame = rising_frame()
+    prepared = prepare_pooled(frame, ["close"], cost_bps=0.0, horizon_bars=1)
+    assert "fwd_mae_atr_5" in prepared.columns
+    rows = validate_slices(prepared, [candidate(state=0, side="LONG")])
+    assert rows
+    assert 1.5 <= rows[0].stop_atr_mult <= 3.5
+
+
+def test_read_validated_tolerates_legacy_schema_without_stop_column(tmp_path):
+    frame = rising_frame()
+    prepared = prepare_pooled(frame, ["close"], cost_bps=0.0, horizon_bars=1)
+    rows = validate_slices(prepared, [candidate(state=0, side="LONG")])
+    path = tmp_path / "validated.csv"
+    write_validated(path, rows)
+    import csv
+
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        legacy_headers = [name for name in reader.fieldnames if name != "stop_atr_mult"]
+        legacy_rows = [
+            {name: value for name, value in row.items() if name != "stop_atr_mult"}
+            for row in reader
+        ]
+    legacy_path = tmp_path / "legacy.csv"
+    with legacy_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=legacy_headers)
+        writer.writeheader()
+        writer.writerows(legacy_rows)
+    loaded = read_validated(legacy_path)
+    assert len(loaded) == len(rows)
+    assert loaded[0].stop_atr_mult == 2.0

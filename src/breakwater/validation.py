@@ -33,10 +33,13 @@ VALIDATED_HEADERS = [
     "p_value",
     "validated",
     "horizon_bars",
+    "stop_atr_mult",
 ]
 
 MIN_ROWS_PER_FOLD = 20
 FOLD_COUNT = 5
+STOP_ATR_FLOOR = 1.5
+STOP_ATR_CEIL = 3.5
 
 
 @dataclass(frozen=True)
@@ -56,6 +59,7 @@ class ValidatedSlice:
     p_value: float
     validated: bool
     horizon_bars: int
+    stop_atr_mult: float = 2.0
 
 
 def _fold_pass(returns: np.ndarray, side: str) -> bool:
@@ -65,6 +69,24 @@ def _fold_pass(returns: np.ndarray, side: str) -> bool:
     if side == "LONG":
         return mean > 0
     return mean < 0
+
+
+def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
+    """90th percentile of the slice's adverse-atr distribution, clamped.
+
+    The percentile (not an in-sample optimum) avoids overfitting the stop
+    to the worst historical bar; the clamp keeps stops within sane bounds
+    for both sleepy and wild symbols.
+    """
+    if "fwd_mae_atr_5" not in prepared.columns:
+        return 2.0
+    subset = prepared.dropna(subset=[state_column, "fwd_mae_atr_5"])
+    mask = subset[state_column] == candidate.state
+    values = subset.loc[mask, "fwd_mae_atr_5"].to_numpy()
+    if len(values) < MIN_ROWS_PER_FOLD:
+        return 2.0
+    percentile = float(np.percentile(values, 90))
+    return min(STOP_ATR_CEIL, max(STOP_ATR_FLOOR, percentile))
 
 
 def validate_slices(
@@ -119,6 +141,7 @@ def validate_slices(
             p_value=candidate.p_value,
             validated=passed,
             horizon_bars=candidate.horizon_bars,
+            stop_atr_mult=_calibrate_stop_atr_mult(prepared, candidate, state_column),
         ))
     return sorted(validated, key=lambda row: (not row.validated, -row.mean_ret_costadj))
 
@@ -128,8 +151,11 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         return []
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        if reader.fieldnames != VALIDATED_HEADERS:
+        if not reader.fieldnames or not set(VALIDATED_HEADERS[:-1]).issubset(
+            set(reader.fieldnames)
+        ):
             raise RuntimeError("validated slices file has an unsupported schema")
+        has_stop = "stop_atr_mult" in reader.fieldnames
         return [
             ValidatedSlice(
                 slice_id=str(row["slice_id"]),
@@ -147,6 +173,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                 p_value=float(row["p_value"]),
                 validated=row["validated"] == "True",
                 horizon_bars=int(row["horizon_bars"]),
+                stop_atr_mult=float(row["stop_atr_mult"]) if has_stop else 2.0,
             )
             for row in reader
         ]

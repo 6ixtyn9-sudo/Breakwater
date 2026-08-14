@@ -57,3 +57,47 @@ def test_monitor_needs_enough_history():
     rows = [book_row(2, feature="feat_ret_20")]
     signals = monitor_book(rows, {"BTCUSDC": frame}, server_time=datetime.now(timezone.utc))
     assert signals == []
+
+
+def test_regime_of_and_side_aware_blocking():
+    from breakwater.models import Side
+    from breakwater.monitor import regime_blocks, regime_of
+
+    rising = trending_frame(n=260, drift=0.05, seed=2)
+    falling = trending_frame(n=260, drift=-0.05, seed=2)
+    assert regime_of(rising) == "bull"
+    assert regime_of(falling) == "bear"
+    assert regime_blocks(Side.BUY, "bear") is True
+    assert regime_blocks(Side.SELL, "bull") is True
+    assert regime_blocks(Side.BUY, "bull") is False
+    assert regime_blocks(Side.SELL, "bear") is False
+    assert regime_blocks(Side.BUY, "neutral") is False
+    assert regime_blocks(Side.SELL, "unknown") is False
+
+
+def test_monitor_skips_longs_in_confirmed_bear():
+    from breakwater.models import Side
+
+    falling = trending_frame(n=260, drift=-0.05, seed=4)
+    rows = [
+        book_row(0, feature="feat_ret_1", side="LONG"),
+        book_row(0, feature="feat_ret_1", side="SHORT"),
+    ]
+    signals = monitor_book(rows, {"BTCUSDC": falling}, server_time=datetime.now(timezone.utc))
+    assert signals
+    assert all(signal.side is Side.SELL for signal in signals)
+    assert all(signal.regime == "bear" for signal in signals)
+
+
+def test_monitor_skips_shorts_in_confirmed_bull():
+    from breakwater.models import Side
+
+    rising = trending_frame(n=260, drift=0.05, seed=4)
+    rows = [
+        book_row(2, feature="feat_ret_20", side="LONG"),
+        book_row(2, feature="feat_ret_20", side="SHORT"),
+    ]
+    signals = monitor_book(rows, {"BTCUSDC": rising}, server_time=datetime.now(timezone.utc))
+    assert signals
+    assert all(signal.side is Side.BUY for signal in signals)
+    assert all(signal.regime == "bull" for signal in signals)

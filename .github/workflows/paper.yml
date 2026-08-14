@@ -1,4 +1,4 @@
-name: Breakwater Guardian
+name: Breakwater Paper Trading
 
 on:
   workflow_dispatch:
@@ -15,9 +15,9 @@ defaults:
     shell: bash
 
 jobs:
-  guardian:
+  paper:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -32,19 +32,11 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.lock
 
-      - name: Restore transactional cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: localdata/breakwater.db
-          key: breakwater-ledger-${{ github.run_id }}
-          restore-keys: |
-            breakwater-ledger-
-
-      - name: Run guarded operational pass
+      - name: Run monitored-slice shadow scan and paper cycle
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
-          BREAKWATER_MODE: ${{ vars.BREAKWATER_MODE || 'readonly' }}
+          BREAKWATER_MODE: shadow
           BREAKWATER_LIVE_ACK: ${{ secrets.BREAKWATER_LIVE_ACK }}
           BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
           BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR: ${{ secrets.BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR }}
@@ -58,15 +50,8 @@ jobs:
           BREAKWATER_MAX_EFFECTIVE_LEVERAGE: ${{ secrets.BREAKWATER_MAX_EFFECTIVE_LEVERAGE }}
           BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
           BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
-        run: PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
+        run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 
       - name: Persist bounded state
         if: always()
-        run: bash scripts/commit_state.sh "guardian"
-
-      - name: Save transactional cache
-        if: always()
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: localdata/breakwater.db
-          key: breakwater-ledger-${{ github.run_id }}
+        run: bash scripts/commit_state.sh "paper trading"

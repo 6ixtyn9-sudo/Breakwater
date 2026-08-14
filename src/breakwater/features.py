@@ -100,3 +100,26 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
 def forward_returns(frame: pd.DataFrame, *, horizon: int = 1) -> pd.Series:
     close = frame["close"]
     return close.shift(-horizon) / close - 1.0
+
+
+def forward_mae_atr(frame: pd.DataFrame, *, horizon: int = 5) -> pd.Series:
+    """Max adverse excursion over the next `horizon` bars, in ATR units.
+
+    Long entries risk the lowest low ahead; short entries risk the highest
+    high ahead. Values are clipped at 0 and normalised by the 14-bar ATR,
+    matching the volatility unit the stop model uses.
+    """
+    close = frame["close"]
+    high = frame["high"]
+    low = frame["low"]
+    high_low = high - low
+    high_close_prev = (high - close.shift(1)).abs()
+    low_close_prev = (low - close.shift(1)).abs()
+    true_range = pd.concat([high_low, high_close_prev, low_close_prev], axis=1).max(axis=1)
+    atr = true_range.rolling(14).mean()
+    fwd_min_low = low.rolling(horizon).min().shift(-horizon)
+    fwd_max_high = high.rolling(horizon).max().shift(-horizon)
+    mae_long = (close - fwd_min_low) / atr.replace(0, np.nan)
+    mae_short = (fwd_max_high - close) / atr.replace(0, np.nan)
+    combined = pd.concat([mae_long, mae_short], axis=1).max(axis=1).clip(lower=0.0)
+    return combined

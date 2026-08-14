@@ -2,8 +2,10 @@
 
 Every monitored book row is checked against the latest completed bar of each
 target symbol. A match produces a signal carrying the slice identity, side,
-entry reference and an ATR stop. Signals are descriptive research outputs;
-paper trading consumes them, live execution never fires from here.
+entry reference, the slice's MAE-calibrated ATR stop, and the symbol's macro
+regime. The regime gate is side-aware and fail-open: longs are blocked in a
+confirmed bear (SMA50 below SMA200), shorts in a confirmed bull, and
+neutral or unknown regimes never block.
 """
 
 from __future__ import annotations
@@ -13,13 +15,43 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 
+import numpy as np
 import pandas as pd
 
 from breakwater.discovery import bin_states
 from breakwater.features import compute_price_features
-from breakwater.models import PairType, Side
+from breakwater.models import Side
 
-STOP_ATR_MULT = Decimal("2")
+DEFAULT_STOP_ATR_MULT = Decimal("2.0")
+REGIME_MIN_BARS = 200
+
+
+def regime_of(frame: pd.DataFrame) -> str:
+    """Bull / bear / neutral / unknown from the SMA-50/200 crossover prior.
+
+    Fail-open: insufficient history returns unknown, which never blocks.
+    """
+    if frame is None or len(frame) < REGIME_MIN_BARS:
+        return "unknown"
+    close = frame["close"].astype(float)
+    sma50 = float(close.rolling(50).mean().iloc[-1])
+    sma200 = float(close.rolling(200).mean().iloc[-1])
+    last = float(close.iloc[-1])
+    if not np.isfinite(sma50) or not np.isfinite(sma200):
+        return "unknown"
+    if sma50 > sma200 and last > sma50:
+        return "bull"
+    if sma50 < sma200 and last < sma50:
+        return "bear"
+    return "neutral"
+
+
+def regime_blocks(side: Side, regime: str) -> bool:
+    if side is Side.BUY and regime == "bear":
+        return True
+    if side is Side.SELL and regime == "bull":
+        return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -37,10 +69,8 @@ class SliceSignal:
     stop_price: Decimal
     atr: Decimal
     edge: float
-
-
-def _frame(frames: dict[str, pd.DataFrame], pair: str) -> pd.DataFrame | None:
-    return frames.get(pair.upper())
+    stop_atr_mult: float = 2.0
+    regime: str = "unknown"
 
 
 def _latest_state(
@@ -73,8 +103,17 @@ def monitor_book(
         direction = str(row["side"]).upper()
         side = Side.BUY if direction == "LONG" else Side.SELL
         kind = str(row["kind"])
+        try:
+            stop_atr_mult = float(row.get("stop_atr_mult") or DEFAULT_STOP_ATR_MULT)
+        except (TypeError, ValueError):
+            stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
+        if stop_atr_mult <= 0:
+            stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
         for pair, frame in frames.items():
-            if frame.empty or len(frame) < 60:
+            if frame is None or frame.empty or len(frame) < 60:
+                continue
+            regime = regime_of(frame)
+            if regime_blocks(side, regime):
                 continue
             featured = compute_price_features(frame)
             latest_state, latest_row = _latest_state(featured, feature)
@@ -85,7 +124,8 @@ def monitor_book(
             if close <= 0 or atr_raw <= 0:
                 continue
             atr = Decimal(str(atr_raw))
-            stop = close - STOP_ATR_MULT * atr if side is Side.BUY else close + STOP_ATR_MULT * atr
+            stop_distance = Decimal(str(stop_atr_mult)) * atr
+            stop = close - stop_distance if side is Side.BUY else close + stop_distance
             if stop <= 0:
                 continue
             bar_start = latest_row["start"]
@@ -109,6 +149,8 @@ def monitor_book(
                 stop_price=stop,
                 atr=atr,
                 edge=float(row.get("mean_ret_costadj") or 0),
+                stop_atr_mult=stop_atr_mult,
+                regime=regime,
             ))
     return signals
 
@@ -126,6 +168,12 @@ def _atr(frame: pd.DataFrame) -> float:
     return float(values[-1]) if len(values) else 0.0
 
 
+def signal_pair_type(kind: str):
+    from breakwater.models import PairType
+
+    return PairType.SPOT if kind == "SPOT" else PairType.FUTURE
+
+
 def signal_payload(signal: SliceSignal) -> dict:
     return {
         "signal_id": signal.signal_id,
@@ -141,8 +189,6 @@ def signal_payload(signal: SliceSignal) -> dict:
         "stop_price": str(signal.stop_price),
         "atr": str(signal.atr),
         "edge": signal.edge,
+        "stop_atr_mult": signal.stop_atr_mult,
+        "regime": signal.regime,
     }
-
-
-def signal_pair_type(kind: str) -> PairType:
-    return PairType.SPOT if kind == "SPOT" else PairType.FUTURE
