@@ -77,6 +77,18 @@ Deliberate deviations (recorded honestly):
 
 ## Incidents
 
+- 2026-08-14, state-commit push race (paper run #2 failed): the guardian and
+  paper cron jobs both dispatch at 14:00:00 UTC. Two workflow_dispatch
+  events created in the same instant can both pass the concurrency-group
+  check, so their commit_state pushes collided; the paper run's pull
+  --rebase conflicted on localdata/status.csv and the run failed, losing
+  one hourly paper state update (self-healing, but red). Fix: commit_state.sh
+  now resolves state conflicts deterministically — status.csv unions
+  origin's rows with ours (append-only log, deduplicated), all other state
+  files take ours (later writer) — then pushes, verified against a
+  simulated origin. Prevention: cron schedules staggered so no two
+  workflows dispatch in the same minute (paper :15, research 02:45;
+  guardian stays :00/:30).
 - 2026-08-14, stale-universe mask: the committed universe.csv predated the
   perp-volume feature, so it ranked the perp universe alphabetically
   (0GUSDC first) instead of by venue volume. The 7-day freshness gate did
