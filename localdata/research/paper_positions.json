@@ -1,6 +1,6 @@
 [
   {
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_price": "9865.0",
     "kind": "SPOT",
     "missing_bars": "0",
@@ -12,7 +12,7 @@
     "stop_price": "9953.714285714285708"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "62961.37500000000000000000000",
     "kind": "PERP",
@@ -25,7 +25,7 @@
     "stop_price": "63796.12500000000000000000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "1878.076785714285717500000000",
     "kind": "PERP",
@@ -38,7 +38,7 @@
     "stop_price": "1905.001785714285672500000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "104.9517857142857146000000000",
     "kind": "SPOT",
@@ -51,20 +51,7 @@
     "stop_price": "107.0267857142857102000000000"
   },
   {
-    "bars_held": "1",
-    "entry_guard": "passed",
-    "entry_price": "0.00007411785714285714255000000000",
-    "kind": "SPOT",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "SHIBZAR",
-    "side": "SELL",
-    "signal_id": "023901bea7581898",
-    "slice_id": "feat_ext_vs_ma_50:2:SHORT",
-    "stop_price": "0.00007526785714285714685000000000"
-  },
-  {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "55.61101785714285755000000000",
     "kind": "PERP",
@@ -75,5 +62,18 @@
     "signal_id": "92c7fe9d36219994",
     "slice_id": "feat_ret_1:1:SHORT",
     "stop_price": "56.87639342857142349680000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "30680.87500000000000000000000",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "ETHZAR",
+    "side": "SELL",
+    "signal_id": "d90a668155c727b2",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT",
+    "stop_price": "31242.62500000000000000000000"
   }
 ]

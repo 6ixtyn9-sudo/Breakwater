@@ -5,5 +5,13 @@
     "signal_id": "662de084bb095260",
     "slice_id": "feat_ret_3:0:SHORT",
     "stopped_at": "2026-08-14T12:02:42+00:00"
+  },
+  {
+    "pair": "SHIBZAR",
+    "pnl_zar": "-3.5032",
+    "reason": "stop",
+    "signal_id": "023901bea7581898",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT",
+    "stopped_at": "2026-08-14T18:15:22+00:00"
   }
 ]
