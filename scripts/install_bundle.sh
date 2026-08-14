@@ -22,8 +22,10 @@ git fetch "$BUNDLE_PATH" refs/heads/main:refs/remotes/breakwater-build/main
 
 test "$(git rev-parse refs/remotes/breakwater-build/main)" = "$EXPECTED_COMMIT_SHA"
 
-git -c user.name="6ixtyn9-sudo" -c user.email="6ixtyn9@gmail.com" \
-  cherry-pick "$(git rev-parse refs/remotes/breakwater-build/main)"
+UPDATES="$(git rev-list --reverse origin/main..refs/remotes/breakwater-build/main)"
+if [ -n "$UPDATES" ]; then
+  git -c user.name="6ixtyn9-sudo" -c user.email="6ixtyn9@gmail.com" cherry-pick $UPDATES
+fi
 
 if ! git push origin main; then
   git -c user.name="6ixtyn9-sudo" -c user.email="6ixtyn9@gmail.com" \
