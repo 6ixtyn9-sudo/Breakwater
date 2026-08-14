@@ -34,7 +34,7 @@ risk.py          env-supplied mandate, perp sizing under venue minimums
 engine.py        guardian / shadow / research / health orchestration
 ```
 
-## Lessons audit (Price handover -> Breakwater status)
+## Lessons audit (predecessor handover -> Breakwater status)
 
 Inherited and verified:
 
@@ -48,7 +48,7 @@ Inherited and verified:
 - MAE-calibrated per-slice stops: 90th percentile, clamped [1.5, 3.5] ATR.
 - Side-aware regime gate: no longs in a death-cross bear, no shorts in a
   bull, fail-open otherwise.
-- Regime-stratified validation (KLAC): hostile-regime rows must not oppose
+- Regime-stratified validation: hostile-regime rows must not oppose
   the slice's side; confounded slices are recorded and excluded.
 - Book-only paper trading: unvalidated fallback signals are research-only.
 - Immortal-trade guard: positions close at entry after 24 missing bars.
@@ -66,13 +66,13 @@ Inherited and verified:
 
 Deliberate deviations (recorded honestly):
 
-- Price forbade leverage entirely; Breakwater's per-position leverage cap
+- The predecessor system forbade leverage entirely; Breakwater's per-position leverage cap
   (default 3x) is operator-mandated and bounded by VALR's isolated-margin
   model (worst loss per position = allocated margin).
-- Price was an equities lab with RTH sessions and corporate actions;
+- The predecessor system was an equities lab with RTH sessions and corporate actions;
   crypto is 24/7, so no DST/RTH windows, no adjustment gates, no
   corporate-action quarantine apply here.
-- Price's yfinance/Tiingo/Alpaca warehouse stack is replaced by VALR +
+- The predecessor system's yfinance/Tiingo/Alpaca warehouse stack is replaced by VALR +
   Hyperliquid public feeds.
 
 Known placeholders and seams (do not tune without evidence):
@@ -106,7 +106,7 @@ Updates ship as signed git bundles; never hand-edit committed state files.
 ## Process rules for future agents
 
 - Verify current code on main before claiming anything is broken or
-  missing; tag evidence with its as-of time (the Price lesson).
+  missing; tag evidence with its as-of time.
 - No silent fallbacks, no silent drops: every guard decision is journaled
   with a reason.
 - Fail closed: empty data, partial mandate, malformed artifacts halt the

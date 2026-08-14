@@ -5,7 +5,7 @@ fold when that fold carries enough rows and its mean cost-adjusted forward
 return keeps the slice's sign. A slice is validated only when most folds
 pass and the most recent fold passes, so the evidence includes recency.
 
-Price lesson (KLAC regime confound): chronological folds cannot tell a
+Standing lesson (regime confound): chronological folds cannot tell a
 durable price-state edge from a regime artifact. Every slice is therefore
 also tested against HOSTILE regime rows: bear rows for long slices, bull
 rows for short slices. A slice whose hostile-regime mean return opposes

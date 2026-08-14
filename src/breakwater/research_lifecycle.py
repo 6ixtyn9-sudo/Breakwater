@@ -78,7 +78,7 @@ def sync_book(
 ) -> dict:
     """Rebuild the monitored book from this run's validated slices.
 
-    Price lesson (crypto rerun wipe + green != live): the validated file
+    Standing lesson (rerun wipe + green != live): the validated file
     only contains slices discovered by the current run, which researches a
     subset of the universe. Rebuilding every kind from it would silently
     wipe whole books when one kind's data failed. Kinds that produced no

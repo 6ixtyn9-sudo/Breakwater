@@ -94,7 +94,7 @@ def test_book_carries_stop_calibration_and_provenance(tmp_path):
 
 
 def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
-    """Price lesson (rerun wipe): a run that produces no validated rows for
+    """Standing lesson (rerun wipe): a run that produces no validated rows for
     a kind must not wipe that kind's existing book rows."""
     validated_path = tmp_path / "validated.csv"
     book_path = tmp_path / "book.csv"

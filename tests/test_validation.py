@@ -142,7 +142,7 @@ def test_regime_series_labels_the_prior():
 
 
 def test_bull_only_edge_is_regime_confounded_and_not_validated():
-    """The KLAC safeguard: an edge that only works in friendly regimes must
+    """Regime-confound safeguard: an edge that only works in friendly regimes must
     not be promoted as a structural edge."""
     rng = np.random.default_rng(11)
     bars = 500

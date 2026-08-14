@@ -51,15 +51,15 @@ Nothing in this pipeline is a hand-authored strategy. Features are
 descriptive price states; the system discovers which states carry stable
 forward behaviour and only promotes slices that survive validation.
 
-## Lessons inherited from the Price system
+## Inherited safeguards
 
-Breakwater is a successor to the Price research lab and carries its
-hard-won operational lessons as first-class safeguards:
+Breakwater carries the hard-won operational lessons of its predecessor
+research system as first-class safeguards:
 
 - **Falling-knife entry guard.** Entries are compared against the latest
   price before opening: if the market has moved adversely beyond
   min(1.0 ATR, 2 percent) of the signal close, the entry is skipped.
-  This is the guard that Price built after systematically buying
+  This is the guard the predecessor system built after systematically buying
   declines with limits resting on the signal close.
 - **Winner-capture entry premium.** The reference entry is adjusted by
   min(0.25 ATR, 1 percent) in the trade's direction so modest
@@ -72,10 +72,10 @@ hard-won operational lessons as first-class safeguards:
   [1.5, 3.5] ATR. Percentiles, not in-sample optima.
 - **Side-aware regime gate.** Longs are blocked in a confirmed bear
   (SMA50 below SMA200) and shorts in a confirmed bull. Neutral and
-  unknown regimes never block. This mirrors Price's lesson that
+  unknown regimes never block. This mirrors the standing lesson that
   regime-conditional edges are tradeable only when the regime is
   detected and gated.
-- **Regime-stratified validation (the KLAC safeguard).** Chronological
+- **Regime-stratified validation.** Chronological
   walk-forward folds cannot distinguish a durable price-state edge from
   a regime artifact. Every slice is therefore also measured on its
   hostile-regime rows: bear rows for longs, bull rows for shorts. A
@@ -97,10 +97,10 @@ hard-won operational lessons as first-class safeguards:
   group, so two runs can never commit research and trading state to
   `main` at the same time.
 - **Research and paper execution are separate workflows**, following
-  Price's separation doctrine.
+  the separation doctrine.
 
-Deliberate deviations from Price's anti-drift rules, recorded honestly:
-Price forbade leverage entirely; Breakwater permits per-position
+Deliberate deviations from the predecessor system's anti-drift rules,
+recorded honestly: the predecessor system forbade leverage entirely; Breakwater permits per-position
 exchange leverage up to the mandate's cap (default 3x) on VALR Perps
 only, where the isolated-margin model bounds the worst-case loss of a
 position to its allocated margin.

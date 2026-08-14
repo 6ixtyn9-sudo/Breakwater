@@ -6,7 +6,7 @@ a time-stop closes the position, and the realised result is logged,
 journaled and fed back into the slice book so decay gates see honest paper
 results.
 
-Entry-side guards inherited from the Price lessons:
+Entry-side guards inherited from the predecessor system's lessons:
 
 - book-only: only slices present in the monitored book are paper-traded;
   unvalidated fallback signals (big-wave) are research-only;

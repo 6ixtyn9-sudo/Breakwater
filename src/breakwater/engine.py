@@ -487,7 +487,7 @@ class BreakwaterEngine:
     def health(self) -> dict:
         """Local one-glance heartbeat; performs no network calls.
 
-        Price lesson (green != live): a green workflow run is not proof
+        Standing lesson (green != live): a green workflow run is not proof
         that anything traded or that the book is alive. This digest
         surfaces universe freshness, book composition and paper activity
         from the committed state files.
