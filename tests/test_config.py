@@ -115,11 +115,20 @@ def test_credentials_with_internal_whitespace_fail(monkeypatch, tmp_path):
         get_settings()
 
 
-def test_swapped_key_and_secret_are_detected(monkeypatch, tmp_path):
+def test_hex_key_and_hex_secret_are_accepted(monkeypatch, tmp_path):
+    monkeypatch.setenv("BREAKWATER_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("VALR_API_KEY", "b9fb68df5485639d03c3171cf6e49b89e52fd78d5c313819b9c592b59c689f33")
+    monkeypatch.setenv("VALR_API_SECRET", "92b0171ae5a302a99245d2a59302334dbee80f0b663aa9d5862e64f9c267f0ed")
+    settings = get_settings()
+    assert settings.api_key.startswith("b9fb68df")
+    assert settings.api_secret.startswith("92b0171a")
+
+
+def test_identical_key_and_secret_are_rejected(monkeypatch, tmp_path):
     monkeypatch.setenv("BREAKWATER_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("VALR_API_KEY", "92b0171ae5a302a99245d2a59302334dbee80f0b663aa9d5862e64f9c267f0ed")
-    monkeypatch.setenv("VALR_API_SECRET", "some-uuid-key")
-    with pytest.raises(RuntimeError, match="swapped"):
+    monkeypatch.setenv("VALR_API_SECRET", "92b0171ae5a302a99245d2a59302334dbee80f0b663aa9d5862e64f9c267f0ed")
+    with pytest.raises(RuntimeError, match="identical"):
         get_settings()
 
 

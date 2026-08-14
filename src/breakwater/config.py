@@ -71,15 +71,6 @@ def _clean_credential(name: str, value: str) -> str:
             f"{name} contains internal whitespace or newlines; "
             "re-export it cleanly before uploading it"
         )
-    if (
-        name == "VALR_API_KEY"
-        and len(cleaned) == 64
-        and all(character in "0123456789abcdefABCDEF" for character in cleaned)
-    ):
-        raise RuntimeError(
-            "VALR_API_KEY looks like an API secret; "
-            "VALR_API_KEY and VALR_API_SECRET may be swapped"
-        )
     return cleaned
 
 
@@ -197,6 +188,10 @@ def get_settings() -> Settings:
     if api_key is not None:
         api_key = _clean_credential("VALR_API_KEY", api_key)
         api_secret = _clean_credential("VALR_API_SECRET", api_secret or "")
+        if api_key == api_secret:
+            raise RuntimeError(
+                "VALR_API_KEY and VALR_API_SECRET are identical; check the .env values"
+            )
     settings = Settings(
         api_key=api_key,
         api_secret=api_secret,

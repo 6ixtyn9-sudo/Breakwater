@@ -22,8 +22,9 @@ def main() -> int:
     )
     parser.add_argument("--max-pairs", type=int, default=12)
     args = parser.parse_args()
-    settings = get_settings()
+    settings = None
     try:
+        settings = get_settings()
         engine = BreakwaterEngine(settings)
         engine.startup_assertions()
         if args.command == "guardian":
@@ -36,10 +37,11 @@ def main() -> int:
             result = engine.shadow_scan(max_pairs=args.max_pairs)
     except Exception as exc:
         detail = f"{type(exc).__name__}: {exc}"
-        try:
-            append_status(settings.status_path, "failed", settings.mode, detail)
-        except Exception:
-            pass
+        if settings is not None:
+            try:
+                append_status(settings.status_path, "failed", settings.mode, detail)
+            except Exception:
+                pass
         print(json.dumps({"ok": False, "error": detail}, indent=2))
         return 2 if isinstance(exc, GuardianHalt) else 1
     print(json.dumps({"ok": True, "result": result}, indent=2, default=str))
