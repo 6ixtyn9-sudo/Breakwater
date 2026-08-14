@@ -3,7 +3,10 @@ from decimal import Decimal
 
 from breakwater.models import MarketSummary, PairSpec, PairType, PerpSymbol
 from breakwater.universe import (
+    UniverseRow,
+    UniverseSnapshot,
     ingest_universe,
+    is_legacy_universe,
     read_universe,
     write_universe,
 )
@@ -101,3 +104,22 @@ def test_universe_roundtrip(tmp_path):
 
 def test_missing_universe_file_reads_none(tmp_path):
     assert read_universe(tmp_path / "missing.csv") is None
+
+
+def test_legacy_universe_with_zero_perp_volumes_is_detected():
+    from breakwater.universe import ingest_universe
+
+    fresh = ingest_universe(FakeClient())
+    rows = []
+    for row in fresh.rows:
+        rows.append(UniverseRow(
+            symbol=row.symbol, kind=row.kind, base=row.base, quote=row.quote,
+            active=row.active, liquidity_rank=row.liquidity_rank,
+            quote_volume=Decimal(0) if row.kind == "PERP" else row.quote_volume,
+            mark_price=row.mark_price, max_leverage=row.max_leverage,
+            min_notional=row.min_notional, min_margin=row.min_margin,
+            as_of=row.as_of,
+        ))
+    legacy = UniverseSnapshot(rows=tuple(rows), as_of=fresh.as_of)
+    assert is_legacy_universe(legacy) is True
+    assert is_legacy_universe(fresh) is False

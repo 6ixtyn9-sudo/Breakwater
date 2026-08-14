@@ -37,6 +37,7 @@ BOOK_HEADERS = [
     "horizon_bars",
     "stop_atr_mult",
     "source",
+    "hostile_unproven",
 ]
 
 MONITORED = "monitored"
@@ -144,6 +145,7 @@ def sync_book(
             "horizon_bars": str(row.horizon_bars),
             "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
             "source": PROVENANCE_VALIDATED,
+            "hostile_unproven": "True" if row.hostile_unproven else "False",
         })
     carried = [
         row for row in existing_rows

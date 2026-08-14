@@ -43,6 +43,7 @@ VALIDATED_HEADERS = [
     "hostile_n",
     "hostile_mean_ret",
     "regime_confounded",
+    "hostile_unproven",
 ]
 
 MIN_ROWS_PER_FOLD = 20
@@ -73,6 +74,7 @@ class ValidatedSlice:
     hostile_n: int = 0
     hostile_mean_ret: float = 0.0
     regime_confounded: bool = False
+    hostile_unproven: bool = False
 
 
 def _fold_pass(returns: np.ndarray, side: str) -> bool:
@@ -107,20 +109,24 @@ def _attach_regime_labels(prepared: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(parts, ignore_index=True)
 
 
-def _hostile_regime_check(side: str, hostile_returns: np.ndarray) -> tuple[int, float, bool]:
-    """Return (hostile_n, hostile_mean, confounded).
+def _hostile_regime_check(
+    side: str, hostile_returns: np.ndarray
+) -> tuple[int, float, bool, bool]:
+    """Return (hostile_n, hostile_mean, confounded, unproven).
 
     A slice is confounded when it has at least HOSTILE_MIN_ROWS hostile rows
-    and the hostile-regime mean return opposes the slice's side: the edge
-    does not survive the regime it would lose money in.
+    and the hostile-regime mean return opposes the slice's side. When the
+    hostile evidence is too thin to test at all, the slice is marked
+    hostile_unproven: it may pass temporally, but the audit trail records
+    that its regime independence was never demonstrated.
     """
     hostile_n = len(hostile_returns)
     hostile_mean = float(np.mean(hostile_returns)) if hostile_n else 0.0
     if hostile_n < HOSTILE_MIN_ROWS:
-        return hostile_n, hostile_mean, False
+        return hostile_n, hostile_mean, False, True
     if side == "LONG":
-        return hostile_n, hostile_mean, hostile_mean <= 0
-    return hostile_n, hostile_mean, hostile_mean >= 0
+        return hostile_n, hostile_mean, hostile_mean <= 0, False
+    return hostile_n, hostile_mean, hostile_mean >= 0, False
 
 
 def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
@@ -182,7 +188,7 @@ def validate_slices(
         hostile_label = "bear" if candidate.side == "LONG" else "bull"
         hostile_mask = mask & (subset["regime_row"].to_numpy() == hostile_label)
         hostile_returns = subset.loc[hostile_mask, "fwd_ret"].to_numpy()
-        hostile_n, hostile_mean, confounded = _hostile_regime_check(
+        hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(
             candidate.side, hostile_returns
         )
 
@@ -206,6 +212,7 @@ def validate_slices(
             hostile_n=hostile_n,
             hostile_mean_ret=hostile_mean,
             regime_confounded=confounded,
+            hostile_unproven=hostile_unproven,
         ))
     return sorted(validated, key=lambda row: (not row.validated, -row.mean_ret_costadj))
 
@@ -216,12 +223,14 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         required = set(VALIDATED_HEADERS) - {
-            "stop_atr_mult", "hostile_n", "hostile_mean_ret", "regime_confounded"
+            "stop_atr_mult", "hostile_n", "hostile_mean_ret",
+            "regime_confounded", "hostile_unproven",
         }
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise RuntimeError("validated slices file has an unsupported schema")
         has_stop = "stop_atr_mult" in reader.fieldnames
         has_hostile = "hostile_n" in reader.fieldnames
+        has_unproven = "hostile_unproven" in reader.fieldnames
         return [
             ValidatedSlice(
                 slice_id=str(row["slice_id"]),
@@ -244,6 +253,9 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                 hostile_mean_ret=float(row["hostile_mean_ret"]) if has_hostile else 0.0,
                 regime_confounded=(
                     row["regime_confounded"] == "True" if has_hostile else False
+                ),
+                hostile_unproven=(
+                    row["hostile_unproven"] == "True" if has_unproven else False
                 ),
             )
             for row in reader

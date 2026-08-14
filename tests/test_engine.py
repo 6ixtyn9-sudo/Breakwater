@@ -132,6 +132,7 @@ class ResearchClient(PublicClient):
             pair="BTCUSDC", base_asset="BTC", max_leverage=Decimal("10"),
             min_notional=Decimal("11"), min_margin=Decimal("2"),
             mark_price=Decimal("1500"), price_decimal_places=6,
+            volume=Decimal("500000"), open_interest=Decimal("900"),
         )]
 
 
@@ -156,3 +157,22 @@ def test_health_reports_committed_state(tmp_path):
     assert report["book"]["rows"] == 0
     assert report["paper_open_positions"] == 0
 
+
+
+def test_universe_reingests_legacy_file_without_perp_volumes(tmp_path):
+    from breakwater.universe import UniverseRow, UniverseSnapshot, write_universe
+
+    legacy = UniverseSnapshot(
+        rows=(UniverseRow(
+            symbol="0GUSDC", kind="PERP", base="0G", quote="USDC", active=True,
+            liquidity_rank=1, quote_volume=Decimal(0), mark_price=Decimal("0.1"),
+            max_leverage=Decimal("3"), min_notional=Decimal("11"),
+            min_margin=Decimal("2"), as_of="2026-08-14T11:00:00+00:00",
+        ),),
+        as_of="2026-08-14T11:00:00+00:00",
+    )
+    engine = BreakwaterEngine(settings(tmp_path), client=ResearchClient())
+    write_universe(engine.settings.universe_path, legacy)
+    snapshot = engine._universe()
+    perps = [row for row in snapshot.rows if row.kind == "PERP"]
+    assert any(row.quote_volume > 0 for row in perps)

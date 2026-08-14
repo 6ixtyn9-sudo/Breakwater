@@ -229,3 +229,15 @@ def read_universe(path: Path) -> UniverseSnapshot | None:
             return UniverseSnapshot(rows=tuple(rows), as_of=rows[0].as_of if rows else "")
     except (OSError, KeyError, ValueError) as exc:
         raise RuntimeError(f"universe file is unreadable: {exc}") from exc
+
+
+def is_legacy_universe(snapshot: UniverseSnapshot) -> bool:
+    """Detect a universe file written before perp-volume capture.
+
+    Such files rank the perp universe alphabetically instead of by venue
+    volume, silently degrading research targets. Any snapshot whose perp
+    rows all carry zero volume is treated as legacy and re-ingested.
+    """
+    perps = [row for row in snapshot.rows if row.kind == "PERP"]
+    return bool(perps) and all(row.quote_volume == 0 for row in perps)
+

@@ -75,6 +75,29 @@ Deliberate deviations (recorded honestly):
 - The predecessor system's yfinance/Tiingo/Alpaca warehouse stack is replaced by VALR +
   Hyperliquid public feeds.
 
+## Incidents
+
+- 2026-08-14, stale-universe mask: the committed universe.csv predated the
+  perp-volume feature, so it ranked the perp universe alphabetically
+  (0GUSDC first) instead of by venue volume. The 7-day freshness gate did
+  not catch it because the file was recent. Every research run since had
+  therefore been studying the alphabetically-first perps rather than the
+  most liquid ones. Fix: is_legacy_universe() sentinel — any snapshot
+  whose perp rows all carry zero volume is re-ingested regardless of age.
+- 2026-08-14, dropped fix commit: an update of two commits was installed
+  by cherry-picking only the bundle tip; the fix beneath it never reached
+  main and the cron kept running without it. Caught from the operator's
+  terminal output. Fix: scripts/install_bundle.sh cherry-picks the full
+  range origin/main..bundle-head, and the installer is executed against a
+  simulated origin before shipping.
+- 2026-08-14, hostile-evidence blind spot: the regime-confound check
+  passed slices whose hostile regime was never observed (fewer than 20
+  hostile rows), silently. Such slices are now labelled hostile_unproven
+  in validation, carried into the book, and counted in research summaries
+  and the health digest.
+
+## Known placeholders
+
 Known placeholders and seams (do not tune without evidence):
 
 - SPOT_FEE_BPS 20 / PERP_FEE_BPS 26 are first-pass simulations; they must

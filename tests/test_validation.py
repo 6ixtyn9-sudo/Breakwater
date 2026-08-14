@@ -110,21 +110,22 @@ def test_read_validated_tolerates_legacy_schema_without_hostile_columns(tmp_path
 def test_hostile_regime_check_flags_regime_confounds():
     from breakwater.validation import _hostile_regime_check
 
-    hostile_n, hostile_mean, confounded = _hostile_regime_check(
+    hostile_n, hostile_mean, confounded, unproven = _hostile_regime_check(
         "LONG", np.full(30, -0.01)
     )
     assert hostile_n == 30
     assert hostile_mean < 0
     assert confounded is True
+    assert unproven is False
 
-    _, _, ok_long = _hostile_regime_check("LONG", np.full(30, 0.01))
+    _, _, ok_long, _ = _hostile_regime_check("LONG", np.full(30, 0.01))
     assert ok_long is False
 
-    _, _, short_confounded = _hostile_regime_check("SHORT", np.full(30, 0.01))
+    _, _, short_confounded, _ = _hostile_regime_check("SHORT", np.full(30, 0.01))
     assert short_confounded is True
 
-    _, _, small = _hostile_regime_check("LONG", np.full(5, -0.01))
-    assert small is False
+    _, _, _, small_unproven = _hostile_regime_check("LONG", np.full(5, -0.01))
+    assert small_unproven is True
 
 
 def test_regime_series_labels_the_prior():
@@ -184,3 +185,16 @@ def test_bull_only_edge_is_regime_confounded_and_not_validated():
     for row in confounded:
         assert row.validated is False
         assert row.hostile_n >= 20
+
+
+def test_thin_hostile_evidence_is_flagged_unproven_not_confounded():
+    """An edge whose hostile regime was never observed must be labelled
+    unproven, not silently treated as regime-independent."""
+    from breakwater.validation import _hostile_regime_check
+
+    hostile_n, hostile_mean, confounded, unproven = _hostile_regime_check(
+        "LONG", np.full(5, -0.01)
+    )
+    assert hostile_n == 5
+    assert confounded is False
+    assert unproven is True

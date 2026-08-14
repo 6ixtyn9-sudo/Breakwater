@@ -36,6 +36,7 @@ from breakwater.strategy import detect_big_wave
 from breakwater.universe import (
     UniverseSnapshot,
     ingest_universe,
+    is_legacy_universe,
     read_universe,
     write_universe,
 )
@@ -82,7 +83,7 @@ class BreakwaterEngine:
 
     def _universe(self) -> UniverseSnapshot:
         snapshot = read_universe(self.settings.universe_path)
-        if snapshot is not None:
+        if snapshot is not None and not is_legacy_universe(snapshot):
             try:
                 as_of = datetime.fromisoformat(snapshot.as_of)
                 if datetime.now(timezone.utc) - as_of < timedelta(days=7):
@@ -474,6 +475,9 @@ class BreakwaterEngine:
             "regime_confounded_slices": len(
                 [row for row in validated if row.regime_confounded]
             ),
+            "hostile_unproven_slices": len(
+                [row for row in validated if row.hostile_unproven]
+            ),
             "book": book_summary,
         }
         append_status(
@@ -520,6 +524,10 @@ class BreakwaterEngine:
             "rows": len(book_rows),
             "statuses": dict(Counter(row.get("status") for row in book_rows)),
             "kinds": dict(Counter(row.get("kind") for row in book_rows)),
+            "sides": dict(Counter(row.get("side") for row in book_rows)),
+            "hostile_unproven": sum(
+                1 for row in book_rows if row.get("hostile_unproven") == "True"
+            ),
         }
         positions = read_positions(
             self.settings.data_dir / "research" / "paper_positions.json"
