@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from breakwater.valr import ValrClient, ValrError
@@ -40,12 +42,18 @@ def test_perp_symbol_info_parses_venue_payload():
         "minMarginAmount": "2",
         "markPrice": "1500",
         "priceDecimalPlaces": 6,
+        "volume": "500000",
+        "openInterest": "900",
+        "fundingRate": "0.00001",
     }]})])
     symbols = client.perps_symbol_info()
     assert len(symbols) == 1
     assert symbols[0].pair == "BTCUSDC"
     assert symbols[0].min_notional == 11
     assert symbols[0].max_leverage == 10
+    assert symbols[0].volume == 500000
+    assert symbols[0].open_interest == 900
+    assert symbols[0].funding_rate == Decimal("0.00001")
 
 
 def test_perp_candles_map_tolerant_schema():

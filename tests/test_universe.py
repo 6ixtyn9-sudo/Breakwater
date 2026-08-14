@@ -61,6 +61,9 @@ class FakeClient:
                 min_margin=Decimal("2"),
                 mark_price=Decimal("1500"),
                 price_decimal_places=6,
+                volume=Decimal("900000"),
+                open_interest=Decimal("1200"),
+                funding_rate=Decimal("0.00001"),
             ),
             PerpSymbol(
                 pair="ETHUSDC",
@@ -70,6 +73,9 @@ class FakeClient:
                 min_margin=Decimal("2"),
                 mark_price=Decimal("90"),
                 price_decimal_places=6,
+                volume=Decimal("400000"),
+                open_interest=Decimal("800"),
+                funding_rate=Decimal("0.00002"),
             ),
         ]
 

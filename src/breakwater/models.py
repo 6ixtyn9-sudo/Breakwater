@@ -142,6 +142,9 @@ class PerpSymbol:
     min_margin: Decimal
     mark_price: Decimal
     price_decimal_places: int
+    volume: Decimal = Decimal(0)
+    open_interest: Decimal = Decimal(0)
+    funding_rate: Decimal = Decimal(0)
 
     @classmethod
     def from_payload(cls, row: dict) -> "PerpSymbol":
@@ -156,6 +159,9 @@ class PerpSymbol:
             min_margin=D(row.get("minMarginAmount") or 0, field="minMarginAmount"),
             mark_price=D(row.get("markPrice") or 0, field="markPrice"),
             price_decimal_places=int(row.get("priceDecimalPlaces") or 6),
+            volume=D(row.get("volume") or 0, field="volume"),
+            open_interest=D(row.get("openInterest") or 0, field="openInterest"),
+            funding_rate=D(row.get("fundingRate") or 0, field="fundingRate"),
         )
 
 

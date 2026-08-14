@@ -80,10 +80,6 @@ class UniverseSnapshot:
         return picked
 
 
-def _volume_sort_key(row: UniverseRow) -> Decimal:
-    return row.quote_volume
-
-
 def ingest_universe(client: ValrClient) -> UniverseSnapshot:
     as_of = datetime.now(timezone.utc).isoformat()
     spot_rows: list[UniverseRow] = []
@@ -151,14 +147,14 @@ def ingest_universe(client: ValrClient) -> UniverseSnapshot:
             quote="USDC",
             active=True,
             liquidity_rank=0,
-            quote_volume=Decimal(0),
+            quote_volume=symbol.volume,
             mark_price=symbol.mark_price,
             max_leverage=symbol.max_leverage,
             min_notional=symbol.min_notional,
             min_margin=symbol.min_margin,
             as_of=as_of,
         ))
-    perp_rows.sort(key=lambda row: row.symbol)
+    perp_rows.sort(key=lambda row: (-row.quote_volume, row.symbol))
     for index, row in enumerate(perp_rows, start=1):
         perp_rows[index - 1] = UniverseRow(
             symbol=row.symbol,
