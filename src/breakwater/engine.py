@@ -148,6 +148,7 @@ class BreakwaterEngine:
             perp_error = f"{type(exc).__name__}: {exc}"
             if self.settings.mode == "live":
                 raise GuardianHalt(f"perp position state is unverifiable: {exc}") from exc
+        perps_api = "available" if perp_error is None else "unavailable"
 
         valuator = EquityValuator(self.client, specs)
         equity_zar = valuator.equity_zar(balances, positions)
@@ -179,6 +180,7 @@ class BreakwaterEngine:
             "high_water_zar": str(high_water.quantize(Decimal("0.01"))),
             "positions": len(positions),
             "perp_positions": len(perp_positions),
+            "perps_api": perps_api,
             "perp_state_error": perp_error,
             "open_orders": len(open_orders),
             "exposure_slots": len(exposure_symbols),

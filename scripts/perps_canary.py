@@ -106,6 +106,12 @@ def main() -> int:
     raw_probe(client, "settings", "/simple-futures/settings")
     raw_probe(client, "address", "/simple-futures/address")
     print("---")
+    print(
+        "Verdict: if the account routes above return 401 code -93 with a valid "
+        "key, VALR Perps trading is currently web-session-only and is not yet "
+        "available to API keys. Breakwater records perps_api on every guardian "
+        "run and will detect automatically when this changes."
+    )
     print("No account writes were performed.")
     return 0
 

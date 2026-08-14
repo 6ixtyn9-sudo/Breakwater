@@ -57,15 +57,17 @@ forward behaviour and only promotes slices that survive validation.
   needs no VALR credentials, which is how the VALR web application
   sources it as well. Builder-listed pairs (xyz: prefixed) are skipped
   until their coin mapping is published. Research, shadow signals,
-  positions and paper trading are supported. Live perp entry is
-  deliberately code-locked: the account endpoints (position-history,
-  settings, order, tp-sl, leverage) mirror the web application's
-  private routes, and execution will only be enabled once those routes
-  are proven to accept API-key authentication and the take-profit and
-  stop-loss contracts have passed an authenticated canary. Note that
-  order execution, liquidation and mark prices are provider-managed,
-  TPSL execution is not guaranteed, and position data synchronisation
-  can lag.
+  positions and paper trading are supported. As of 2026-08-14, VALR's
+  perps trading routes are authenticated by web session only: they
+  return HTTP 401 code -93 to API keys, so programmatic perp trading
+  is not yet possible through the venue. Breakwater probes this on
+  every guardian run and records `perps_api` in the result, so the
+  moment VALR opens the product to API keys the system will report it
+  automatically. Live perp entry remains code-locked regardless, until
+  the take-profit and stop-loss contracts have passed an authenticated
+  canary. Note that order execution, liquidation and mark prices are
+  provider-managed, TPSL execution is not guaranteed, and position data
+  synchronisation can lag.
 - VALR-native sub-account futures are not targeted by this system.
 
 ## Capital mandate
