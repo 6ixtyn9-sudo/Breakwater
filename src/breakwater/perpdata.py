@@ -1,0 +1,95 @@
+"""Hyperliquid public market data for VALR Perps pairs.
+
+VALR Perps executes on Hyperliquid. Market data such as candles is served
+by Hyperliquid's public info API and needs no VALR credentials, which the
+VALR web application itself relies on. Pairs listed by builder venues
+(xyz: prefixed) are skipped until their coin mapping is known.
+"""
+
+from __future__ import annotations
+
+import time
+from datetime import datetime, timezone
+from decimal import Decimal
+
+import requests
+
+from breakwater.models import Candle
+
+HYPERLIQUID_INFO_URL = "https://api.hyperliquid.xyz/info"
+
+INTERVAL_SECONDS = {
+    "1m": 60,
+    "5m": 300,
+    "15m": 900,
+    "30m": 1800,
+    "1h": 3600,
+    "4h": 14400,
+    "1d": 86400,
+}
+
+
+def pair_to_coin(pair: str) -> str | None:
+    symbol = str(pair).upper().strip()
+    if ":" in symbol or not symbol.endswith("USDC"):
+        return None
+    coin = symbol[:-4]
+    return coin or None
+
+
+def fetch_perp_candles_for_pair(pair: str, **kwargs) -> list[Candle]:
+    coin = pair_to_coin(pair)
+    if coin is None:
+        raise ValueError(
+            f"{pair} has no Hyperliquid coin mapping and cannot be researched yet"
+        )
+    return fetch_perp_candles(coin, **kwargs)
+
+
+def fetch_perp_candles(
+    coin: str,
+    *,
+    interval: str = "1h",
+    count: int = 220,
+    session: requests.Session | None = None,
+) -> list[Candle]:
+    if interval not in INTERVAL_SECONDS:
+        raise ValueError("unsupported perp candle interval")
+    if count < 2 or count > 5000:
+        raise ValueError("perp candle count must be between 2 and 5000")
+    period_ms = INTERVAL_SECONDS[interval] * 1000
+    end_ms = int(time.time() * 1000)
+    start_ms = end_ms - period_ms * count
+    payload = {
+        "type": "candleSnapshot",
+        "req": {
+            "coin": coin.upper(),
+            "interval": interval,
+            "startTime": start_ms,
+            "endTime": end_ms,
+        },
+    }
+    requester = session or requests
+    response = requester.post(
+        HYPERLIQUID_INFO_URL, json=payload, timeout=20
+    )
+    response.raise_for_status()
+    rows = response.json()
+    if not isinstance(rows, list):
+        raise RuntimeError("hyperliquid candle response is malformed")
+    candles = []
+    for row in rows:
+        try:
+            candles.append(Candle(
+                pair=f"{coin.upper()}USDC",
+                period_seconds=INTERVAL_SECONDS[interval],
+                start=datetime.fromtimestamp(int(row["t"]) / 1000, tz=timezone.utc),
+                open=Decimal(str(row["o"])),
+                high=Decimal(str(row["h"])),
+                low=Decimal(str(row["l"])),
+                close=Decimal(str(row["c"])),
+                volume=Decimal(str(row["v"])),
+            ))
+        except (KeyError, TypeError, ValueError):
+            raise RuntimeError("hyperliquid candle schema is unrecognized")
+    return candles

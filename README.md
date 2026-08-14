@@ -51,13 +51,21 @@ forward behaviour and only promotes slices that survive validation.
 ## Instruments
 
 - **VALR spot**: execution-capable after promotion, long side only.
-- **VALR Perps**: the USDC-quoted perpetual product on the main account.
-  Research, shadow signals, positions and paper trading are supported.
-  Live perp entry is deliberately code-locked until the order placement
-  and take-profit/stop-loss contracts have passed an authenticated canary.
-  Note that VALR Perps executes through third-party providers: order
-  execution, liquidation and mark prices are provider-managed, TPSL
-  execution is not guaranteed, and position data synchronisation can lag.
+- **VALR Perps**: the USDC-quoted perpetual product on the main account,
+  executing on Hyperliquid. Perp market data (candles, mark prices,
+  volume, funding) is sourced from the Hyperliquid public info API and
+  needs no VALR credentials, which is how the VALR web application
+  sources it as well. Builder-listed pairs (xyz: prefixed) are skipped
+  until their coin mapping is published. Research, shadow signals,
+  positions and paper trading are supported. Live perp entry is
+  deliberately code-locked: the account endpoints (position-history,
+  settings, order, tp-sl, leverage) mirror the web application's
+  private routes, and execution will only be enabled once those routes
+  are proven to accept API-key authentication and the take-profit and
+  stop-loss contracts have passed an authenticated canary. Note that
+  order execution, liquidation and mark prices are provider-managed,
+  TPSL execution is not guaranteed, and position data synchronisation
+  can lag.
 - VALR-native sub-account futures are not targeted by this system.
 
 ## Capital mandate
@@ -178,9 +186,9 @@ set +a
 PYTHONPATH=src python scripts/perps_canary.py
 ```
 
-The output shows the key permissions VALR reports and the exact response
-of each perp endpoint, which is what the system verifies before any live
-path is considered.
+The output shows Hyperliquid candle availability, the top perps by volume,
+the key permissions VALR reports, and the exact response of each perp
+account endpoint as used by the VALR web application.
 
 ## GitHub configuration
 

@@ -56,23 +56,7 @@ def test_perp_symbol_info_parses_venue_payload():
     assert symbols[0].funding_rate == Decimal("0.00001")
 
 
-def test_perp_candles_map_tolerant_schema():
-    client = client_with([Response(payload=[
-        {"t": 1786705200000, "o": "10", "h": "11", "l": "9.5", "c": "10.5", "v": "100"}
-    ])])
-    candles = client.perps_candles("BTCUSDC")
-    assert len(candles) == 1
-    assert candles[0].pair == "BTCUSDC"
-    assert str(candles[0].close) == "10.5"
-
-
-def test_perp_candles_fail_closed_on_unknown_schema():
-    client = client_with([Response(payload=[{"something": "else"}])])
-    with pytest.raises(ValrError, match="schema"):
-        client.perps_candles("BTCUSDC")
-
-
-def test_perp_positions_normalize_venue_fields():
+def test_perp_position_history_normalizes_venue_fields():
     client = client_with([Response(payload=[{
         "pair": "BTCUSDC",
         "side": "LONG",
@@ -87,14 +71,27 @@ def test_perp_positions_normalize_venue_fields():
     assert positions[0]["margin"] == 5
 
 
-def test_perp_positions_fail_closed_on_unknown_schema():
+def test_perp_position_history_fails_closed_on_unknown_schema():
     client = client_with([Response(payload=[{"mystery": True}])])
     with pytest.raises(ValrError, match="schema"):
         client.perps_positions()
 
 
-def test_perp_endpoints_require_authentication():
-    session = Session([Response(status=401, payload={"code": -93, "message": "Unauthorized"})])
-    client = ValrClient("key", "secret", session=session)
-    with pytest.raises(Exception):
-        client.perps_orders()
+def test_perp_account_endpoints_use_app_paths():
+    client = client_with([
+        Response(payload=[]),
+        Response(payload=[]),
+        Response(payload={}),
+        Response(payload={}),
+    ])
+    assert client.perps_position_history() == []
+    assert client.perps_position_timeline() == []
+    assert client.perps_settings() == {}
+    assert client.perps_address() == {}
+    paths = [call[0][1] for call in client.session.calls]
+    assert paths == [
+        "https://api.valr.com/simple-futures/position-history",
+        "https://api.valr.com/simple-futures/position-timeline",
+        "https://api.valr.com/simple-futures/settings",
+        "https://api.valr.com/simple-futures/address",
+    ]

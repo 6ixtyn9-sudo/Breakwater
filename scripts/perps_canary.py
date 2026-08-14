@@ -2,9 +2,10 @@
 """Authenticated VALR Perps connectivity canary.
 
 Reads VALR_API_KEY and VALR_API_SECRET from the environment or .env and
-probes every read endpoint Breakwater uses, printing status codes and
-short response snippets. It performs no writes. Run it locally after
-creating a key to verify permissions and endpoint behaviour in one step.
+probes the endpoints the VALR web application itself uses, printing
+status codes and short response snippets. It performs no writes. Perp
+market data comes from the Hyperliquid public info API and needs no
+VALR credentials at all.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import requests  # noqa: E402
 
 from breakwater.config import get_settings  # noqa: E402
+from breakwater.perpdata import fetch_perp_candles_for_pair  # noqa: E402
 from breakwater.valr import ValrClient, sign_request  # noqa: E402
 
 BASE = "https://api.valr.com"
@@ -62,14 +64,30 @@ def raw_probe(client: ValrClient, label: str, path: str, query: str = "") -> Non
 
 def main() -> int:
     settings = get_settings()
-    if not settings.has_credentials:
-        print("No VALR_API_KEY / VALR_API_SECRET found in the environment or .env")
-        return 1
     client = ValrClient(
         api_key=settings.api_key,
         api_secret=settings.api_secret,
         allow_writes=False,
     )
+    print("Perp market data (public, no VALR credentials needed):")
+    try:
+        candles = fetch_perp_candles_for_pair("BTCUSDC", interval="1h", count=3)
+        print(f"OK    hyperliquid candles BTCUSDC: {len(candles)} rows, last close={candles[-1].close}")
+    except Exception as exc:
+        print(f"FAIL  hyperliquid candles BTCUSDC: {type(exc).__name__}: {exc}")
+    print("---")
+    symbols = client.perps_symbol_info()
+    print(f"VALR perps symbol-info: {len(symbols)} symbols (public)")
+    top = sorted(symbols, key=lambda s: (-s.volume, -s.open_interest))[:10]
+    for rank, symbol in enumerate(top, start=1):
+        print(
+            f"  {rank:>2} {symbol.pair:<14} mark={symbol.mark_price:<12} "
+            f"vol={symbol.volume:<14} lev={symbol.max_leverage}x"
+        )
+    print("---")
+    if not settings.has_credentials:
+        print("No VALR credentials found: skipping account-scope probes.")
+        return 0
     print(
         f"Key loaded: {len(settings.api_key)} chars, starts with "
         f"{settings.api_key[:4]}... (secret hidden)"
@@ -77,36 +95,16 @@ def main() -> int:
     print("---")
     probe(client, "GET /v1/account/api-keys/current (permissions)", client.current_api_key)
     print("---")
-    symbols = client.perps_symbol_info()
-    print(f"Perps symbol-info: {len(symbols)} symbols (public)")
-    top = sorted(symbols, key=lambda s: (-s.volume, -s.open_interest))[:10]
-    for rank, symbol in enumerate(top, start=1):
-        print(
-            f"  {rank:>2} {symbol.pair:<14} mark={symbol.mark_price:<12} "
-            f"vol={symbol.volume:<14} oi={symbol.open_interest:<14} "
-            f"lev={symbol.max_leverage}x funding={symbol.funding_rate}"
-        )
-    print("---")
-    probe(client, "GET /simple-futures/status", client.perps_status)
-    probe(client, "GET /simple-futures/ticker", client.perps_ticker)
-    probe(client, "GET /simple-futures/candles BTCUSDC", client.perps_candles, "BTCUSDC")
-    probe(client, "GET /simple-futures/positions", client.perps_positions)
-    probe(client, "GET /simple-futures/orders", client.perps_orders)
-    probe(client, "GET /simple-futures/account", client.perps_account)
+    print("VALR perps account endpoints (as used by the VALR web app):")
+    probe(client, "GET /simple-futures/position-history", client.perps_position_history)
+    probe(client, "GET /simple-futures/position-timeline", client.perps_position_timeline)
+    probe(client, "GET /simple-futures/settings", client.perps_settings)
+    probe(client, "GET /simple-futures/address", client.perps_address)
     print("---")
     print("Raw probes (signature over the path, query excluded):")
-    raw_probe(client, "symbol-info/BTCUSDC", "/simple-futures/symbol-info/BTCUSDC")
-    raw_probe(client, "candles interval=1h", "/simple-futures/candles/BTCUSDC", "?interval=1h&limit=5")
-    raw_probe(client, "candles no query", "/simple-futures/candles/BTCUSDC")
-    raw_probe(client, "klines interval=1h", "/simple-futures/klines/BTCUSDC", "?interval=1h&limit=5")
-    raw_probe(client, "orderbook", "/simple-futures/orderbook/BTCUSDC")
-    raw_probe(client, "trades", "/simple-futures/trades/BTCUSDC")
-    raw_probe(client, "funding", "/simple-futures/funding/BTCUSDC")
-    raw_probe(client, "mark-price", "/simple-futures/mark-price/BTCUSDC")
-    raw_probe(client, "positions", "/simple-futures/positions")
-    raw_probe(client, "orders", "/simple-futures/orders")
-    raw_probe(client, "account", "/simple-futures/account")
-    raw_probe(client, "margin/account", "/simple-futures/margin/account")
+    raw_probe(client, "position-history", "/simple-futures/position-history")
+    raw_probe(client, "settings", "/simple-futures/settings")
+    raw_probe(client, "address", "/simple-futures/address")
     print("---")
     print("No account writes were performed.")
     return 0

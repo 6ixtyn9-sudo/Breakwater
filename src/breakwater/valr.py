@@ -7,7 +7,6 @@ import hmac
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 from urllib.parse import urlencode
@@ -313,49 +312,32 @@ class ValrClient:
             raise ValrError("VALR perps symbol-info response is malformed")
         return [PerpSymbol.from_payload(row) for row in rows["symbols"]]
 
-    def perps_candles(
-        self, pair: str, *, interval: str = "1h", limit: int = 220
-    ) -> list[Candle]:
-        query = urlencode({"interval": interval, "limit": limit})
-        rows = self._request(
-            "GET", f"/simple-futures/candles/{pair.upper()}?{query}", authenticated=True
-        )
+    def perps_position_history(self) -> list[dict]:
+        rows = self._request("GET", "/simple-futures/position-history", authenticated=True)
         if not isinstance(rows, list):
-            raise ValrError("VALR perps candles response is malformed")
-        candles = []
-        for row in rows:
-            candles.append(_perp_candle(row, pair.upper(), interval))
-        return candles
-
-    def perps_positions(self) -> list[dict]:
-        rows = self._request("GET", "/simple-futures/positions", authenticated=True)
-        if not isinstance(rows, list):
-            raise ValrError("VALR perps positions response is malformed")
+            raise ValrError("VALR perps position-history response is malformed")
         return [_perp_position(row) for row in rows]
 
-    def perps_orders(self) -> list[dict]:
-        rows = self._request("GET", "/simple-futures/orders", authenticated=True)
+    def perps_position_timeline(self) -> list[dict]:
+        rows = self._request("GET", "/simple-futures/position-timeline", authenticated=True)
         if not isinstance(rows, list):
-            raise ValrError("VALR perps orders response is malformed")
-        return [_perp_order(row) for row in rows]
-
-    def perps_account(self) -> dict:
-        row = self._request("GET", "/simple-futures/account", authenticated=True)
-        if not isinstance(row, dict):
-            raise ValrError("VALR perps account response is malformed")
-        return row
-
-    def perps_ticker(self) -> list[dict]:
-        rows = self._request("GET", "/simple-futures/ticker", authenticated=True)
-        if not isinstance(rows, list):
-            raise ValrError("VALR perps ticker response is malformed")
+            raise ValrError("VALR perps position-timeline response is malformed")
         return rows
 
-    def perps_status(self) -> dict:
-        row = self._request("GET", "/simple-futures/status", authenticated=True)
+    def perps_settings(self) -> dict:
+        row = self._request("GET", "/simple-futures/settings", authenticated=True)
         if not isinstance(row, dict):
-            raise ValrError("VALR perps status response is malformed")
+            raise ValrError("VALR perps settings response is malformed")
         return row
+
+    def perps_address(self) -> dict:
+        row = self._request("GET", "/simple-futures/address", authenticated=True)
+        if not isinstance(row, dict):
+            raise ValrError("VALR perps address response is malformed")
+        return row
+
+    def perps_positions(self) -> list[dict]:
+        return self.perps_position_history()
 
 
 def _first(row: dict, *names: str):
@@ -367,38 +349,6 @@ def _first(row: dict, *names: str):
 
 def _number(value, field: str) -> Decimal:
     return Decimal(str(value))
-
-
-def _perp_time(row: dict, pair: str, interval: str) -> datetime:
-    value = _first(row, "t", "ts", "time", "timestamp", "openTime", "startTime")
-    if value is None:
-        raise ValrError(f"VALR perps candle for {pair} has no timestamp")
-    text = str(value)
-    try:
-        epoch_ms = int(text)
-        if epoch_ms < 10_000_000_000:
-            epoch_ms *= 1000
-        return datetime.fromtimestamp(epoch_ms / 1000, tz=timezone.utc)
-    except ValueError:
-        return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc)
-
-
-def _perp_candle(row: dict, pair: str, interval: str) -> Candle:
-    close = _first(row, "c", "close")
-    if close is None:
-        raise ValrError(
-            "VALR perps candle schema is unrecognized; update the client mapping"
-        )
-    return Candle(
-        pair=pair,
-        period_seconds={"1h": 3600, "4h": 14400, "1d": 86400}.get(interval, 3600),
-        start=_perp_time(row, pair, interval),
-        open=_number(_first(row, "o", "open") or close, "open"),
-        high=_number(_first(row, "h", "high") or close, "high"),
-        low=_number(_first(row, "l", "low") or close, "low"),
-        close=_number(close, "close"),
-        volume=_number(_first(row, "v", "volume") or 0, "volume"),
-    )
 
 
 def _perp_position(row: dict) -> dict:
@@ -423,20 +373,4 @@ def _perp_position(row: dict) -> dict:
             _first(row, "unrealisedPnl", "unrealizedPnl", "uPnl") or 0, "pnl"
         ),
         "margin": _number(_first(row, "margin", "marginUsed") or 0, "margin"),
-    }
-
-
-def _perp_order(row: dict) -> dict:
-    pair = str(_first(row, "pair", "symbol", "currencyPair", "coin") or "")
-    if not pair:
-        raise ValrError(
-            "VALR perps order schema is unrecognized; update the client mapping"
-        )
-    return {
-        "pair": pair.upper(),
-        "order_id": str(_first(row, "orderId", "id") or ""),
-        "side": str(_first(row, "side", "direction") or "").upper(),
-        "quantity": _number(_first(row, "quantity", "size", "amount") or 0, "quantity"),
-        "price": _number(_first(row, "price", "limitPrice") or 0, "price"),
-        "status": str(_first(row, "status", "state") or "").upper(),
     }

@@ -26,6 +26,7 @@ from breakwater.market import (
 from breakwater.models import Candle, Lifecycle, PairType
 from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
 from breakwater.paper_trade import run_paper_cycle
+from breakwater.perpdata import fetch_perp_candles_for_pair
 from breakwater.promotion import PromotionRegistry
 from breakwater.research_lifecycle import read_book
 from breakwater.risk import RiskManager
@@ -93,7 +94,7 @@ class BreakwaterEngine:
         for pair, kind in targets:
             try:
                 if kind == "PERP":
-                    candles = self.client.perps_candles(pair)
+                    candles = fetch_perp_candles_for_pair(pair)
                 else:
                     candles = fetch_recent_candles(self.client, pair, server_time)
                 frame = candle_frame(candles)
