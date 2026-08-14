@@ -1,0 +1,7 @@
+pandas==2.2.3
+numpy==2.2.6
+python-dotenv==1.2.2
+requests==2.33.0
+pytest==9.0.3
+ruff==0.16.3
+PyYAML==6.0.3

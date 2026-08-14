@@ -1,0 +1,61 @@
+name: Breakwater Guardian
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: breakwater-operational
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  guardian:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements.lock
+
+      - name: Restore transactional cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: localdata/breakwater.db
+          key: breakwater-ledger-${{ github.run_id }}
+          restore-keys: |
+            breakwater-ledger-
+
+      - name: Run guarded operational pass
+        env:
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+          VALR_SUBACCOUNT_ID: ${{ secrets.VALR_SUBACCOUNT_ID }}
+          BREAKWATER_MODE: ${{ vars.BREAKWATER_MODE || 'readonly' }}
+          BREAKWATER_LIVE_ACK: ${{ secrets.BREAKWATER_LIVE_ACK }}
+        run: PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
+
+      - name: Persist bounded state
+        if: always()
+        run: bash scripts/commit_state.sh "guardian"
+
+      - name: Save transactional cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: localdata/breakwater.db
+          key: breakwater-ledger-${{ github.run_id }}
