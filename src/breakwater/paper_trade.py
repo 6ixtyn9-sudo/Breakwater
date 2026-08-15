@@ -34,6 +34,11 @@ Horizon alignment (IMPORTANT):
 If a position carries `horizon_bars` (>0), paper trading will exit at the bar
 close once that many bars have elapsed (while still honoring the stop intrabar).
 This aligns paper execution with the horizon the slice edge was researched on.
+
+Migration (IMPORTANT):
+Legacy open positions may predate `horizon_bars` persistence. Each cycle we
+load `horizon_bars` from the monitored book (book_path) and backfill any
+positions missing it (or carrying 0), so horizon exits actually engage.
 """
 
 from __future__ import annotations
@@ -46,7 +51,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from breakwater.monitor import SliceSignal, regime_blocks
+from breakwater.monitor import SliceSignal, regime_blocks, regime_of
 from breakwater.research_lifecycle import apply_signal_feedback
 
 
@@ -76,7 +81,9 @@ MISSING_BARS_EXIT = 24
 SPOT_FEE_BPS = Decimal("20")
 PERP_FEE_BPS = Decimal("26")
 MAX_PAPER_POSITIONS = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS", "6"))
-MAX_PAPER_POSITIONS_PER_KIND = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3"))
+MAX_PAPER_POSITIONS_PER_KIND = int(
+    os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3")
+)
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
@@ -286,6 +293,52 @@ def _coerce_int(value, default: int = 0) -> int:
         return default
 
 
+def _load_book_horizon_map(book_path: Path) -> dict[str, int]:
+    """Load slice_id -> horizon_bars from monitored_slices.csv (book_path)."""
+    if not book_path or not book_path.exists():
+        return {}
+    try:
+        with book_path.open(newline="") as handle:
+            reader = csv.DictReader(handle)
+            if not reader.fieldnames:
+                return {}
+            out: dict[str, int] = {}
+            for row in reader:
+                sid = row.get("slice_id")
+                if not sid:
+                    continue
+                hb = _coerce_int(row.get("horizon_bars"), 0)
+                if hb > 0:
+                    out[str(sid)] = hb
+            return out
+    except OSError:
+        return {}
+
+
+def _migrate_legacy_positions(
+    open_positions: list[dict],
+    *,
+    horizon_map: dict[str, int],
+    frames: dict,
+) -> None:
+    """Backfill horizon_bars/regime on old positions (in-place)."""
+    for position in open_positions:
+        sid = str(position.get("slice_id") or "")
+        hb_existing = _coerce_int(position.get("horizon_bars"), 0)
+
+        if hb_existing <= 0 and sid:
+            hb_book = horizon_map.get(sid, 0)
+            if hb_book > 0:
+                position["horizon_bars"] = str(hb_book)
+
+        if not position.get("regime"):
+            frame = frames.get(str(position.get("pair") or "").upper())
+            if frame is not None and not frame.empty:
+                position["regime"] = regime_of(frame)
+            else:
+                position["regime"] = "unknown"
+
+
 def run_paper_cycle(
     *,
     signals: list[SliceSignal],
@@ -302,6 +355,12 @@ def run_paper_cycle(
 ) -> dict:
     closed_rows: list[dict] = []
     open_positions = read_positions(positions_path)
+
+    # Migration: ensure legacy positions pick up book horizon/regime so horizon exits engage.
+    book_horizon_map = _load_book_horizon_map(book_path)
+    if open_positions:
+        _migrate_legacy_positions(open_positions, horizon_map=book_horizon_map, frames=frames)
+
     surviving = []
 
     # 1) Mark-to-market and close eligible existing positions
@@ -312,7 +371,7 @@ def run_paper_cycle(
         stop = Decimal(str(position["stop_price"]))
         notional_zar = Decimal(str(position["notional_zar"]))
 
-        # NEW: horizon & regime persist for audit + correct exits
+        # horizon & regime persist for audit + correct exits
         horizon_bars = _coerce_int(position.get("horizon_bars"), 0)
         if horizon_bars < 0:
             horizon_bars = 0
@@ -406,7 +465,11 @@ def run_paper_cycle(
         if exit_price is None and horizon_bars > 0 and bars_held >= horizon_bars:
             exit_price = close
             exit_reason = "horizon"
-            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+            outcome = (
+                "win"
+                if (close > entry if side == "BUY" else close < entry)
+                else "loss"
+            )
 
         # Time-stop (legacy only; option to ignore once trailing is active).
         trail_active = _coerce_bool(position.get("trail_active"))
@@ -418,7 +481,11 @@ def run_paper_cycle(
         ):
             exit_price = close
             exit_reason = "time_stop"
-            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+            outcome = (
+                "win"
+                if (close > entry if side == "BUY" else close < entry)
+                else "loss"
+            )
 
         if exit_price is None:
             # --- Trailing update happens ONLY after the bar closes (no intrabar lookahead). ---
@@ -630,6 +697,11 @@ def run_paper_cycle(
             else reference + risk_distance
         )
 
+        # Horizon selection: prefer signal.horizon_bars if it exists, else fall back to book.
+        signal_horizon = _coerce_int(getattr(signal, "horizon_bars", 0), 0)
+        if signal_horizon <= 0:
+            signal_horizon = book_horizon_map.get(signal.slice_id, 0)
+
         surviving.append(
             {
                 "signal_id": signal.signal_id,
@@ -647,8 +719,7 @@ def run_paper_cycle(
                 "bars_held": "0",
                 "missing_bars": "0",
                 "entry_guard": guard,
-                # NEW: persist horizon + regime for correct exits & logging
-                "horizon_bars": str(int(getattr(signal, "horizon_bars", 0) or 0)),
+                "horizon_bars": str(int(signal_horizon or 0)),
                 "regime": str(getattr(signal, "regime", "") or ""),
             }
         )
