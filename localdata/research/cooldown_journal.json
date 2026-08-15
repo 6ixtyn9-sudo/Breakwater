@@ -13,5 +13,13 @@
     "signal_id": "023901bea7581898",
     "slice_id": "feat_ext_vs_ma_50:2:SHORT",
     "stopped_at": "2026-08-14T18:15:22+00:00"
+  },
+  {
+    "pair": "AVAXZAR",
+    "pnl_zar": "-4.3542",
+    "reason": "stop",
+    "signal_id": "22d6bb99868344aa",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT",
+    "stopped_at": "2026-08-15T03:15:25+00:00"
   }
 ]
