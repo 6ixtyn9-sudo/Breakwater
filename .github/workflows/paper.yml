@@ -36,6 +36,8 @@ jobs:
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: shadow
           BREAKWATER_PAPER_TIME_STOP_BARS: "12"
+          BREAKWATER_PAPER_MAX_POSITIONS: "10"
+          BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: "5"
 
           # Trailing (profit-protecting stop) - OFF by default
           BREAKWATER_TRAIL_ENABLE: "0"
