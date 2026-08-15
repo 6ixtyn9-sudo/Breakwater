@@ -136,11 +136,13 @@ def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: st
     to the worst historical bar; the clamp keeps stops within sane bounds
     for both sleepy and wild symbols.
     """
-    if "fwd_mae_atr_5" not in prepared.columns:
-        return 2.0
-    subset = prepared.dropna(subset=[state_column, "fwd_mae_atr_5"])
-    mask = subset[state_column] == candidate.state
-    values = subset.loc[mask, "fwd_mae_atr_5"].to_numpy()
+   mae_col = "fwd_mae_atr" if "fwd_mae_atr" in prepared.columns else "fwd_mae_atr_5"
+if mae_col not in prepared.columns:
+    return 2.0
+
+subset = prepared.dropna(subset=[state_column, mae_col])
+mask = subset[state_column] == candidate.state
+values = subset.loc[mask, mae_col].to_numpy()
     if len(values) < MIN_ROWS_PER_FOLD:
         return 2.0
     percentile = float(np.percentile(values, 90))
