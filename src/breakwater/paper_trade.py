@@ -11,7 +11,6 @@ PERP) so evidence accumulates in both markets. The live-account mandate
 (one position) is untouched.
 
 Entry-side guards inherited from the predecessor system's lessons:
-
 - book-only: only slices present in the monitored book are paper-traded;
   unvalidated fallback signals (big-wave) are research-only;
 - falling-knife guard: a signal whose latest price has moved adversely
@@ -24,6 +23,12 @@ Entry-side guards inherited from the predecessor system's lessons:
 - immortal-trade guard: positions whose pair data has gone missing for
   more than 24 consecutive bars are closed at entry with fees, so no
   paper position lives forever on vanished data.
+
+Optional trailing (profit-protection) feature (OFF by default):
+- A trailing stop can ratchet in the favorable direction once the position
+  has moved +ACTIVATE_R in your favor (measured in R = initial risk).
+- The trailing stop sits TRAIL_DISTANCE_R behind the best price seen.
+- If enabled, a stop can become a profitable exit (so "stop" can be a win).
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ import json
 import os
 import tempfile
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from breakwater.monitor import SliceSignal, regime_blocks
@@ -61,8 +66,10 @@ PAPER_LOG_HEADERS = [
 TARGET_R_MULTIPLE = Decimal("2")
 TIME_STOP_BARS = int(os.getenv("BREAKWATER_PAPER_TIME_STOP_BARS", "48"))
 MISSING_BARS_EXIT = 24
+
 SPOT_FEE_BPS = Decimal("20")
 PERP_FEE_BPS = Decimal("26")
+
 MAX_PAPER_POSITIONS = 6
 MAX_PAPER_POSITIONS_PER_KIND = 3
 
@@ -70,6 +77,26 @@ ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
 PREMIUM_ATR_MULT = Decimal("0.25")
 PREMIUM_CAP_BPS = Decimal("100")
+
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    value = str(os.getenv(name, default)).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
+def _env_decimal(name: str, default: str) -> Decimal:
+    raw = os.getenv(name, default)
+    try:
+        return Decimal(str(raw))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal(default)
+
+
+# Trailing feature flags (OFF by default).
+TRAIL_ENABLE = _env_bool("BREAKWATER_TRAIL_ENABLE", "0")
+TRAIL_ACTIVATE_R = _env_decimal("BREAKWATER_TRAIL_ACTIVATE_R", "1.0")
+TRAIL_DISTANCE_R = _env_decimal("BREAKWATER_TRAIL_DISTANCE_R", "1.0")
+TRAIL_IGNORE_TIME_STOP = _env_bool("BREAKWATER_TRAIL_IGNORE_TIME_STOP", "0")
 
 
 def read_positions(path: Path) -> list[dict]:
@@ -204,12 +231,12 @@ def _latest_close(frame):
     return Decimal(str(frame.iloc[-1]["close"]))
 
 
-def _entry_guard(
-    signal: SliceSignal, frame, atr: Decimal
-) -> tuple[str, Decimal]:
+def _entry_guard(signal: SliceSignal, frame, atr: Decimal) -> tuple[str, Decimal]:
     """Return (guard_verdict, reference_entry_price)."""
     reference = signal.entry_price
-    premium_frac = min(PREMIUM_ATR_MULT * atr / reference, PREMIUM_CAP_BPS / Decimal(10000))
+    premium_frac = min(
+        PREMIUM_ATR_MULT * atr / reference, PREMIUM_CAP_BPS / Decimal(10000)
+    )
     if signal.side.value == "BUY":
         reference = signal.entry_price * (Decimal(1) + premium_frac)
     else:
@@ -217,12 +244,27 @@ def _entry_guard(
     latest = _latest_close(frame)
     if latest is None:
         return "no_price", reference
-    adverse_frac = min(ADVERSE_ATR_MULT * atr / signal.entry_price, ADVERSE_CAP_BPS / Decimal(10000))
-    if signal.side.value == "BUY" and latest < signal.entry_price * (Decimal(1) - adverse_frac):
+    adverse_frac = min(
+        ADVERSE_ATR_MULT * atr / signal.entry_price, ADVERSE_CAP_BPS / Decimal(10000)
+    )
+    if signal.side.value == "BUY" and latest < signal.entry_price * (
+        Decimal(1) - adverse_frac
+    ):
         return "adverse_blocked", reference
-    if signal.side.value == "SELL" and latest > signal.entry_price * (Decimal(1) + adverse_frac):
+    if signal.side.value == "SELL" and latest > signal.entry_price * (
+        Decimal(1) + adverse_frac
+    ):
         return "adverse_blocked", reference
     return "passed", reference
+
+
+def _coerce_bool(value) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    return text in {"1", "true", "yes", "y", "on"}
 
 
 def run_paper_cycle(
@@ -249,28 +291,31 @@ def run_paper_cycle(
         entry = Decimal(str(position["entry_price"]))
         stop = Decimal(str(position["stop_price"]))
         notional_zar = Decimal(str(position["notional_zar"]))
+
         if frame is None or frame.empty:
             missing = int(position.get("missing_bars") or 0) + 1
             if missing >= missing_bars_exit:
                 fee_bps = PERP_FEE_BPS if position["kind"] == "PERP" else SPOT_FEE_BPS
                 fees = notional_zar * fee_bps / Decimal(10000)
-                closed_rows.append({
-                    "closed_at": server_time.isoformat(),
-                    "signal_id": str(position["signal_id"]),
-                    "pair": str(position["pair"]),
-                    "kind": str(position["kind"]),
-                    "slice_id": str(position["slice_id"]),
-                    "side": side,
-                    "entry_price": str(entry),
-                    "exit_price": str(entry),
-                    "stop_price": str(stop),
-                    "notional_zar": str(notional_zar),
-                    "pnl_zar": f"{-fees:.4f}",
-                    "outcome": "loss",
-                    "bars_held": str(position.get("bars_held") or 0),
-                    "exit_reason": "stale_data",
-                    "entry_guard": str(position.get("entry_guard") or ""),
-                })
+                closed_rows.append(
+                    {
+                        "closed_at": server_time.isoformat(),
+                        "signal_id": str(position["signal_id"]),
+                        "pair": str(position["pair"]),
+                        "kind": str(position["kind"]),
+                        "slice_id": str(position["slice_id"]),
+                        "side": side,
+                        "entry_price": str(entry),
+                        "exit_price": str(entry),
+                        "stop_price": str(stop),
+                        "notional_zar": str(notional_zar),
+                        "pnl_zar": f"{-fees:.4f}",
+                        "outcome": "loss",
+                        "bars_held": str(position.get("bars_held") or 0),
+                        "exit_reason": "stale_data",
+                        "entry_guard": str(position.get("entry_guard") or ""),
+                    }
+                )
                 apply_signal_feedback(
                     book_path,
                     str(position["slice_id"]),
@@ -278,14 +323,17 @@ def run_paper_cycle(
                     outcome="loss",
                     pnl_zar=float(-fees),
                 )
-                append_cooldown(cooldown_path, {
-                    "stopped_at": server_time.isoformat(),
-                    "slice_id": str(position["slice_id"]),
-                    "pair": str(position["pair"]),
-                    "signal_id": str(position["signal_id"]),
-                    "pnl_zar": f"{-fees:.4f}",
-                    "reason": "stale_data",
-                })
+                append_cooldown(
+                    cooldown_path,
+                    {
+                        "stopped_at": server_time.isoformat(),
+                        "slice_id": str(position["slice_id"]),
+                        "pair": str(position["pair"]),
+                        "signal_id": str(position["signal_id"]),
+                        "pnl_zar": f"{-fees:.4f}",
+                        "reason": "stale_data",
+                    },
+                )
                 continue
             position["missing_bars"] = str(missing)
             surviving.append(position)
@@ -296,29 +344,86 @@ def run_paper_cycle(
         high = Decimal(str(last["high"]))
         low = Decimal(str(last["low"]))
         bars_held = int(position.get("bars_held") or 0) + 1
-        target = entry + (entry - stop) * TARGET_R_MULTIPLE if side == "BUY" else (
-            entry - (stop - entry) * TARGET_R_MULTIPLE
+
+        # Fixed target based on current stop distance (stop may trail only AFTER a bar closes).
+        target = (
+            entry + (entry - stop) * TARGET_R_MULTIPLE
+            if side == "BUY"
+            else entry - (stop - entry) * TARGET_R_MULTIPLE
         )
+
         exit_price = None
         exit_reason = None
         outcome = None
+
+        # --- Exit checks using the stop that was in force during this bar ---
         if side == "BUY":
             if low <= stop:
-                exit_price, exit_reason, outcome = stop, "stop", "loss"
+                exit_price = stop
+                # Stop can be a win if it has trailed above entry.
+                outcome = "win" if stop >= entry else "loss"
+                initial_stop = Decimal(str(position.get("initial_stop_price") or stop))
+                exit_reason = "trail_stop" if stop != initial_stop else "stop"
             elif high >= target:
                 exit_price, exit_reason, outcome = target, "target", "win"
         else:
             if high >= stop:
-                exit_price, exit_reason, outcome = stop, "stop", "loss"
+                exit_price = stop
+                outcome = "win" if stop <= entry else "loss"
+                initial_stop = Decimal(str(position.get("initial_stop_price") or stop))
+                exit_reason = "trail_stop" if stop != initial_stop else "stop"
             elif low <= target:
                 exit_price, exit_reason, outcome = target, "target", "win"
-        if exit_price is None and bars_held >= TIME_STOP_BARS:
+
+        # Time-stop (optionally ignored once trailing is active).
+        trail_active = _coerce_bool(position.get("trail_active"))
+        if (
+            exit_price is None
+            and bars_held >= TIME_STOP_BARS
+            and not (TRAIL_ENABLE and TRAIL_IGNORE_TIME_STOP and trail_active)
+        ):
             exit_price = close
             exit_reason = "time_stop"
-            outcome = "win" if (
-                close > entry if side == "BUY" else close < entry
-            ) else "loss"
+            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+
         if exit_price is None:
+            # --- Trailing update happens ONLY after the bar closes (no intrabar lookahead). ---
+            if TRAIL_ENABLE:
+                initial_stop_price = Decimal(
+                    str(position.get("initial_stop_price") or position["stop_price"])
+                )
+                r = abs(entry - initial_stop_price)
+                if r > 0:
+                    # Track best price seen.
+                    peak_price = Decimal(str(position.get("peak_price") or entry))
+                    trough_price = Decimal(str(position.get("trough_price") or entry))
+
+                    peak_price = max(peak_price, high)
+                    trough_price = min(trough_price, low)
+
+                    # Activate trailing once we have moved +ACTIVATE_R in our favor.
+                    if not trail_active:
+                        if side == "BUY":
+                            trail_active = peak_price >= (entry + TRAIL_ACTIVATE_R * r)
+                        else:
+                            trail_active = trough_price <= (entry - TRAIL_ACTIVATE_R * r)
+
+                    # Ratchet the stop if active.
+                    if trail_active:
+                        if side == "BUY":
+                            candidate_stop = peak_price - TRAIL_DISTANCE_R * r
+                            stop = max(stop, candidate_stop)
+                        else:
+                            candidate_stop = trough_price + TRAIL_DISTANCE_R * r
+                            stop = min(stop, candidate_stop)
+
+                        position["stop_price"] = str(stop)
+
+                    position["initial_stop_price"] = str(initial_stop_price)
+                    position["peak_price"] = str(peak_price)
+                    position["trough_price"] = str(trough_price)
+                    position["trail_active"] = "1" if trail_active else "0"
+
             position["bars_held"] = str(bars_held)
             position["missing_bars"] = "0"
             surviving.append(position)
@@ -329,23 +434,27 @@ def run_paper_cycle(
         gross = (exit_price - entry) / entry * direction * notional_zar
         fees = notional_zar * fee_bps / Decimal(10000)
         pnl_zar = gross - fees
-        closed_rows.append({
-            "closed_at": server_time.isoformat(),
-            "signal_id": str(position["signal_id"]),
-            "pair": str(position["pair"]),
-            "kind": str(position["kind"]),
-            "slice_id": str(position["slice_id"]),
-            "side": side,
-            "entry_price": str(entry),
-            "exit_price": str(exit_price),
-            "stop_price": str(stop),
-            "notional_zar": str(notional_zar),
-            "pnl_zar": f"{pnl_zar:.4f}",
-            "outcome": outcome,
-            "bars_held": str(bars_held),
-            "exit_reason": exit_reason,
-            "entry_guard": str(position.get("entry_guard") or ""),
-        })
+
+        closed_rows.append(
+            {
+                "closed_at": server_time.isoformat(),
+                "signal_id": str(position["signal_id"]),
+                "pair": str(position["pair"]),
+                "kind": str(position["kind"]),
+                "slice_id": str(position["slice_id"]),
+                "side": side,
+                "entry_price": str(entry),
+                "exit_price": str(exit_price),
+                "stop_price": str(stop),
+                "notional_zar": str(notional_zar),
+                "pnl_zar": f"{pnl_zar:.4f}",
+                "outcome": outcome,
+                "bars_held": str(bars_held),
+                "exit_reason": exit_reason,
+                "entry_guard": str(position.get("entry_guard") or ""),
+            }
+        )
+
         apply_signal_feedback(
             book_path,
             str(position["slice_id"]),
@@ -354,14 +463,17 @@ def run_paper_cycle(
             pnl_zar=float(pnl_zar),
         )
         if outcome == "loss":
-            append_cooldown(cooldown_path, {
-                "stopped_at": server_time.isoformat(),
-                "slice_id": str(position["slice_id"]),
-                "pair": str(position["pair"]),
-                "signal_id": str(position["signal_id"]),
-                "pnl_zar": f"{pnl_zar:.4f}",
-                "reason": exit_reason,
-            })
+            append_cooldown(
+                cooldown_path,
+                {
+                    "stopped_at": server_time.isoformat(),
+                    "slice_id": str(position["slice_id"]),
+                    "pair": str(position["pair"]),
+                    "signal_id": str(position["signal_id"]),
+                    "pnl_zar": f"{pnl_zar:.4f}",
+                    "reason": exit_reason,
+                },
+            )
 
     for row in closed_rows:
         append_log(log_path, row)
@@ -371,6 +483,7 @@ def run_paper_cycle(
     pair_held = 0
     open_pairs = {str(position["pair"]).upper() for position in surviving}
     candidates = sorted(signals, key=lambda s: (-abs(s.edge), s.pair))
+
     for signal in candidates:
         if len(surviving) >= MAX_PAPER_POSITIONS:
             slot_full += 1
@@ -383,87 +496,111 @@ def run_paper_cycle(
             pair_held += 1
             continue
         if signal.slice_id not in book_slice_ids:
-            append_log(log_path, {
-                "closed_at": server_time.isoformat(),
-                "signal_id": signal.signal_id,
-                "pair": signal.pair,
-                "kind": signal.kind,
-                "slice_id": signal.slice_id,
-                "side": signal.side.value,
-                "entry_price": str(signal.entry_price),
-                "exit_price": "",
-                "stop_price": str(signal.stop_price),
-                "notional_zar": "0",
-                "pnl_zar": "0",
-                "outcome": "skipped",
-                "bars_held": "0",
-                "exit_reason": "not_book",
-                "entry_guard": "not_book",
-            })
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "not_book",
+                    "entry_guard": "not_book",
+                },
+            )
             skipped += 1
             continue
         if regime_blocks(signal.side, signal.regime):
-            append_log(log_path, {
-                "closed_at": server_time.isoformat(),
-                "signal_id": signal.signal_id,
-                "pair": signal.pair,
-                "kind": signal.kind,
-                "slice_id": signal.slice_id,
-                "side": signal.side.value,
-                "entry_price": str(signal.entry_price),
-                "exit_price": "",
-                "stop_price": str(signal.stop_price),
-                "notional_zar": "0",
-                "pnl_zar": "0",
-                "outcome": "skipped",
-                "bars_held": "0",
-                "exit_reason": "regime",
-                "entry_guard": "regime_blocked",
-            })
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "regime",
+                    "entry_guard": "regime_blocked",
+                },
+            )
             skipped += 1
             continue
+
         frame = frames.get(signal.pair.upper())
         guard, reference = _entry_guard(signal, frame, signal.atr)
         if guard == "adverse_blocked":
-            append_log(log_path, {
-                "closed_at": server_time.isoformat(),
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "adverse",
+                    "entry_guard": "adverse_blocked",
+                },
+            )
+            skipped += 1
+            continue
+
+        notional_zar = _paper_size(signal, policy, usdc_zar)
+        if notional_zar <= 0:
+            continue
+
+        # Stop at entry uses the original risk distance from the signal.
+        risk_distance = (
+            (signal.entry_price - signal.stop_price)
+            if signal.side.value == "BUY"
+            else (signal.stop_price - signal.entry_price)
+        )
+        initial_stop_price = (
+            reference - risk_distance if signal.side.value == "BUY" else reference + risk_distance
+        )
+
+        surviving.append(
+            {
                 "signal_id": signal.signal_id,
                 "pair": signal.pair,
                 "kind": signal.kind,
                 "slice_id": signal.slice_id,
                 "side": signal.side.value,
-                "entry_price": str(signal.entry_price),
-                "exit_price": "",
-                "stop_price": str(signal.stop_price),
-                "notional_zar": "0",
-                "pnl_zar": "0",
-                "outcome": "skipped",
+                "entry_price": str(reference),
+                "stop_price": str(initial_stop_price),
+                "initial_stop_price": str(initial_stop_price),
+                "peak_price": str(reference),
+                "trough_price": str(reference),
+                "trail_active": "0",
+                "notional_zar": str(notional_zar),
                 "bars_held": "0",
-                "exit_reason": "adverse",
-                "entry_guard": "adverse_blocked",
-            })
-            skipped += 1
-            continue
-        notional_zar = _paper_size(signal, policy, usdc_zar)
-        if notional_zar <= 0:
-            continue
-        surviving.append({
-            "signal_id": signal.signal_id,
-            "pair": signal.pair,
-            "kind": signal.kind,
-            "slice_id": signal.slice_id,
-            "side": signal.side.value,
-            "entry_price": str(reference),
-            "stop_price": str(
-                reference - (signal.entry_price - signal.stop_price)
-                if signal.side.value == "BUY"
-                else reference + (signal.stop_price - signal.entry_price)
-            ),
-            "notional_zar": str(notional_zar),
-            "bars_held": "0",
-            "missing_bars": "0",
-            "entry_guard": guard,
-        })
+                "missing_bars": "0",
+                "entry_guard": guard,
+            }
+        )
         open_pairs.add(signal.pair.upper())
 
     write_positions(positions_path, surviving)
