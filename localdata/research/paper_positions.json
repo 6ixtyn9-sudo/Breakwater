@@ -1,6 +1,6 @@
 [
   {
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_guard": "passed",
     "entry_price": "63072.05357142857142750000000",
     "kind": "PERP",
@@ -13,7 +13,7 @@
     "stop_price": "63383.08564285714286943000000"
   },
   {
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_guard": "passed",
     "entry_price": "1884.258928571428573075000000",
     "kind": "PERP",
@@ -26,7 +26,7 @@
     "stop_price": "1894.745407142857123975900000"
   },
   {
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_guard": "passed",
     "entry_price": "30765.39285714285714250000000",
     "kind": "SPOT",
@@ -39,7 +39,7 @@
     "stop_price": "31095.89285714285714750000000"
   },
   {
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "1029947.892857142857100000000",
     "kind": "SPOT",
@@ -52,7 +52,7 @@
     "stop_price": "1038237.392857142857700000000"
   },
   {
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "723.2999999999999930000000000",
     "kind": "SPOT",
@@ -65,7 +65,7 @@
     "stop_price": "733.1000000000000910000000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "0.00007512678571428571420000000000",
     "initial_stop_price": "0.00007615178571428571540000000000",
@@ -82,7 +82,7 @@
     "trough_price": "0.00007512678571428571420000000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "1233.071428571428571400000000",
     "initial_stop_price": "1246.071428571428571800000000",
