@@ -21,5 +21,13 @@
     "signal_id": "22d6bb99868344aa",
     "slice_id": "feat_ext_vs_ma_50:2:SHORT",
     "stopped_at": "2026-08-15T03:15:25+00:00"
+  },
+  {
+    "pair": "BNBZAR",
+    "pnl_zar": "-2.1986",
+    "reason": "stop",
+    "signal_id": "2849c6c4c065bf2f",
+    "slice_id": "feat_ret_1:0:SHORT",
+    "stopped_at": "2026-08-15T04:15:21+00:00"
   }
 ]
