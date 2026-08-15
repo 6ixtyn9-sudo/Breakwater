@@ -36,9 +36,10 @@ close once that many bars have elapsed (while still honoring the stop intrabar).
 This aligns paper execution with the horizon the slice edge was researched on.
 
 Migration (IMPORTANT):
-Legacy open positions may predate `horizon_bars` persistence. Each cycle we
-load `horizon_bars` from the monitored book (book_path) and backfill any
-positions missing it (or carrying 0), so horizon exits actually engage.
+Legacy open positions may predate `horizon_bars`/`regime` persistence. Each
+cycle we load slice -> horizon from the monitored book (book_path) and
+backfill any positions with missing/zero horizon, and any missing regime.
+This makes horizon exits engage immediately without wiping positions.
 """
 
 from __future__ import annotations
@@ -81,9 +82,7 @@ MISSING_BARS_EXIT = 24
 SPOT_FEE_BPS = Decimal("20")
 PERP_FEE_BPS = Decimal("26")
 MAX_PAPER_POSITIONS = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS", "6"))
-MAX_PAPER_POSITIONS_PER_KIND = int(
-    os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3")
-)
+MAX_PAPER_POSITIONS_PER_KIND = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3"))
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
@@ -147,7 +146,6 @@ def _migrate_log_header(path: Path) -> None:
     legacy header names only 13, so any csv.DictReader silently drops
     exit_reason, entry_guard and regime. This migration rewrites the file
     with the current header, padding legacy rows with empty strings.
-
     Idempotent: a file with the current header is left untouched.
     """
     with path.open(newline="") as handle:
@@ -159,14 +157,12 @@ def _migrate_log_header(path: Path) -> None:
         if header == PAPER_LOG_HEADERS:
             return
         rows = list(reader)
-
     width = len(PAPER_LOG_HEADERS)
     migrated = [PAPER_LOG_HEADERS]
     for row in rows:
         if len(row) > width:
             row = row[:width]
         migrated.append(row + [""] * (width - len(row)))
-
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
     )
@@ -210,7 +206,6 @@ def append_cooldown(path: Path, entry: dict) -> None:
         journal = []
     journal.append(entry)
     journal = journal[-200:]
-
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
     )
@@ -257,11 +252,9 @@ def _entry_guard(signal: SliceSignal, frame, atr: Decimal) -> tuple[str, Decimal
         reference = signal.entry_price * (Decimal(1) + premium_frac)
     else:
         reference = signal.entry_price * (Decimal(1) - premium_frac)
-
     latest = _latest_close(frame)
     if latest is None:
         return "no_price", reference
-
     adverse_frac = min(
         ADVERSE_ATR_MULT * atr / signal.entry_price, ADVERSE_CAP_BPS / Decimal(10000)
     )
@@ -294,7 +287,12 @@ def _coerce_int(value, default: int = 0) -> int:
 
 
 def _load_book_horizon_map(book_path: Path) -> dict[str, int]:
-    """Load slice_id -> horizon_bars from monitored_slices.csv (book_path)."""
+    """Load slice_id -> horizon_bars from the monitored book CSV (book_path).
+
+    Red-team notes:
+    - Must be tolerant to missing file, missing column, and non-int values.
+    - Must never throw during trading cycle; failure should degrade to {}.
+    """
     if not book_path or not book_path.exists():
         return {}
     try:
@@ -315,13 +313,14 @@ def _load_book_horizon_map(book_path: Path) -> dict[str, int]:
         return {}
 
 
-def _migrate_legacy_positions(
-    open_positions: list[dict],
-    *,
-    horizon_map: dict[str, int],
-    frames: dict,
-) -> None:
-    """Backfill horizon_bars/regime on old positions (in-place)."""
+def _migrate_legacy_positions(open_positions: list[dict], *, horizon_map: dict[str, int], frames: dict) -> None:
+    """Backfill horizon_bars/regime on old positions (in-place).
+
+    Red-team notes:
+    - Do not assume position keys exist or are valid types.
+    - Backfill horizon only when missing/<=0.
+    - Backfill regime only when missing/empty; compute from current frame if possible.
+    """
     for position in open_positions:
         sid = str(position.get("slice_id") or "")
         hb_existing = _coerce_int(position.get("horizon_bars"), 0)
@@ -356,7 +355,7 @@ def run_paper_cycle(
     closed_rows: list[dict] = []
     open_positions = read_positions(positions_path)
 
-    # Migration: ensure legacy positions pick up book horizon/regime so horizon exits engage.
+    # Migration step: upgrade legacy positions so horizon exits engage.
     book_horizon_map = _load_book_horizon_map(book_path)
     if open_positions:
         _migrate_legacy_positions(open_positions, horizon_map=book_horizon_map, frames=frames)
@@ -375,7 +374,18 @@ def run_paper_cycle(
         horizon_bars = _coerce_int(position.get("horizon_bars"), 0)
         if horizon_bars < 0:
             horizon_bars = 0
+
+        # Extra safety: if migration couldn't set it, attempt book fallback.
+        if horizon_bars <= 0:
+            sid = str(position.get("slice_id") or "")
+            horizon_bars = book_horizon_map.get(sid, 0)
+
         position_regime = str(position.get("regime") or "")
+        if not position_regime:
+            if frame is not None and not frame.empty:
+                position_regime = regime_of(frame)
+            else:
+                position_regime = "unknown"
 
         if frame is None or frame.empty:
             missing = _coerce_int(position.get("missing_bars"), 0) + 1
@@ -421,7 +431,12 @@ def run_paper_cycle(
                     },
                 )
                 continue
+
             position["missing_bars"] = str(missing)
+            # Persist backfilled fields even if we couldn't price this bar.
+            if horizon_bars > 0:
+                position["horizon_bars"] = str(horizon_bars)
+            position["regime"] = position_regime
             surviving.append(position)
             continue
 
@@ -465,11 +480,7 @@ def run_paper_cycle(
         if exit_price is None and horizon_bars > 0 and bars_held >= horizon_bars:
             exit_price = close
             exit_reason = "horizon"
-            outcome = (
-                "win"
-                if (close > entry if side == "BUY" else close < entry)
-                else "loss"
-            )
+            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
 
         # Time-stop (legacy only; option to ignore once trailing is active).
         trail_active = _coerce_bool(position.get("trail_active"))
@@ -481,11 +492,7 @@ def run_paper_cycle(
         ):
             exit_price = close
             exit_reason = "time_stop"
-            outcome = (
-                "win"
-                if (close > entry if side == "BUY" else close < entry)
-                else "loss"
-            )
+            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
 
         if exit_price is None:
             # --- Trailing update happens ONLY after the bar closes (no intrabar lookahead). ---
@@ -528,6 +535,9 @@ def run_paper_cycle(
 
             position["bars_held"] = str(bars_held)
             position["missing_bars"] = "0"
+            if horizon_bars > 0:
+                position["horizon_bars"] = str(horizon_bars)
+            position["regime"] = position_regime
             surviving.append(position)
             continue
 
@@ -697,7 +707,7 @@ def run_paper_cycle(
             else reference + risk_distance
         )
 
-        # Horizon selection: prefer signal.horizon_bars if it exists, else fall back to book.
+        # Red-team: If for any reason a signal doesn't carry horizon_bars, fall back to book.
         signal_horizon = _coerce_int(getattr(signal, "horizon_bars", 0), 0)
         if signal_horizon <= 0:
             signal_horizon = book_horizon_map.get(signal.slice_id, 0)
@@ -719,6 +729,7 @@ def run_paper_cycle(
                 "bars_held": "0",
                 "missing_bars": "0",
                 "entry_guard": guard,
+                # Persist horizon + regime for correct exits & logging
                 "horizon_bars": str(int(signal_horizon or 0)),
                 "regime": str(getattr(signal, "regime", "") or ""),
             }
