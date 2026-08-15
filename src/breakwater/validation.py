@@ -4,7 +4,6 @@ Pooled research rows are split into contiguous time folds. A slice passes a
 fold when that fold carries enough rows and its mean cost-adjusted forward
 return keeps the slice's sign. A slice is validated only when most folds
 pass and the most recent fold passes, so the evidence includes recency.
-
 Standing lesson (regime confound): chronological folds cannot tell a
 durable price-state edge from a regime artifact. Every slice is therefore
 also tested against HOSTILE regime rows: bear rows for long slices, bull
@@ -22,6 +21,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 
 VALIDATED_HEADERS = [
     "slice_id",
@@ -136,15 +136,16 @@ def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: st
     to the worst historical bar; the clamp keeps stops within sane bounds
     for both sleepy and wild symbols.
     """
-   mae_col = "fwd_mae_atr" if "fwd_mae_atr" in prepared.columns else "fwd_mae_atr_5"
-if mae_col not in prepared.columns:
-    return 2.0
+    mae_col = "fwd_mae_atr" if "fwd_mae_atr" in prepared.columns else "fwd_mae_atr_5"
+    if mae_col not in prepared.columns:
+        return 2.0
 
-subset = prepared.dropna(subset=[state_column, mae_col])
-mask = subset[state_column] == candidate.state
-values = subset.loc[mask, mae_col].to_numpy()
+    subset = prepared.dropna(subset=[state_column, mae_col])
+    mask = subset[state_column] == candidate.state
+    values = subset.loc[mask, mae_col].to_numpy()
     if len(values) < MIN_ROWS_PER_FOLD:
         return 2.0
+
     percentile = float(np.percentile(values, 90))
     return min(STOP_ATR_CEIL, max(STOP_ATR_FLOOR, percentile))
 
@@ -156,31 +157,42 @@ def validate_slices(
     if prepared.empty or not candidates:
         return []
     labelled = _attach_regime_labels(prepared)
-    rows = labelled.dropna(subset=["fwd_ret"]).sort_values("start").reset_index(drop=True)
+    rows = (
+        labelled.dropna(subset=["fwd_ret"])
+        .sort_values("start")
+        .reset_index(drop=True)
+    )
+
     validated: list[ValidatedSlice] = []
     for candidate in candidates:
         state_column = f"state_{candidate.feature}"
         if state_column not in rows.columns:
             continue
+
         subset = rows.dropna(subset=[state_column])
         mask = (subset[state_column] == candidate.state).to_numpy()
+
         fold_ids = np.linspace(0, len(subset), FOLD_COUNT + 1).astype(int)
         fold_results = []
         fold_means = []
         fold_sizes = []
+
         for fold in range(FOLD_COUNT):
             fold_mask = np.zeros(len(subset), dtype=bool)
-            fold_mask[fold_ids[fold]:fold_ids[fold + 1]] = True
-            fold_returns = subset.loc[(mask & fold_mask).astype(bool), "fwd_ret"].to_numpy()
+            fold_mask[fold_ids[fold] : fold_ids[fold + 1]] = True
+            fold_returns = subset.loc[
+                (mask & fold_mask).astype(bool), "fwd_ret"
+            ].to_numpy()
+
             passed = _fold_pass(fold_returns, candidate.side)
             fold_results.append("1" if passed else "0")
-            fold_means.append(
-                float(np.mean(fold_returns)) if len(fold_returns) else 0.0
-            )
+            fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
             fold_sizes.append(len(fold_returns))
+
         pattern = "".join(fold_results)
         pass_count = pattern.count("1")
         latest_passes = pattern[-1] == "1"
+
         temporal_pass = (
             pass_count >= max(3, int(0.75 * FOLD_COUNT))
             and latest_passes
@@ -194,28 +206,31 @@ def validate_slices(
             candidate.side, hostile_returns
         )
 
-        validated.append(ValidatedSlice(
-            slice_id=candidate.slice_id,
-            kind=candidate.kind,
-            feature=candidate.feature,
-            state=candidate.state,
-            side=candidate.side,
-            folds=FOLD_COUNT,
-            walk_forward_pass_pattern=pattern,
-            walk_forward_pass_count=pass_count,
-            fold_mean_rets=",".join(f"{value:.6f}" for value in fold_means),
-            fold_sizes=",".join(str(size) for size in fold_sizes),
-            n=candidate.n,
-            mean_ret_costadj=candidate.mean_ret_costadj,
-            p_value=candidate.p_value,
-            validated=temporal_pass and not confounded,
-            horizon_bars=candidate.horizon_bars,
-            stop_atr_mult=_calibrate_stop_atr_mult(prepared, candidate, state_column),
-            hostile_n=hostile_n,
-            hostile_mean_ret=hostile_mean,
-            regime_confounded=confounded,
-            hostile_unproven=hostile_unproven,
-        ))
+        validated.append(
+            ValidatedSlice(
+                slice_id=candidate.slice_id,
+                kind=candidate.kind,
+                feature=candidate.feature,
+                state=candidate.state,
+                side=candidate.side,
+                folds=FOLD_COUNT,
+                walk_forward_pass_pattern=pattern,
+                walk_forward_pass_count=pass_count,
+                fold_mean_rets=",".join(f"{value:.6f}" for value in fold_means),
+                fold_sizes=",".join(str(size) for size in fold_sizes),
+                n=candidate.n,
+                mean_ret_costadj=candidate.mean_ret_costadj,
+                p_value=candidate.p_value,
+                validated=temporal_pass and not confounded,
+                horizon_bars=candidate.horizon_bars,
+                stop_atr_mult=_calibrate_stop_atr_mult(prepared, candidate, state_column),
+                hostile_n=hostile_n,
+                hostile_mean_ret=hostile_mean,
+                regime_confounded=confounded,
+                hostile_unproven=hostile_unproven,
+            )
+        )
+
     return sorted(validated, key=lambda row: (not row.validated, -row.mean_ret_costadj))
 
 
@@ -225,14 +240,19 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         required = set(VALIDATED_HEADERS) - {
-            "stop_atr_mult", "hostile_n", "hostile_mean_ret",
-            "regime_confounded", "hostile_unproven",
+            "stop_atr_mult",
+            "hostile_n",
+            "hostile_mean_ret",
+            "regime_confounded",
+            "hostile_unproven",
         }
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise RuntimeError("validated slices file has an unsupported schema")
+
         has_stop = "stop_atr_mult" in reader.fieldnames
         has_hostile = "hostile_n" in reader.fieldnames
         has_unproven = "hostile_unproven" in reader.fieldnames
+
         return [
             ValidatedSlice(
                 slice_id=str(row["slice_id"]),
@@ -253,12 +273,8 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                 stop_atr_mult=float(row["stop_atr_mult"]) if has_stop else 2.0,
                 hostile_n=int(row["hostile_n"]) if has_hostile else 0,
                 hostile_mean_ret=float(row["hostile_mean_ret"]) if has_hostile else 0.0,
-                regime_confounded=(
-                    row["regime_confounded"] == "True" if has_hostile else False
-                ),
-                hostile_unproven=(
-                    row["hostile_unproven"] == "True" if has_unproven else False
-                ),
+                regime_confounded=(row["regime_confounded"] == "True" if has_hostile else False),
+                hostile_unproven=(row["hostile_unproven"] == "True" if has_unproven else False),
             )
             for row in reader
         ]
