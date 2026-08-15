@@ -24,6 +24,9 @@ lags the code, trust the code and correct this file.
     `*_DISTANCE_R="1.0"`, `*_IGNORE_TIME_STOP="0"`.
 - Book: built only from walk-forward-validated, regime-confounded-free
   slices; paper trades are simulations committed to the repo.
+- VALR Perps API status (as of 2026-08-15): /simple-futures/symbol-info is public, but authenticated /simple-futures/* routes 
+  (positions/settings/address/order/tp-sl) return HTTP 401 with code -93 when signed with API keys. Support ticket [RM3PGP-R30W3] is 
+  escalated; do not build execution on /simple-futures until VALR confirms API-key support.
 
 ## Architecture map
 ```text
@@ -144,6 +147,11 @@ Deliberate deviations (recorded honestly):
   indentation/syntax errors that halted `research`. Fix was full-file replacement
   plus reliance on CI compile gates. Operator note: prefer full-file replaces
   for web edits; avoid placeholder lines.
+- 2026-08-15, VALR “simple-futures” private API unauthorized via API keys: /simple-futures/symbol-info works unauthenticated, but 
+  private /simple-futures/* endpoints return HTTP 401 {"code": -93, "message": "Unauthorized"} when using a valid API key (View + 
+  Trade). VALR support acknowledged and escalated (ticket [RM3PGP-R30W3]). Operational rule: do not spam these endpoints; re-test only 
+  occasionally (e.g., once per day) and wait for VALR response before further integration work. Next polite status ping window: 2026-08- 
+  20 to 2026-08-21 if no update.
 
 ## Known placeholders
 
