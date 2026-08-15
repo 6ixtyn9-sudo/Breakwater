@@ -1,36 +1,6 @@
 [
   {
-    "bars_held": "5",
-    "entry_guard": "passed",
-    "entry_price": "1029947.892857142857100000000",
-    "horizon_bars": "6",
-    "kind": "SPOT",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "BTCZAR",
-    "regime": "neutral",
-    "side": "SELL",
-    "signal_id": "ac112a7e26c1ac7a",
-    "slice_id": "feat_ret_20:2:SHORT",
-    "stop_price": "1038237.392857142857700000000"
-  },
-  {
-    "bars_held": "5",
-    "entry_guard": "passed",
-    "entry_price": "723.2999999999999930000000000",
-    "horizon_bars": "6",
-    "kind": "SPOT",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "LTCZAR",
-    "regime": "bear",
-    "side": "SELL",
-    "signal_id": "b1ea58578fdc3fa9",
-    "slice_id": "feat_ret_20:2:SHORT",
-    "stop_price": "733.1000000000000910000000000"
-  },
-  {
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "0.00007512678571428571420000000000",
     "horizon_bars": "6",
@@ -49,7 +19,7 @@
     "trough_price": "0.00007512678571428571420000000000"
   },
   {
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "1233.071428571428571400000000",
     "horizon_bars": "6",
@@ -68,7 +38,7 @@
     "trough_price": "1233.071428571428571400000000"
   },
   {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "63054.39285714285714250000000",
     "horizon_bars": "6",
@@ -87,7 +57,7 @@
     "trough_price": "63054.39285714285714250000000"
   },
   {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "1882.151785714285716750000000",
     "horizon_bars": "6",
@@ -106,7 +76,7 @@
     "trough_price": "1882.151785714285716750000000"
   },
   {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "16.39214285714285718400000000",
     "horizon_bars": "6",
@@ -123,5 +93,43 @@
     "stop_price": "16.50214285714285660800000000",
     "trail_active": "0",
     "trough_price": "16.39214285714285718400000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "1030745.107142857142900000000",
+    "horizon_bars": "6",
+    "initial_stop_price": "1038135.607142857142300000000",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BTCZAR",
+    "peak_price": "1030745.107142857142900000000",
+    "regime": "neutral",
+    "side": "SELL",
+    "signal_id": "a11493e20cd900ad",
+    "slice_id": "feat_ret_5:2:SHORT",
+    "stop_price": "1038135.607142857142300000000",
+    "trail_active": "0",
+    "trough_price": "1030745.107142857142900000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "30740.60714285714285750000000",
+    "horizon_bars": "6",
+    "initial_stop_price": "31026.10714285714285250000000",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "ETHZAR",
+    "peak_price": "30740.60714285714285750000000",
+    "regime": "neutral",
+    "side": "SELL",
+    "signal_id": "8508f406583d3e95",
+    "slice_id": "feat_ret_3:2:SHORT",
+    "stop_price": "31026.10714285714285250000000",
+    "trail_active": "0",
+    "trough_price": "30740.60714285714285750000000"
   }
 ]
