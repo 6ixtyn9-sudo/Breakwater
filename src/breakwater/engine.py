@@ -126,13 +126,14 @@ class BreakwaterEngine:
         }
         if not self.settings.has_credentials:
             append_status(
-                self.settings.status_path, "public_ok", self.settings.mode,
+                self.settings.status_path,
+                "public_ok",
+                self.settings.mode,
                 json.dumps(result, sort_keys=True),
             )
             return result
         if self.risk is None:
             raise GuardianHalt("capital mandate is not configured for authenticated runs")
-
         key_info = self.client.current_api_key()
         permissions = validate_api_key_permissions(
             key_info, live=self.settings.mode == "live"
@@ -145,10 +146,12 @@ class BreakwaterEngine:
         if missing_protection:
             pairs = ",".join(position.pair for position in missing_protection)
             append_status(
-                self.settings.status_path, "unprotected_position", self.settings.mode, pairs
+                self.settings.status_path,
+                "unprotected_position",
+                self.settings.mode,
+                pairs,
             )
             raise GuardianHalt(f"open positions lack confirmed stop protection: {pairs}")
-
         perp_positions: list[dict] = []
         perp_error = None
         try:
@@ -158,7 +161,6 @@ class BreakwaterEngine:
             if self.settings.mode == "live":
                 raise GuardianHalt(f"perp position state is unverifiable: {exc}") from exc
         perps_api = "available" if perp_error is None else "unavailable"
-
         valuator = EquityValuator(self.client, specs)
         equity_zar = valuator.equity_zar(balances, positions)
         if perp_positions:
@@ -167,7 +169,6 @@ class BreakwaterEngine:
                 margin = Decimal(str(row.get("margin") or 0))
                 pnl = Decimal(str(row.get("unrealised_pnl") or 0))
                 equity_zar += (margin + pnl) * usdc_zar
-
         high_water = self.risk_state.observe_equity(equity_zar)
         exposure_symbols = {position.pair for position in positions}
         exposure_symbols.update(str(row.get("pair") or "") for row in perp_positions)
@@ -184,21 +185,23 @@ class BreakwaterEngine:
             open_positions=len(exposure_symbols),
             aggregate_open_risk_zar=Decimal(0),
         )
-        result.update({
-            "equity_zar": str(equity_zar.quantize(Decimal("0.01"))),
-            "high_water_zar": str(high_water.quantize(Decimal("0.01"))),
-            "positions": len(positions),
-            "perp_positions": len(perp_positions),
-            "perps_api": perps_api,
-            "perp_state_error": perp_error,
-            "open_orders": len(open_orders),
-            "exposure_slots": len(exposure_symbols),
-            "risk_allowed": risk_state.allowed,
-            "risk_reasons": list(risk_state.reasons),
-            "key_permissions": sorted(permissions),
-            "key_ip_restricted": bool(key_info.get("allowedIpAddressCidr")),
-            "mandate_configured": self.risk is not None,
-        })
+        result.update(
+            {
+                "equity_zar": str(equity_zar.quantize(Decimal("0.01"))),
+                "high_water_zar": str(high_water.quantize(Decimal("0.01"))),
+                "positions": len(positions),
+                "perp_positions": len(perp_positions),
+                "perps_api": perps_api,
+                "perp_state_error": perp_error,
+                "open_orders": len(open_orders),
+                "exposure_slots": len(exposure_symbols),
+                "risk_allowed": risk_state.allowed,
+                "risk_reasons": list(risk_state.reasons),
+                "key_permissions": sorted(permissions),
+                "key_ip_restricted": bool(key_info.get("allowedIpAddressCidr")),
+                "mandate_configured": self.risk is not None,
+            }
+        )
         event_id = hashlib.sha256(
             f"guardian|{server_time.isoformat()}|{equity_zar}".encode()
         ).hexdigest()
@@ -216,7 +219,8 @@ class BreakwaterEngine:
         self.catalog.refresh()
         universe = self._universe()
         book_rows = [
-            row for row in read_book(self.settings.book_path)
+            row
+            for row in read_book(self.settings.book_path)
             if row.get("status") == "monitored"
         ]
         targets = [
@@ -238,7 +242,6 @@ class BreakwaterEngine:
             )
         else:
             signals = self._big_wave_fallback(targets, frames, server_time)
-
         paper_result = None
         if self.settings.mode in {"shadow", "live"} and self.risk is not None:
             valuator = EquityValuator(self.client, self.catalog.refresh())
@@ -252,7 +255,9 @@ class BreakwaterEngine:
                 frames=frames,
                 policy=self.risk.policy,
                 usdc_zar=usdc_zar,
-                positions_path=self.settings.data_dir / "research" / "paper_positions.json",
+                positions_path=self.settings.data_dir
+                / "research"
+                / "paper_positions.json",
                 log_path=self.settings.paper_log_path,
                 cooldown_path=self.settings.cooldown_path,
                 book_path=self.settings.book_path,
@@ -260,26 +265,28 @@ class BreakwaterEngine:
                 server_time=server_time,
             )
             for entry in blocked:
-                append_log(self.settings.paper_log_path, {
-                    "closed_at": server_time.isoformat(),
-                    "signal_id": "",
-                    "pair": entry["pair"],
-                    "kind": entry["kind"],
-                    "slice_id": entry["slice_id"],
-                    "side": entry["side"],
-                    "entry_price": "",
-                    "exit_price": "",
-                    "stop_price": "",
-                    "notional_zar": "0",
-                    "pnl_zar": "0",
-                    "outcome": "skipped",
-                    "bars_held": "0",
-                    "exit_reason": "regime",
-                    "entry_guard": "regime_blocked",
-                    "regime": entry["regime"],
-                })
+                append_log(
+                    self.settings.paper_log_path,
+                    {
+                        "closed_at": server_time.isoformat(),
+                        "signal_id": "",
+                        "pair": entry["pair"],
+                        "kind": entry["kind"],
+                        "slice_id": entry["slice_id"],
+                        "side": entry["side"],
+                        "entry_price": "",
+                        "exit_price": "",
+                        "stop_price": "",
+                        "notional_zar": "0",
+                        "pnl_zar": "0",
+                        "outcome": "skipped",
+                        "bars_held": "0",
+                        "exit_reason": "regime",
+                        "entry_guard": "regime_blocked",
+                        "regime": entry["regime"],
+                    },
+                )
             paper_result["regime_blocked"] = len(blocked)
-
         payloads = []
         for signal in signals:
             payload = {
@@ -294,15 +301,10 @@ class BreakwaterEngine:
                 strategy_id=signal.slice_id,
                 pair=signal.pair,
             )
-        errors = [
-            {"pair": pair, "error": error}
-            for pair, error in sorted(frame_errors.items())
-        ]
+        errors = [{"pair": pair, "error": error} for pair, error in sorted(frame_errors.items())]
         result = {
             "server_time": server_time.isoformat(),
-            "universe_symbols": {
-                kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
-            },
+            "universe_symbols": {kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")},
             "book_slices": len(book_rows),
             "pairs_checked": len(frames),
             "pair_errors": errors,
@@ -347,36 +349,40 @@ class BreakwaterEngine:
             )
             if signal is None:
                 continue
-            signals.append(SliceSignal(
-                signal_id=signal.signal_id,
-                pair=pair.upper(),
-                kind=kind,
-                slice_id="big-wave",
-                feature="big-wave",
-                state=0,
-                side=signal.side,
-                observed_at=signal.observed_at,
-                bar_start=signal.candle_start,
-                entry_price=signal.entry_price,
-                stop_price=signal.stop_price,
-                atr=signal.atr,
-                edge=0.0,
-            ))
+            signals.append(
+                SliceSignal(
+                    signal_id=signal.signal_id,
+                    pair=pair.upper(),
+                    kind=kind,
+                    slice_id="big-wave",
+                    feature="big-wave",
+                    state=0,
+                    side=signal.side,
+                    observed_at=signal.observed_at,
+                    bar_start=signal.candle_start,
+                    entry_price=signal.entry_price,
+                    stop_price=signal.stop_price,
+                    atr=signal.atr,
+                    edge=0.0,
+                )
+            )
         return signals
 
     def _candles_from_frame(self, frame) -> list[Candle]:
         candles = []
         for _, row in frame.iterrows():
-            candles.append(Candle(
-                pair=str(row["symbol"]),
-                period_seconds=3600,
-                start=row["start"],
-                open=Decimal(str(row["open"])),
-                high=Decimal(str(row["high"])),
-                low=Decimal(str(row["low"])),
-                close=Decimal(str(row["close"])),
-                volume=Decimal(str(row["volume"])),
-            ))
+            candles.append(
+                Candle(
+                    pair=str(row["symbol"]),
+                    period_seconds=3600,
+                    start=row["start"],
+                    open=Decimal(str(row["open"])),
+                    high=Decimal(str(row["high"])),
+                    low=Decimal(str(row["low"])),
+                    close=Decimal(str(row["close"])),
+                    volume=Decimal(str(row["volume"])),
+                )
+            )
         return candles
 
     def operational_pass(self, *, max_pairs: int = 12) -> dict:
@@ -393,9 +399,7 @@ class BreakwaterEngine:
         for payload in scan["signals"]:
             if payload.get("slice_id") != "big-wave":
                 continue
-            strategy_id = (
-                f"big-wave-{payload['pair']}-{str(payload['side']).lower()}"
-            )
+            strategy_id = f"big-wave-{payload['pair']}-{str(payload['side']).lower()}"
             if self.registry.lifecycle(strategy_id) is not Lifecycle.LIVE_CAPPED:
                 continue
             pair = str(payload["pair"])
@@ -450,24 +454,28 @@ class BreakwaterEngine:
             break
         return result
 
-   def research_pass(self, *, max_pairs: int = 30) -> dict:
+    def research_pass(self, *, max_pairs: int = 30) -> dict:
         server_time, _ = self._server_state()
         self.catalog.refresh()
         universe = self._universe()
+
         from breakwater.discovery import _slice_stats, write_discovered
         from breakwater.research_lifecycle import sync_book
         from breakwater.validation import validate_slices, write_validated
 
         write_universe(self.settings.universe_path, universe)
+
         spot_targets = [(pair, "SPOT") for pair in universe.ranked("SPOT", max_pairs)]
         perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
         all_targets = spot_targets + perp_targets
+
         frames, frame_errors = self._frames(all_targets, server_time)
         if not frames:
             raise GuardianHalt(
                 "no research frames could be fetched; refusing to overwrite "
                 "research artifacts with empty results"
             )
+
         discovered = []
         validated = []
 
@@ -476,25 +484,37 @@ class BreakwaterEngine:
             raise GuardianHalt("BREAKWATER_RESEARCH_HORIZON_BARS must be >= 1")
 
         for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
-            pooled = _pool_frames({pair: frames[pair] for pair, k in all_targets if k == kind})
-            prepared = prepare_pooled(pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars)
+            # IMPORTANT: only include frames that actually exist (avoid KeyError).
+            kind_frames = {}
+            for pair, k in all_targets:
+                if k != kind:
+                    continue
+                frame = frames.get(pair.upper())
+                if frame is None:
+                    continue
+                kind_frames[pair.upper()] = frame
 
+            pooled = _pool_frames(kind_frames)
+            prepared = prepare_pooled(
+                pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars
+            )
             found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars)
             checked = validate_slices(prepared, found)
             discovered.extend(found)
             validated.extend(checked)
+
         write_discovered(self.settings.discovered_path, discovered)
         write_validated(self.settings.validated_path, validated)
+
         book_summary = sync_book(
             validated_path=self.settings.validated_path,
             book_path=self.settings.book_path,
             now=server_time,
         )
+
         result = {
             "server_time": server_time.isoformat(),
-            "universe": {
-                kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
-            },
+            "universe": {kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")},
             "pairs_researched": len(frames),
             "frame_errors": [
                 {"pair": pair, "error": error}
@@ -505,9 +525,7 @@ class BreakwaterEngine:
             "regime_confounded_slices": len(
                 [row for row in validated if row.regime_confounded]
             ),
-            "hostile_unproven_slices": len(
-                [row for row in validated if row.hostile_unproven]
-            ),
+            "hostile_unproven_slices": len([row for row in validated if row.hostile_unproven]),
             "book": book_summary,
         }
         append_status(
@@ -537,14 +555,13 @@ class BreakwaterEngine:
             try:
                 as_of = datetime.fromisoformat(snapshot.as_of)
                 age_hours = round(
-                    (datetime.now(timezone.utc) - as_of).total_seconds() / 3600, 1
+                    (datetime.now(timezone.utc) - as_of).total_seconds() / 3600,
+                    1,
                 )
             except (TypeError, ValueError):
                 pass
             result["universe"] = {
-                "status": (
-                    "ok" if age_hours is not None and age_hours < 168 else "stale"
-                ),
+                "status": ("ok" if age_hours is not None and age_hours < 168 else "stale"),
                 "age_hours": age_hours,
                 "spot_symbols": len(snapshot.symbols("SPOT")),
                 "perp_symbols": len(snapshot.symbols("PERP")),
@@ -559,9 +576,7 @@ class BreakwaterEngine:
                 1 for row in book_rows if row.get("hostile_unproven") == "True"
             ),
         }
-        positions = read_positions(
-            self.settings.data_dir / "research" / "paper_positions.json"
-        )
+        positions = read_positions(self.settings.data_dir / "research" / "paper_positions.json")
         result["paper_open_positions"] = len(positions)
         result["paper_positions"] = [
             {
@@ -582,7 +597,8 @@ class BreakwaterEngine:
             raise GuardianHalt("live mode requires a configured capital mandate")
         if self.settings.mode == "live":
             live = [
-                row for row in self.registry.load()["strategies"].values()
+                row
+                for row in self.registry.load()["strategies"].values()
                 if row.get("lifecycle") == Lifecycle.LIVE_CAPPED.value
             ]
             if not live:
