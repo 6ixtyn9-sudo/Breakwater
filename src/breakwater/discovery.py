@@ -15,6 +15,7 @@ from decimal import Decimal
 import numpy as np
 import pandas as pd
 
+
 DISCOVERY_HEADERS = [
     "slice_id",
     "kind",
@@ -71,7 +72,7 @@ def bin_states(
         values = series.to_numpy()
         states = np.full(len(values), np.nan)
         for index in range(min_periods, len(values)):
-            window = values[:index + 1]
+            window = values[: index + 1]
             finite = window[np.isfinite(window)]
             if len(finite) < min_periods:
                 continue
@@ -112,20 +113,24 @@ def prepare_pooled(
     cost = cost_bps / 10000.0
     if "symbol" not in frame.columns:
         raise ValueError("pooled frame must carry a symbol column")
+
     from breakwater.features import forward_mae_atr
 
     parts = []
     for _, group in frame.groupby("symbol", sort=False):
         binned = bin_states(group, feature_columns)
         close = binned["close"]
-binned["fwd_ret"] = (close.shift(-horizon_bars) / close - 1.0) - cost
 
-# New: MAE measured over the same horizon as forward returns
-binned["fwd_mae_atr"] = forward_mae_atr(binned, horizon=horizon_bars)
+        binned["fwd_ret"] = (close.shift(-horizon_bars) / close - 1.0) - cost
 
-# Keep legacy 5-bar MAE for backward compatibility
-binned["fwd_mae_atr_5"] = forward_mae_atr(binned, horizon=5)
+        # New: MAE measured over the same horizon as forward returns
+        binned["fwd_mae_atr"] = forward_mae_atr(binned, horizon=horizon_bars)
+
+        # Keep legacy 5-bar MAE for backward compatibility
+        binned["fwd_mae_atr_5"] = forward_mae_atr(binned, horizon=5)
+
         parts.append(binned)
+
     if not parts:
         return frame.iloc[0:0].copy()
     return pd.concat(parts, ignore_index=True)
@@ -152,29 +157,36 @@ def _slice_stats(
             t_stat = mean / (std / math.sqrt(n)) if std > 0 else 0.0
             p_value = _normal_p(t_stat)
             side = "LONG" if mean > 0 else "SHORT"
-            candidates.append(SliceStat(
-                slice_id=f"{feature}:{state}:{side}",
-                kind=kind,
-                feature=feature,
-                state=state,
-                side=side,
-                n=n,
-                mean_ret_costadj=mean,
-                median_ret_costadj=float(np.median(returns)),
-                hit_rate=float(np.mean(returns > 0)),
-                t_stat=t_stat,
-                p_value=p_value,
-                bonferroni_pass=False,
-                horizon_bars=horizon_bars,
-            ))
+            candidates.append(
+                SliceStat(
+                    slice_id=f"{feature}:{state}:{side}",
+                    kind=kind,
+                    feature=feature,
+                    state=state,
+                    side=side,
+                    n=n,
+                    mean_ret_costadj=mean,
+                    median_ret_costadj=float(np.median(returns)),
+                    hit_rate=float(np.mean(returns > 0)),
+                    t_stat=t_stat,
+                    p_value=p_value,
+                    bonferroni_pass=False,
+                    horizon_bars=horizon_bars,
+                )
+            )
+
     if candidates:
         threshold = float(ALPHA) / len(candidates)
         flagged = [
             asdict(stat)
-            | {"bonferroni_pass": stat.p_value < threshold and stat.n >= MIN_SLICE_ROWS}
+            | {
+                "bonferroni_pass": stat.p_value < threshold
+                and stat.n >= MIN_SLICE_ROWS
+            }
             for stat in candidates
         ]
         candidates = [SliceStat(**row) for row in flagged]
+
     return sorted(
         candidates,
         key=lambda stat: (not stat.bonferroni_pass, -stat.mean_ret_costadj),
