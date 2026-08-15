@@ -37,6 +37,7 @@ jobs:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: readonly
+          BREAKWATER_RESEARCH_HORIZON_BARS: "6"
         run: PYTHONPATH=src python scripts/breakwater.py research
 
       - name: Persist research inputs and status
