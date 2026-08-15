@@ -1,6 +1,6 @@
 This is a **full replacement `HANDOVER.md`** updated to match what’s currently on `main` (existing handover structure + today’s runtime knobs in workflows + trailing capability in `paper_trade.py` + note about `commit_state.sh` always pushing to `main`). 
 
-```md
+
 # Breakwater — Handover
 
 Date: 2026-08-15
@@ -28,7 +28,7 @@ lags the code, trust the code and correct this file.
   slices; paper trades are simulations committed to the repo.
 
 ## Architecture map
-```text
+
 universe.py      full VALR spot + Perps ingestion, volume-ranked, 7-day freshness
 perpdata.py      Hyperliquid public candles (the venue's own market data)
 features.py      descriptive price-state features + forward MAE in ATR
@@ -39,7 +39,7 @@ monitor.py       per-slice signals, side-aware regime gate, calibrated stops
 paper_trade.py   simulated fills: knife guard, winner capture, exits, audit (+ optional trailing)
 risk.py          env-supplied mandate, perp sizing under venue minimums
 engine.py        guardian / shadow / research / health orchestration
-```
+
 
 ## Lessons audit (predecessor handover -> Breakwater status)
 
@@ -182,7 +182,7 @@ tail -3 localdata/status.csv
 tail -3 localdata/research/paper_trade_log.csv
 cat localdata/research/paper_positions.json
 PYTHONPATH=src python scripts/breakwater.py health
-```
+
 
 Workflow dispatch and secret updates are documented in README.md.
 Updates ship as signed git bundles; never hand-edit committed state files.
@@ -207,4 +207,4 @@ Notes for operators/agents:
 - Small patches, in-place documentation, no placeholder files.
 - For GitHub web edits: prefer full-file replacements; never paste partial
   blocks with placeholder `...`; keep CI compileall green.
-```
+
