@@ -1,3 +1,4 @@
+# FILE: src/breakwater/discovery.py
 """Market-state slice discovery on pooled universe bars.
 
 Features are binned into expanding quantile states per symbol. Each
