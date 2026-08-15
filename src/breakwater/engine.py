@@ -450,7 +450,7 @@ class BreakwaterEngine:
             break
         return result
 
-       def research_pass(self, *, max_pairs: int = 30) -> dict:
+   def research_pass(self, *, max_pairs: int = 30) -> dict:
         server_time, _ = self._server_state()
         self.catalog.refresh()
         universe = self._universe()
