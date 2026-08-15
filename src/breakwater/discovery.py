@@ -1,4 +1,3 @@
-# FILE: src/breakwater/discovery.py
 """Market-state slice discovery on pooled universe bars.
 
 Features are binned into expanding quantile states per symbol. Each
@@ -6,10 +5,9 @@ Features are binned into expanding quantile states per symbol. Each
 forward returns are measured across the pooled universe. Candidates are
 ranked with a Bonferroni correction applied to the number of slices tested.
 
-Session audit (UTC): each prepared row is tagged into a coarse UTC session
-bucket (asia/eu/us). Discovery outputs include per-session counts/means/hit
-rates for each slice. This is audit-only; it does not change which slices
-exist or how they are ranked.
+Session audit (UTC): we attach a coarse `session_utc` label to each bar and
+report per-session stats for each slice (audit-only; does not change slice
+eligibility or validation logic).
 """
 
 from __future__ import annotations
@@ -190,8 +188,8 @@ def _session_stats(
 ) -> tuple[int, float, float]:
     if "session_utc" not in subset.columns:
         return 0, 0.0, 0.0
-    session_mask = subset["session_utc"] == session_label
-    values = subset.loc[slice_mask & session_mask, "fwd_ret"].to_numpy()
+
+    values = subset.loc[slice_mask & (subset["session_utc"] == session_label), "fwd_ret"].to_numpy()
     n = len(values)
     if n == 0:
         return 0, 0.0, 0.0
@@ -256,10 +254,7 @@ def _slice_stats(
         threshold = float(ALPHA) / len(candidates)
         flagged = [
             asdict(stat)
-            | {
-                "bonferroni_pass": stat.p_value < threshold
-                and stat.n >= MIN_SLICE_ROWS
-            }
+            | {"bonferroni_pass": stat.p_value < threshold and stat.n >= MIN_SLICE_ROWS}
             for stat in candidates
         ]
         candidates = [SliceStat(**row) for row in flagged]
