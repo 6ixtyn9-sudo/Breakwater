@@ -450,7 +450,7 @@ class BreakwaterEngine:
             break
         return result
 
-    def research_pass(self, *, max_pairs: int = 30) -> dict:
+       def research_pass(self, *, max_pairs: int = 30) -> dict:
         server_time, _ = self._server_state()
         self.catalog.refresh()
         universe = self._universe()
@@ -468,19 +468,18 @@ class BreakwaterEngine:
                 "no research frames could be fetched; refusing to overwrite "
                 "research artifacts with empty results"
             )
-       discovered = []
+        discovered = []
+        validated = []
 
-validated = []
+        horizon_bars = int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"))
+        if horizon_bars < 1:
+            raise GuardianHalt("BREAKWATER_RESEARCH_HORIZON_BARS must be >= 1")
 
-horizon_bars = int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"))
-if horizon_bars < 1:
-    raise GuardianHalt("BREAKWATER_RESEARCH_HORIZON_BARS must be >= 1")
+        for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
+            pooled = _pool_frames({pair: frames[pair] for pair, k in all_targets if k == kind})
+            prepared = prepare_pooled(pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars)
 
-for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
-    ...
-    prepared = prepare_pooled(pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars)
-
-    found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars)
+            found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars)
             checked = validate_slices(prepared, found)
             discovered.extend(found)
             validated.extend(checked)
