@@ -61,5 +61,21 @@
     "signal_id": "d90a668155c727b2",
     "slice_id": "feat_ext_vs_ma_50:2:SHORT",
     "stopped_at": "2026-08-15T15:43:10+00:00"
+  },
+  {
+    "pair": "BTCZAR",
+    "pnl_zar": "-1.0961",
+    "reason": "time_stop",
+    "signal_id": "bcd734a26f60c05c",
+    "slice_id": "feat_atr_norm_ext:2:SHORT",
+    "stopped_at": "2026-08-15T16:15:25+00:00"
+  },
+  {
+    "pair": "LTCZAR",
+    "pnl_zar": "-2.5190",
+    "reason": "stop",
+    "signal_id": "ed146f10126bcc01",
+    "slice_id": "feat_ret_20:2:SHORT",
+    "stopped_at": "2026-08-15T16:15:25+00:00"
   }
 ]

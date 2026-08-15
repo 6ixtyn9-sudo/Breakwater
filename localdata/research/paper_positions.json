@@ -1,19 +1,6 @@
 [
   {
-    "bars_held": "11",
-    "entry_guard": "passed",
-    "entry_price": "1026965.732142857142900000000",
-    "kind": "SPOT",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "BTCZAR",
-    "side": "SELL",
-    "signal_id": "bcd734a26f60c05c",
-    "slice_id": "feat_atr_norm_ext:2:SHORT",
-    "stop_price": "1039401.482142857142300000000"
-  },
-  {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "63072.05357142857142750000000",
     "kind": "PERP",
@@ -26,7 +13,7 @@
     "stop_price": "63383.08564285714286943000000"
   },
   {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "1884.258928571428573075000000",
     "kind": "PERP",
@@ -39,7 +26,7 @@
     "stop_price": "1894.745407142857123975900000"
   },
   {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "30765.39285714285714250000000",
     "kind": "SPOT",
@@ -54,14 +41,27 @@
   {
     "bars_held": "0",
     "entry_guard": "passed",
-    "entry_price": "722.0535714285714220750000000",
+    "entry_price": "1029947.892857142857100000000",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BTCZAR",
+    "side": "SELL",
+    "signal_id": "ac112a7e26c1ac7a",
+    "slice_id": "feat_ret_20:2:SHORT",
+    "stop_price": "1038237.392857142857700000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "723.2999999999999930000000000",
     "kind": "SPOT",
     "missing_bars": "0",
     "notional_zar": "200.00",
     "pair": "LTCZAR",
     "side": "SELL",
-    "signal_id": "ed146f10126bcc01",
+    "signal_id": "b1ea58578fdc3fa9",
     "slice_id": "feat_ret_20:2:SHORT",
-    "stop_price": "729.7035714285715130250000000"
+    "stop_price": "733.1000000000000910000000000"
   }
 ]
