@@ -162,13 +162,13 @@ def _hostile_regime_check(
 def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
     """90th percentile of the slice's adverse-atr distribution, clamped.
 
-    The percentile (not an in-sample optimum) avoids overfitting the stop
-    to the worst historical bar; the clamp keeps stops within sane bounds
-    for both sleepy and wild symbols.
+    Uses `fwd_mae_atr` (horizon-matched) when present; falls back to legacy
+    `fwd_mae_atr_5` otherwise.
     """
     mae_col = "fwd_mae_atr" if "fwd_mae_atr" in prepared.columns else "fwd_mae_atr_5"
     if mae_col not in prepared.columns:
         return 2.0
+
     subset = prepared.dropna(subset=[state_column, mae_col])
     mask = subset[state_column] == candidate.state
     values = subset.loc[mask, mae_col].to_numpy()
@@ -187,7 +187,7 @@ def _session_stats(
     if "session_utc" not in subset.columns:
         return 0, 0.0, 0.0
     sess = subset["session_utc"].to_numpy()
-    values = subset.loc[(slice_mask & (sess == session_label)).astype(bool), "fwd_ret"].to_numpy()
+    values = subset.loc[(slice_mask & (sess == session_label)), "fwd_ret"].to_numpy()
     n = len(values)
     if n == 0:
         return 0, 0.0, 0.0
@@ -214,17 +214,16 @@ def validate_slices(
             continue
 
         subset = rows.dropna(subset=[state_column])
-        mask = (subset[state_column] == candidate.state).to_numpy()
+        mask = (subset[state_column] == candidate.state).to_numpy(dtype=bool)
 
         fold_ids = np.linspace(0, len(subset), FOLD_COUNT + 1).astype(int)
         fold_results = []
         fold_means = []
         fold_sizes = []
-
         for fold in range(FOLD_COUNT):
             fold_mask = np.zeros(len(subset), dtype=bool)
             fold_mask[fold_ids[fold] : fold_ids[fold + 1]] = True
-            fold_returns = subset.loc[(mask & fold_mask).astype(bool), "fwd_ret"].to_numpy()
+            fold_returns = subset.loc[(mask & fold_mask), "fwd_ret"].to_numpy()
             passed = _fold_pass(fold_returns, candidate.side)
             fold_results.append("1" if passed else "0")
             fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
@@ -233,6 +232,7 @@ def validate_slices(
         pattern = "".join(fold_results)
         pass_count = pattern.count("1")
         latest_passes = pattern[-1] == "1"
+
         temporal_pass = (
             pass_count >= max(3, int(0.75 * FOLD_COUNT))
             and latest_passes
@@ -293,7 +293,6 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
 
-        # Backward compatibility: these are optional in older validated files.
         optional = {
             "stop_atr_mult",
             "hostile_n",
@@ -320,9 +319,9 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         has_unproven = "hostile_unproven" in fieldnames
         has_session = "session_asia_n" in fieldnames
 
-        rows = []
+        out = []
         for row in reader:
-            rows.append(
+            out.append(
                 ValidatedSlice(
                     slice_id=str(row["slice_id"]),
                     kind=str(row["kind"]),
@@ -342,20 +341,38 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     stop_atr_mult=float(row["stop_atr_mult"]) if has_stop else 2.0,
                     hostile_n=int(row["hostile_n"]) if has_hostile else 0,
                     hostile_mean_ret=float(row["hostile_mean_ret"]) if has_hostile else 0.0,
-                    regime_confounded=(row.get("regime_confounded") == "True" if has_hostile else False),
-                    hostile_unproven=(row.get("hostile_unproven") == "True" if has_unproven else False),
-                    session_asia_n=int(row["session_asia_n"]) if has_session and row.get("session_asia_n") else 0,
-                    session_asia_mean_ret_costadj=float(row["session_asia_mean_ret_costadj"]) if has_session and row.get("session_asia_mean_ret_costadj") else 0.0,
-                    session_asia_hit_rate=float(row["session_asia_hit_rate"]) if has_session and row.get("session_asia_hit_rate") else 0.0,
+                    regime_confounded=(
+                        row.get("regime_confounded") == "True" if has_hostile else False
+                    ),
+                    hostile_unproven=(
+                        row.get("hostile_unproven") == "True" if has_unproven else False
+                    ),
+                    session_asia_n=int(row["session_asia_n"])
+                    if has_session and row.get("session_asia_n")
+                    else 0,
+                    session_asia_mean_ret_costadj=float(row["session_asia_mean_ret_costadj"])
+                    if has_session and row.get("session_asia_mean_ret_costadj")
+                    else 0.0,
+                    session_asia_hit_rate=float(row["session_asia_hit_rate"])
+                    if has_session and row.get("session_asia_hit_rate")
+                    else 0.0,
                     session_eu_n=int(row["session_eu_n"]) if has_session and row.get("session_eu_n") else 0,
-                    session_eu_mean_ret_costadj=float(row["session_eu_mean_ret_costadj"]) if has_session and row.get("session_eu_mean_ret_costadj") else 0.0,
-                    session_eu_hit_rate=float(row["session_eu_hit_rate"]) if has_session and row.get("session_eu_hit_rate") else 0.0,
+                    session_eu_mean_ret_costadj=float(row["session_eu_mean_ret_costadj"])
+                    if has_session and row.get("session_eu_mean_ret_costadj")
+                    else 0.0,
+                    session_eu_hit_rate=float(row["session_eu_hit_rate"])
+                    if has_session and row.get("session_eu_hit_rate")
+                    else 0.0,
                     session_us_n=int(row["session_us_n"]) if has_session and row.get("session_us_n") else 0,
-                    session_us_mean_ret_costadj=float(row["session_us_mean_ret_costadj"]) if has_session and row.get("session_us_mean_ret_costadj") else 0.0,
-                    session_us_hit_rate=float(row["session_us_hit_rate"]) if has_session and row.get("session_us_hit_rate") else 0.0,
+                    session_us_mean_ret_costadj=float(row["session_us_mean_ret_costadj"])
+                    if has_session and row.get("session_us_mean_ret_costadj")
+                    else 0.0,
+                    session_us_hit_rate=float(row["session_us_hit_rate"])
+                    if has_session and row.get("session_us_hit_rate")
+                    else 0.0,
                 )
             )
-        return rows
+        return out
 
 
 def write_validated(path, rows: list[ValidatedSlice]) -> None:
