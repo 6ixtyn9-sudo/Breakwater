@@ -28,7 +28,6 @@ REGIME_MIN_BARS = 200
 
 def regime_of(frame: pd.DataFrame) -> str:
     """Bull / bear / neutral / unknown from the SMA-50/200 crossover prior.
-
     Fail-open: insufficient history returns unknown, which never blocks.
     """
     if frame is None or len(frame) < REGIME_MIN_BARS:
@@ -69,6 +68,9 @@ class SliceSignal:
     stop_price: Decimal
     atr: Decimal
     edge: float
+    # NEW: carry the research/validation horizon into paper execution
+    # (default keeps backward compatibility for non-book / fallback signals).
+    horizon_bars: int = 1
     stop_atr_mult: float = 2.0
     regime: str = "unknown"
 
@@ -93,7 +95,6 @@ def monitor_book(
     server_time: datetime,
 ) -> tuple[list[SliceSignal], list[dict]]:
     """Scan monitored book rows against frames of the SAME kind only.
-
     Returns (signals, regime_blocked). Regime-blocked matches are reported
     rather than silently dropped, so the audit trail shows why a slice did
     not fire.
@@ -104,44 +105,62 @@ def monitor_book(
     for row in book_rows:
         if row.get("status") != "monitored":
             continue
+
         slice_id = str(row["slice_id"])
         feature = str(row["feature"])
         state = int(row["state"])
         direction = str(row["side"]).upper()
         side = Side.BUY if direction == "LONG" else Side.SELL
         kind = str(row["kind"])
+
         try:
             stop_atr_mult = float(row.get("stop_atr_mult") or DEFAULT_STOP_ATR_MULT)
         except (TypeError, ValueError):
             stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
         if stop_atr_mult <= 0:
             stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
+
+        # NEW: horizon passed through from the monitored book
+        try:
+            horizon_bars = int(row.get("horizon_bars") or 1)
+        except (TypeError, ValueError):
+            horizon_bars = 1
+        if horizon_bars <= 0:
+            horizon_bars = 1
+
         for pair, frame in (frames_by_kind.get(kind) or {}).items():
             if frame is None or frame.empty or len(frame) < 60:
                 continue
+
             regime = regime_of(frame)
             featured = compute_price_features(frame)
             latest_state, latest_row = _latest_state(featured, feature)
             if latest_state != state:
                 continue
+
             if regime_blocks(side, regime):
-                blocked.append({
-                    "pair": pair.upper(),
-                    "kind": kind,
-                    "slice_id": slice_id,
-                    "side": side.value,
-                    "regime": regime,
-                })
+                blocked.append(
+                    {
+                        "pair": pair.upper(),
+                        "kind": kind,
+                        "slice_id": slice_id,
+                        "side": side.value,
+                        "regime": regime,
+                    }
+                )
                 continue
+
             close = Decimal(str(latest_row["close"]))
             atr_raw = _atr(featured)
             if close <= 0 or atr_raw <= 0:
                 continue
+
             atr = Decimal(str(atr_raw))
             stop_distance = Decimal(str(stop_atr_mult)) * atr
             stop = close - stop_distance if side is Side.BUY else close + stop_distance
             if stop <= 0:
                 continue
+
             bar_start = latest_row["start"]
             digest = hashlib.sha256(
                 f"{pair}|{slice_id}|{bar_start.isoformat()}".encode()
@@ -149,36 +168,42 @@ def monitor_book(
             if digest in seen:
                 continue
             seen.add(digest)
-            signals.append(SliceSignal(
-                signal_id=digest,
-                pair=pair.upper(),
-                kind=kind,
-                slice_id=slice_id,
-                feature=feature,
-                state=state,
-                side=side,
-                observed_at=server_time.astimezone(timezone.utc),
-                bar_start=bar_start,
-                entry_price=close,
-                stop_price=stop,
-                atr=atr,
-                edge=float(row.get("mean_ret_costadj") or 0),
-                stop_atr_mult=stop_atr_mult,
-                regime=regime,
-            ))
-    return signals, blocked
 
+            signals.append(
+                SliceSignal(
+                    signal_id=digest,
+                    pair=pair.upper(),
+                    kind=kind,
+                    slice_id=slice_id,
+                    feature=feature,
+                    state=state,
+                    side=side,
+                    observed_at=server_time.astimezone(timezone.utc),
+                    bar_start=bar_start,
+                    entry_price=close,
+                    stop_price=stop,
+                    atr=atr,
+                    edge=float(row.get("mean_ret_costadj") or 0),
+                    horizon_bars=horizon_bars,
+                    stop_atr_mult=stop_atr_mult,
+                    regime=regime,
+                )
+            )
+    return signals, blocked
 
 
 def _atr(frame: pd.DataFrame) -> float:
     high = frame["high"]
     low = frame["low"]
     close = frame["close"]
-    true_range = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs(),
-    ], axis=1).max(axis=1)
+    true_range = pd.concat(
+        [
+            high - low,
+            (high - close.shift(1)).abs(),
+            (low - close.shift(1)).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
     values = true_range.rolling(14).mean().dropna().to_numpy()
     return float(values[-1]) if len(values) else 0.0
 
@@ -204,6 +229,7 @@ def signal_payload(signal: SliceSignal) -> dict:
         "stop_price": str(signal.stop_price),
         "atr": str(signal.atr),
         "edge": signal.edge,
+        "horizon_bars": int(signal.horizon_bars),
         "stop_atr_mult": signal.stop_atr_mult,
         "regime": signal.regime,
     }
