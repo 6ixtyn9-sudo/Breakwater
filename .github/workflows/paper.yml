@@ -21,7 +21,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
@@ -31,14 +30,19 @@ jobs:
 
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.lock
-
       - name: Run monitored-slice shadow scan and paper cycle
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: shadow
           BREAKWATER_PAPER_TIME_STOP_BARS: "12"
-          BREAKWATER_TRAIL_ENABLE: "1"
+
+          # Trailing (profit-protecting stop) - OFF by default
+          BREAKWATER_TRAIL_ENABLE: "0"
+          BREAKWATER_TRAIL_ACTIVATE_R: "1.0"
+          BREAKWATER_TRAIL_DISTANCE_R: "1.0"
+          BREAKWATER_TRAIL_IGNORE_TIME_STOP: "0"
+
           BREAKWATER_LIVE_ACK: ${{ secrets.BREAKWATER_LIVE_ACK }}
           BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
           BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR: ${{ secrets.BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR }}
@@ -53,7 +57,6 @@ jobs:
           BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
           BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
-
       - name: Persist bounded state
         if: always()
         run: bash scripts/commit_state.sh "paper trading"
