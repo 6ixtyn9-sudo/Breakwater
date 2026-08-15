@@ -468,19 +468,19 @@ class BreakwaterEngine:
                 "no research frames could be fetched; refusing to overwrite "
                 "research artifacts with empty results"
             )
-        discovered = []
-        validated = []
-        for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
-            kind_frames = {
-                pair: frames[pair.upper()]
-                for pair, frame_kind in all_targets
-                if frame_kind == kind and pair.upper() in frames
-            }
-            if not kind_frames:
-                continue
-            pooled = _pool_frames(kind_frames)
-            prepared = prepare_pooled(pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=1)
-            found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=1)
+       discovered = []
+
+validated = []
+
+horizon_bars = int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"))
+if horizon_bars < 1:
+    raise GuardianHalt("BREAKWATER_RESEARCH_HORIZON_BARS must be >= 1")
+
+for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
+    ...
+    prepared = prepare_pooled(pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars)
+
+    found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars)
             checked = validate_slices(prepared, found)
             discovered.extend(found)
             validated.extend(checked)
