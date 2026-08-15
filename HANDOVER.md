@@ -1,6 +1,3 @@
-This is a **full replacement `HANDOVER.md`** updated to match what’s currently on `main` (existing handover structure + today’s runtime knobs in workflows + trailing capability in `paper_trade.py` + note about `commit_state.sh` always pushing to `main`). 
-
-
 # Breakwater — Handover
 
 Date: 2026-08-15
@@ -17,18 +14,19 @@ lags the code, trust the code and correct this file.
   HTTP 401 code -93 to API keys (`perps_api: unavailable` in every
   guardian run; the system auto-reports when this changes).
 - Cadence (cronjobs.com, dispatch-only workflows): guardian every 30 min,
-  paper hourly, research daily at 02:30 UTC. (Scheduler is external;
-  the repo workflows are `workflow_dispatch` only.)
+  paper hourly, research daily at 02:30 UTC.
+  - NOTE: the repo workflows are `workflow_dispatch` only. Scheduling is external.
 - Runtime knobs (current GitHub Actions settings):
-  - Research horizon: `BREAKWATER_RESEARCH_HORIZON_BARS="6"` (research.yml).
-  - Paper time-stop: `BREAKWATER_PAPER_TIME_STOP_BARS="12"` (paper.yml).
-  - Trailing profit-protection exists in `paper_trade.py` behind env flags,
-    but is currently OFF (paper.yml does not set `BREAKWATER_TRAIL_ENABLE`).
+  - Research horizon bars: `BREAKWATER_RESEARCH_HORIZON_BARS="6"` (research.yml).
+  - Paper time-stop bars: `BREAKWATER_PAPER_TIME_STOP_BARS="12"` (paper.yml).
+  - Trailing stop is wired in paper.yml but OFF by default:
+    `BREAKWATER_TRAIL_ENABLE="0"` plus `*_ACTIVATE_R="1.0"`,
+    `*_DISTANCE_R="1.0"`, `*_IGNORE_TIME_STOP="0"`.
 - Book: built only from walk-forward-validated, regime-confounded-free
   slices; paper trades are simulations committed to the repo.
 
 ## Architecture map
-
+```text
 universe.py      full VALR spot + Perps ingestion, volume-ranked, 7-day freshness
 perpdata.py      Hyperliquid public candles (the venue's own market data)
 features.py      descriptive price-state features + forward MAE in ATR
@@ -39,7 +37,7 @@ monitor.py       per-slice signals, side-aware regime gate, calibrated stops
 paper_trade.py   simulated fills: knife guard, winner capture, exits, audit (+ optional trailing)
 risk.py          env-supplied mandate, perp sizing under venue minimums
 engine.py        guardian / shadow / research / health orchestration
-
+```
 
 ## Lessons audit (predecessor handover -> Breakwater status)
 
@@ -91,18 +89,10 @@ Deliberate deviations (recorded honestly):
   the same market windows, so per-slice round-trip counts are correlated
   observations, not independent ones — the review must weigh that before
   treating accumulated counts as proof.
-- 2026-08-15, horizon/time-stop alignment shipped (operator call):
-  research now runs with `BREAKWATER_RESEARCH_HORIZON_BARS="6"` and paper
-  uses `BREAKWATER_PAPER_TIME_STOP_BARS="12"` in GitHub Actions. Reason:
-  (1) 1-bar cost-adjusted research biased the slice book toward SHORT-only
-  discoveries; (2) 48-bar paper holds were misaligned with short-horizon
-  evidence and slowed learning. The env knobs keep defaults unchanged when
-  unset, but workflows explicitly set the new values.
-- 2026-08-15, optional trailing profit-protection added (operator request):
-  `paper_trade.py` now supports a ratcheting trailing stop behind env flags
-  (`BREAKWATER_TRAIL_ENABLE`, `BREAKWATER_TRAIL_ACTIVATE_R`,
-  `BREAKWATER_TRAIL_DISTANCE_R`, `BREAKWATER_TRAIL_IGNORE_TIME_STOP`).
-  Default is OFF; do not enable without an evidence plan.
+- 2026-08-15, knobs shipped (operator call): research horizon and paper
+  time-stop are now controlled by env vars (defaults preserve prior behavior),
+  and GitHub Actions sets horizon=6 and time_stop=12 to improve research/execution
+  alignment and learning speed.
 
 ## Incidents
 - 2026-08-14, legacy log header hid audit columns: paper_trade_log.csv was
@@ -150,22 +140,22 @@ Deliberate deviations (recorded honestly):
   hostile rows), silently. Such slices are now labelled hostile_unproven
   in validation, carried into the book, and counted in research summaries
   and the health digest.
-- 2026-08-15, GitHub web-edit indentation breakage: partial copy/paste edits
-  introduced Python indentation/syntax errors that halted `research`. Fix:
-  replace entire files (not fragments) when editing in browser; CI compileall
-  is the required guardrail and must stay green.
+- 2026-08-15, GitHub web-edit syntax breakage: browser copy/paste introduced
+  indentation/syntax errors that halted `research`. Fix was full-file replacement
+  plus reliance on CI compile gates. Operator note: prefer full-file replaces
+  for web edits; avoid placeholder lines.
 
 ## Known placeholders
 
 Known placeholders and seams (do not tune without evidence):
 - SPOT_FEE_BPS 20 / PERP_FEE_BPS 26 are first-pass simulations; they must
   be calibrated from realized paper fills before any live step.
-- Per-slice hold-horizon: the book carries `horizon_bars` but paper exits
-  still use a single global time-stop. This is now controlled by
-  `BREAKWATER_PAPER_TIME_STOP_BARS` (default 48). Workflows currently set 12.
-  Per-slice horizon-to-exit calibration remains deferred.
-- Optional trailing stop exists but is OFF by default; do not enable without
-  a measured plan (baseline week, then A/B).
+- Per-slice hold-horizon: the book carries `horizon_bars` but the paper
+  time-stop is still global (not per-slice). It is now controlled by
+  `BREAKWATER_PAPER_TIME_STOP_BARS` (default 48). GitHub Actions currently
+  sets it to 12. Per-slice horizon calibration is deferred (research-side feature).
+- Trailing stop: supported in paper behind env flags (see Current posture),
+  OFF by default; enable only with an evidence plan.
 - `xyz:` builder pairs are skipped (no Hyperliquid coin mapping).
 - Big-wave fallback signals exist only for an empty book and never paper-trade.
 - The promotion registry (live_capped) is vestigial from v0.1; live
@@ -182,14 +172,15 @@ tail -3 localdata/status.csv
 tail -3 localdata/research/paper_trade_log.csv
 cat localdata/research/paper_positions.json
 PYTHONPATH=src python scripts/breakwater.py health
-
+```
 
 Workflow dispatch and secret updates are documented in README.md.
 Updates ship as signed git bundles; never hand-edit committed state files.
 
-Notes for operators/agents:
-- `scripts/commit_state.sh` always pulls/pushes `origin main` (hardcoded).
-  Do not expect "run workflow on a branch" to keep state isolated.
+Operator note:
+- `scripts/commit_state.sh` always pulls/pushes `origin main`. Running a workflow
+  from a branch will still attempt to write state back to main unless you avoid
+  calling commit_state.sh.
 
 ## Process rules for future agents
 - Verify current code on main before claiming anything is broken or
@@ -205,6 +196,3 @@ Notes for operators/agents:
 - Every shipped shell filter or query is executed against a realistic
   synthetic payload before it leaves the sandbox.
 - Small patches, in-place documentation, no placeholder files.
-- For GitHub web edits: prefer full-file replacements; never paste partial
-  blocks with placeholder `...`; keep CI compileall green.
-
