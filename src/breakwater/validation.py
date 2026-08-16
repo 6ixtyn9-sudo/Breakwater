@@ -11,14 +11,14 @@ Validation converts raw returns to net returns for the candidate side:
 
 All fold tests, hostile regime tests, and session audit stats use those net returns.
 
-Validation gating knobs (safe relaxation):
+Validation gating knobs:
 - By default, validation REQUIRES discovery Bonferroni: candidate.bonferroni_pass must be True.
-- You can relax this to allow "walk-forward only" validation (still requires
-  strong fold consistency + hostile checks + net-positive mean).
+- You can relax this to allow "walk-forward-only" validation (still requires strong fold
+  consistency + latest fold + hostile-regime check + net-positive mean).
 
 Env:
 - BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "1" (default) or "0"
-- BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: integer (default 4) used when bonferroni not required
+- BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: integer (default 4) used when Bonferroni not required
 """
 
 from __future__ import annotations
@@ -82,9 +82,6 @@ def _env_bool(name: str, default: str = "0") -> bool:
     return value in {"1", "true", "yes", "y", "on"}
 
 
-REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
-
-
 def _coerce_int(value, default: int) -> int:
     try:
         return int(value)
@@ -92,6 +89,7 @@ def _coerce_int(value, default: int) -> int:
         return default
 
 
+REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4)
 
 
@@ -239,7 +237,6 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         fold_results = []
         fold_means = []
         fold_sizes = []
-
         for fold in range(FOLD_COUNT):
             fold_mask = np.zeros(len(subset), dtype=bool)
             fold_mask[fold_ids[fold] : fold_ids[fold + 1]] = True
