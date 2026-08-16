@@ -1,15 +1,15 @@
 """Slice lifecycle: discovered to validated to monitored, with decay.
 
-The book is the single source of monitored slices. Promotion into the book
-requires validated walk-forward evidence, enough rows, and the correct
-directional edge.
-
 Key behaviors:
 - Monitored slices decay out when they stop firing or lose money on paper.
 - Cooldown is reserved for STOP-OUT style losses (hard adverse outcomes),
   not every small after-fee loss (especially at horizon exits).
 - Cooldown expiry is refreshed when the book is read so slices can recover
   without requiring a separate research rebuild.
+
+IMPORTANT COMPATIBILITY:
+Paper trading calls apply_signal_feedback(..., stopout=bool). This module must
+accept that kwarg and must not cooldown on every non-win.
 """
 
 from __future__ import annotations
@@ -66,9 +66,6 @@ def _coerce_int(value, default: int = 0) -> int:
 
 
 def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> int:
-    """Reactivate cooldown rows whose cooldown_until has passed.
-    Returns number of rows changed.
-    """
     changed = 0
     for row in rows:
         if row.get("status") != COOLDOWN:
@@ -84,9 +81,7 @@ def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> i
 def read_book(path: Path) -> list[dict]:
     """Read the monitored book.
 
-    Side effect (intentional): if cooldown_until has passed, the row is
-    reactivated (status -> monitored) and persisted. This prevents slices
-    getting stuck in cooldown until the next research rebuild.
+    Side effect (intentional): expired cooldown rows are reactivated and persisted.
     """
     if not path.exists():
         return []
@@ -110,10 +105,19 @@ def read_book(path: Path) -> list[dict]:
     return rows
 
 
+def _min_net_edge() -> float:
+    """Optional promotion filter: require net edge above this threshold."""
+    raw = os.getenv("BREAKWATER_MIN_NET_EDGE", "0")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = 0.0
+    return max(0.0, value)
+
+
 def _directional_edge(row: ValidatedSlice) -> bool:
-    if row.side == "LONG":
-        return row.mean_ret_costadj > 0
-    return row.mean_ret_costadj < 0
+    # mean_ret_costadj is NET return for the chosen side (already cost-aware).
+    return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge()
 
 
 def sync_book(
@@ -122,14 +126,6 @@ def sync_book(
     book_path: Path,
     now: datetime | None = None,
 ) -> dict:
-    """Rebuild the monitored book from this run's validated slices.
-
-    Standing lesson (rerun wipe + green != live): the validated file
-    only contains slices discovered by the current run, which researches a
-    subset of the universe. Rebuilding every kind from it would silently
-    wipe whole books when one kind's data failed. Kinds that produced no
-    validated rows this run therefore keep their existing book rows.
-    """
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
     validated = [row for row in read_validated(validated_path) if row.validated]
@@ -204,8 +200,6 @@ def sync_book(
     if carried:
         summary["carried_kinds"] = sorted({str(row["kind"]) for row in carried})
         rows.extend(carried)
-        for row in carried:
-            summary[row.get("status") or MONITORED] = summary.get(row.get("status") or MONITORED, 0) + 1
 
     _write_book(book_path, rows)
     return summary
@@ -223,10 +217,7 @@ def apply_signal_feedback(
 ) -> None:
     """Update per-slice paper outcomes.
 
-    IMPORTANT:
-    - We always record wins/losses and pnl.
-    - We only apply COOLDOWN when stopout=True.
-      (Stopout = hard adverse boundary such as stop / trail_stop / stale_data safety exit.)
+    Losses are recorded always. Cooldown is applied ONLY when stopout=True.
     """
     now = now or datetime.now(timezone.utc)
     rows = read_book(book_path)
