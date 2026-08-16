@@ -2,13 +2,14 @@
 
 The book is the single source of monitored slices. Promotion into the book
 requires validated walk-forward evidence, enough rows, and the correct
-directional edge. Monitored slices decay out when they stop firing, lose
-money on paper, or sit in a post-stopout cooldown.
+directional edge.
 
-IMPORTANT:
-- "Cooldown" is for stopouts (hard adverse outcomes), not for every small loss.
-- Book status needs periodic refresh so cooldown can expire without requiring
-  a full promotion/rebuild cycle.
+Key behaviors:
+- Monitored slices decay out when they stop firing or lose money on paper.
+- Cooldown is reserved for STOP-OUT style losses (hard adverse outcomes),
+  not every small after-fee loss (especially at horizon exits).
+- Cooldown expiry is refreshed when the book is read so slices can recover
+  without requiring a separate research rebuild.
 """
 
 from __future__ import annotations
@@ -57,7 +58,36 @@ STOPOUT_COOLDOWN_BARS = 24
 BAR_SECONDS = 3600
 
 
+def _coerce_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> int:
+    """Reactivate cooldown rows whose cooldown_until has passed.
+    Returns number of rows changed.
+    """
+    changed = 0
+    for row in rows:
+        if row.get("status") != COOLDOWN:
+            continue
+        cooldown_until = _coerce_int(row.get("cooldown_until"), 0)
+        if cooldown_until and cooldown_until <= now_epoch:
+            row["status"] = MONITORED
+            row["cooldown_until"] = ""
+            changed += 1
+    return changed
+
+
 def read_book(path: Path) -> list[dict]:
+    """Read the monitored book.
+
+    Side effect (intentional): if cooldown_until has passed, the row is
+    reactivated (status -> monitored) and persisted. This prevents slices
+    getting stuck in cooldown until the next research rebuild.
+    """
     if not path.exists():
         return []
     with path.open(newline="") as handle:
@@ -71,48 +101,13 @@ def read_book(path: Path) -> list[dict]:
             "status",
         }.issubset(set(reader.fieldnames)):
             raise RuntimeError("monitored book has an unsupported schema")
-        return list(reader)
+        rows = list(reader)
 
+    now_epoch = int(datetime.now(timezone.utc).timestamp())
+    if _refresh_expired_cooldowns_inplace(rows, now_epoch=now_epoch):
+        _write_book(path, rows)
 
-def refresh_book_status(
-    book_path: Path,
-    *,
-    now: datetime | None = None,
-) -> dict:
-    """Refresh time-based status transitions (cooldown expiry).
-
-    Engine runs frequently; promotions may not. If cooldown_until has passed,
-    we should allow the slice back into MONITORED so evidence can continue.
-
-    Returns summary counts (useful for status payloads / debugging).
-    """
-    now = now or datetime.now(timezone.utc)
-    now_epoch = int(now.timestamp())
-
-    rows = read_book(book_path)
-    if not rows:
-        return {"rows": 0, "reactivated": 0}
-
-    changed = False
-    reactivated = 0
-    for row in rows:
-        if row.get("status") != COOLDOWN:
-            continue
-        try:
-            cooldown_until = int(row.get("cooldown_until") or 0)
-        except (TypeError, ValueError):
-            cooldown_until = 0
-
-        if cooldown_until and cooldown_until <= now_epoch:
-            row["status"] = MONITORED
-            row["cooldown_until"] = ""
-            changed = True
-            reactivated += 1
-
-    if changed:
-        _write_book(book_path, rows)
-
-    return {"rows": len(rows), "reactivated": reactivated}
+    return rows
 
 
 def _directional_edge(row: ValidatedSlice) -> bool:
@@ -154,22 +149,20 @@ def sync_book(
 
     for row in validated:
         prior = existing.get(row.slice_id)
+
         if row.n < MIN_BOOK_ROWS or not _directional_edge(row):
             continue
 
-        cooldown_until = int(prior.get("cooldown_until") or 0) if prior else 0
+        cooldown_until = _coerce_int(prior.get("cooldown_until"), 0) if prior else 0
         if cooldown_until > now_epoch:
             status = COOLDOWN
             summary["cooldown"] += 1
         elif prior and prior.get("status") == MONITORED:
-            last_signal = int(prior.get("last_signal_bar") or 0)
-            paper_trades = int(prior.get("paper_trades") or 0)
+            last_signal = _coerce_int(prior.get("last_signal_bar"), 0)
+            paper_trades = _coerce_int(prior.get("paper_trades"), 0)
             paper_pnl = float(prior.get("paper_pnl_zar") or 0)
 
-            stale = (
-                last_signal > 0
-                and now_epoch - last_signal > LIVE_DECAY_BARS * BAR_SECONDS
-            )
+            stale = last_signal > 0 and (now_epoch - last_signal) > LIVE_DECAY_BARS * BAR_SECONDS
             losing = paper_trades >= PNL_DECAY_MIN_TRADES and paper_pnl < 0
 
             if stale or losing:
@@ -212,9 +205,7 @@ def sync_book(
         summary["carried_kinds"] = sorted({str(row["kind"]) for row in carried})
         rows.extend(carried)
         for row in carried:
-            summary[row.get("status") or MONITORED] = summary.get(
-                row.get("status") or MONITORED, 0
-            ) + 1
+            summary[row.get("status") or MONITORED] = summary.get(row.get("status") or MONITORED, 0) + 1
 
     _write_book(book_path, rows)
     return summary
@@ -232,10 +223,10 @@ def apply_signal_feedback(
 ) -> None:
     """Update per-slice paper outcomes.
 
-    Change vs prior behavior:
-    - Losses are recorded always.
-    - Cooldown is applied ONLY when stopout=True.
-      (Stopout = hard adverse outcome like stop/failed data safety exit.)
+    IMPORTANT:
+    - We always record wins/losses and pnl.
+    - We only apply COOLDOWN when stopout=True.
+      (Stopout = hard adverse boundary such as stop / trail_stop / stale_data safety exit.)
     """
     now = now or datetime.now(timezone.utc)
     rows = read_book(book_path)
@@ -246,21 +237,21 @@ def apply_signal_feedback(
 
         row["last_signal_bar"] = str(bar_epoch)
 
-        trades = int(row.get("paper_trades") or 0) + 1
+        trades = _coerce_int(row.get("paper_trades"), 0) + 1
         row["paper_trades"] = str(trades)
-        row["paper_pnl_zar"] = f"{(float(row.get('paper_pnl_zar') or 0) + pnl_zar):.4f}"
+
+        current_pnl = float(row.get("paper_pnl_zar") or 0.0)
+        row["paper_pnl_zar"] = f"{(current_pnl + pnl_zar):.4f}"
 
         if outcome == "win":
-            row["paper_wins"] = str(int(row.get("paper_wins") or 0) + 1)
+            row["paper_wins"] = str(_coerce_int(row.get("paper_wins"), 0) + 1)
             row["cooldown_until"] = ""
             if row.get("status") == COOLDOWN:
                 row["status"] = MONITORED
         else:
-            row["paper_losses"] = str(int(row.get("paper_losses") or 0) + 1)
+            row["paper_losses"] = str(_coerce_int(row.get("paper_losses"), 0) + 1)
             if stopout:
-                row["cooldown_until"] = str(
-                    bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS
-                )
+                row["cooldown_until"] = str(bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS)
                 row["status"] = COOLDOWN
 
     _write_book(book_path, rows)
@@ -292,8 +283,6 @@ def read_cooldown_journal(path: Path) -> list[dict]:
         return []
     try:
         payload = json.loads(path.read_text())
-        if isinstance(payload, list):
-            return payload
-        return []
+        return payload if isinstance(payload, list) else []
     except (OSError, json.JSONDecodeError):
         return []
