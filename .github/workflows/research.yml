@@ -38,7 +38,12 @@ jobs:
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: readonly
           BREAKWATER_RESEARCH_HORIZON_BARS: "6"
+
+          # RELAXED VALIDATION (still strict walk-forward + hostile-regime + net-positive)
+          # 0 => do NOT require discovery Bonferroni to validate
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
+          # when Bonferroni not required, require at least this many passing folds (out of 5)
+          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "4"
         run: PYTHONPATH=src python scripts/breakwater.py research
 
       - name: Persist research inputs and status
