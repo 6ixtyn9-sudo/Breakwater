@@ -4,6 +4,11 @@ The book is the single source of monitored slices. Promotion into the book
 requires validated walk-forward evidence, enough rows, and the correct
 directional edge. Monitored slices decay out when they stop firing, lose
 money on paper, or sit in a post-stopout cooldown.
+
+IMPORTANT:
+- "Cooldown" is for stopouts (hard adverse outcomes), not for every small loss.
+- Book status needs periodic refresh so cooldown can expire without requiring
+  a full promotion/rebuild cycle.
 """
 
 from __future__ import annotations
@@ -43,7 +48,6 @@ BOOK_HEADERS = [
 MONITORED = "monitored"
 COOLDOWN = "cooldown"
 DECAYED = "decayed"
-
 PROVENANCE_VALIDATED = "validated_walk_forward"
 
 MIN_BOOK_ROWS = 60
@@ -59,10 +63,56 @@ def read_book(path: Path) -> list[dict]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames or not {
-            "slice_id", "kind", "feature", "state", "side", "status",
+            "slice_id",
+            "kind",
+            "feature",
+            "state",
+            "side",
+            "status",
         }.issubset(set(reader.fieldnames)):
             raise RuntimeError("monitored book has an unsupported schema")
         return list(reader)
+
+
+def refresh_book_status(
+    book_path: Path,
+    *,
+    now: datetime | None = None,
+) -> dict:
+    """Refresh time-based status transitions (cooldown expiry).
+
+    Engine runs frequently; promotions may not. If cooldown_until has passed,
+    we should allow the slice back into MONITORED so evidence can continue.
+
+    Returns summary counts (useful for status payloads / debugging).
+    """
+    now = now or datetime.now(timezone.utc)
+    now_epoch = int(now.timestamp())
+
+    rows = read_book(book_path)
+    if not rows:
+        return {"rows": 0, "reactivated": 0}
+
+    changed = False
+    reactivated = 0
+    for row in rows:
+        if row.get("status") != COOLDOWN:
+            continue
+        try:
+            cooldown_until = int(row.get("cooldown_until") or 0)
+        except (TypeError, ValueError):
+            cooldown_until = 0
+
+        if cooldown_until and cooldown_until <= now_epoch:
+            row["status"] = MONITORED
+            row["cooldown_until"] = ""
+            changed = True
+            reactivated += 1
+
+    if changed:
+        _write_book(book_path, rows)
+
+    return {"rows": len(rows), "reactivated": reactivated}
 
 
 def _directional_edge(row: ValidatedSlice) -> bool:
@@ -88,9 +138,11 @@ def sync_book(
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
     validated = [row for row in read_validated(validated_path) if row.validated]
+
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
     validated_kinds = {row.kind for row in validated}
+
     rows: list[dict] = []
     summary = {
         "validated": len(validated),
@@ -99,10 +151,12 @@ def sync_book(
         "cooldown": 0,
         "carried_kinds": [],
     }
+
     for row in validated:
         prior = existing.get(row.slice_id)
         if row.n < MIN_BOOK_ROWS or not _directional_edge(row):
             continue
+
         cooldown_until = int(prior.get("cooldown_until") or 0) if prior else 0
         if cooldown_until > now_epoch:
             status = COOLDOWN
@@ -111,11 +165,13 @@ def sync_book(
             last_signal = int(prior.get("last_signal_bar") or 0)
             paper_trades = int(prior.get("paper_trades") or 0)
             paper_pnl = float(prior.get("paper_pnl_zar") or 0)
+
             stale = (
                 last_signal > 0
                 and now_epoch - last_signal > LIVE_DECAY_BARS * BAR_SECONDS
             )
             losing = paper_trades >= PNL_DECAY_MIN_TRADES and paper_pnl < 0
+
             if stale or losing:
                 status = DECAYED
                 summary["decayed"] += 1
@@ -125,32 +181,33 @@ def sync_book(
         else:
             status = MONITORED
             summary["monitored"] += 1
-        rows.append({
-            "slice_id": row.slice_id,
-            "kind": row.kind,
-            "feature": row.feature,
-            "state": str(row.state),
-            "side": row.side,
-            "status": status,
-            "validated_at": now.isoformat(),
-            "last_signal_bar": prior.get("last_signal_bar", "") if prior else "",
-            "paper_trades": prior.get("paper_trades", "0") if prior else "0",
-            "paper_wins": prior.get("paper_wins", "0") if prior else "0",
-            "paper_losses": prior.get("paper_losses", "0") if prior else "0",
-            "paper_pnl_zar": prior.get("paper_pnl_zar", "0") if prior else "0",
-            "cooldown_until": prior.get("cooldown_until", "") if prior else "",
-            "mean_ret_costadj": f"{row.mean_ret_costadj:.6f}",
-            "n": str(row.n),
-            "p_value": f"{row.p_value:.6f}",
-            "horizon_bars": str(row.horizon_bars),
-            "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
-            "source": PROVENANCE_VALIDATED,
-            "hostile_unproven": "True" if row.hostile_unproven else "False",
-        })
-    carried = [
-        row for row in existing_rows
-        if row.get("kind") not in validated_kinds
-    ]
+
+        rows.append(
+            {
+                "slice_id": row.slice_id,
+                "kind": row.kind,
+                "feature": row.feature,
+                "state": str(row.state),
+                "side": row.side,
+                "status": status,
+                "validated_at": now.isoformat(),
+                "last_signal_bar": prior.get("last_signal_bar", "") if prior else "",
+                "paper_trades": prior.get("paper_trades", "0") if prior else "0",
+                "paper_wins": prior.get("paper_wins", "0") if prior else "0",
+                "paper_losses": prior.get("paper_losses", "0") if prior else "0",
+                "paper_pnl_zar": prior.get("paper_pnl_zar", "0") if prior else "0",
+                "cooldown_until": prior.get("cooldown_until", "") if prior else "",
+                "mean_ret_costadj": f"{row.mean_ret_costadj:.6f}",
+                "n": str(row.n),
+                "p_value": f"{row.p_value:.6f}",
+                "horizon_bars": str(row.horizon_bars),
+                "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
+                "source": PROVENANCE_VALIDATED,
+                "hostile_unproven": "True" if row.hostile_unproven else "False",
+            }
+        )
+
+    carried = [row for row in existing_rows if row.get("kind") not in validated_kinds]
     if carried:
         summary["carried_kinds"] = sorted({str(row["kind"]) for row in carried})
         rows.extend(carried)
@@ -159,24 +216,7 @@ def sync_book(
                 row.get("status") or MONITORED, 0
             ) + 1
 
-    book_path.parent.mkdir(parents=True, exist_ok=True)
-    file_descriptor, temporary_name = tempfile.mkstemp(
-        prefix=book_path.name + ".", suffix=".tmp", dir=book_path.parent
-    )
-    try:
-        with os.fdopen(file_descriptor, "w", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=BOOK_HEADERS)
-            writer.writeheader()
-            writer.writerows(rows)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary_name, book_path)
-    except Exception:
-        try:
-            os.unlink(temporary_name)
-        except OSError:
-            pass
-        raise
+    _write_book(book_path, rows)
     return summary
 
 
@@ -187,28 +227,47 @@ def apply_signal_feedback(
     bar_epoch: int,
     outcome: str,
     pnl_zar: float,
+    stopout: bool = False,
     now: datetime | None = None,
 ) -> None:
+    """Update per-slice paper outcomes.
+
+    Change vs prior behavior:
+    - Losses are recorded always.
+    - Cooldown is applied ONLY when stopout=True.
+      (Stopout = hard adverse outcome like stop/failed data safety exit.)
+    """
     now = now or datetime.now(timezone.utc)
     rows = read_book(book_path)
+
     for row in rows:
         if row["slice_id"] != slice_id:
             continue
+
         row["last_signal_bar"] = str(bar_epoch)
+
         trades = int(row.get("paper_trades") or 0) + 1
         row["paper_trades"] = str(trades)
         row["paper_pnl_zar"] = f"{(float(row.get('paper_pnl_zar') or 0) + pnl_zar):.4f}"
+
         if outcome == "win":
             row["paper_wins"] = str(int(row.get("paper_wins") or 0) + 1)
             row["cooldown_until"] = ""
+            if row.get("status") == COOLDOWN:
+                row["status"] = MONITORED
         else:
             row["paper_losses"] = str(int(row.get("paper_losses") or 0) + 1)
-            row["cooldown_until"] = str(bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS)
-            row["status"] = COOLDOWN
+            if stopout:
+                row["cooldown_until"] = str(
+                    bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS
+                )
+                row["status"] = COOLDOWN
+
     _write_book(book_path, rows)
 
 
 def _write_book(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
     )
