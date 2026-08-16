@@ -11,10 +11,21 @@ IMPORTANT COMPATIBILITY:
 Paper trading calls apply_signal_feedback(..., stopout=bool). This module must
 accept that kwarg and must not cooldown on every non-win.
 
-Book semantics:
-- New validated rows are written with edge_semantics_version="net_v1".
-- Carried legacy rows are stamped as edge_semantics_version="legacy_v0" when missing.
-This allows monitoring-time filters to optionally ignore legacy rows.
+Edge meaning marker:
+Breakwater needs one bit of information:
+
+"This book row was written under the directional net-edge convention."
+vs
+"This row was carried forward from older state and might not match it."
+
+We store that as a plain boolean string:
+
+- edge_is_directional_net="True" for newly validated/promoted rows
+- edge_is_directional_net="False" for carried legacy rows (or when unknown)
+
+For backwards compatibility, if a carried row has edge_semantics_version
+(net_v1/legacy_v0), we convert it into edge_is_directional_net and remove the
+old field before writing.
 """
 
 from __future__ import annotations
@@ -28,9 +39,6 @@ from pathlib import Path
 
 from breakwater.validation import ValidatedSlice, read_validated
 
-
-EDGE_SEMANTICS_NET_V1 = "net_v1"
-EDGE_SEMANTICS_LEGACY_V0 = "legacy_v0"
 
 BOOK_HEADERS = [
     "slice_id",
@@ -53,8 +61,8 @@ BOOK_HEADERS = [
     "stop_atr_mult",
     "source",
     "hostile_unproven",
-    # NEW: schema marker so we can distinguish legacy carried rows from net_v1 rows
-    "edge_semantics_version",
+    # New, human marker: can we trust mean_ret_costadj as directional net edge?
+    "edge_is_directional_net",
 ]
 
 MONITORED = "monitored"
@@ -117,7 +125,6 @@ def read_book(path: Path) -> list[dict]:
 
 
 def _min_net_edge() -> float:
-    """Optional promotion filter: require net edge above this threshold."""
     raw = os.getenv("BREAKWATER_MIN_NET_EDGE", "0")
     try:
         value = float(raw)
@@ -129,6 +136,31 @@ def _min_net_edge() -> float:
 def _directional_edge(row: ValidatedSlice) -> bool:
     # mean_ret_costadj is NET return for the chosen side (already cost-aware).
     return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge()
+
+
+def _truthy_bool_str(value) -> str:
+    return "True" if str(value).strip() == "True" else "False"
+
+
+def _convert_legacy_semantics_inplace(row: dict) -> None:
+    """Ensure row has edge_is_directional_net and no edge_semantics_version key.
+
+    Needed because DictWriter will raise if a row contains keys not in BOOK_HEADERS.
+    """
+    # Map any existing edge_semantics_version (net_v1/legacy_v0) to boolean.
+    version = str(row.pop("edge_semantics_version", "") or "")
+    flag = row.get("edge_is_directional_net")
+
+    if flag is None or str(flag).strip() not in {"True", "False"}:
+        if version == "net_v1":
+            row["edge_is_directional_net"] = "True"
+        elif version == "legacy_v0":
+            row["edge_is_directional_net"] = "False"
+        else:
+            # Unknown/missing => treat as legacy/untrusted
+            row["edge_is_directional_net"] = "False"
+    else:
+        row["edge_is_directional_net"] = _truthy_bool_str(flag)
 
 
 def sync_book(
@@ -152,7 +184,6 @@ def sync_book(
         "decayed": 0,
         "cooldown": 0,
         "carried_kinds": [],
-        # NEW: observability so "0/0" doesn't lie
         "carried_total": 0,
         "carried_monitored": 0,
         "carried_cooldown": 0,
@@ -210,7 +241,7 @@ def sync_book(
                 "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
                 "source": PROVENANCE_VALIDATED,
                 "hostile_unproven": "True" if row.hostile_unproven else "False",
-                "edge_semantics_version": EDGE_SEMANTICS_NET_V1,
+                "edge_is_directional_net": "True",
             }
         )
 
@@ -221,9 +252,7 @@ def sync_book(
         summary["carried_total"] = len(carried)
 
         for r in carried:
-            # Stamp legacy rows so downstream filters can optionally ignore them.
-            if not r.get("edge_semantics_version"):
-                r["edge_semantics_version"] = EDGE_SEMANTICS_LEGACY_V0
+            _convert_legacy_semantics_inplace(r)
 
             status = str(r.get("status") or "")
             if status == MONITORED:
@@ -281,10 +310,17 @@ def apply_signal_feedback(
                 row["cooldown_until"] = str(bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS)
                 row["status"] = COOLDOWN
 
+        # Ensure marker exists for safety if book was older
+        _convert_legacy_semantics_inplace(row)
+
     _write_book(book_path, rows)
 
 
 def _write_book(path: Path, rows: list[dict]) -> None:
+    # Ensure no legacy-only keys sneak into the writer
+    for row in rows:
+        _convert_legacy_semantics_inplace(row)
+
     path.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
