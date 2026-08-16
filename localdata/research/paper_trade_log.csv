@@ -1,0 +1,3 @@
+closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,notional_zar,pnl_zar,outcome,bars_held,exit_reason,entry_guard,regime,pnl_outcome
+2026-08-16T16:15:20+00:00,,HYPEUSDC,PERP,feat_vol_regime:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
+2026-08-16T16:15:20+00:00,,HYPEUSDC,PERP,feat_realized_vol_20:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
