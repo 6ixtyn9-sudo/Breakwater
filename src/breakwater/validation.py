@@ -10,6 +10,15 @@ Validation converts raw returns to net returns for the candidate side:
 - SHORT net: -r - cost
 
 All fold tests, hostile regime tests, and session audit stats use those net returns.
+
+Validation gating knobs (safe relaxation):
+- By default, validation REQUIRES discovery Bonferroni: candidate.bonferroni_pass must be True.
+- You can relax this to allow "walk-forward only" validation (still requires
+  strong fold consistency + hostile checks + net-positive mean).
+
+Env:
+- BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "1" (default) or "0"
+- BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: integer (default 4) used when bonferroni not required
 """
 
 from __future__ import annotations
@@ -66,6 +75,24 @@ STOP_ATR_CEIL = 3.5
 SESSION_ASIA = "asia"
 SESSION_EU = "eu"
 SESSION_US = "us"
+
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    value = str(os.getenv(name, default)).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
+REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
+
+
+def _coerce_int(value, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+RELAXED_MIN_PASSES = _coerce_int(os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4)
 
 
 @dataclass(frozen=True)
@@ -229,11 +256,13 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         pass_count = pattern.count("1")
         latest_passes = pattern[-1] == "1"
 
-        temporal_pass = (
-            pass_count >= max(3, int(0.75 * FOLD_COUNT))
-            and latest_passes
-            and candidate.bonferroni_pass
-        )
+        strict_required = max(3, int(0.75 * FOLD_COUNT))
+        relaxed_required = max(strict_required, min(FOLD_COUNT, max(1, RELAXED_MIN_PASSES)))
+        required_passes = strict_required if REQUIRE_BONFERRONI else relaxed_required
+
+        temporal_pass = (pass_count >= required_passes) and latest_passes
+        if REQUIRE_BONFERRONI:
+            temporal_pass = temporal_pass and bool(candidate.bonferroni_pass)
 
         hostile_label = "bear" if candidate.side == "LONG" else "bull"
         hostile_mask = mask & (subset["regime_row"].to_numpy() == hostile_label)
