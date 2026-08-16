@@ -250,11 +250,7 @@ class TradeExecutor:
             raise ExecutionError("protection failed and emergency close could not be confirmed") from exc
 
     def _emergency_close_short(self, pair: str, quantity: Decimal, price_hint: Decimal) -> None:
-        """Emergency close of a short (BUY back base).
-
-        VALR market BUY orders commonly accept quoteAmount; we estimate required quote
-        using a price hint with a buffer.
-        """
+        """Emergency close of a short (BUY back base)."""
         try:
             quote_amount = (quantity * price_hint) * Decimal("1.05")
             response = self.client.place_market(
