@@ -1,9 +1,14 @@
 """Synchronous guarded execution; perpetual writes remain locked pending TPSL proof.
 
-Spot margin note:
-VALR offers Spot Margin Trading which can enable long/short exposure by borrowing
-real balances. Breakwater can execute spot-margin shorts, but it is disabled by
-default and requires explicit operator acknowledgement via environment gates.
+Spot (cash) vs Spot Margin:
+- Cash spot shorts aren't meaningful without borrowing.
+- VALR exposes Spot Margin endpoints (account status + leverage settings).
+- Breakwater can execute spot-margin shorts, but this is OFF by default and
+  requires an explicit operator gate + acknowledgement string.
+
+Perps:
+- Perpetual live entry remains hard-locked until TPSL / reduce-only behavior
+  is verified through an authenticated canary.
 """
 
 from __future__ import annotations
@@ -40,7 +45,7 @@ def _spot_margin_ack_ok() -> bool:
 
 
 def _spot_margin_shorts_enabled() -> bool:
-    # Two-key turn style: feature flag + explicit risk acknowledgement
+    # Two-key turn: feature flag + explicit risk acknowledgement
     return _env_bool("BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS", "0") and _spot_margin_ack_ok()
 
 
@@ -66,24 +71,27 @@ class TradeExecutor:
                 last_error = exc
                 time.sleep(0.5)
                 continue
+
             status = str(state.get("orderStatusType", "")).lower()
             if status in {"filled", "cancelled", "canceled", "failed", "partially filled"}:
                 return state
             time.sleep(0.5)
+
         raise ExecutionError(f"entry order did not become terminal: {last_error}")
 
     def execute(self, plan: OrderPlan) -> ExecutionReceipt:
+        # Perps remain locked.
         if plan.pair_type is PairType.FUTURE:
             raise PerpetualActivationBlocked(
                 "perpetual live entry is locked until VALR conditionalOrderData "
                 "has passed an authenticated canary and reduce-only TPSL verification"
             )
 
-        # Spot execution
+        # Spot long (cash spot BUY) - supported
         if plan.side is Side.BUY:
             return self._execute_spot_long(plan)
 
-        # Spot short => margin short (hard-gated)
+        # Spot short (SELL) - only via spot margin, hard-gated
         if plan.side is Side.SELL:
             return self._execute_spot_margin_short(plan)
 
@@ -153,8 +161,7 @@ class TradeExecutor:
                 "and BREAKWATER_SPOT_MARGIN_ACK=I_ACCEPT_BREAKWATER_SPOT_MARGIN_RISK"
             )
 
-        # Canary: margin endpoints must be accessible (indicates margin is enabled for the account/subaccount).
-        # We do not assume a response schema; success is "request works and returns a dict".
+        # Canary: margin endpoints must be accessible for this key/subaccount.
         try:
             status = self.client.margin_status()
             if not isinstance(status, dict):
@@ -169,7 +176,7 @@ class TradeExecutor:
         if "LIMIT" not in order_types or "STOP_LOSS_LIMIT" not in order_types:
             raise ExecutionError("pair lacks required limit and stop-loss support")
 
-        # Margin short entry: SELL base. If balance is insufficient, VALR margin engine borrows automatically.
+        # Margin short entry: SELL base (VALR margin borrows if needed).
         entry = self.client.place_limit(
             {
                 "side": "SELL",
@@ -192,7 +199,7 @@ class TradeExecutor:
         if status != "filled" or filled <= 0 or average <= 0:
             raise ExecutionError(f"spot short entry did not fill completely: {status}")
 
-        # Protection for short: BUY stop-loss limit (trigger above, buy back).
+        # Protection for short: BUY stop-loss limit (trigger above; buy back).
         protection = self.client.place_spot_stop_limit(
             {
                 "side": "BUY",
@@ -245,11 +252,10 @@ class TradeExecutor:
     def _emergency_close_short(self, pair: str, quantity: Decimal, price_hint: Decimal) -> None:
         """Emergency close of a short (BUY back base).
 
-        VALR market BUY orders commonly use quoteAmount; we therefore estimate a quote amount
-        using the stop-limit price and a buffer.
+        VALR market BUY orders commonly accept quoteAmount; we estimate required quote
+        using a price hint with a buffer.
         """
         try:
-            # Buffer to reduce risk of insufficient quote amount on a fast spike.
             quote_amount = (quantity * price_hint) * Decimal("1.05")
             response = self.client.place_market(
                 {
