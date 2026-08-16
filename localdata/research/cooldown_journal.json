@@ -109,5 +109,13 @@
     "signal_id": "b99657be5f41acc1",
     "slice_id": "feat_ext_vs_ma_50:1:SHORT",
     "stopped_at": "2026-08-16T03:15:19+00:00"
+  },
+  {
+    "pair": "BTCZAR",
+    "pnl_zar": "-0.4597",
+    "reason": "horizon",
+    "signal_id": "a11493e20cd900ad",
+    "slice_id": "feat_ret_5:2:SHORT",
+    "stopped_at": "2026-08-16T04:15:24+00:00"
   }
 ]
