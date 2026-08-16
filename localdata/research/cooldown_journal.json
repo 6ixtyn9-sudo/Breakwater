@@ -1,0 +1,10 @@
+[
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-1.0817",
+    "reason": "stop",
+    "signal_id": "253eeb8f4aee9d30",
+    "slice_id": "feat_realized_vol_20:0:SHORT",
+    "stopped_at": "2026-08-16T17:15:26+00:00"
+  }
+]
