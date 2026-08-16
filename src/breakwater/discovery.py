@@ -1,9 +1,17 @@
 """Market-state slice discovery on pooled universe bars.
 
 Features are binned into expanding quantile states per symbol. Each
-(feature, state, side) combination is a candidate slice whose cost-adjusted
-forward returns are measured across the pooled universe. Candidates are
-ranked with a Bonferroni correction applied to the number of slices tested.
+(feature, state) combination is a candidate slice. Discovery evaluates BOTH
+trade directions correctly:
+
+- raw forward return: r = close[t+h]/close[t] - 1
+- LONG net:  r - cost
+- SHORT net: -r - cost
+
+We choose the direction with the higher net mean for that (feature, state)
+and record that slice as LONG or SHORT accordingly. Bonferroni correction
+is conservatively applied as if we had tested both directions
+(2 * number_of_slices).
 
 Session audit (UTC): we attach a coarse `session_utc` label to each bar and
 report per-session stats for each slice (audit-only; does not change slice
@@ -84,6 +92,7 @@ class SliceStat:
 
 
 def _normal_p(t_stat: float) -> float:
+    # Normal approx (consistent with prior implementation)
     return 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(t_stat) / math.sqrt(2.0))))
 
 
@@ -96,6 +105,13 @@ def _utc_session_labels(start_series: pd.Series) -> pd.Series:
     session[(hour >= 8) & (hour <= 15)] = SESSION_EU
     session[(hour >= 16) & (hour <= 23)] = SESSION_US
     return session
+
+
+def _net_returns(raw_returns: np.ndarray, side: str, cost: float) -> np.ndarray:
+    """Returns are oriented so profitable returns are > 0 for BOTH sides."""
+    if side == "LONG":
+        return raw_returns - cost
+    return (-raw_returns) - cost
 
 
 def bin_states(
@@ -166,7 +182,16 @@ def prepare_pooled(
             binned["session_utc"] = "unknown"
 
         close = binned["close"]
-        binned["fwd_ret"] = (close.shift(-horizon_bars) / close - 1.0) - cost
+
+        # Raw forward return (no cost, no side)
+        binned["fwd_ret_raw"] = (close.shift(-horizon_bars) / close) - 1.0
+
+        # Keep legacy column name for compatibility with any external tooling,
+        # but it now mirrors raw returns (side/cost are applied in discovery/validation).
+        binned["fwd_ret"] = binned["fwd_ret_raw"]
+
+        # Cost carried as a constant column so validation can compute net returns too
+        binned["cost"] = float(cost)
 
         # MAE measured over the same horizon as forward returns
         binned["fwd_mae_atr"] = forward_mae_atr(binned, horizon=horizon_bars)
@@ -185,15 +210,30 @@ def _session_stats(
     subset: pd.DataFrame,
     slice_mask: pd.Series,
     session_label: str,
+    *,
+    side: str,
+    cost: float,
 ) -> tuple[int, float, float]:
     if "session_utc" not in subset.columns:
         return 0, 0.0, 0.0
-
-    values = subset.loc[slice_mask & (subset["session_utc"] == session_label), "fwd_ret"].to_numpy()
-    n = len(values)
+    session_mask = subset["session_utc"] == session_label
+    raw = subset.loc[slice_mask & session_mask, "fwd_ret_raw"].to_numpy()
+    n = len(raw)
     if n == 0:
         return 0, 0.0, 0.0
-    return n, float(np.mean(values)), float(np.mean(values > 0))
+    net = _net_returns(raw, side, cost)
+    return n, float(np.mean(net)), float(np.mean(net > 0))
+
+
+def _stat_block(returns: np.ndarray) -> tuple[float, float, float, float, float]:
+    n = len(returns)
+    mean = float(np.mean(returns))
+    median = float(np.median(returns))
+    hit = float(np.mean(returns > 0))
+    std = float(np.std(returns, ddof=1)) if n > 1 else 0.0
+    t_stat = mean / (std / math.sqrt(n)) if std > 0 else 0.0
+    p_value = _normal_p(t_stat)
+    return mean, median, hit, t_stat, p_value
 
 
 def _slice_stats(
@@ -203,25 +243,40 @@ def _slice_stats(
     horizon_bars: int,
 ) -> list[SliceStat]:
     candidates: list[SliceStat] = []
+
+    # Conservative: treat each (feature,state) as if we tested 2 hypotheses (LONG + SHORT)
+    effective_tests = 0
+
     for feature in feature_columns:
         state_column = f"state_{feature}"
         for state in (0, 1, 2):
-            subset = prepared.dropna(subset=[state_column, "fwd_ret"])
+            subset = prepared.dropna(subset=[state_column, "fwd_ret_raw"])
             mask = subset[state_column] == state
-            returns = subset.loc[mask, "fwd_ret"].to_numpy()
-            n = len(returns)
+
+            raw = subset.loc[mask, "fwd_ret_raw"].to_numpy()
+            n = len(raw)
             if n < MIN_SLICE_ROWS:
                 continue
 
-            mean = float(np.mean(returns))
-            std = float(np.std(returns, ddof=1)) if n > 1 else 0.0
-            t_stat = mean / (std / math.sqrt(n)) if std > 0 else 0.0
-            p_value = _normal_p(t_stat)
-            side = "LONG" if mean > 0 else "SHORT"
+            cost = float(subset["cost"].iloc[0]) if "cost" in subset.columns and len(subset) else 0.0
 
-            asia_n, asia_mean, asia_hit = _session_stats(subset, mask, SESSION_ASIA)
-            eu_n, eu_mean, eu_hit = _session_stats(subset, mask, SESSION_EU)
-            us_n, us_mean, us_hit = _session_stats(subset, mask, SESSION_US)
+            long_net = _net_returns(raw, "LONG", cost)
+            short_net = _net_returns(raw, "SHORT", cost)
+
+            long_mean, long_median, long_hit, long_t, long_p = _stat_block(long_net)
+            short_mean, short_median, short_hit, short_t, short_p = _stat_block(short_net)
+
+            # Choose the side with the higher net mean
+            if long_mean >= short_mean:
+                side = "LONG"
+                mean, median, hit_rate, t_stat, p_value = long_mean, long_median, long_hit, long_t, long_p
+            else:
+                side = "SHORT"
+                mean, median, hit_rate, t_stat, p_value = short_mean, short_median, short_hit, short_t, short_p
+
+            asia_n, asia_mean, asia_hit = _session_stats(subset, mask, SESSION_ASIA, side=side, cost=cost)
+            eu_n, eu_mean, eu_hit = _session_stats(subset, mask, SESSION_EU, side=side, cost=cost)
+            us_n, us_mean, us_hit = _session_stats(subset, mask, SESSION_US, side=side, cost=cost)
 
             candidates.append(
                 SliceStat(
@@ -232,8 +287,8 @@ def _slice_stats(
                     side=side,
                     n=n,
                     mean_ret_costadj=mean,
-                    median_ret_costadj=float(np.median(returns)),
-                    hit_rate=float(np.mean(returns > 0)),
+                    median_ret_costadj=median,
+                    hit_rate=hit_rate,
                     t_stat=t_stat,
                     p_value=p_value,
                     bonferroni_pass=False,
@@ -249,14 +304,18 @@ def _slice_stats(
                     session_us_hit_rate=us_hit,
                 )
             )
+            effective_tests += 2
 
     if candidates:
-        threshold = float(ALPHA) / len(candidates)
-        flagged = [
-            asdict(stat)
-            | {"bonferroni_pass": stat.p_value < threshold and stat.n >= MIN_SLICE_ROWS}
-            for stat in candidates
-        ]
+        threshold = float(ALPHA) / max(1, effective_tests)
+
+        flagged = []
+        for stat in candidates:
+            passed = (stat.p_value < threshold) and (stat.n >= MIN_SLICE_ROWS) and (stat.mean_ret_costadj > 0)
+            row = asdict(stat)
+            row["bonferroni_pass"] = passed
+            flagged.append(row)
+
         candidates = [SliceStat(**row) for row in flagged]
 
     return sorted(
