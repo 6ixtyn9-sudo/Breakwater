@@ -1,5 +1,5 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_semantics_version
-feat_ext_vs_ma_50:0:LONG,SPOT,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-16T14:40:12+00:00,,0,0,0,0,,0.000220,391,0.486478,6,2.963,validated_walk_forward,False,net_v1
+feat_ext_vs_ma_50:0:LONG,SPOT,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-16T14:54:03+00:00,,0,0,0,0,,0.000220,391,0.486478,6,2.963,validated_walk_forward,False,net_v1
 feat_ext_vs_ma_10:1:SHORT,PERP,feat_ext_vs_ma_10,1,SHORT,monitored,2026-08-16T11:25:18+00:00,,0,0,0,0,,-0.002274,221,0.000322,6,2.602,validated_walk_forward,False,legacy_v0
 feat_vol_regime:0:SHORT,PERP,feat_vol_regime,0,SHORT,monitored,2026-08-16T11:25:18+00:00,,0,0,0,0,,-0.002770,157,0.000010,6,2.200,validated_walk_forward,True,legacy_v0
 feat_ret_3:1:SHORT,PERP,feat_ret_3,1,SHORT,monitored,2026-08-16T11:25:18+00:00,,0,0,0,0,,-0.002827,209,0.000009,6,2.539,validated_walk_forward,False,legacy_v0
