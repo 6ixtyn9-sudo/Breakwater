@@ -117,5 +117,21 @@
     "signal_id": "a11493e20cd900ad",
     "slice_id": "feat_ret_5:2:SHORT",
     "stopped_at": "2026-08-16T04:15:24+00:00"
+  },
+  {
+    "pair": "BNBZAR",
+    "pnl_zar": "-0.1164",
+    "reason": "horizon",
+    "signal_id": "1a9181a70b6f2fd9",
+    "slice_id": "feat_vol_regime:2:SHORT",
+    "stopped_at": "2026-08-16T06:15:26+00:00"
+  },
+  {
+    "pair": "XAUTZAR",
+    "pnl_zar": "-0.8799",
+    "reason": "horizon",
+    "signal_id": "29c4ab41c804c18b",
+    "slice_id": "feat_ret_3:2:SHORT",
+    "stopped_at": "2026-08-16T06:15:26+00:00"
   }
 ]
