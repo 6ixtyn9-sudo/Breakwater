@@ -10,6 +10,11 @@ Key behaviors:
 IMPORTANT COMPATIBILITY:
 Paper trading calls apply_signal_feedback(..., stopout=bool). This module must
 accept that kwarg and must not cooldown on every non-win.
+
+Book semantics:
+- New validated rows are written with edge_semantics_version="net_v1".
+- Carried legacy rows are stamped as edge_semantics_version="legacy_v0" when missing.
+This allows monitoring-time filters to optionally ignore legacy rows.
 """
 
 from __future__ import annotations
@@ -22,6 +27,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from breakwater.validation import ValidatedSlice, read_validated
+
+
+EDGE_SEMANTICS_NET_V1 = "net_v1"
+EDGE_SEMANTICS_LEGACY_V0 = "legacy_v0"
 
 BOOK_HEADERS = [
     "slice_id",
@@ -44,6 +53,8 @@ BOOK_HEADERS = [
     "stop_atr_mult",
     "source",
     "hostile_unproven",
+    # NEW: schema marker so we can distinguish legacy carried rows from net_v1 rows
+    "edge_semantics_version",
 ]
 
 MONITORED = "monitored"
@@ -128,24 +139,30 @@ def sync_book(
 ) -> dict:
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
-    validated = [row for row in read_validated(validated_path) if row.validated]
 
+    validated = [row for row in read_validated(validated_path) if row.validated]
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
     validated_kinds = {row.kind for row in validated}
 
     rows: list[dict] = []
-    summary = {
+    summary: dict = {
         "validated": len(validated),
         "monitored": 0,
         "decayed": 0,
         "cooldown": 0,
         "carried_kinds": [],
+        # NEW: observability so "0/0" doesn't lie
+        "carried_total": 0,
+        "carried_monitored": 0,
+        "carried_cooldown": 0,
+        "carried_decayed": 0,
+        "rows_total_after_sync": 0,
     }
 
+    # Promote newly validated slices
     for row in validated:
         prior = existing.get(row.slice_id)
-
         if row.n < MIN_BOOK_ROWS or not _directional_edge(row):
             continue
 
@@ -193,13 +210,32 @@ def sync_book(
                 "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
                 "source": PROVENANCE_VALIDATED,
                 "hostile_unproven": "True" if row.hostile_unproven else "False",
+                "edge_semantics_version": EDGE_SEMANTICS_NET_V1,
             }
         )
 
-    carried = [row for row in existing_rows if row.get("kind") not in validated_kinds]
+    # Carry rows for kinds that did not validate in this run
+    carried = [r for r in existing_rows if r.get("kind") not in validated_kinds]
     if carried:
-        summary["carried_kinds"] = sorted({str(row["kind"]) for row in carried})
+        summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
+        summary["carried_total"] = len(carried)
+
+        for r in carried:
+            # Stamp legacy rows so downstream filters can optionally ignore them.
+            if not r.get("edge_semantics_version"):
+                r["edge_semantics_version"] = EDGE_SEMANTICS_LEGACY_V0
+
+            status = str(r.get("status") or "")
+            if status == MONITORED:
+                summary["carried_monitored"] += 1
+            elif status == COOLDOWN:
+                summary["carried_cooldown"] += 1
+            elif status == DECAYED:
+                summary["carried_decayed"] += 1
+
         rows.extend(carried)
+
+    summary["rows_total_after_sync"] = len(rows)
 
     _write_book(book_path, rows)
     return summary
