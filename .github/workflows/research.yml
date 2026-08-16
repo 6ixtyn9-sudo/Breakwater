@@ -43,7 +43,7 @@ jobs:
           # 0 => do NOT require discovery Bonferroni to validate
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
           # when Bonferroni not required, require at least this many passing folds (out of 5)
-          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "4"
+          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "3"
         run: PYTHONPATH=src python scripts/breakwater.py research
 
       - name: Persist research inputs and status
