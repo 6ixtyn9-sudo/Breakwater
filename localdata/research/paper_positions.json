@@ -1,44 +1,6 @@
 [
   {
-    "bars_held": "5",
-    "entry_guard": "passed",
-    "entry_price": "0.00007512678571428571420000000000",
-    "horizon_bars": "6",
-    "initial_stop_price": "0.00007615178571428571540000000000",
-    "kind": "SPOT",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "SHIBZAR",
-    "peak_price": "0.00007512678571428571420000000000",
-    "regime": "neutral",
-    "side": "SELL",
-    "signal_id": "d221cc14c0ae7d62",
-    "slice_id": "feat_ext_vs_ma_20:2:SHORT",
-    "stop_price": "0.00007615178571428571540000000000",
-    "trail_active": "0",
-    "trough_price": "0.00007512678571428571420000000000"
-  },
-  {
-    "bars_held": "5",
-    "entry_guard": "passed",
-    "entry_price": "1233.071428571428571400000000",
-    "horizon_bars": "6",
-    "initial_stop_price": "1246.071428571428571800000000",
-    "kind": "SPOT",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "SOLZAR",
-    "peak_price": "1233.071428571428571400000000",
-    "regime": "neutral",
-    "side": "SELL",
-    "signal_id": "36a8e76693581172",
-    "slice_id": "feat_ext_vs_ma_20:2:SHORT",
-    "stop_price": "1246.071428571428571800000000",
-    "trail_active": "0",
-    "trough_price": "1233.071428571428571400000000"
-  },
-  {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "63054.39285714285714250000000",
     "horizon_bars": "6",
@@ -57,7 +19,7 @@
     "trough_price": "63054.39285714285714250000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "1882.151785714285716750000000",
     "horizon_bars": "6",
@@ -76,7 +38,7 @@
     "trough_price": "1882.151785714285716750000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "16.39214285714285718400000000",
     "horizon_bars": "6",
@@ -95,7 +57,7 @@
     "trough_price": "16.39214285714285718400000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "1030745.107142857142900000000",
     "horizon_bars": "6",
@@ -114,7 +76,7 @@
     "trough_price": "1030745.107142857142900000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "30740.60714285714285750000000",
     "horizon_bars": "6",
@@ -131,5 +93,43 @@
     "stop_price": "31026.10714285714285250000000",
     "trail_active": "0",
     "trough_price": "30740.60714285714285750000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "9925.071428571428571250000000",
+    "horizon_bars": "6",
+    "initial_stop_price": "10055.13571428571428787500000",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BNBZAR",
+    "peak_price": "9925.071428571428571250000000",
+    "regime": "neutral",
+    "side": "SELL",
+    "signal_id": "1a9181a70b6f2fd9",
+    "slice_id": "feat_vol_regime:2:SHORT",
+    "stop_price": "10055.13571428571428787500000",
+    "trail_active": "0",
+    "trough_price": "9925.071428571428571250000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "71243.05357142857142500000000",
+    "horizon_bars": "6",
+    "initial_stop_price": "72558.30357142857147500000000",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "XAUTZAR",
+    "peak_price": "71243.05357142857142500000000",
+    "regime": "neutral",
+    "side": "SELL",
+    "signal_id": "29c4ab41c804c18b",
+    "slice_id": "feat_ret_3:2:SHORT",
+    "stop_price": "72558.30357142857147500000000",
+    "trail_active": "0",
+    "trough_price": "71243.05357142857142500000000"
   }
 ]
