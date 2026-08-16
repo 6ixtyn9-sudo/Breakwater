@@ -10,11 +10,11 @@ Environment:
 
 Optional book filters (OFF by default; freeze-friendly):
 - BREAKWATER_FILTER_LEGACY_BOOK=1:
-    skip rows not marked as edge_semantics_version == "net_v1"
+    skip rows not marked edge_semantics_version == "net_v1"
 - BREAKWATER_FILTER_NONPOSITIVE_BOOK=1:
     skip rows where mean_ret_costadj <= 0
 These are belt-and-suspenders guards to prevent legacy carried rows from
-contaminating the evidence stream after a semantics upgrade.
+contaminating evidence after a semantics upgrade.
 """
 
 from __future__ import annotations
