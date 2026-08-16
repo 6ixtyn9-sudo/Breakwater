@@ -3,14 +3,24 @@
 Every monitored book row is checked against the latest completed bar of each
 target symbol. A match produces a signal carrying the slice identity, side,
 entry reference, the slice's MAE-calibrated ATR stop, and the symbol's macro
-regime. The regime gate is side-aware and fail-open: longs are blocked in a
-confirmed bear (SMA50 below SMA200), shorts in a confirmed bull, and
-neutral or unknown regimes never block.
+regime.
+
+Regime gating (fix for bias):
+- Historically we hard-blocked longs in confirmed bear and shorts in confirmed bull.
+- That creates a biased evidence stream when the book is skewed to one side.
+- The monitored book already carries `hostile_unproven` from validation.
+  If a slice has proven hostile-regime evidence (`hostile_unproven=False`),
+  we allow it to trade even in the hostile regime.
+- If `hostile_unproven=True` (insufficient hostile rows), we still block in the hostile regime.
+
+Operator escape hatch:
+- Set BREAKWATER_REGIME_GATE_STRICT=1 to restore the old "always block in hostile regime" behavior.
 """
 
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -22,8 +32,27 @@ from breakwater.discovery import bin_states
 from breakwater.features import compute_price_features
 from breakwater.models import Side
 
+
 DEFAULT_STOP_ATR_MULT = Decimal("2.0")
 REGIME_MIN_BARS = 200
+
+
+def _coerce_bool(value, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text == "":
+        return default
+    return text in {"1", "true", "yes", "y", "on"}
+
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    return _coerce_bool(os.getenv(name, default), default=False)
+
+
+REGIME_GATE_STRICT = _env_bool("BREAKWATER_REGIME_GATE_STRICT", "0")
 
 
 def regime_of(frame: pd.DataFrame) -> str:
@@ -45,11 +74,20 @@ def regime_of(frame: pd.DataFrame) -> str:
     return "neutral"
 
 
-def regime_blocks(side: Side, regime: str) -> bool:
+def regime_blocks(side: Side, regime: str, hostile_unproven: bool = True) -> bool:
+    """Return True if the side should be blocked in this regime.
+
+    hostile_unproven=True means the slice did NOT demonstrate independence from
+    hostile regime during validation (too few hostile rows). In that case, we
+    block in the hostile regime.
+
+    If BREAKWATER_REGIME_GATE_STRICT=1, we keep the old behavior:
+    always block in hostile regime regardless of evidence.
+    """
     if side is Side.BUY and regime == "bear":
-        return True
+        return True if REGIME_GATE_STRICT else hostile_unproven
     if side is Side.SELL and regime == "bull":
-        return True
+        return True if REGIME_GATE_STRICT else hostile_unproven
     return False
 
 
@@ -68,11 +106,15 @@ class SliceSignal:
     stop_price: Decimal
     atr: Decimal
     edge: float
-    # NEW: carry the research/validation horizon into paper execution
-    # (default keeps backward compatibility for non-book / fallback signals).
+
+    # Carry research/validation horizon into paper execution.
     horizon_bars: int = 1
+
     stop_atr_mult: float = 2.0
     regime: str = "unknown"
+
+    # NEW: evidence flag from the monitored book; used for regime gating.
+    hostile_unproven: bool = True
 
 
 def _latest_state(
@@ -95,13 +137,13 @@ def monitor_book(
     server_time: datetime,
 ) -> tuple[list[SliceSignal], list[dict]]:
     """Scan monitored book rows against frames of the SAME kind only.
-    Returns (signals, regime_blocked). Regime-blocked matches are reported
-    rather than silently dropped, so the audit trail shows why a slice did
-    not fire.
+
+    Returns (signals, blocked). Blocked entries are returned for audit/logging.
     """
     signals: list[SliceSignal] = []
     blocked: list[dict] = []
     seen = set()
+
     for row in book_rows:
         if row.get("status") != "monitored":
             continue
@@ -120,13 +162,15 @@ def monitor_book(
         if stop_atr_mult <= 0:
             stop_atr_mult = float(DEFAULT_STOP_ATR_MULT)
 
-        # NEW: horizon passed through from the monitored book
         try:
             horizon_bars = int(row.get("horizon_bars") or 1)
         except (TypeError, ValueError):
             horizon_bars = 1
         if horizon_bars <= 0:
             horizon_bars = 1
+
+        # NEW: evidence flag (string in CSV) -> bool; default True (conservative)
+        hostile_unproven = _coerce_bool(row.get("hostile_unproven"), default=True)
 
         for pair, frame in (frames_by_kind.get(kind) or {}).items():
             if frame is None or frame.empty or len(frame) < 60:
@@ -138,7 +182,7 @@ def monitor_book(
             if latest_state != state:
                 continue
 
-            if regime_blocks(side, regime):
+            if regime_blocks(side, regime, hostile_unproven):
                 blocked.append(
                     {
                         "pair": pair.upper(),
@@ -146,6 +190,7 @@ def monitor_book(
                         "slice_id": slice_id,
                         "side": side.value,
                         "regime": regime,
+                        "hostile_unproven": hostile_unproven,
                     }
                 )
                 continue
@@ -187,8 +232,10 @@ def monitor_book(
                     horizon_bars=horizon_bars,
                     stop_atr_mult=stop_atr_mult,
                     regime=regime,
+                    hostile_unproven=hostile_unproven,
                 )
             )
+
     return signals, blocked
 
 
@@ -232,4 +279,5 @@ def signal_payload(signal: SliceSignal) -> dict:
         "horizon_bars": int(signal.horizon_bars),
         "stop_atr_mult": signal.stop_atr_mult,
         "regime": signal.regime,
+        "hostile_unproven": bool(signal.hostile_unproven),
     }
