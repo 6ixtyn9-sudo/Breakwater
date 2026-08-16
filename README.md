@@ -27,12 +27,12 @@ OHLCV research bars per symbol
 Price-state features (extension, ATR, returns, volatility, trend)
         |
         v
-Slice discovery (feature state bins x forward returns, side/cost-correct,
-                  Bonferroni-controlled)
+Slice discovery (binned feature states x forward returns,
+                  Bonferroni-controlled, side/cost-correct)
         |
         v
 Walk-forward validation (time folds, pass patterns, recency required,
-                        hostile-regime audit)
+                         hostile-regime audit, side/cost-correct)
         |
         v
 Monitored book (lifecycle gates, live decay, PnL decay, stopout-only cooldown)
@@ -44,12 +44,28 @@ Signal monitoring on completed bars (evidence-aware regime gating)
 Paper trading (horizon-aligned exits, fees, journals, truth metric feedback)
         |
         v
-Risk-managed live execution (spot path; perps remain code-locked)
+Risk-managed live execution (spot cash longs; spot margin shorts gated; perps code-locked)
 ```
 
 Nothing in this pipeline is a hand-authored strategy. Features are
 descriptive price states; the system discovers which states carry stable
 forward behaviour and only promotes slices that survive validation.
+
+## Core research math (side/cost-correct)
+
+Breakwater discovery/validation evaluate both trade directions correctly from raw forward returns.
+
+Let:
+
+- raw forward return over horizon h: `r = close[t+h] / close[t] - 1`
+- cost as fraction: `cost = cost_bps / 10000`
+
+Then the cost-adjusted net returns are:
+
+- LONG net: `r - cost`
+- SHORT net: `-r - cost`
+
+Discovery computes both and chooses the side with the higher net mean per slice. Validation uses the same net-return definition when scoring folds, hostile-regime checks, and session audits.
 
 ## Inherited safeguards
 
@@ -72,72 +88,70 @@ research system as first-class safeguards:
   [1.5, 3.5] ATR. Percentiles, not in-sample optima.
 - **Evidence-aware regime gate.** Longs are blocked in a confirmed bear
   (SMA50 below SMA200) and shorts in a confirmed bull. Neutral and
-  unknown regimes never block. If a slice has hostile-regime evidence
+  unknown regimes never block. If the slice has hostile-regime evidence
   (`hostile_unproven=False`), gating can be relaxed to avoid biased
   evidence collection. Strict gating can be forced via
   `BREAKWATER_REGIME_GATE_STRICT=1`.
-- **Regime-stratified validation.** Chronological walk-forward folds cannot
-  distinguish a durable price-state edge from a regime artifact. Every slice
-  is therefore also measured on its hostile-regime rows: bear rows for longs,
-  bull rows for shorts. A slice whose hostile-regime mean net return is
-  non-positive (at least 20 hostile rows) is marked `regime_confounded` and
-  is not validated, with hostile evidence recorded.
-- **Book-only paper trading.** Only slices promoted into the monitored book
-  by walk-forward validation are paper-traded. Unvalidated fallback signals
-  are research-only.
+- **Regime-stratified validation.** Chronological
+  walk-forward folds cannot distinguish a durable price-state edge from
+  a regime artifact. Every slice is therefore also measured on its
+  hostile-regime rows: bear rows for longs, bull rows for shorts. A
+  slice whose hostile-regime mean net return is non-positive (at least 20
+  hostile rows) is marked `regime_confounded` and is not validated,
+  with `hostile_n` and `hostile_mean_ret` recorded in the evidence.
+- **Book-only paper trading.** Only slices promoted into the monitored
+  book by walk-forward validation are paper-traded. Unvalidated
+  fallback signals are research-only.
 - **Immortal-trade guard.** Positions whose pair data has vanished are
-  closed at entry with fees after 24 missing bars instead of living forever.
-- **Stale-data refusal.** The universe snapshot is re-ingested if it is older
-  than seven days.
-- **Provenance honesty.** Every book row records the gate that promoted it
-  (`validated_walk_forward`), so the audit trail never overstates the evidence
-  behind the book.
-- **Serialized state commits.** All workflows share one concurrency group,
-  so two runs can never commit research and trading state to `main` at the
-  same time.
-- **Research and paper execution are separate workflows**, following the
-  separation doctrine.
-- **Stopout-only cooldown.** A slice cooldown is applied only on stopout-style
+  closed at entry with fees after 24 missing bars instead of living
+  forever.
+- **Stale-data refusal.** The universe snapshot is re-ingested if it is
+  older than seven days.
+- **Provenance honesty.** Every book row records the gate that promoted
+  it (`validated_walk_forward`), so the audit trail never overstates the
+  evidence behind the book.
+- **Serialized state commits.** All workflows share one concurrency
+  group, so two runs can never commit research and trading state to
+  `main` at the same time.
+- **Research and paper execution are separate workflows**, following
+  the separation doctrine.
+- **Stopout-only cooldown.** Slice cooldowns are applied only on stopout-style
   adverse exits (stop / trail_stop / stale_data safety), not every small
   horizon loss.
 - **Truth-metric paper feedback.** Paper logs preserve directional `outcome`,
-  but lifecycle feedback is driven by after-fees truth (`pnl_outcome`).
+  while lifecycle feedback is driven by after-fees truth (`pnl_outcome`).
 
 Deliberate deviations from the predecessor system's anti-drift rules,
-recorded honestly: the predecessor system forbade leverage entirely;
-Breakwater permits per-position exchange leverage up to the mandate's cap
-(default 3x) on VALR Perps only, where the isolated-margin model bounds the
-worst-case loss of a position to its allocated margin.
+recorded honestly: the predecessor system forbade leverage entirely; Breakwater permits per-position
+exchange leverage up to the mandate's cap (default 3x) on VALR Perps
+only, where the isolated-margin model bounds the worst-case loss of a
+position to its allocated margin.
 
 ## Instruments
 
-- **VALR spot (cash)**: execution-capable after promotion; supports live long
-  entries (BUY). Cash spot SELL is treated as reducing/closing exposure, not
-  borrowing to short.
-- **VALR spot margin (optional)**: Breakwater supports live spot-margin shorts
-  (SELL to open), but this is **disabled by default** and requires explicit
-  operator gating:
-  - `BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS=1`
-  - `BREAKWATER_SPOT_MARGIN_ACK=I_ACCEPT_BREAKWATER_SPOT_MARGIN_RISK`
+- **VALR spot (cash)**:
+  - Live execution supports cash spot long entries (BUY).
+  - Cash spot sells (SELL) are conceptually “reduce/close long exposure”, not “open a short”.
 
-  Spot margin adds borrowing costs and liquidation risk. Paper/research do not
-  model borrow interest or liquidation fees.
+- **VALR spot margin (optional)**:
+  - VALR offers spot margin trading (borrow/repay), enabling spot short exposure (SELL to open).
+  - Breakwater supports live spot-margin shorts, but it is **disabled by default** and requires explicit operator gating:
+    - `BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS=1`
+    - `BREAKWATER_SPOT_MARGIN_ACK=I_ACCEPT_BREAKWATER_SPOT_MARGIN_RISK`
+  - Spot margin adds borrow interest and liquidation risk; paper/research do not model borrow interest or liquidation fees.
+
 - **VALR Perps**: the USDC-quoted perpetual product on the main account,
-  executing on Hyperliquid. Perp market data (candles, mark prices, volume,
-  funding) is sourced from the Hyperliquid public info API and needs no VALR
-  credentials, which is how the VALR web application sources it as well.
-  Builder-listed pairs (xyz: prefixed) are skipped until their coin mapping is
-  published. Research, shadow signals, positions and paper trading are supported.
+  executing on Hyperliquid. Perp market data (candles, mark prices,
+  volume, funding) is sourced from the Hyperliquid public info API and
+  needs no VALR credentials, which is how the VALR web application
+  sources it as well. Builder-listed pairs (xyz: prefixed) are skipped
+  until their coin mapping is published. Research, shadow signals,
+  positions and paper trading are supported. Live perp entry remains
+  code-locked regardless, until the take-profit and stop-loss contracts
+  have passed an authenticated canary. Note that order execution,
+  liquidation and mark prices are provider-managed, TPSL execution is not
+  guaranteed, and position data synchronisation can lag.
 
-  As of 2026-08-14, some VALR perps trading routes may be authenticated by web
-  session only (HTTP 401 / code -93 to API keys). Breakwater probes this on every
-  guardian run and records `perps_api` in the result, so the moment VALR opens the
-  product to API keys the system will report it automatically. Live perp entry
-  remains code-locked regardless, until take-profit and stop-loss semantics have
-  passed an authenticated canary.
-
-  Note that order execution, liquidation and mark prices are provider-managed,
-  TPSL execution is not guaranteed, and position data synchronisation can lag.
 - VALR-native sub-account futures are not targeted by this system.
 
 ## Capital mandate
@@ -165,9 +179,8 @@ fields are:
 Perp sizing is bounded by the venue minimum notional and minimum margin.
 When the venue minimum forces notional above the risk-sized amount, the
 plan is rejected rather than silently enlarged. The strategy cannot modify
-these values at runtime. Averaging down, martingale, grids, withdrawals and
-transfers are not implemented. Spot margin shorts are supported only behind
-explicit operator gates and are off by default.
+these values at runtime. Averaging down, martingale, grids, spot borrowing,
+withdrawals and transfers are not implemented (spot margin shorts are gated).
 
 ## Security posture
 
@@ -197,21 +210,16 @@ initial deployment.
 
 The atomic research row is one symbol, one bar timestamp, one forward
 window: OHLCV inputs, descriptive price-state features, and a raw forward
-return.
+return. Feature states are binned per symbol on expanding windows, so a
+slice is a market state, not a rule.
 
-Discovery and validation are **side/cost-correct**:
-
-- raw return: `r = close[t+h] / close[t] - 1`
-- LONG net: `r - cost`
-- SHORT net: `-r - cost`
-
-Discovery evaluates both sides per `(feature,state)` and chooses the side with
-the higher net mean. Validation splits pooled rows into contiguous time folds;
-a slice must pass most folds, including the most recent one, and must not be
-regime-confounded in hostile rows.
+Discovery measures (feature, state) slices across the pooled universe and
+applies a Bonferroni correction to the number of slices tested. Validation
+splits pooled rows into contiguous time folds; a slice must pass most folds,
+including the most recent one. Hostile-regime and session audits are recorded.
 
 The monitored book applies lifecycle gates on top of validation: a minimum
-row count, the correct directional edge, live decay for slices that stop
+row count, the correct directional net edge, live decay for slices that stop
 firing, PnL decay for slices that lose on paper, and a cooldown after
 paper stopouts.
 
@@ -272,8 +280,6 @@ account endpoint as used by the VALR web application.
 ```bash
 gh secret set VALR_API_KEY --repo 6ixtyn9-sudo/Breakwater
 gh secret set VALR_API_SECRET --repo 6ixtyn9-sudo/Breakwater
-
-# mandate
 gh secret set BREAKWATER_INITIAL_EQUITY_ZAR --repo 6ixtyn9-sudo/Breakwater
 gh secret set BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR --repo 6ixtyn9-sudo/Breakwater
 gh secret set BREAKWATER_MAX_TOTAL_LOSS_ZAR --repo 6ixtyn9-sudo/Breakwater
@@ -286,14 +292,7 @@ gh secret set BREAKWATER_MAX_POSITION_NOTIONAL_ZAR --repo 6ixtyn9-sudo/Breakwate
 gh secret set BREAKWATER_MAX_EFFECTIVE_LEVERAGE --repo 6ixtyn9-sudo/Breakwater
 gh secret set BREAKWATER_PERP_LEVERAGE_CAP --repo 6ixtyn9-sudo/Breakwater
 gh secret set BREAKWATER_MAX_POSITIONS --repo 6ixtyn9-sudo/Breakwater
-
-# mode
 gh variable set BREAKWATER_MODE --body readonly --repo 6ixtyn9-sudo/Breakwater
-
-# optional spot margin gates (only relevant in live mode)
-gh secret set BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_SPOT_MARGIN_ACK --repo 6ixtyn9-sudo/Breakwater
-
 gh secret list --repo 6ixtyn9-sudo/Breakwater
 ```
 
@@ -312,17 +311,21 @@ Dispatch the universe research refresh:
 gh workflow run research.yml --repo 6ixtyn9-sudo/Breakwater --ref main
 sleep 3
 RUN_ID="$(gh run list --repo 6ixtyn9-sudo/Breakwater --workflow research.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$RUN_ID" --repo 6ixtyn9-sudo/Breakwater --exit-status
 ```
 
-Notes:
-- GitHub Actions variables are visible as plain text; secrets are encrypted.
-- Even if you set spot margin gates in repo variables or secrets, they only
-  take effect for Actions if the workflow exports them into the job `env:`.
+Dispatch the paper trading cycle (shadow mode; simulated fills, no orders reach the venue):
 
-For example, in a workflow:
-
-```yaml
-env:
-  BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS: ${{ secrets.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS }}
-  BREAKWATER_SPOT_MARGIN_ACK: ${{ secrets.BREAKWATER_SPOT_MARGIN_ACK }}
+```bash
+gh workflow run paper.yml --repo 6ixtyn9-sudo/Breakwater --ref main
+sleep 3
+RUN_ID="$(gh run list --repo 6ixtyn9-sudo/Breakwater --workflow paper.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$RUN_ID" --repo 6ixtyn9-sudo/Breakwater --exit-status
 ```
+
+Important: GitHub secrets/variables are only available to your Python process if the workflow exports them into the job environment (`env:`). If you set:
+
+- `BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS`
+- `BREAKWATER_SPOT_MARGIN_ACK`
+
+…make sure the workflow job includes them in `env:` when you eventually go live.
