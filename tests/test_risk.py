@@ -1,5 +1,8 @@
+
+```python
 from datetime import datetime, timezone
 from decimal import Decimal
+import os
 
 import pytest
 
@@ -149,7 +152,10 @@ def test_minimum_order_that_breaks_risk_is_rejected():
         )
 
 
-def test_spot_short_is_rejected():
+def test_spot_short_is_rejected_by_default(monkeypatch):
+    monkeypatch.delenv("BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS", raising=False)
+    monkeypatch.delenv("BREAKWATER_SPOT_MARGIN_ACK", raising=False)
+
     spot_signal = signal(pair="ETHZAR", pair_type=PairType.SPOT, side=Side.SELL)
     spot_market = market("ETHZAR")
     with pytest.raises(ValueError, match="spot short"):
@@ -157,6 +163,20 @@ def test_spot_short_is_rejected():
             spot_signal, spec(PairType.SPOT), spot_market,
             quote_to_zar=Decimal(1), equity_zar=Decimal("331.45"),
         )
+
+
+def test_spot_short_is_allowed_when_margin_gates_enabled(monkeypatch):
+    monkeypatch.setenv("BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS", "1")
+    monkeypatch.setenv("BREAKWATER_SPOT_MARGIN_ACK", "I_ACCEPT_BREAKWATER_SPOT_MARGIN_RISK")
+
+    spot_signal = signal(pair="ETHZAR", pair_type=PairType.SPOT, side=Side.SELL)
+    spot_market = market("ETHZAR")
+    plan = RiskManager(policy(max_effective_leverage=Decimal("3"))).plan_order(
+        spot_signal, spec(PairType.SPOT), spot_market,
+        quote_to_zar=Decimal(1), equity_zar=Decimal("331.45"),
+    )
+    assert plan.side is Side.SELL
+    assert plan.stop_limit_price > plan.stop_price  # short stop limit should be above stop
 
 
 def test_chased_signal_is_rejected():
