@@ -3,15 +3,35 @@
 Policy values are supplied by the operator through environment variables and
 are never compiled into this repository. RiskManager only ever receives a
 fully-populated RiskPolicy.
+
+Spot margin note:
+- Cash spot shorts are not meaningful (you cannot sell what you do not have).
+- VALR Spot Margin can enable short exposure by borrowing.
+- Breakwater allows planning spot SELL orders only when explicitly enabled by
+  operator environment gates (see `_spot_margin_shorts_enabled()`).
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from decimal import Decimal
 
 from breakwater.decimal_utils import ceil_to_step, floor_to_step
 from breakwater.models import MarketSummary, OrderPlan, PairSpec, PairType, PerpSymbol, Side, Signal
+
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    value = str(os.getenv(name, default)).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
+def _spot_margin_ack_ok() -> bool:
+    return os.getenv("BREAKWATER_SPOT_MARGIN_ACK", "off") == "I_ACCEPT_BREAKWATER_SPOT_MARGIN_RISK"
+
+
+def _spot_margin_shorts_enabled() -> bool:
+    return _env_bool("BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS", "0") and _spot_margin_ack_ok()
 
 
 @dataclass(frozen=True)
@@ -91,8 +111,11 @@ class RiskManager:
             raise ValueError("signal, metadata and summary pairs must match")
         if signal.risk_per_unit <= 0 or quote_to_zar <= 0 or equity_zar <= 0:
             raise ValueError("risk, conversion and equity must be positive")
-        if spec.pair_type is PairType.SPOT and signal.side is Side.SELL:
-            raise ValueError("spot short entries are prohibited")
+
+        # Spot short (SELL) is only allowed when spot margin shorts are explicitly enabled.
+        if spec.pair_type is PairType.SPOT and signal.side is Side.SELL and not _spot_margin_shorts_enabled():
+            raise ValueError("spot short entries require spot margin enablement (BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS + ACK)")
+
         executable_price = summary.ask if signal.side is Side.BUY else summary.bid
         slippage = abs(executable_price - signal.entry_price) / signal.entry_price
         if slippage > Decimal("0.01"):
@@ -100,8 +123,10 @@ class RiskManager:
 
         risk_per_base_zar = signal.risk_per_unit * quote_to_zar
         risk_quantity = p.risk_per_trade_zar / risk_per_base_zar
+
         notional_cap_zar = min(p.max_position_notional_zar, equity_zar * p.max_effective_leverage)
         notional_quantity = notional_cap_zar / (signal.entry_price * quote_to_zar)
+
         quantity = floor_to_step(min(risk_quantity, notional_quantity), spec.quantity_step)
         quantity = min(quantity, spec.max_base)
         if quantity < spec.min_base:
@@ -111,6 +136,7 @@ class RiskManager:
         if notional_quote < spec.min_quote:
             quantity = ceil_to_step(spec.min_quote / signal.entry_price, spec.quantity_step)
             notional_quote = quantity * signal.entry_price
+
         if quantity < spec.min_base or quantity > spec.max_base:
             raise ValueError("quantity is outside VALR pair limits")
         if notional_quote < spec.min_quote or notional_quote > spec.max_quote:
@@ -118,6 +144,7 @@ class RiskManager:
 
         notional_zar = notional_quote * quote_to_zar
         risk_zar = quantity * signal.risk_per_unit * quote_to_zar
+
         if notional_zar > notional_cap_zar:
             raise ValueError("minimum valid order exceeds notional cap")
         if risk_zar > p.risk_per_trade_zar:
@@ -176,9 +203,11 @@ class RiskManager:
 
         notional_usdc = min(risk_notional_usdc, notional_cap_usdc)
         notional_usdc = max(notional_usdc, perp.min_notional)
+
         margin_usdc = notional_usdc / leverage
         if margin_usdc < perp.min_margin:
             notional_usdc = perp.min_margin * leverage
+
         if notional_usdc > notional_cap_usdc:
             raise ValueError("minimum perp margin forces notional above the cap")
 
@@ -188,9 +217,7 @@ class RiskManager:
             raise ValueError("perp minimum order exceeds per-trade risk")
 
         quantity = notional_usdc / signal.entry_price
-        quantity = Decimal(quantity).quantize(
-            Decimal(1).scaleb(-perp.price_decimal_places)
-        )
+        quantity = Decimal(quantity).quantize(Decimal(1).scaleb(-perp.price_decimal_places))
         if quantity <= 0:
             raise ValueError("perp quantity rounds to zero")
 
