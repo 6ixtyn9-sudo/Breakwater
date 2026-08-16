@@ -9,12 +9,13 @@ Environment:
 - BREAKWATER_REGIME_GATE_STRICT=1 forces strict gating.
 
 Optional book filters (OFF by default; freeze-friendly):
-- BREAKWATER_FILTER_LEGACY_BOOK=1:
-    skip rows not marked edge_semantics_version == "net_v1"
+- BREAKWATER_FILTER_NON_DIRECTIONAL_BOOK=1 (or legacy name BREAKWATER_FILTER_LEGACY_BOOK=1):
+    skip rows where edge_is_directional_net != "True"
 - BREAKWATER_FILTER_NONPOSITIVE_BOOK=1:
     skip rows where mean_ret_costadj <= 0
-These are belt-and-suspenders guards to prevent legacy carried rows from
-contaminating evidence after a semantics upgrade.
+
+These prevent carried legacy rows (whose edge semantics may not match the current
+directional net-edge convention) from contaminating evidence.
 """
 
 from __future__ import annotations
@@ -35,8 +36,6 @@ from breakwater.models import Side
 DEFAULT_STOP_ATR_MULT = Decimal("2.0")
 REGIME_MIN_BARS = 200
 
-EDGE_SEMANTICS_NET_V1 = "net_v1"
-
 
 def _coerce_bool(value, default: bool = False) -> bool:
     if value is None:
@@ -54,7 +53,11 @@ def _env_bool(name: str, default: str = "0") -> bool:
 
 
 REGIME_GATE_STRICT = _env_bool("BREAKWATER_REGIME_GATE_STRICT", "0")
-FILTER_LEGACY_BOOK = _env_bool("BREAKWATER_FILTER_LEGACY_BOOK", "0")
+
+# New name (preferred) + old name (kept for backward compatibility)
+FILTER_NON_DIRECTIONAL_BOOK = _env_bool("BREAKWATER_FILTER_NON_DIRECTIONAL_BOOK", "0") or _env_bool(
+    "BREAKWATER_FILTER_LEGACY_BOOK", "0"
+)
 FILTER_NONPOSITIVE_BOOK = _env_bool("BREAKWATER_FILTER_NONPOSITIVE_BOOK", "0")
 
 
@@ -127,6 +130,27 @@ def _latest_state(frame: pd.DataFrame, feature: str, min_periods: int = 200) -> 
     return int(latest[state_column].iloc[-1]), latest.iloc[0]
 
 
+def _edge_is_directional_net(row: dict) -> bool:
+    """Return True if the row is stamped as directional net-edge.
+
+    Backward compatibility:
+    - if edge_is_directional_net is missing, accept old edge_semantics_version.
+    """
+    flag = row.get("edge_is_directional_net")
+    if str(flag).strip() == "True":
+        return True
+    if str(flag).strip() == "False":
+        return False
+
+    version = str(row.get("edge_semantics_version") or "")
+    if version == "net_v1":
+        return True
+    if version == "legacy_v0":
+        return False
+
+    return False
+
+
 def monitor_book(
     book_rows: list[dict],
     frames_by_kind: dict[str, dict],
@@ -142,10 +166,8 @@ def monitor_book(
             continue
 
         # Optional filters (OFF by default)
-        if FILTER_LEGACY_BOOK:
-            version = str(row.get("edge_semantics_version") or "")
-            if version != EDGE_SEMANTICS_NET_V1:
-                continue
+        if FILTER_NON_DIRECTIONAL_BOOK and not _edge_is_directional_net(row):
+            continue
 
         if FILTER_NONPOSITIVE_BOOK:
             edge_val = _coerce_float(row.get("mean_ret_costadj"), 0.0)
