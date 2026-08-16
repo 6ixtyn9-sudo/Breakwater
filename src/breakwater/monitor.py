@@ -7,6 +7,14 @@ Regime gating (evidence-aware):
 
 Environment:
 - BREAKWATER_REGIME_GATE_STRICT=1 forces strict gating.
+
+Optional book filters (OFF by default; freeze-friendly):
+- BREAKWATER_FILTER_LEGACY_BOOK=1:
+    skip rows not marked as edge_semantics_version == "net_v1"
+- BREAKWATER_FILTER_NONPOSITIVE_BOOK=1:
+    skip rows where mean_ret_costadj <= 0
+These are belt-and-suspenders guards to prevent legacy carried rows from
+contaminating the evidence stream after a semantics upgrade.
 """
 
 from __future__ import annotations
@@ -27,6 +35,8 @@ from breakwater.models import Side
 DEFAULT_STOP_ATR_MULT = Decimal("2.0")
 REGIME_MIN_BARS = 200
 
+EDGE_SEMANTICS_NET_V1 = "net_v1"
+
 
 def _coerce_bool(value, default: bool = False) -> bool:
     if value is None:
@@ -44,6 +54,15 @@ def _env_bool(name: str, default: str = "0") -> bool:
 
 
 REGIME_GATE_STRICT = _env_bool("BREAKWATER_REGIME_GATE_STRICT", "0")
+FILTER_LEGACY_BOOK = _env_bool("BREAKWATER_FILTER_LEGACY_BOOK", "0")
+FILTER_NONPOSITIVE_BOOK = _env_bool("BREAKWATER_FILTER_NONPOSITIVE_BOOK", "0")
+
+
+def _coerce_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def regime_of(frame: pd.DataFrame) -> str:
@@ -121,6 +140,17 @@ def monitor_book(
     for row in book_rows:
         if row.get("status") != "monitored":
             continue
+
+        # Optional filters (OFF by default)
+        if FILTER_LEGACY_BOOK:
+            version = str(row.get("edge_semantics_version") or "")
+            if version != EDGE_SEMANTICS_NET_V1:
+                continue
+
+        if FILTER_NONPOSITIVE_BOOK:
+            edge_val = _coerce_float(row.get("mean_ret_costadj"), 0.0)
+            if edge_val <= 0.0:
+                continue
 
         slice_id = str(row["slice_id"])
         feature = str(row["feature"])
