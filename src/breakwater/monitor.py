@@ -5,16 +5,13 @@ target symbol. A match produces a signal carrying the slice identity, side,
 entry reference, the slice's MAE-calibrated ATR stop, and the symbol's macro
 regime.
 
-Regime gating (fix for bias):
-- Historically we hard-blocked longs in confirmed bear and shorts in confirmed bull.
-- That creates a biased evidence stream when the book is skewed to one side.
-- The monitored book already carries `hostile_unproven` from validation.
-  If a slice has proven hostile-regime evidence (`hostile_unproven=False`),
-  we allow it to trade even in the hostile regime.
-- If `hostile_unproven=True` (insufficient hostile rows), we still block in the hostile regime.
+Regime gating (evidence-aware):
+- Strict mode blocks longs in bear and shorts in bull.
+- Evidence-aware mode blocks only when the slice is hostile-unproven
+  (`hostile_unproven=True`).
 
-Operator escape hatch:
-- Set BREAKWATER_REGIME_GATE_STRICT=1 to restore the old "always block in hostile regime" behavior.
+Environment:
+- BREAKWATER_REGIME_GATE_STRICT=1 forces strict gating.
 """
 
 from __future__ import annotations
@@ -32,12 +29,11 @@ from breakwater.discovery import bin_states
 from breakwater.features import compute_price_features
 from breakwater.models import Side
 
-
 DEFAULT_STOP_ATR_MULT = Decimal("2.0")
 REGIME_MIN_BARS = 200
 
 
-def _coerce_bool(value, *, default: bool = False) -> bool:
+def _coerce_bool(value, default: bool = False) -> bool:
     if value is None:
         return default
     if isinstance(value, bool):
@@ -75,14 +71,10 @@ def regime_of(frame: pd.DataFrame) -> str:
 
 
 def regime_blocks(side: Side, regime: str, hostile_unproven: bool = True) -> bool:
-    """Return True if the side should be blocked in this regime.
+    """Block side in hostile regime.
 
-    hostile_unproven=True means the slice did NOT demonstrate independence from
-    hostile regime during validation (too few hostile rows). In that case, we
-    block in the hostile regime.
-
-    If BREAKWATER_REGIME_GATE_STRICT=1, we keep the old behavior:
-    always block in hostile regime regardless of evidence.
+    - If strict: always block hostile regime.
+    - If not strict: block only when hostile_unproven=True.
     """
     if side is Side.BUY and regime == "bear":
         return True if REGIME_GATE_STRICT else hostile_unproven
@@ -107,13 +99,10 @@ class SliceSignal:
     atr: Decimal
     edge: float
 
-    # Carry research/validation horizon into paper execution.
+    # Optional enrichments (defaults keep compatibility with older constructors)
     horizon_bars: int = 1
-
     stop_atr_mult: float = 2.0
     regime: str = "unknown"
-
-    # NEW: evidence flag from the monitored book; used for regime gating.
     hostile_unproven: bool = True
 
 
@@ -138,7 +127,7 @@ def monitor_book(
 ) -> tuple[list[SliceSignal], list[dict]]:
     """Scan monitored book rows against frames of the SAME kind only.
 
-    Returns (signals, blocked). Blocked entries are returned for audit/logging.
+    Returns (signals, blocked). Blocked matches are returned for audit/logging.
     """
     signals: list[SliceSignal] = []
     blocked: list[dict] = []
@@ -169,7 +158,6 @@ def monitor_book(
         if horizon_bars <= 0:
             horizon_bars = 1
 
-        # NEW: evidence flag (string in CSV) -> bool; default True (conservative)
         hostile_unproven = _coerce_bool(row.get("hostile_unproven"), default=True)
 
         for pair, frame in (frames_by_kind.get(kind) or {}).items():
@@ -207,9 +195,7 @@ def monitor_book(
                 continue
 
             bar_start = latest_row["start"]
-            digest = hashlib.sha256(
-                f"{pair}|{slice_id}|{bar_start.isoformat()}".encode()
-            ).hexdigest()[:16]
+            digest = hashlib.sha256(f"{pair}|{slice_id}|{bar_start.isoformat()}".encode()).hexdigest()[:16]
             if digest in seen:
                 continue
             seen.add(digest)
@@ -257,7 +243,6 @@ def _atr(frame: pd.DataFrame) -> float:
 
 def signal_pair_type(kind: str):
     from breakwater.models import PairType
-
     return PairType.SPOT if kind == "SPOT" else PairType.FUTURE
 
 
