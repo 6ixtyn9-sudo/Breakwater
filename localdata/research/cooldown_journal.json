@@ -93,5 +93,21 @@
     "signal_id": "ac112a7e26c1ac7a",
     "slice_id": "feat_ret_20:2:SHORT",
     "stopped_at": "2026-08-15T22:15:23+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-0.6647",
+    "reason": "horizon",
+    "signal_id": "92bab9ba8fa774b3",
+    "slice_id": "feat_ext_vs_ma_50:1:SHORT",
+    "stopped_at": "2026-08-16T03:15:19+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-0.6314",
+    "reason": "horizon",
+    "signal_id": "b99657be5f41acc1",
+    "slice_id": "feat_ext_vs_ma_50:1:SHORT",
+    "stopped_at": "2026-08-16T03:15:19+00:00"
   }
 ]

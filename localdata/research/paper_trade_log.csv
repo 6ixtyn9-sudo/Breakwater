@@ -961,3 +961,14 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-08-16T02:15:23+00:00,,LINKZAR,SPOT,feat_ret_1:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
 2026-08-16T02:15:23+00:00,,HYPEUSDC,PERP,feat_ret_3:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
 2026-08-16T02:15:23+00:00,,HYPEUSDC,PERP,feat_ret_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,92bab9ba8fa774b3,BTCUSDC,PERP,feat_ext_vs_ma_50:1:SHORT,SELL,63054.39285714285714250000000,63100.0,63218.65671428571428851000000,200.00,-0.6647,loss,6,horizon,passed,neutral
+2026-08-16T03:15:19+00:00,b99657be5f41acc1,ETHUSDC,PERP,feat_ext_vs_ma_50:1:SHORT,SELL,1882.151785714285716750000000,1883.2,1888.757021428571409281000000,200.00,-0.6314,loss,6,horizon,passed,neutral
+2026-08-16T03:15:19+00:00,22f4172c8348380b,XRPZAR,SPOT,feat_ret_5:2:SHORT,SELL,16.39214285714285718400000000,16.39,16.50214285714285660800000000,200.00,-0.3739,win,6,horizon,passed,neutral
+2026-08-16T03:15:19+00:00,,LINKZAR,SPOT,feat_trend_strength_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,LINKZAR,SPOT,feat_trend_slope_20:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,LINKZAR,SPOT,feat_atr_norm_ext:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,LINKZAR,SPOT,feat_ext_vs_ma_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,LINKZAR,SPOT,feat_realized_vol_20:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,LINKZAR,SPOT,feat_ret_3:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,HYPEUSDC,PERP,feat_ret_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T03:15:19+00:00,,HYPEUSDC,PERP,feat_ret_3:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
