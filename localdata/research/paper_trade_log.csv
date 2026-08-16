@@ -12,3 +12,5 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-08-16T22:15:22+00:00,174553316febbf10,BNBZAR,SPOT,feat_ext_vs_ma_50:0:LONG,BUY,9904.285714285714286499999998,9854.0,9797.685714285714277479999998,200.00,-1.4154,loss,6,horizon,passed,neutral,loss
 2026-08-16T22:15:22+00:00,dc0ebe7618d14f9e,HYPEUSDC,PERP,feat_ret_1:2:SHORT,SELL,57.79358928571428585000000000,57.232,58.73203214285714123400000000,200.00,1.4234,win,6,horizon,passed,bull,win
 2026-08-16T22:15:22+00:00,,HYPEUSDC,PERP,feat_vol_regime:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
+2026-08-16T23:15:21+00:00,8bdbdcef71e3d935,ETHUSDC,PERP,feat_vol_regime:0:SHORT,SELL,1886.139285714285714250000000,1873.6,1891.953571428571428850000000,200.00,0.8096,win,6,horizon,passed,neutral,win
+2026-08-16T23:15:21+00:00,,HYPEUSDC,PERP,feat_vol_regime:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
