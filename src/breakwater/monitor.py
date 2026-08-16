@@ -1,10 +1,5 @@
 """Monitored-slice scanning over the live universe.
 
-Every monitored book row is checked against the latest completed bar of each
-target symbol. A match produces a signal carrying the slice identity, side,
-entry reference, the slice's MAE-calibrated ATR stop, and the symbol's macro
-regime.
-
 Regime gating (evidence-aware):
 - Strict mode blocks longs in bear and shorts in bull.
 - Evidence-aware mode blocks only when the slice is hostile-unproven
@@ -52,9 +47,7 @@ REGIME_GATE_STRICT = _env_bool("BREAKWATER_REGIME_GATE_STRICT", "0")
 
 
 def regime_of(frame: pd.DataFrame) -> str:
-    """Bull / bear / neutral / unknown from the SMA-50/200 crossover prior.
-    Fail-open: insufficient history returns unknown, which never blocks.
-    """
+    """Bull / bear / neutral / unknown from the SMA-50/200 crossover prior."""
     if frame is None or len(frame) < REGIME_MIN_BARS:
         return "unknown"
     close = frame["close"].astype(float)
@@ -98,17 +91,13 @@ class SliceSignal:
     stop_price: Decimal
     atr: Decimal
     edge: float
-
-    # Optional enrichments (defaults keep compatibility with older constructors)
     horizon_bars: int = 1
     stop_atr_mult: float = 2.0
     regime: str = "unknown"
     hostile_unproven: bool = True
 
 
-def _latest_state(
-    frame: pd.DataFrame, feature: str, min_periods: int = 200
-) -> tuple[int | None, pd.Series]:
+def _latest_state(frame: pd.DataFrame, feature: str, min_periods: int = 200) -> tuple[int | None, pd.Series]:
     if len(frame) < min_periods:
         return None, pd.Series(dtype=float)
     binned = bin_states(frame, [feature], min_periods=min_periods)
@@ -125,10 +114,6 @@ def monitor_book(
     *,
     server_time: datetime,
 ) -> tuple[list[SliceSignal], list[dict]]:
-    """Scan monitored book rows against frames of the SAME kind only.
-
-    Returns (signals, blocked). Blocked matches are returned for audit/logging.
-    """
     signals: list[SliceSignal] = []
     blocked: list[dict] = []
     seen = set()
