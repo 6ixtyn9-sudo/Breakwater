@@ -1,19 +1,15 @@
 """Walk-forward validation of discovered slices.
 
-Pooled research rows are split into contiguous time folds. A slice passes a
-fold when that fold carries enough rows and its mean cost-adjusted forward
-return keeps the slice's sign. A slice is validated only when most folds
-pass and the most recent fold passes, so the evidence includes recency.
+Pooled research rows are split into contiguous time folds.
 
-Standing lesson (regime confound): chronological folds cannot tell a
-durable price-state edge from a regime artifact. Every slice is therefore
-also tested against HOSTILE regime rows: bear rows for long slices, bull
-rows for short slices. A slice whose hostile-regime mean return opposes
-its side is marked regime-confounded and is not validated.
+IMPORTANT (side + cost correctness):
+Prepared rows carry `fwd_ret_raw` (no cost, no side) and a constant `cost`.
+Validation converts raw returns to net returns for the candidate side:
 
-Session audit (UTC): if `session_utc` exists in prepared rows, validation
-outputs per-session n/mean/hit-rate for each slice (audit-only; does not
-change validation decisions).
+- LONG net:  r - cost
+- SHORT net: -r - cost
+
+All fold tests, hostile regime tests, and session audit stats use those net returns.
 """
 
 from __future__ import annotations
@@ -107,13 +103,16 @@ class ValidatedSlice:
     session_us_hit_rate: float = 0.0
 
 
-def _fold_pass(returns: np.ndarray, side: str) -> bool:
-    if len(returns) < MIN_ROWS_PER_FOLD:
-        return False
-    mean = float(np.mean(returns))
+def _net_returns(raw_returns: np.ndarray, side: str, cost: float) -> np.ndarray:
     if side == "LONG":
-        return mean > 0
-    return mean < 0
+        return raw_returns - cost
+    return (-raw_returns) - cost
+
+
+def _fold_pass(net_returns: np.ndarray) -> bool:
+    if len(net_returns) < MIN_ROWS_PER_FOLD:
+        return False
+    return float(np.mean(net_returns)) > 0
 
 
 def _regime_series(frame: pd.DataFrame) -> pd.Series:
@@ -139,32 +138,21 @@ def _attach_regime_labels(prepared: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(parts, ignore_index=True)
 
 
-def _hostile_regime_check(
-    side: str, hostile_returns: np.ndarray
-) -> tuple[int, float, bool, bool]:
+def _hostile_regime_check(net_hostile_returns: np.ndarray) -> tuple[int, float, bool, bool]:
     """Return (hostile_n, hostile_mean, confounded, unproven).
 
-    A slice is confounded when it has at least HOSTILE_MIN_ROWS hostile rows
-    and the hostile-regime mean return opposes the slice's side. When the
-    hostile evidence is too thin to test at all, the slice is marked
-    hostile_unproven: it may pass temporally, but the audit trail records
-    that its regime independence was never demonstrated.
+    Net returns are oriented so profitable returns are > 0 for BOTH sides.
+    Confounded => hostile mean <= 0 (if enough hostile rows).
     """
-    hostile_n = len(hostile_returns)
-    hostile_mean = float(np.mean(hostile_returns)) if hostile_n else 0.0
+    hostile_n = len(net_hostile_returns)
+    hostile_mean = float(np.mean(net_hostile_returns)) if hostile_n else 0.0
     if hostile_n < HOSTILE_MIN_ROWS:
         return hostile_n, hostile_mean, False, True
-    if side == "LONG":
-        return hostile_n, hostile_mean, hostile_mean <= 0, False
-    return hostile_n, hostile_mean, hostile_mean >= 0, False
+    return hostile_n, hostile_mean, hostile_mean <= 0, False
 
 
 def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
-    """90th percentile of the slice's adverse-atr distribution, clamped.
-
-    Uses `fwd_mae_atr` (horizon-matched) when present; falls back to legacy
-    `fwd_mae_atr_5` otherwise.
-    """
+    """90th percentile of the slice's adverse-atr distribution, clamped."""
     mae_col = "fwd_mae_atr" if "fwd_mae_atr" in prepared.columns else "fwd_mae_atr_5"
     if mae_col not in prepared.columns:
         return 2.0
@@ -183,29 +171,33 @@ def _session_stats(
     subset: pd.DataFrame,
     slice_mask: np.ndarray,
     session_label: str,
+    *,
+    side: str,
+    cost: float,
 ) -> tuple[int, float, float]:
     if "session_utc" not in subset.columns:
         return 0, 0.0, 0.0
     sess = subset["session_utc"].to_numpy()
-    values = subset.loc[(slice_mask & (sess == session_label)), "fwd_ret"].to_numpy()
-    n = len(values)
+    raw = subset.loc[(slice_mask & (sess == session_label)), "fwd_ret_raw"].to_numpy()
+    n = len(raw)
     if n == 0:
         return 0, 0.0, 0.0
-    return n, float(np.mean(values)), float(np.mean(values > 0))
+    net = _net_returns(raw, side, cost)
+    return n, float(np.mean(net)), float(np.mean(net > 0))
 
 
-def validate_slices(
-    prepared: pd.DataFrame,
-    candidates,
-) -> list[ValidatedSlice]:
+def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
     if prepared.empty or not candidates:
         return []
+
     labelled = _attach_regime_labels(prepared)
     rows = (
-        labelled.dropna(subset=["fwd_ret"])
+        labelled.dropna(subset=["fwd_ret_raw"])
         .sort_values("start")
         .reset_index(drop=True)
     )
+
+    cost = float(rows["cost"].iloc[0]) if "cost" in rows.columns and len(rows) else 0.0
 
     validated: list[ValidatedSlice] = []
     for candidate in candidates:
@@ -213,21 +205,25 @@ def validate_slices(
         if state_column not in rows.columns:
             continue
 
-        subset = rows.dropna(subset=[state_column])
+        subset = rows.dropna(subset=[state_column, "fwd_ret_raw"])
         mask = (subset[state_column] == candidate.state).to_numpy(dtype=bool)
 
         fold_ids = np.linspace(0, len(subset), FOLD_COUNT + 1).astype(int)
         fold_results = []
         fold_means = []
         fold_sizes = []
+
         for fold in range(FOLD_COUNT):
             fold_mask = np.zeros(len(subset), dtype=bool)
             fold_mask[fold_ids[fold] : fold_ids[fold + 1]] = True
-            fold_returns = subset.loc[(mask & fold_mask), "fwd_ret"].to_numpy()
-            passed = _fold_pass(fold_returns, candidate.side)
+
+            raw = subset.loc[(mask & fold_mask), "fwd_ret_raw"].to_numpy()
+            net = _net_returns(raw, candidate.side, cost)
+
+            passed = _fold_pass(net)
             fold_results.append("1" if passed else "0")
-            fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
-            fold_sizes.append(len(fold_returns))
+            fold_means.append(float(np.mean(net)) if len(net) else 0.0)
+            fold_sizes.append(len(net))
 
         pattern = "".join(fold_results)
         pass_count = pattern.count("1")
@@ -241,14 +237,14 @@ def validate_slices(
 
         hostile_label = "bear" if candidate.side == "LONG" else "bull"
         hostile_mask = mask & (subset["regime_row"].to_numpy() == hostile_label)
-        hostile_returns = subset.loc[hostile_mask, "fwd_ret"].to_numpy()
-        hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(
-            candidate.side, hostile_returns
-        )
+        hostile_raw = subset.loc[hostile_mask, "fwd_ret_raw"].to_numpy()
+        hostile_net = _net_returns(hostile_raw, candidate.side, cost)
 
-        asia_n, asia_mean, asia_hit = _session_stats(subset, mask, SESSION_ASIA)
-        eu_n, eu_mean, eu_hit = _session_stats(subset, mask, SESSION_EU)
-        us_n, us_mean, us_hit = _session_stats(subset, mask, SESSION_US)
+        hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(hostile_net)
+
+        asia_n, asia_mean, asia_hit = _session_stats(subset, mask, SESSION_ASIA, side=candidate.side, cost=cost)
+        eu_n, eu_mean, eu_hit = _session_stats(subset, mask, SESSION_EU, side=candidate.side, cost=cost)
+        us_n, us_mean, us_hit = _session_stats(subset, mask, SESSION_US, side=candidate.side, cost=cost)
 
         validated.append(
             ValidatedSlice(
@@ -265,7 +261,7 @@ def validate_slices(
                 n=candidate.n,
                 mean_ret_costadj=candidate.mean_ret_costadj,
                 p_value=candidate.p_value,
-                validated=temporal_pass and not confounded,
+                validated=(temporal_pass and not confounded and candidate.mean_ret_costadj > 0),
                 horizon_bars=candidate.horizon_bars,
                 stop_atr_mult=_calibrate_stop_atr_mult(prepared, candidate, state_column),
                 hostile_n=hostile_n,
@@ -341,35 +337,17 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     stop_atr_mult=float(row["stop_atr_mult"]) if has_stop else 2.0,
                     hostile_n=int(row["hostile_n"]) if has_hostile else 0,
                     hostile_mean_ret=float(row["hostile_mean_ret"]) if has_hostile else 0.0,
-                    regime_confounded=(
-                        row.get("regime_confounded") == "True" if has_hostile else False
-                    ),
-                    hostile_unproven=(
-                        row.get("hostile_unproven") == "True" if has_unproven else False
-                    ),
-                    session_asia_n=int(row["session_asia_n"])
-                    if has_session and row.get("session_asia_n")
-                    else 0,
-                    session_asia_mean_ret_costadj=float(row["session_asia_mean_ret_costadj"])
-                    if has_session and row.get("session_asia_mean_ret_costadj")
-                    else 0.0,
-                    session_asia_hit_rate=float(row["session_asia_hit_rate"])
-                    if has_session and row.get("session_asia_hit_rate")
-                    else 0.0,
+                    regime_confounded=(row.get("regime_confounded") == "True" if has_hostile else False),
+                    hostile_unproven=(row.get("hostile_unproven") == "True" if has_unproven else False),
+                    session_asia_n=int(row["session_asia_n"]) if has_session and row.get("session_asia_n") else 0,
+                    session_asia_mean_ret_costadj=float(row["session_asia_mean_ret_costadj"]) if has_session and row.get("session_asia_mean_ret_costadj") else 0.0,
+                    session_asia_hit_rate=float(row["session_asia_hit_rate"]) if has_session and row.get("session_asia_hit_rate") else 0.0,
                     session_eu_n=int(row["session_eu_n"]) if has_session and row.get("session_eu_n") else 0,
-                    session_eu_mean_ret_costadj=float(row["session_eu_mean_ret_costadj"])
-                    if has_session and row.get("session_eu_mean_ret_costadj")
-                    else 0.0,
-                    session_eu_hit_rate=float(row["session_eu_hit_rate"])
-                    if has_session and row.get("session_eu_hit_rate")
-                    else 0.0,
+                    session_eu_mean_ret_costadj=float(row["session_eu_mean_ret_costadj"]) if has_session and row.get("session_eu_mean_ret_costadj") else 0.0,
+                    session_eu_hit_rate=float(row["session_eu_hit_rate"]) if has_session and row.get("session_eu_hit_rate") else 0.0,
                     session_us_n=int(row["session_us_n"]) if has_session and row.get("session_us_n") else 0,
-                    session_us_mean_ret_costadj=float(row["session_us_mean_ret_costadj"])
-                    if has_session and row.get("session_us_mean_ret_costadj")
-                    else 0.0,
-                    session_us_hit_rate=float(row["session_us_hit_rate"])
-                    if has_session and row.get("session_us_hit_rate")
-                    else 0.0,
+                    session_us_mean_ret_costadj=float(row["session_us_mean_ret_costadj"]) if has_session and row.get("session_us_mean_ret_costadj") else 0.0,
+                    session_us_hit_rate=float(row["session_us_hit_rate"]) if has_session and row.get("session_us_hit_rate") else 0.0,
                 )
             )
         return out
