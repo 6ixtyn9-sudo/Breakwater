@@ -55,9 +55,12 @@ def test_sync_book_demotes_stale_monitored_slices(tmp_path):
     sync_book(validated_path=validated_path, book_path=book_path)
     now = datetime.now(timezone.utc)
     apply_signal_feedback(
-        book_path, "feat:0:LONG",
+        book_path,
+        "feat:0:LONG",
         bar_epoch=int((now - timedelta(days=10)).timestamp()),
-        outcome="win", pnl_zar=1.0, now=now,
+        outcome="win",
+        pnl_zar=1.0,
+        now=now,
     )
     summary = sync_book(validated_path=validated_path, book_path=book_path, now=now)
     assert summary["decayed"] == 1
@@ -69,10 +72,15 @@ def test_stopout_sets_cooldown_then_recovers(tmp_path):
     write_validated(validated_path, [validated_row()])
     sync_book(validated_path=validated_path, book_path=book_path)
     now = datetime.now(timezone.utc)
+
     apply_signal_feedback(
-        book_path, "feat:0:LONG",
+        book_path,
+        "feat:0:LONG",
         bar_epoch=int(now.timestamp()),
-        outcome="loss", pnl_zar=-2.0, now=now,
+        outcome="loss",
+        pnl_zar=-2.0,
+        stopout=True,
+        now=now,
     )
     rows = read_book(book_path)
     assert rows[0]["status"] == "cooldown"
@@ -120,6 +128,7 @@ def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
         "horizon_bars": "1",
         "stop_atr_mult": "2.500",
         "source": "validated_walk_forward",
+        "hostile_unproven": "False",
     }
     _write_book(book_path, [perp_row])
     write_validated(validated_path, [validated_row()])
@@ -158,6 +167,7 @@ def test_sync_book_never_wipes_on_empty_validated(tmp_path):
         "horizon_bars": "1",
         "stop_atr_mult": "2.000",
         "source": "validated_walk_forward",
+        "hostile_unproven": "False",
     }
     _write_book(book_path, [existing_row])
     write_validated(validated_path, [])
@@ -167,4 +177,3 @@ def test_sync_book_never_wipes_on_empty_validated(tmp_path):
     assert len(rows) == 1
     assert rows[0]["slice_id"] == "feat:0:LONG"
     assert rows[0]["paper_trades"] == "1"
-
