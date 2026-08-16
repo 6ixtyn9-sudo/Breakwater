@@ -255,9 +255,7 @@ class BreakwaterEngine:
                 frames=frames,
                 policy=self.risk.policy,
                 usdc_zar=usdc_zar,
-                positions_path=self.settings.data_dir
-                / "research"
-                / "paper_positions.json",
+                positions_path=self.settings.data_dir / "research" / "paper_positions.json",
                 log_path=self.settings.paper_log_path,
                 cooldown_path=self.settings.cooldown_path,
                 book_path=self.settings.book_path,
@@ -464,7 +462,6 @@ class BreakwaterEngine:
         from breakwater.validation import validate_slices, write_validated
 
         write_universe(self.settings.universe_path, universe)
-
         spot_targets = [(pair, "SPOT") for pair in universe.ranked("SPOT", max_pairs)]
         perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
         all_targets = spot_targets + perp_targets
@@ -475,14 +472,12 @@ class BreakwaterEngine:
                 "no research frames could be fetched; refusing to overwrite "
                 "research artifacts with empty results"
             )
-
         discovered = []
         validated = []
 
         horizon_bars = int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"))
         if horizon_bars < 1:
             raise GuardianHalt("BREAKWATER_RESEARCH_HORIZON_BARS must be >= 1")
-
         for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
             # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
@@ -493,7 +488,6 @@ class BreakwaterEngine:
                 if frame is None:
                     continue
                 kind_frames[pair.upper()] = frame
-
             pooled = _pool_frames(kind_frames)
             prepared = prepare_pooled(
                 pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars
@@ -502,7 +496,6 @@ class BreakwaterEngine:
             checked = validate_slices(prepared, found)
             discovered.extend(found)
             validated.extend(checked)
-
         write_discovered(self.settings.discovered_path, discovered)
         write_validated(self.settings.validated_path, validated)
 
@@ -510,6 +503,14 @@ class BreakwaterEngine:
             validated_path=self.settings.validated_path,
             book_path=self.settings.book_path,
             now=server_time,
+        )
+
+        # NEW: record validation knob state in the committed research_done payload
+        validation_require_bonferroni = os.getenv(
+            "BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", ""
+        )
+        validation_relaxed_min_passes = os.getenv(
+            "BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", ""
         )
 
         result = {
@@ -526,6 +527,8 @@ class BreakwaterEngine:
                 [row for row in validated if row.regime_confounded]
             ),
             "hostile_unproven_slices": len([row for row in validated if row.hostile_unproven]),
+            "validation_require_bonferroni": validation_require_bonferroni,
+            "validation_relaxed_min_passes": validation_relaxed_min_passes,
             "book": book_summary,
         }
         append_status(
