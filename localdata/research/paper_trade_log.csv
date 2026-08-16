@@ -945,3 +945,9 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-08-16T00:15:21+00:00,,HYPEUSDC,PERP,feat_ret_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
 2026-08-16T00:15:21+00:00,,HYPEUSDC,PERP,feat_ret_10:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
 2026-08-16T00:15:21+00:00,,HYPEUSDC,PERP,feat_trend_slope_20:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T01:15:22+00:00,,LINKZAR,SPOT,feat_trend_strength_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T01:15:22+00:00,,LINKZAR,SPOT,feat_trend_slope_20:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T01:15:22+00:00,,LINKZAR,SPOT,feat_realized_vol_20:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T01:15:22+00:00,,HYPEUSDC,PERP,feat_ret_3:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T01:15:22+00:00,,HYPEUSDC,PERP,feat_ret_20:1:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
+2026-08-16T01:15:22+00:00,,HYPEUSDC,PERP,feat_ret_1:2:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull
