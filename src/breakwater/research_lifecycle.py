@@ -6,7 +6,6 @@ Key behaviors:
   not every small after-fee loss (especially at horizon exits).
 - Cooldown expiry is refreshed when the book is read so slices can recover
   without requiring a separate research rebuild.
-
 IMPORTANT COMPATIBILITY:
 Paper trading calls apply_signal_feedback(..., stopout=bool). This module must
 accept that kwarg and must not cooldown on every non-win.
@@ -19,7 +18,6 @@ vs
 "This row was carried forward from older state and might not match it."
 
 We store that as a plain boolean string:
-
 - edge_is_directional_net="True" for newly validated/promoted rows
 - edge_is_directional_net="False" for carried legacy rows (or when unknown)
 
@@ -38,7 +36,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from breakwater.validation import ValidatedSlice, read_validated
-
 
 BOOK_HEADERS = [
     "slice_id",
@@ -64,7 +61,6 @@ BOOK_HEADERS = [
     # New, human marker: can we trust mean_ret_costadj as directional net edge?
     "edge_is_directional_net",
 ]
-
 MONITORED = "monitored"
 COOLDOWN = "cooldown"
 DECAYED = "decayed"
@@ -99,7 +95,6 @@ def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> i
 
 def read_book(path: Path) -> list[dict]:
     """Read the monitored book.
-
     Side effect (intentional): expired cooldown rows are reactivated and persisted.
     """
     if not path.exists():
@@ -116,7 +111,6 @@ def read_book(path: Path) -> list[dict]:
         }.issubset(set(reader.fieldnames)):
             raise RuntimeError("monitored book has an unsupported schema")
         rows = list(reader)
-
     now_epoch = int(datetime.now(timezone.utc).timestamp())
     if _refresh_expired_cooldowns_inplace(rows, now_epoch=now_epoch):
         _write_book(path, rows)
@@ -144,13 +138,11 @@ def _truthy_bool_str(value) -> str:
 
 def _convert_legacy_semantics_inplace(row: dict) -> None:
     """Ensure row has edge_is_directional_net and no edge_semantics_version key.
-
     Needed because DictWriter will raise if a row contains keys not in BOOK_HEADERS.
     """
     # Map any existing edge_semantics_version (net_v1/legacy_v0) to boolean.
     version = str(row.pop("edge_semantics_version", "") or "")
     flag = row.get("edge_is_directional_net")
-
     if flag is None or str(flag).strip() not in {"True", "False"}:
         if version == "net_v1":
             row["edge_is_directional_net"] = "True"
@@ -175,9 +167,12 @@ def sync_book(
     validated = [row for row in read_validated(validated_path) if row.validated]
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
-    validated_kinds = {row.kind for row in validated}
-
     rows: list[dict] = []
+
+    # FIX: carry is determined by kinds that were actually promoted into `rows`,
+    # not merely by kinds that had `validated=True` rows.
+    promoted_kinds: set[str] = set()
+
     summary: dict = {
         "validated": len(validated),
         "monitored": 0,
@@ -205,7 +200,6 @@ def sync_book(
             last_signal = _coerce_int(prior.get("last_signal_bar"), 0)
             paper_trades = _coerce_int(prior.get("paper_trades"), 0)
             paper_pnl = float(prior.get("paper_pnl_zar") or 0)
-
             stale = last_signal > 0 and (now_epoch - last_signal) > LIVE_DECAY_BARS * BAR_SECONDS
             losing = paper_trades >= PNL_DECAY_MIN_TRADES and paper_pnl < 0
 
@@ -244,16 +238,16 @@ def sync_book(
                 "edge_is_directional_net": "True",
             }
         )
+        promoted_kinds.add(str(row.kind))
 
-    # Carry rows for kinds that did not validate in this run
-    carried = [r for r in existing_rows if r.get("kind") not in validated_kinds]
+    # Carry rows for kinds that did not get promoted in this run
+    carried = [r for r in existing_rows if str(r.get("kind") or "") not in promoted_kinds]
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
         summary["carried_total"] = len(carried)
 
         for r in carried:
             _convert_legacy_semantics_inplace(r)
-
             status = str(r.get("status") or "")
             if status == MONITORED:
                 summary["carried_monitored"] += 1
@@ -290,7 +284,6 @@ def apply_signal_feedback(
     for row in rows:
         if row["slice_id"] != slice_id:
             continue
-
         row["last_signal_bar"] = str(bar_epoch)
 
         trades = _coerce_int(row.get("paper_trades"), 0) + 1
@@ -298,7 +291,6 @@ def apply_signal_feedback(
 
         current_pnl = float(row.get("paper_pnl_zar") or 0.0)
         row["paper_pnl_zar"] = f"{(current_pnl + pnl_zar):.4f}"
-
         if outcome == "win":
             row["paper_wins"] = str(_coerce_int(row.get("paper_wins"), 0) + 1)
             row["cooldown_until"] = ""
@@ -309,7 +301,6 @@ def apply_signal_feedback(
             if stopout:
                 row["cooldown_until"] = str(bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS)
                 row["status"] = COOLDOWN
-
         # Ensure marker exists for safety if book was older
         _convert_legacy_semantics_inplace(row)
 
@@ -320,7 +311,6 @@ def _write_book(path: Path, rows: list[dict]) -> None:
     # Ensure no legacy-only keys sneak into the writer
     for row in rows:
         _convert_legacy_semantics_inplace(row)
-
     path.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
