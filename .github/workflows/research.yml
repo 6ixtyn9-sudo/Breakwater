@@ -23,7 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
@@ -33,29 +32,28 @@ jobs:
 
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.lock
-
       - name: Ingest universe and run slice research
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: readonly
 
+          # Promotion floor for net-edge (sync_book directional gate)
+          BREAKWATER_MIN_NET_EDGE: ${{ secrets.BREAKWATER_MIN_NET_EDGE || vars.BREAKWATER_MIN_NET_EDGE || '0' }}
+
           # Preferred: multi-horizon research (you added this secret)
           BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
           # Back-compat fallback (used if code ignores horizons or if horizons is blank)
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
-
           # === Research scale knobs ===
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
           BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '300' }}
-
           # === Discovery binning knobs ===
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
 
           # Optional politeness delay for paged candle fetches
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
-
           # RELAXED VALIDATION (still strict walk-forward + hostile-regime + net-positive)
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
           BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "3"
