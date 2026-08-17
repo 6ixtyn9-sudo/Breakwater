@@ -1,31 +1,23 @@
 """Market-state slice discovery on pooled universe bars.
 
-Features are binned into expanding quantile states per symbol. Each
-(feature, state) combination is a candidate slice. Discovery evaluates BOTH
-trade directions correctly:
+Upgrade (core):
+- Discovery now scores candidates using a stop-aware forward trade model that
+  matches paper trading for horizon-based slices:
+    - Entry at close[t]
+    - Stop at +/- DISCOVERY_STOP_ATR_MULT * ATR(14)
+    - Exit at stop if breached within horizon, else exit at close[t+h]
+    - Directional gross return minus cost => net return
+  This reduces research/execution mismatch.
 
-- raw forward return: r = close[t+h]/close[t] - 1
-- LONG net:  r - cost
-- SHORT net: -r - cost
+Notes:
+- This is still just discovery: validation recalibrates stop_atr_mult per slice
+  using fwd_mae_atr distribution and re-scores there.
+- Schema stays the same.
 
-We choose the direction with the higher net mean for that (feature, state)
-and record that slice as LONG or SHORT accordingly. Bonferroni correction
-is conservatively applied as if we had tested both directions
-(2 * number_of_slices).
-
-Session audit (UTC): we attach a coarse `session_utc` label to each bar and
-report per-session stats for each slice (audit-only; does not change slice
-eligibility or validation logic).
-
-Upgrade:
-- bin_states is now vectorized using pandas expanding quantiles (O(n) per feature),
-  replacing the prior O(n^2) python loop.
-
-Env knobs:
+Env knobs (existing):
 - BREAKWATER_DISCOVERY_MIN_SLICE_ROWS (default 30)
 - BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS (default 200)
 - BREAKWATER_DISCOVERY_STATE_QUANTILES (default "0.333333,0.666666")
-  Two cutpoints -> 3 states (0,1,2). Recommend "0.2,0.8" to emphasize tails.
 - BREAKWATER_DISCOVERY_ALPHA (default "0.05")
 """
 
@@ -68,6 +60,9 @@ DISCOVERY_HEADERS = [
 SESSION_ASIA = "asia"  # 00-07 UTC
 SESSION_EU = "eu"      # 08-15 UTC
 SESSION_US = "us"      # 16-23 UTC
+
+# Fixed stop multiple for discovery scoring only (validation recalibrates per slice)
+DISCOVERY_STOP_ATR_MULT = 2.0
 
 
 def _env_int(name: str, default: int) -> int:
@@ -144,7 +139,6 @@ class SliceStat:
 
 
 def _normal_p(t_stat: float) -> float:
-    # Two-sided normal approximation (kept consistent with current implementation)
     return 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(t_stat) / math.sqrt(2.0))))
 
 
@@ -158,13 +152,6 @@ def _utc_session_labels(start_series: pd.Series) -> pd.Series:
     return session
 
 
-def _net_returns(raw_returns: np.ndarray, side: str, cost: float) -> np.ndarray:
-    """Returns are oriented so profitable returns are > 0 for BOTH sides."""
-    if side == "LONG":
-        return raw_returns - cost
-    return (-raw_returns) - cost
-
-
 def bin_states(
     frame: pd.DataFrame,
     columns: list[str],
@@ -172,12 +159,6 @@ def bin_states(
     bins: int = 3,
     min_periods: int = ROLLING_MIN_PERIODS,
 ) -> pd.DataFrame:
-    """Attach state_{feature} columns.
-
-    Breakwater uses exactly 3 states (0,1,2).
-    - We keep `bins` for backward signature compatibility.
-    - We fail loudly if bins != 3 to prevent silent nonsense.
-    """
     if bins != 3:
         raise ValueError("Breakwater bin_states currently supports bins=3 only")
 
@@ -189,7 +170,6 @@ def bin_states(
         if len(series) < min_periods:
             continue
 
-        # Vectorized expanding quantile thresholds
         t0 = series.expanding(min_periods=min_periods).quantile(STATE_Q0).to_numpy()
         t1 = series.expanding(min_periods=min_periods).quantile(STATE_Q1).to_numpy()
         v = series.to_numpy()
@@ -207,6 +187,61 @@ def bin_states(
         df[f"state_{column}"] = states
 
     return df
+
+
+def _atr14(df: pd.DataFrame) -> pd.Series:
+    close = df["close"].astype(float)
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    high_low = high - low
+    high_close_prev = (high - close.shift(1)).abs()
+    low_close_prev = (low - close.shift(1)).abs()
+    true_range = pd.concat([high_low, high_close_prev, low_close_prev], axis=1).max(axis=1)
+    return true_range.rolling(14).mean()
+
+
+def _trade_net_cols(
+    df: pd.DataFrame,
+    *,
+    horizon_bars: int,
+    stop_atr_mult: float,
+    cost: float,
+) -> pd.DataFrame:
+    """Attach stop-aware net returns for LONG and SHORT (directional, cost-adjusted)."""
+    out = df.copy()
+
+    close = out["close"].astype(float)
+    high = out["high"].astype(float)
+    low = out["low"].astype(float)
+
+    atr = _atr14(out).replace(0, np.nan)
+    out["atr_14"] = atr
+
+    fwd_close = close.shift(-horizon_bars)
+    out["fwd_close_h"] = fwd_close
+
+    fwd_min_low = low.rolling(horizon_bars).min().shift(-horizon_bars)
+    fwd_max_high = high.rolling(horizon_bars).max().shift(-horizon_bars)
+    out["fwd_min_low_h"] = fwd_min_low
+    out["fwd_max_high_h"] = fwd_max_high
+
+    # LONG
+    stop_long = close - stop_atr_mult * atr
+    hit_long = fwd_min_low <= stop_long
+    exit_long = np.where(hit_long.to_numpy(dtype=bool), stop_long.to_numpy(), fwd_close.to_numpy())
+    gross_long = (exit_long - close.to_numpy()) / close.to_numpy()
+    net_long = gross_long - cost
+
+    # SHORT
+    stop_short = close + stop_atr_mult * atr
+    hit_short = fwd_max_high >= stop_short
+    exit_short = np.where(hit_short.to_numpy(dtype=bool), stop_short.to_numpy(), fwd_close.to_numpy())
+    gross_short = (exit_short - close.to_numpy()) / close.to_numpy() * (-1.0)
+    net_short = gross_short - cost
+
+    out["fwd_trade_net_long"] = net_long
+    out["fwd_trade_net_short"] = net_short
+    return out
 
 
 def discover_slices(
@@ -247,19 +282,22 @@ def prepare_pooled(
 
         close = binned["close"].astype(float)
 
-        # Raw forward return (no cost, no side)
+        # Raw forward return (kept for compatibility / validation calibration)
         binned["fwd_ret_raw"] = (close.shift(-horizon_bars) / close) - 1.0
-
-        # Legacy column name preserved
         binned["fwd_ret"] = binned["fwd_ret_raw"]
-
-        # Cost carried as a constant column so validation can compute net returns too
         binned["cost"] = float(cost)
 
-        # MAE measured over the same horizon as forward returns
+        # MAE in ATR units (used to calibrate stop_atr_mult in validation)
         binned["fwd_mae_atr"] = forward_mae_atr(binned, horizon=horizon_bars)
-        # Keep legacy 5-bar MAE for backward compatibility
         binned["fwd_mae_atr_5"] = forward_mae_atr(binned, horizon=5)
+
+        # Stop-aware trade net returns (discovery uses fixed stop multiple)
+        binned = _trade_net_cols(
+            binned,
+            horizon_bars=horizon_bars,
+            stop_atr_mult=float(DISCOVERY_STOP_ATR_MULT),
+            cost=float(cost),
+        )
 
         parts.append(binned)
 
@@ -268,30 +306,29 @@ def prepare_pooled(
     return pd.concat(parts, ignore_index=True)
 
 
-def _session_stats(
+def _session_stats_from_col(
     subset: pd.DataFrame,
     slice_mask: pd.Series,
     session_label: str,
-    *,
-    side: str,
-    cost: float,
+    ret_col: str,
 ) -> tuple[int, float, float]:
     if "session_utc" not in subset.columns:
         return 0, 0.0, 0.0
     session_mask = subset["session_utc"] == session_label
-    raw = subset.loc[slice_mask & session_mask, "fwd_ret_raw"].to_numpy()
-    n = len(raw)
+    values = subset.loc[slice_mask & session_mask, ret_col].to_numpy()
+    values = values[np.isfinite(values)]
+    n = len(values)
     if n == 0:
         return 0, 0.0, 0.0
-    net = _net_returns(raw, side, cost)
-    return n, float(np.mean(net)), float(np.mean(net > 0))
+    return n, float(np.mean(values)), float(np.mean(values > 0))
 
 
 def _stat_block(returns: np.ndarray) -> tuple[float, float, float, float, float]:
+    returns = returns[np.isfinite(returns)]
     n = len(returns)
-    mean = float(np.mean(returns))
-    median = float(np.median(returns))
-    hit = float(np.mean(returns > 0))
+    mean = float(np.mean(returns)) if n else 0.0
+    median = float(np.median(returns)) if n else 0.0
+    hit = float(np.mean(returns > 0)) if n else 0.0
     std = float(np.std(returns, ddof=1)) if n > 1 else 0.0
     t_stat = mean / (std / math.sqrt(n)) if std > 0 else 0.0
     p_value = _normal_p(t_stat)
@@ -305,40 +342,36 @@ def _slice_stats(
     horizon_bars: int,
 ) -> list[SliceStat]:
     candidates: list[SliceStat] = []
-
-    # Conservative: treat each (feature,state) as if we tested 2 hypotheses (LONG + SHORT)
     effective_tests = 0
 
     for feature in feature_columns:
         state_column = f"state_{feature}"
         for state in (0, 1, 2):
-            subset = prepared.dropna(subset=[state_column, "fwd_ret_raw"])
+            subset = prepared.dropna(subset=[state_column, "fwd_trade_net_long", "fwd_trade_net_short"])
             mask = subset[state_column] == state
 
-            raw = subset.loc[mask, "fwd_ret_raw"].to_numpy()
-            n = len(raw)
+            long_net = subset.loc[mask, "fwd_trade_net_long"].to_numpy()
+            short_net = subset.loc[mask, "fwd_trade_net_short"].to_numpy()
+
+            n = int(np.isfinite(long_net).sum())
             if n < MIN_SLICE_ROWS:
                 continue
-
-            cost = float(subset["cost"].iloc[0]) if "cost" in subset.columns and len(subset) else 0.0
-
-            long_net = _net_returns(raw, "LONG", cost)
-            short_net = _net_returns(raw, "SHORT", cost)
 
             long_mean, long_median, long_hit, long_t, long_p = _stat_block(long_net)
             short_mean, short_median, short_hit, short_t, short_p = _stat_block(short_net)
 
-            # Choose the side with the higher net mean
             if long_mean >= short_mean:
                 side = "LONG"
                 mean, median, hit_rate, t_stat, p_value = long_mean, long_median, long_hit, long_t, long_p
+                ret_col = "fwd_trade_net_long"
             else:
                 side = "SHORT"
                 mean, median, hit_rate, t_stat, p_value = short_mean, short_median, short_hit, short_t, short_p
+                ret_col = "fwd_trade_net_short"
 
-            asia_n, asia_mean, asia_hit = _session_stats(subset, mask, SESSION_ASIA, side=side, cost=cost)
-            eu_n, eu_mean, eu_hit = _session_stats(subset, mask, SESSION_EU, side=side, cost=cost)
-            us_n, us_mean, us_hit = _session_stats(subset, mask, SESSION_US, side=side, cost=cost)
+            asia_n, asia_mean, asia_hit = _session_stats_from_col(subset, mask, SESSION_ASIA, ret_col)
+            eu_n, eu_mean, eu_hit = _session_stats_from_col(subset, mask, SESSION_EU, ret_col)
+            us_n, us_mean, us_hit = _session_stats_from_col(subset, mask, SESSION_US, ret_col)
 
             candidates.append(
                 SliceStat(
@@ -370,20 +403,15 @@ def _slice_stats(
 
     if candidates:
         threshold = float(ALPHA) / max(1, effective_tests)
-
         flagged = []
         for stat in candidates:
             passed = (stat.p_value < threshold) and (stat.n >= MIN_SLICE_ROWS) and (stat.mean_ret_costadj > 0)
             row = asdict(stat)
             row["bonferroni_pass"] = bool(passed)
             flagged.append(row)
-
         candidates = [SliceStat(**row) for row in flagged]
 
-    return sorted(
-        candidates,
-        key=lambda stat: (not stat.bonferroni_pass, -stat.mean_ret_costadj),
-    )
+    return sorted(candidates, key=lambda stat: (not stat.bonferroni_pass, -stat.mean_ret_costadj))
 
 
 def write_discovered(path, slices: list[SliceStat]) -> None:
