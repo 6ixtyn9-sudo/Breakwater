@@ -30,5 +30,13 @@
     "signal_id": "b4605405d179a75d",
     "slice_id": "feat_trend_strength_20:0:SHORT",
     "stopped_at": "2026-08-17T03:15:23+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-2.2722",
+    "reason": "stop",
+    "signal_id": "23a09601b2e7062b",
+    "slice_id": "feat_atr_norm_ext:2:SHORT",
+    "stopped_at": "2026-08-17T07:15:23+00:00"
   }
 ]

@@ -1,25 +1,6 @@
 [
   {
-    "bars_held": "5",
-    "entry_guard": "passed",
-    "entry_price": "1887.585714285714288125000000",
-    "horizon_bars": "6",
-    "initial_stop_price": "1904.122457142857120572500000",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "ETHUSDC",
-    "peak_price": "1887.585714285714288125000000",
-    "regime": "neutral",
-    "side": "SELL",
-    "signal_id": "23a09601b2e7062b",
-    "slice_id": "feat_atr_norm_ext:2:SHORT",
-    "stop_price": "1904.122457142857120572500000",
-    "trail_active": "0",
-    "trough_price": "1887.585714285714288125000000"
-  },
-  {
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "58.96178571428571440000000000",
     "horizon_bars": "6",
@@ -38,7 +19,7 @@
     "trough_price": "58.96178571428571440000000000"
   },
   {
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "63338.41071428571428500000000",
     "horizon_bars": "6",
@@ -57,7 +38,7 @@
     "trough_price": "63338.41071428571428500000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "103.8589285714285712750000001",
     "horizon_bars": "6",
@@ -76,7 +57,7 @@
     "trough_price": "103.8589285714285712750000001"
   },
   {
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "9860.107142857142857500000003",
     "horizon_bars": "24",
@@ -93,5 +74,24 @@
     "stop_price": "9690.607142857142852500000003",
     "trail_active": "0",
     "trough_price": "9860.107142857142857500000003"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "1905.819642857142850000000000",
+    "horizon_bars": "24",
+    "initial_stop_price": "1876.144642857142950000000000",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "ETHUSDC",
+    "peak_price": "1905.819642857142850000000000",
+    "regime": "neutral",
+    "side": "BUY",
+    "signal_id": "70b9cf500dc424b4",
+    "slice_id": "feat_realized_vol_20:0:LONG:h24",
+    "stop_price": "1876.144642857142950000000000",
+    "trail_active": "0",
+    "trough_price": "1905.819642857142850000000000"
   }
 ]
