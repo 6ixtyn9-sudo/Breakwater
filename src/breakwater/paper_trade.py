@@ -724,6 +724,11 @@ def run_paper_cycle(
             reference - risk_distance if signal.side.value == "BUY" else reference + risk_distance
         )
 
+      # Stop tightness diagnostics (entry-time).
+        initial_risk_distance = abs(reference - initial_stop_price)
+        risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
+        stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
+
         signal_horizon = _coerce_int(getattr(signal, "horizon_bars", 0), 0)
         if signal_horizon <= 0:
             signal_horizon = book_horizon_map.get(signal.slice_id, 0)
@@ -747,6 +752,9 @@ def run_paper_cycle(
                 "entry_guard": guard,
                 "horizon_bars": str(int(signal_horizon or 0)),
                 "regime": str(getattr(signal, "regime", "") or ""),
+                "atr": str(signal.atr),
+                "stop_atr_mult": (f"{stop_atr_mult:.6f}" if signal.atr > 0 else ""),
+                "risk_fraction": (f"{risk_fraction:.8f}" if reference > 0 else ""),
             }
         )
         open_pairs.add(signal.pair.upper())
