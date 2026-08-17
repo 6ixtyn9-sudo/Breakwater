@@ -40,13 +40,14 @@ jobs:
 
           BREAKWATER_MODE: shadow
 
-          # Keep monitoring aligned with research binning + history depth
+          # Align paper scan depth + binning with research
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
           BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '300' }}
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
 
+          # Paper controls
           BREAKWATER_PAPER_TIME_STOP_BARS: "12"
           BREAKWATER_PAPER_MAX_POSITIONS: "10"
           BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: "5"
@@ -57,8 +58,8 @@ jobs:
           BREAKWATER_TRAIL_DISTANCE_R: "1.0"
           BREAKWATER_TRAIL_IGNORE_TIME_STOP: "0"
 
+          # Mandate / arming (paper uses authenticated endpoints)
           BREAKWATER_LIVE_ACK: ${{ secrets.BREAKWATER_LIVE_ACK }}
-
           BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
           BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR: ${{ secrets.BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR }}
           BREAKWATER_MAX_TOTAL_LOSS_ZAR: ${{ secrets.BREAKWATER_MAX_TOTAL_LOSS_ZAR }}
@@ -71,6 +72,10 @@ jobs:
           BREAKWATER_MAX_EFFECTIVE_LEVERAGE: ${{ secrets.BREAKWATER_MAX_EFFECTIVE_LEVERAGE }}
           BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
           BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
+
+          # Optional spot margin shorts (if your code reads these)
+          BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS: ${{ secrets.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || vars.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || '0' }}
+          BREAKWATER_SPOT_MARGIN_ACK: ${{ secrets.BREAKWATER_SPOT_MARGIN_ACK || vars.BREAKWATER_SPOT_MARGIN_ACK || 'off' }}
 
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 
