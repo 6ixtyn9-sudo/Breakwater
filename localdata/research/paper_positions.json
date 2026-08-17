@@ -1,6 +1,6 @@
 [
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "57.16016071428571435000000000",
     "horizon_bars": "6",
@@ -19,7 +19,7 @@
     "trough_price": "57.16016071428571435000000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "62902.94642857142857250000000",
     "horizon_bars": "6",
@@ -38,7 +38,7 @@
     "trough_price": "62902.94642857142857250000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "103.0285714285714288750000000",
     "horizon_bars": "6",
@@ -57,22 +57,22 @@
     "trough_price": "103.0285714285714288750000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "0",
     "entry_guard": "passed",
-    "entry_price": "1872.428571428571430250000000",
+    "entry_price": "1887.585714285714288125000000",
     "horizon_bars": "6",
-    "initial_stop_price": "1884.138171428571413471000000",
+    "initial_stop_price": "1904.122457142857120572500000",
     "kind": "PERP",
     "missing_bars": "0",
     "notional_zar": "200.00",
     "pair": "ETHUSDC",
-    "peak_price": "1872.428571428571430250000000",
-    "regime": "bear",
+    "peak_price": "1887.585714285714288125000000",
+    "regime": "neutral",
     "side": "SELL",
-    "signal_id": "5186afc72605612e",
-    "slice_id": "feat_trend_slope_20:1:SHORT",
-    "stop_price": "1884.138171428571413471000000",
+    "signal_id": "23a09601b2e7062b",
+    "slice_id": "feat_atr_norm_ext:2:SHORT",
+    "stop_price": "1904.122457142857120572500000",
     "trail_active": "0",
-    "trough_price": "1872.428571428571430250000000"
+    "trough_price": "1887.585714285714288125000000"
   }
 ]
