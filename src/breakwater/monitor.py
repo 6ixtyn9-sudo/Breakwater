@@ -7,7 +7,6 @@ Regime gating (evidence-aware):
 
 Environment:
 - BREAKWATER_REGIME_GATE_STRICT=1 forces strict gating.
-
 Optional book filters (OFF by default; freeze-friendly):
 - BREAKWATER_FILTER_NON_DIRECTIONAL_BOOK=1 (preferred):
     skip rows where edge_is_directional_net != "True"
@@ -15,7 +14,6 @@ Optional book filters (OFF by default; freeze-friendly):
   edge_semantics_version == "net_v1" (if present).
 - BREAKWATER_FILTER_NONPOSITIVE_BOOK=1:
     skip rows where mean_ret_costadj <= 0
-
 These allow you to keep legacy carried rows in the book for visibility while
 preventing them from emitting new signals unless you explicitly opt in.
 """
@@ -70,7 +68,6 @@ def _coerce_float(value, default: float = 0.0) -> float:
 
 def _edge_is_directional_net(row: dict) -> bool:
     """True if the row is stamped as directional net-edge.
-
     Primary: edge_is_directional_net == "True"
     Back-compat: edge_semantics_version == "net_v1"
     """
@@ -138,7 +135,17 @@ class SliceSignal:
     hostile_unproven: bool = True
 
 
-def _latest_state(frame: pd.DataFrame, feature: str, min_periods: int = 200) -> tuple[int | None, pd.Series]:
+def _latest_state(
+    frame: pd.DataFrame,
+    feature: str,
+    min_periods: int | None = None,
+) -> tuple[int | None, pd.Series]:
+    if min_periods is None:
+        try:
+            min_periods = int(os.getenv("BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS", "200"))
+        except ValueError:
+            min_periods = 200
+
     if len(frame) < min_periods:
         return None, pd.Series(dtype=float)
     binned = bin_states(frame, [feature], min_periods=min_periods)
@@ -166,7 +173,6 @@ def monitor_book(
         # Optional: only allow rows we can trust as directional net-edge
         if FILTER_NON_DIRECTIONAL_BOOK and not _edge_is_directional_net(row):
             continue
-
         # Optional: only allow net-positive book rows
         if FILTER_NONPOSITIVE_BOOK:
             edge_val = _coerce_float(row.get("mean_ret_costadj"), 0.0)
@@ -179,7 +185,6 @@ def monitor_book(
         direction = str(row["side"]).upper()
         side = Side.BUY if direction == "LONG" else Side.SELL
         kind = str(row["kind"])
-
         try:
             stop_atr_mult = float(row.get("stop_atr_mult") or DEFAULT_STOP_ATR_MULT)
         except (TypeError, ValueError):
@@ -193,7 +198,6 @@ def monitor_book(
             horizon_bars = 1
         if horizon_bars <= 0:
             horizon_bars = 1
-
         hostile_unproven = _coerce_bool(row.get("hostile_unproven"), default=True)
 
         for pair, frame in (frames_by_kind.get(kind) or {}).items():
@@ -218,7 +222,6 @@ def monitor_book(
                     }
                 )
                 continue
-
             close = Decimal(str(latest_row["close"]))
             atr_raw = _atr(featured)
             if close <= 0 or atr_raw <= 0:
@@ -229,13 +232,11 @@ def monitor_book(
             stop = close - stop_distance if side is Side.BUY else close + stop_distance
             if stop <= 0:
                 continue
-
             bar_start = latest_row["start"]
             digest = hashlib.sha256(f"{pair}|{slice_id}|{bar_start.isoformat()}".encode()).hexdigest()[:16]
             if digest in seen:
                 continue
             seen.add(digest)
-
             signals.append(
                 SliceSignal(
                     signal_id=digest,
@@ -257,7 +258,6 @@ def monitor_book(
                     hostile_unproven=hostile_unproven,
                 )
             )
-
     return signals, blocked
 
 
