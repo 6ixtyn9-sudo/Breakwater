@@ -14,3 +14,4 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-08-16T22:15:22+00:00,,HYPEUSDC,PERP,feat_vol_regime:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
 2026-08-16T23:15:21+00:00,8bdbdcef71e3d935,ETHUSDC,PERP,feat_vol_regime:0:SHORT,SELL,1886.139285714285714250000000,1873.6,1891.953571428571428850000000,200.00,0.8096,win,6,horizon,passed,neutral,win
 2026-08-16T23:15:21+00:00,,HYPEUSDC,PERP,feat_vol_regime:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
+2026-08-17T00:15:23+00:00,,HYPEUSDC,PERP,feat_vol_regime:0:SHORT,SELL,,,,0,0,skipped,0,regime,regime_blocked,bull,
