@@ -565,6 +565,9 @@ def run_paper_cycle(
                 "entry_guard": str(position.get("entry_guard") or ""),
                 "regime": position_regime,
                 "pnl_outcome": pnl_outcome,
+                "atr": str(position.get("atr") or ""),
+                "stop_atr_mult": str(position.get("stop_atr_mult") or ""),
+                "risk_fraction": str(position.get("risk_fraction") or ""),
             }
         )
 
