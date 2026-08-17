@@ -125,7 +125,7 @@ def read_book(path: Path) -> list[dict]:
 
 
 def _min_net_edge() -> float:
-    raw = os.getenv("BREAKWATER_MIN_NET_EDGE", "0")
+    raw = os.getenv("BREAKWATER_MIN_NET_EDGE", "0.0005")
     try:
         value = float(raw)
     except (TypeError, ValueError):
