@@ -98,19 +98,32 @@ class BreakwaterEngine:
     def _frames(self, targets: list[tuple[str, str]], server_time: datetime):
         frames = {}
         errors = {}
+
+        def _coerce_int(value, default: int) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        spot_count = _coerce_int(os.getenv("BREAKWATER_SPOT_CANDLE_COUNT", "300"), 300)
+        perp_count = _coerce_int(os.getenv("BREAKWATER_PERP_CANDLE_COUNT", "300"), 300)
+
+        # Safety clamps (spot paging supports up to 5000; perps already supports up to 5000)
+        spot_count = max(60, min(5000, spot_count))
+        perp_count = max(60, min(5000, perp_count))
+
         for pair, kind in targets:
             try:
                 if kind == "PERP":
-                    candles = fetch_perp_candles_for_pair(pair, count=300)
+                    candles = fetch_perp_candles_for_pair(pair, count=perp_count)
                 else:
-                    candles = fetch_recent_candles(
-                        self.client, pair, server_time, count=300
-                    )
+                    candles = fetch_recent_candles(self.client, pair, server_time, count=spot_count)
                 frame = candle_frame(candles)
                 frame["symbol"] = pair.upper()
                 frames[pair.upper()] = frame
             except Exception as exc:
                 errors[pair.upper()] = f"{type(exc).__name__}: {exc}"[:140]
+
         return frames, errors
 
     def guardian(self) -> dict:
@@ -285,6 +298,7 @@ class BreakwaterEngine:
                     },
                 )
             paper_result["regime_blocked"] = len(blocked)
+
         payloads = []
         for signal in signals:
             payload = {
@@ -465,7 +479,6 @@ class BreakwaterEngine:
         spot_targets = [(pair, "SPOT") for pair in universe.ranked("SPOT", max_pairs)]
         perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
         all_targets = spot_targets + perp_targets
-
         frames, frame_errors = self._frames(all_targets, server_time)
         if not frames:
             raise GuardianHalt(
@@ -474,7 +487,6 @@ class BreakwaterEngine:
             )
         discovered = []
         validated = []
-
         horizon_bars = int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"))
         if horizon_bars < 1:
             raise GuardianHalt("BREAKWATER_RESEARCH_HORIZON_BARS must be >= 1")
@@ -498,21 +510,19 @@ class BreakwaterEngine:
             validated.extend(checked)
         write_discovered(self.settings.discovered_path, discovered)
         write_validated(self.settings.validated_path, validated)
-
         book_summary = sync_book(
             validated_path=self.settings.validated_path,
             book_path=self.settings.book_path,
             now=server_time,
         )
 
-        # NEW: record validation knob state in the committed research_done payload
+        # Record validation knob state in the committed research_done payload
         validation_require_bonferroni = os.getenv(
             "BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", ""
         )
         validation_relaxed_min_passes = os.getenv(
             "BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", ""
         )
-
         result = {
             "server_time": server_time.isoformat(),
             "universe": {kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")},
