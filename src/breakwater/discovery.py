@@ -16,17 +16,28 @@ is conservatively applied as if we had tested both directions
 Session audit (UTC): we attach a coarse `session_utc` label to each bar and
 report per-session stats for each slice (audit-only; does not change slice
 eligibility or validation logic).
+
+Upgrade:
+- bin_states is now vectorized using pandas expanding quantiles (O(n) per feature),
+  replacing the prior O(n^2) python loop.
+
+Env knobs:
+- BREAKWATER_DISCOVERY_MIN_SLICE_ROWS (default 30)
+- BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS (default 200)
+- BREAKWATER_DISCOVERY_STATE_QUANTILES (default "0.333333,0.666666")
+  Two cutpoints -> 3 states (0,1,2). Recommend "0.2,0.8" to emphasize tails.
+- BREAKWATER_DISCOVERY_ALPHA (default "0.05")
 """
 
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import asdict, dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import numpy as np
 import pandas as pd
-
 
 DISCOVERY_HEADERS = [
     "slice_id",
@@ -54,13 +65,55 @@ DISCOVERY_HEADERS = [
     "session_us_hit_rate",
 ]
 
-MIN_SLICE_ROWS = 30
-ROLLING_MIN_PERIODS = 200
-ALPHA = Decimal("0.05")
-
 SESSION_ASIA = "asia"  # 00-07 UTC
 SESSION_EU = "eu"      # 08-15 UTC
 SESSION_US = "us"      # 16-23 UTC
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = str(os.getenv(name, "")).strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _env_decimal(name: str, default: Decimal) -> Decimal:
+    raw = str(os.getenv(name, "")).strip()
+    if not raw:
+        return default
+    try:
+        val = Decimal(raw)
+    except InvalidOperation:
+        return default
+    return val if val.is_finite() else default
+
+
+def _parse_two_quantiles(text: str, default: tuple[float, float]) -> tuple[float, float]:
+    raw = str(text or "").strip()
+    if not raw:
+        return default
+    try:
+        parts = [float(p.strip()) for p in raw.split(",") if p.strip()]
+    except ValueError:
+        return default
+    if len(parts) != 2:
+        return default
+    q0, q1 = parts[0], parts[1]
+    if not (0.0 < q0 < q1 < 1.0):
+        return default
+    return float(q0), float(q1)
+
+
+MIN_SLICE_ROWS = _env_int("BREAKWATER_DISCOVERY_MIN_SLICE_ROWS", 30)
+ROLLING_MIN_PERIODS = _env_int("BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS", 200)
+ALPHA = _env_decimal("BREAKWATER_DISCOVERY_ALPHA", Decimal("0.05"))
+STATE_Q0, STATE_Q1 = _parse_two_quantiles(
+    os.getenv("BREAKWATER_DISCOVERY_STATE_QUANTILES", "0.333333,0.666666"),
+    default=(1 / 3, 2 / 3),
+)
 
 
 @dataclass(frozen=True)
@@ -78,7 +131,6 @@ class SliceStat:
     p_value: float
     bonferroni_pass: bool
     horizon_bars: int
-
     # Session breakdown (audit-only)
     session_asia_n: int = 0
     session_asia_mean_ret_costadj: float = 0.0
@@ -92,14 +144,13 @@ class SliceStat:
 
 
 def _normal_p(t_stat: float) -> float:
-    # Normal approx (consistent with prior implementation)
+    # Two-sided normal approximation (kept consistent with current implementation)
     return 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(t_stat) / math.sqrt(2.0))))
 
 
 def _utc_session_labels(start_series: pd.Series) -> pd.Series:
     stamps = pd.to_datetime(start_series, utc=True, errors="coerce")
     hour = stamps.dt.hour.fillna(-1).astype(int)
-
     session = pd.Series("unknown", index=start_series.index, dtype="object")
     session[(hour >= 0) & (hour <= 7)] = SESSION_ASIA
     session[(hour >= 8) & (hour <= 15)] = SESSION_EU
@@ -121,28 +172,40 @@ def bin_states(
     bins: int = 3,
     min_periods: int = ROLLING_MIN_PERIODS,
 ) -> pd.DataFrame:
+    """Attach state_{feature} columns.
+
+    Breakwater uses exactly 3 states (0,1,2).
+    - We keep `bins` for backward signature compatibility.
+    - We fail loudly if bins != 3 to prevent silent nonsense.
+    """
+    if bins != 3:
+        raise ValueError("Breakwater bin_states currently supports bins=3 only")
+
     df = frame.copy()
     for column in columns:
-        series = df[column]
+        series = df[column].astype(float)
         df[f"state_{column}"] = np.nan
-        values = series.to_numpy()
-        states = np.full(len(values), np.nan)
-        for index in range(min_periods, len(values)):
-            window = values[: index + 1]
-            finite = window[np.isfinite(window)]
-            if len(finite) < min_periods:
-                continue
-            thresholds = np.quantile(finite, [1 / bins, 2 / bins])
-            value = values[index]
-            if not np.isfinite(value):
-                continue
-            if value <= thresholds[0]:
-                states[index] = 0
-            elif value <= thresholds[1]:
-                states[index] = 1
-            else:
-                states[index] = 2
+
+        if len(series) < min_periods:
+            continue
+
+        # Vectorized expanding quantile thresholds
+        t0 = series.expanding(min_periods=min_periods).quantile(STATE_Q0).to_numpy()
+        t1 = series.expanding(min_periods=min_periods).quantile(STATE_Q1).to_numpy()
+        v = series.to_numpy()
+
+        ok = np.isfinite(v) & np.isfinite(t0) & np.isfinite(t1)
+        states = np.full(len(v), np.nan)
+
+        idx = np.where(ok)[0]
+        if len(idx):
+            vv = v[idx]
+            a = t0[idx]
+            b = t1[idx]
+            states[idx] = np.where(vv <= a, 0, np.where(vv <= b, 1, 2))
+
         df[f"state_{column}"] = states
+
     return df
 
 
@@ -174,6 +237,7 @@ def prepare_pooled(
 
     parts = []
     for _, group in frame.groupby("symbol", sort=False):
+        group = group.sort_values("start").reset_index(drop=True)
         binned = bin_states(group, feature_columns)
 
         if "start" in binned.columns:
@@ -181,13 +245,12 @@ def prepare_pooled(
         else:
             binned["session_utc"] = "unknown"
 
-        close = binned["close"]
+        close = binned["close"].astype(float)
 
         # Raw forward return (no cost, no side)
         binned["fwd_ret_raw"] = (close.shift(-horizon_bars) / close) - 1.0
 
-        # Keep legacy column name for compatibility with any external tooling,
-        # but it now mirrors raw returns (side/cost are applied in discovery/validation).
+        # Legacy column name preserved
         binned["fwd_ret"] = binned["fwd_ret_raw"]
 
         # Cost carried as a constant column so validation can compute net returns too
@@ -195,7 +258,6 @@ def prepare_pooled(
 
         # MAE measured over the same horizon as forward returns
         binned["fwd_mae_atr"] = forward_mae_atr(binned, horizon=horizon_bars)
-
         # Keep legacy 5-bar MAE for backward compatibility
         binned["fwd_mae_atr_5"] = forward_mae_atr(binned, horizon=5)
 
@@ -313,7 +375,7 @@ def _slice_stats(
         for stat in candidates:
             passed = (stat.p_value < threshold) and (stat.n >= MIN_SLICE_ROWS) and (stat.mean_ret_costadj > 0)
             row = asdict(stat)
-            row["bonferroni_pass"] = passed
+            row["bonferroni_pass"] = bool(passed)
             flagged.append(row)
 
         candidates = [SliceStat(**row) for row in flagged]
@@ -334,9 +396,7 @@ def _write_slice_rows(path, rows: list[dict], headers: list[str]) -> None:
     import tempfile
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    file_descriptor, temporary_name = tempfile.mkstemp(
-        prefix=path.name + ".", suffix=".tmp", dir=path.parent
-    )
+    file_descriptor, temporary_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(file_descriptor, "w", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=headers)
