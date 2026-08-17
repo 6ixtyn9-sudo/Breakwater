@@ -77,6 +77,11 @@ PAPER_LOG_HEADERS = [
     "entry_guard",
     "regime",
     "pnl_outcome",    # NEW: after-fee truth label (appended to avoid misalignment)
+
+    # Stop tightness diagnostics (entry-time, stable even if trailing later changes stop_price).
+    "atr",
+    "stop_atr_mult",
+    "risk_fraction",
 ]
 
 TARGET_R_MULTIPLE = Decimal("2")
