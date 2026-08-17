@@ -59,6 +59,7 @@ from pathlib import Path
 from breakwater.monitor import SliceSignal, regime_blocks, regime_of
 from breakwater.research_lifecycle import apply_signal_feedback, read_book
 
+
 PAPER_LOG_HEADERS = [
     "closed_at",
     "signal_id",
@@ -77,7 +78,6 @@ PAPER_LOG_HEADERS = [
     "entry_guard",
     "regime",
     "pnl_outcome",    # NEW: after-fee truth label (appended to avoid misalignment)
-
     # Stop tightness diagnostics (entry-time, stable even if trailing later changes stop_price).
     "atr",
     "stop_atr_mult",
@@ -90,7 +90,6 @@ MISSING_BARS_EXIT = 24
 
 SPOT_FEE_BPS = Decimal("20")
 PERP_FEE_BPS = Decimal("26")
-
 MAX_PAPER_POSITIONS = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS", "6"))
 MAX_PAPER_POSITIONS_PER_KIND = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3"))
 MAX_PAPER_POSITIONS_PER_SLICE = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE", "1"))
@@ -163,14 +162,12 @@ def _migrate_log_header(path: Path) -> None:
         if header == PAPER_LOG_HEADERS:
             return
         rows = list(reader)
-
     width = len(PAPER_LOG_HEADERS)
     migrated = [PAPER_LOG_HEADERS]
     for row in rows:
         if len(row) > width:
             row = row[:width]
         migrated.append(row + [""] * (width - len(row)))
-
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
     )
@@ -214,7 +211,6 @@ def append_cooldown(path: Path, entry: dict) -> None:
         journal = []
     journal.append(entry)
     journal = journal[-200:]
-
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=path.parent
     )
@@ -251,20 +247,41 @@ def _latest_close(frame):
     return Decimal(str(frame.iloc[-1]["close"]))
 
 
+def _paper_entry_mode() -> str:
+    """Entry mode for paper trading.
+
+    aligned (default): enter at the signal close (matches validation semantics).
+    premium: apply the legacy winner-capture premium to the reference entry.
+    """
+    mode = str(os.getenv("BREAKWATER_PAPER_ENTRY_MODE", "aligned")).strip().lower()
+    return mode if mode in {"aligned", "premium"} else "aligned"
+
+
 def _entry_guard(signal: SliceSignal, frame, atr: Decimal) -> tuple[str, Decimal]:
     """Return (guard_verdict, reference_entry_price)."""
     reference = signal.entry_price
-    premium_frac = min(PREMIUM_ATR_MULT * atr / reference, PREMIUM_CAP_BPS / Decimal(10000))
-    if signal.side.value == "BUY":
-        reference = signal.entry_price * (Decimal(1) + premium_frac)
-    else:
-        reference = signal.entry_price * (Decimal(1) - premium_frac)
+    mode = _paper_entry_mode()
+
+    if mode == "premium":
+        # Winner-capture premium: conservative reference entry that requires follow-through.
+        # (Opt-in now: default paper mode is aligned with validation semantics.)
+        premium_frac = min(
+            PREMIUM_ATR_MULT * atr / reference,
+            PREMIUM_CAP_BPS / Decimal(10000),
+        )
+        if signal.side.value == "BUY":
+            reference = signal.entry_price * (Decimal(1) + premium_frac)
+        else:
+            reference = signal.entry_price * (Decimal(1) - premium_frac)
 
     latest = _latest_close(frame)
     if latest is None:
         return "no_price", reference
 
-    adverse_frac = min(ADVERSE_ATR_MULT * atr / signal.entry_price, ADVERSE_CAP_BPS / Decimal(10000))
+    adverse_frac = min(
+        ADVERSE_ATR_MULT * atr / signal.entry_price,
+        ADVERSE_CAP_BPS / Decimal(10000),
+    )
     if signal.side.value == "BUY" and latest < signal.entry_price * (Decimal(1) - adverse_frac):
         return "adverse_blocked", reference
     if signal.side.value == "SELL" and latest > signal.entry_price * (Decimal(1) + adverse_frac):
@@ -317,7 +334,6 @@ def _migrate_legacy_positions(open_positions: list[dict], *, horizon_map: dict[s
             hb_book = horizon_map.get(sid, 0)
             if hb_book > 0:
                 position["horizon_bars"] = str(hb_book)
-
         if not position.get("regime"):
             frame = frames.get(str(position.get("pair") or "").upper())
             if frame is not None and not frame.empty:
@@ -357,14 +373,12 @@ def run_paper_cycle(
 ) -> dict:
     closed_rows: list[dict] = []
     open_positions = read_positions(positions_path)
-
     # Migration: upgrade legacy positions so horizon exits engage.
     book_horizon_map = _load_book_horizon_map(book_path)
     if open_positions:
         _migrate_legacy_positions(open_positions, horizon_map=book_horizon_map, frames=frames)
 
     surviving: list[dict] = []
-
     # 1) Mark-to-market and close eligible existing positions
     for position in open_positions:
         frame = frames.get(str(position["pair"]).upper())
@@ -372,21 +386,18 @@ def run_paper_cycle(
         entry = Decimal(str(position["entry_price"]))
         stop = Decimal(str(position["stop_price"]))
         notional_zar = Decimal(str(position["notional_zar"]))
-
         horizon_bars = _coerce_int(position.get("horizon_bars"), 0)
         if horizon_bars < 0:
             horizon_bars = 0
         if horizon_bars <= 0:
             sid = str(position.get("slice_id") or "")
             horizon_bars = book_horizon_map.get(sid, 0)
-
         position_regime = str(position.get("regime") or "")
         if not position_regime:
             if frame is not None and not frame.empty:
                 position_regime = regime_of(frame)
             else:
                 position_regime = "unknown"
-
         if frame is None or frame.empty:
             missing = _coerce_int(position.get("missing_bars"), 0) + 1
             if missing >= missing_bars_exit:
@@ -395,7 +406,6 @@ def run_paper_cycle(
                 pnl_zar = -fees
                 outcome = "loss"
                 pnl_outcome = "loss"
-
                 closed_rows.append(
                     {
                         "closed_at": server_time.isoformat(),
@@ -420,7 +430,6 @@ def run_paper_cycle(
                         "risk_fraction": str(position.get("risk_fraction") or ""),
                     }
                 )
-
                 apply_signal_feedback(
                     book_path,
                     str(position["slice_id"]),
@@ -429,7 +438,6 @@ def run_paper_cycle(
                     pnl_zar=float(pnl_zar),
                     stopout=True,
                 )
-
                 append_cooldown(
                     cooldown_path,
                     {
@@ -442,7 +450,6 @@ def run_paper_cycle(
                     },
                 )
                 continue
-
             position["missing_bars"] = str(missing)
             if horizon_bars > 0:
                 position["horizon_bars"] = str(horizon_bars)
@@ -455,7 +462,6 @@ def run_paper_cycle(
         high = Decimal(str(last["high"]))
         low = Decimal(str(last["low"]))
         bars_held = _coerce_int(position.get("bars_held"), 0) + 1
-
         target = (
             entry + (entry - stop) * TARGET_R_MULTIPLE
             if side == "BUY"
@@ -465,7 +471,6 @@ def run_paper_cycle(
         exit_price = None
         exit_reason = None
         outcome = None
-
         if side == "BUY":
             if low <= stop:
                 exit_price = stop
@@ -482,12 +487,10 @@ def run_paper_cycle(
                 exit_reason = "trail_stop" if stop != initial_stop else "stop"
             elif horizon_bars == 0 and low <= target:
                 exit_price, exit_reason, outcome = target, "target", "win"
-
         if exit_price is None and horizon_bars > 0 and bars_held >= horizon_bars:
             exit_price = close
             exit_reason = "horizon"
             outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-
         trail_active = _coerce_bool(position.get("trail_active"))
         if (
             exit_price is None
@@ -498,7 +501,6 @@ def run_paper_cycle(
             exit_price = close
             exit_reason = "time_stop"
             outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-
         if exit_price is None:
             if TRAIL_ENABLE and horizon_bars == 0:
                 initial_stop_price = Decimal(str(position.get("initial_stop_price") or position["stop_price"]))
@@ -508,13 +510,11 @@ def run_paper_cycle(
                     trough_price = Decimal(str(position.get("trough_price") or entry))
                     peak_price = max(peak_price, high)
                     trough_price = min(trough_price, low)
-
                     if not trail_active:
                         if side == "BUY":
                             trail_active = peak_price >= (entry + TRAIL_ACTIVATE_R * r)
                         else:
                             trail_active = trough_price <= (entry - TRAIL_ACTIVATE_R * r)
-
                     if trail_active:
                         if side == "BUY":
                             candidate_stop = peak_price - TRAIL_DISTANCE_R * r
@@ -523,12 +523,10 @@ def run_paper_cycle(
                             candidate_stop = trough_price + TRAIL_DISTANCE_R * r
                             stop = min(stop, candidate_stop)
                         position["stop_price"] = str(stop)
-
                     position["initial_stop_price"] = str(initial_stop_price)
                     position["peak_price"] = str(peak_price)
                     position["trough_price"] = str(trough_price)
                     position["trail_active"] = "1" if trail_active else "0"
-
             position["bars_held"] = str(bars_held)
             position["missing_bars"] = "0"
             if horizon_bars > 0:
@@ -545,7 +543,6 @@ def run_paper_cycle(
 
         pnl_outcome = "win" if pnl_zar > 0 else "loss"
         stopout = exit_reason in {"stop", "trail_stop", "stale_data"}
-
         closed_rows.append(
             {
                 "closed_at": server_time.isoformat(),
@@ -570,7 +567,6 @@ def run_paper_cycle(
                 "risk_fraction": str(position.get("risk_fraction") or ""),
             }
         )
-
         apply_signal_feedback(
             book_path,
             str(position["slice_id"]),
@@ -579,7 +575,6 @@ def run_paper_cycle(
             pnl_zar=float(pnl_zar),
             stopout=stopout,
         )
-
         if pnl_outcome == "loss" and stopout:
             append_cooldown(
                 cooldown_path,
@@ -592,7 +587,6 @@ def run_paper_cycle(
                     "reason": exit_reason,
                 },
             )
-
     for row in closed_rows:
         append_log(log_path, row)
 
@@ -610,7 +604,14 @@ def run_paper_cycle(
             open_slice_counts[sid] = open_slice_counts.get(sid, 0) + 1
 
     trade_counts = _slice_trade_counts(book_path)
-    candidates = sorted(signals, key=lambda s: (trade_counts.get(s.slice_id, 0), -abs(s.edge), s.pair))
+
+    selection_mode = str(os.getenv("BREAKWATER_PAPER_SELECTION_MODE", "explore")).strip().lower()
+    if selection_mode == "profit":
+        # PnL-biased ordering: take best edges first (still tie-break by trade count).
+        candidates = sorted(signals, key=lambda s: (-abs(s.edge), trade_counts.get(s.slice_id, 0), s.pair))
+    else:
+        # Evidence-biased ordering: under-sampled first.
+        candidates = sorted(signals, key=lambda s: (trade_counts.get(s.slice_id, 0), -abs(s.edge), s.pair))
 
     for signal in candidates:
         if len(surviving) >= MAX_PAPER_POSITIONS:
@@ -621,7 +622,6 @@ def run_paper_cycle(
         if kind_open >= MAX_PAPER_POSITIONS_PER_KIND:
             slot_full += 1
             continue
-
         if open_slice_counts.get(signal.slice_id, 0) >= MAX_PAPER_POSITIONS_PER_SLICE:
             slice_full += 1
             continue
@@ -651,6 +651,9 @@ def run_paper_cycle(
                     "entry_guard": "not_book",
                     "regime": str(getattr(signal, "regime", "") or ""),
                     "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
                 },
             )
             skipped += 1
@@ -678,6 +681,9 @@ def run_paper_cycle(
                     "entry_guard": f"regime_blocked(hostile_unproven={hostile_unproven})",
                     "regime": str(getattr(signal, "regime", "") or ""),
                     "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
                 },
             )
             skipped += 1
@@ -685,6 +691,36 @@ def run_paper_cycle(
 
         frame = frames.get(signal.pair.upper())
         guard, reference = _entry_guard(signal, frame, signal.atr)
+
+        if guard == "no_price":
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "no_price",
+                    "entry_guard": "no_price",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
+            skipped += 1
+            continue
+
         if guard == "adverse_blocked":
             append_log(
                 log_path,
@@ -706,6 +742,9 @@ def run_paper_cycle(
                     "entry_guard": "adverse_blocked",
                     "regime": str(getattr(signal, "regime", "") or ""),
                     "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
                 },
             )
             skipped += 1
@@ -723,7 +762,6 @@ def run_paper_cycle(
         initial_stop_price = (
             reference - risk_distance if signal.side.value == "BUY" else reference + risk_distance
         )
-
         # Stop tightness diagnostics (entry-time).
         initial_risk_distance = abs(reference - initial_stop_price)
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
