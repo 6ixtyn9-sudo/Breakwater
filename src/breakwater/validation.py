@@ -1,17 +1,31 @@
 """Walk-forward validation of discovered slices.
 
-Fix (core):
-- Validation now scores and validates slices using a stop-aware forward trade model
-  matching paper trading for horizon-based slices:
-    - Entry at close[t]
-    - Stop at +/- stop_atr_mult * ATR(14)
-    - Exit at stop if breached within horizon, else exit at close[t+h]
-    - Directional gross return minus cost => net return
+Fixes the remaining "quant trap" issues:
 
-This replaces the prior close-to-close-only net return metric during validation,
-eliminating research/execution mismatch.
+1) Execution-aligned returns:
+   Validate using a stop-aware trade return that matches paper execution:
+   - entry at close[t]
+   - stop at +/- stop_atr_mult * ATR(14)
+   - stop triggers if breached within the NEXT horizon bars (excludes entry bar)
+   - if not stopped, exit at close[t+h]
+   - subtract constant cost
 
-No new knobs. CSV schema unchanged.
+2) Side-selection leakage:
+   Discovery chooses side using the full sample. Validation now re-chooses side
+   on a training-only window and requires the candidate side to match that
+   training-side.
+
+3) Pooled-row illusion:
+   Requires symbol breadth: the edge must exist across many symbols, not just
+   a pooled burst.
+
+4) Latest-fold brittleness + horizon overlap leakage:
+   Uses a recency-window mean gate in addition to fold pass count, and purges
+   the last `horizon_bars` rows of each fold from evaluation so forward windows
+   don't cross fold boundaries.
+
+No new knobs: uses only existing validation env vars.
+CSV schema stays stable.
 """
 
 from __future__ import annotations
@@ -68,6 +82,16 @@ STOP_ATR_CEIL = 3.5
 SESSION_ASIA = "asia"
 SESSION_EU = "eu"
 SESSION_US = "us"
+
+# --- Hard-coded strength rules (no new knobs) ---
+TRAIN_FRACTION = 0.60
+
+RECENCY_FRACTION = 0.20
+RECENCY_MIN_ROWS = 20
+
+BREADTH_MIN_SYMBOLS = 8
+BREADTH_MIN_ROWS_PER_SYMBOL = 30
+BREADTH_MIN_POSITIVE_FRACTION = 0.60
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -127,7 +151,6 @@ def _normal_p(t_stat: float) -> float:
 def _fold_pass(net_returns: np.ndarray) -> bool:
     if len(net_returns) < MIN_ROWS_PER_FOLD:
         return False
-    # Keep legacy behavior (sign-based); promotion floor already enforces effect size.
     return float(np.mean(net_returns)) > 0.0
 
 
@@ -154,11 +177,12 @@ def _attach_regime_labels(prepared: pd.DataFrame) -> pd.DataFrame:
 
 
 def _hostile_regime_check(net_hostile_returns: np.ndarray) -> tuple[int, float, bool, bool]:
-    hostile_n = len(net_hostile_returns)
-    hostile_mean = float(np.mean(net_hostile_returns)) if hostile_n else 0.0
+    hostile_returns = net_hostile_returns[np.isfinite(net_hostile_returns)]
+    hostile_n = len(hostile_returns)
+    hostile_mean = float(np.mean(hostile_returns)) if hostile_n else 0.0
     if hostile_n < HOSTILE_MIN_ROWS:
         return hostile_n, hostile_mean, False, True
-    return hostile_n, hostile_mean, hostile_mean <= 0, False
+    return hostile_n, hostile_mean, hostile_mean <= 0.0, False
 
 
 def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
@@ -185,48 +209,66 @@ def _atr14(df: pd.DataFrame) -> pd.Series:
     return true_range.rolling(14).mean()
 
 
-def _trade_net_series_for_candidate(
+def _forward_extremes_excluding_entry_bar(
+    high: pd.Series,
+    low: pd.Series,
+    horizon_bars: int,
+) -> tuple[pd.Series, pd.Series]:
+    """Min low / max high over the NEXT `horizon_bars` bars (excludes the entry bar)."""
+    if horizon_bars < 1:
+        raise ValueError("horizon_bars must be >= 1")
+
+    low_next = low.shift(-1)
+    high_next = high.shift(-1)
+
+    fwd_min_low = low_next.rolling(horizon_bars).min().shift(-(horizon_bars - 1))
+    fwd_max_high = high_next.rolling(horizon_bars).max().shift(-(horizon_bars - 1))
+    return fwd_min_low, fwd_max_high
+
+
+def _compute_stop_aware_net_returns(
     subset: pd.DataFrame,
     *,
-    side: str,
     horizon_bars: int,
     stop_atr_mult: float,
     cost: float,
-) -> pd.Series:
-    """Compute per-row stop-aware net returns (directional, cost-adjusted), per symbol."""
-    net = pd.Series(np.nan, index=subset.index, dtype=float)
-
-    direction = 1.0 if side == "LONG" else -1.0
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return (net_long, net_short) arrays aligned to subset index."""
+    n = len(subset)
+    net_long = np.full(n, np.nan, dtype=float)
+    net_short = np.full(n, np.nan, dtype=float)
 
     for _, g in subset.groupby("symbol", sort=False):
         g = g.sort_values("start")
+        idx = g.index.to_numpy()
 
         close = g["close"].astype(float)
         high = g["high"].astype(float)
         low = g["low"].astype(float)
 
-        atr = g["atr_14"] if "atr_14" in g.columns else _atr14(g)
-        atr = atr.replace(0, np.nan)
+        atr = _atr14(g).replace(0, np.nan)
+        fwd_close = close.shift(-horizon_bars)
 
-        fwd_close = g["fwd_close_h"] if "fwd_close_h" in g.columns else close.shift(-horizon_bars)
-        fwd_min_low = g["fwd_min_low_h"] if "fwd_min_low_h" in g.columns else low.rolling(horizon_bars).min().shift(-horizon_bars)
-        fwd_max_high = g["fwd_max_high_h"] if "fwd_max_high_h" in g.columns else high.rolling(horizon_bars).max().shift(-horizon_bars)
+        fwd_min_low, fwd_max_high = _forward_extremes_excluding_entry_bar(high, low, horizon_bars)
 
-        if side == "LONG":
-            stop = close - stop_atr_mult * atr
-            hit = fwd_min_low <= stop
-        else:
-            stop = close + stop_atr_mult * atr
-            hit = fwd_max_high >= stop
+        stop_long = close - stop_atr_mult * atr
+        hit_long = fwd_min_low <= stop_long
+        exit_long = np.where(hit_long.to_numpy(dtype=bool), stop_long.to_numpy(), fwd_close.to_numpy())
+        gross_long = (exit_long - close.to_numpy()) / close.to_numpy()
+        net_l = gross_long - cost
 
-        exit_price = np.where(hit.to_numpy(dtype=bool), stop.to_numpy(), fwd_close.to_numpy())
-        gross_dir = ((exit_price - close.to_numpy()) / close.to_numpy()) * direction
-        net_dir = gross_dir - float(cost)
+        stop_short = close + stop_atr_mult * atr
+        hit_short = fwd_max_high >= stop_short
+        exit_short = np.where(hit_short.to_numpy(dtype=bool), stop_short.to_numpy(), fwd_close.to_numpy())
+        gross_short = (exit_short - close.to_numpy()) / close.to_numpy() * (-1.0)
+        net_s = gross_short - cost
 
-        series = pd.Series(net_dir, index=g.index)
-        net.loc[g.index] = series
+        # Write back aligned to global subset order
+        pos = subset.index.get_indexer(idx)
+        net_long[pos] = net_l
+        net_short[pos] = net_s
 
-    return net
+    return net_long, net_short
 
 
 def _session_stats_from_net(
@@ -246,6 +288,46 @@ def _session_stats_from_net(
     return n, float(np.mean(values)), float(np.mean(values > 0))
 
 
+def _symbol_breadth_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.ndarray) -> bool:
+    if "symbol" not in subset.columns:
+        return False
+    df = subset.loc[slice_mask, ["symbol"]].copy()
+    if df.empty:
+        return False
+    df["net"] = net_values[slice_mask]
+    df = df[np.isfinite(df["net"].to_numpy())]
+    if df.empty:
+        return False
+
+    means = []
+    for sym, g in df.groupby("symbol"):
+        if len(g) < BREADTH_MIN_ROWS_PER_SYMBOL:
+            continue
+        means.append(float(g["net"].mean()))
+
+    if len(means) < BREADTH_MIN_SYMBOLS:
+        return False
+    pos_frac = float(np.mean(np.array(means) > 0.0))
+    return pos_frac >= BREADTH_MIN_POSITIVE_FRACTION
+
+
+def _recency_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.ndarray) -> bool:
+    n_total = len(subset)
+    if n_total <= 0:
+        return False
+    window = int(max(RECENCY_MIN_ROWS, round(n_total * RECENCY_FRACTION)))
+    window = min(window, n_total)
+
+    recency_mask = np.zeros(n_total, dtype=bool)
+    recency_mask[n_total - window : n_total] = True
+
+    values = net_values[slice_mask & recency_mask]
+    values = values[np.isfinite(values)]
+    if len(values) < RECENCY_MIN_ROWS:
+        return False
+    return float(np.mean(values)) > 0.0
+
+
 def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
     if prepared.empty or not candidates:
         return []
@@ -256,6 +338,7 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         .sort_values("start")
         .reset_index(drop=True)
     )
+
     cost = float(rows["cost"].iloc[0]) if "cost" in rows.columns and len(rows) else 0.0
 
     validated: list[ValidatedSlice] = []
@@ -265,40 +348,89 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         if state_column not in rows.columns:
             continue
 
-        subset = rows.dropna(subset=[state_column, "close", "high", "low"])
-        slice_mask = (subset[state_column] == candidate.state).to_numpy(dtype=bool)
+        subset = rows.dropna(subset=[state_column, "close", "high", "low"]).copy()
+        subset = subset.sort_values("start").reset_index(drop=True)
 
-        stop_atr_mult = _calibrate_stop_atr_mult(prepared, candidate, state_column)
+        horizon_bars = int(candidate.horizon_bars)
+        stop_atr_mult = float(_calibrate_stop_atr_mult(prepared, candidate, state_column))
 
-        net_series = _trade_net_series_for_candidate(
+        net_long, net_short = _compute_stop_aware_net_returns(
             subset,
-            side=str(candidate.side),
-            horizon_bars=int(candidate.horizon_bars),
-            stop_atr_mult=float(stop_atr_mult),
-            cost=float(cost),
+            horizon_bars=horizon_bars,
+            stop_atr_mult=stop_atr_mult,
+            cost=cost,
         )
-        net_values = net_series.to_numpy()
 
-        # Only consider rows where the net return is defined (horizon exists, ATR exists)
+        # Slice mask and validity
+        slice_mask = (subset[state_column].to_numpy() == candidate.state)
+        valid_long = np.isfinite(net_long)
+        valid_short = np.isfinite(net_short)
+        slice_mask_long = slice_mask & valid_long
+        slice_mask_short = slice_mask & valid_short
+
+        # --- Side-selection leakage fix: choose direction on training window only ---
+        n_total = len(subset)
+        train_end = int(max(1, round(TRAIN_FRACTION * n_total)))
+        train_mask = np.zeros(n_total, dtype=bool)
+        train_mask[:train_end] = True
+
+        long_train = net_long[slice_mask_long & train_mask]
+        short_train = net_short[slice_mask_short & train_mask]
+        mean_long_train = float(np.mean(long_train)) if len(long_train) else -1e9
+        mean_short_train = float(np.mean(short_train)) if len(short_train) else -1e9
+        side_train = "LONG" if mean_long_train >= mean_short_train else "SHORT"
+
+        direction_ok = (str(candidate.side).upper() == side_train)
+
+        # Candidate-side net series
+        net_values = net_long if str(candidate.side).upper() == "LONG" else net_short
         valid = np.isfinite(net_values)
         slice_mask = slice_mask & valid
 
         slice_net = net_values[slice_mask]
-        n = int(len(slice_net))
-        mean_net = float(np.mean(slice_net)) if n else 0.0
-        std = float(np.std(slice_net, ddof=1)) if n > 1 else 0.0
-        t_stat = mean_net / (std / math.sqrt(n)) if std > 0 else 0.0
-        p_value = _normal_p(t_stat)
+        n_slice = int(len(slice_net))
+        mean_net = float(np.mean(slice_net)) if n_slice else 0.0
 
-        # Walk-forward folds over time (subset already sorted by start)
+        # Symbol-breadth check (pooled illusion fix)
+        breadth_ok = _symbol_breadth_ok(subset, slice_mask, net_values)
+
+        # Recency check (latest-fold brittleness fix)
+        recency_ok = _recency_ok(subset, slice_mask, net_values)
+
+        # Symbol-level p-value (more conservative than pooled rows)
+        # Compute mean net per symbol for slice rows, then t-stat across symbols.
+        symbol_means = []
+        if "symbol" in subset.columns and n_slice:
+            df_sym = subset.loc[slice_mask, ["symbol"]].copy()
+            df_sym["net"] = net_values[slice_mask]
+            for sym, g in df_sym.groupby("symbol"):
+                if len(g) >= BREADTH_MIN_ROWS_PER_SYMBOL:
+                    symbol_means.append(float(g["net"].mean()))
+        if len(symbol_means) >= 2:
+            m = float(np.mean(symbol_means))
+            s = float(np.std(symbol_means, ddof=1))
+            t_stat = m / (s / math.sqrt(len(symbol_means))) if s > 0 else 0.0
+            p_value = _normal_p(t_stat)
+        else:
+            p_value = float(candidate.p_value)
+
+        # Walk-forward folds + horizon-overlap purge
         fold_ids = np.linspace(0, len(subset), FOLD_COUNT + 1).astype(int)
-        fold_results: list[str] = []
-        fold_means: list[float] = []
-        fold_sizes: list[int] = []
+        fold_results = []
+        fold_means = []
+        fold_sizes = []
 
         for fold in range(FOLD_COUNT):
             fold_mask = np.zeros(len(subset), dtype=bool)
-            fold_mask[fold_ids[fold] : fold_ids[fold + 1]] = True
+            start = int(fold_ids[fold])
+            end = int(fold_ids[fold + 1])
+            fold_mask[start:end] = True
+
+            # Purge last horizon bars so forward windows do not cross into next fold
+            purge = horizon_bars
+            if purge > 0 and end > start:
+                purge_start = max(start, end - purge)
+                fold_mask[purge_start:end] = False
 
             fold_returns = net_values[slice_mask & fold_mask]
             passed = _fold_pass(fold_returns)
@@ -315,14 +447,15 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         relaxed_required = max(strict_required, min(FOLD_COUNT, max(1, RELAXED_MIN_PASSES)))
         required_passes = strict_required if REQUIRE_BONFERRONI else relaxed_required
 
-        temporal_pass = (pass_count >= required_passes) and latest_passes
+        # Replace "latest fold must pass" with (recency OR latest) to reduce brittleness
+        temporal_pass = (pass_count >= required_passes) and (recency_ok or latest_passes)
         if REQUIRE_BONFERRONI:
             temporal_pass = temporal_pass and bool(candidate.bonferroni_pass)
 
-        hostile_label = "bear" if str(candidate.side) == "LONG" else "bull"
+        # Hostile regime check using the same stop-aware net returns
+        hostile_label = "bear" if str(candidate.side).upper() == "LONG" else "bull"
         hostile_mask = slice_mask & (subset["regime_row"].to_numpy() == hostile_label)
         hostile_net = net_values[hostile_mask]
-        hostile_net = hostile_net[np.isfinite(hostile_net)]
         hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(hostile_net)
 
         asia_n, asia_mean, asia_hit = _session_stats_from_net(subset, slice_mask, SESSION_ASIA, net_values)
@@ -335,17 +468,23 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
                 kind=candidate.kind,
                 feature=candidate.feature,
                 state=int(candidate.state),
-                side=str(candidate.side),
+                side=str(candidate.side).upper(),
                 folds=FOLD_COUNT,
                 walk_forward_pass_pattern=pattern,
                 walk_forward_pass_count=int(pass_count),
                 fold_mean_rets=",".join(f"{value:.6f}" for value in fold_means),
                 fold_sizes=",".join(str(size) for size in fold_sizes),
-                n=n,
-                mean_ret_costadj=mean_net,
+                n=n_slice,
+                mean_ret_costadj=float(mean_net),
                 p_value=float(p_value),
-                validated=(temporal_pass and not confounded and mean_net > 0.0),
-                horizon_bars=int(candidate.horizon_bars),
+                validated=(
+                    temporal_pass
+                    and direction_ok
+                    and breadth_ok
+                    and (not confounded)
+                    and (mean_net > 0.0)
+                ),
+                horizon_bars=horizon_bars,
                 stop_atr_mult=float(stop_atr_mult),
                 hostile_n=int(hostile_n),
                 hostile_mean_ret=float(hostile_mean),
@@ -395,6 +534,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         has_hostile = "hostile_n" in fieldnames
         has_unproven = "hostile_unproven" in fieldnames
         has_session = "session_asia_n" in fieldnames
+
         out = []
         for row in reader:
             out.append(
