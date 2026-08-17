@@ -220,8 +220,10 @@ def _trade_net_cols(
     fwd_close = close.shift(-horizon_bars)
     out["fwd_close_h"] = fwd_close
 
-    fwd_min_low = low.rolling(horizon_bars).min().shift(-horizon_bars)
-    fwd_max_high = high.rolling(horizon_bars).max().shift(-horizon_bars)
+    low_next = low.shift(-1)
+    high_next = high.shift(-1)
+    fwd_min_low = low_next.rolling(horizon_bars).min().shift(-(horizon_bars - 1))
+    fwd_max_high = high_next.rolling(horizon_bars).max().shift(-(horizon_bars - 1))
     out["fwd_min_low_h"] = fwd_min_low
     out["fwd_max_high_h"] = fwd_max_high
 
