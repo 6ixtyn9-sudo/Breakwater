@@ -1,4 +1,12 @@
-"""Restart-safe guardian, universe scanner and guarded executor."""
+"""Restart-safe guardian, universe scanner and guarded executor.
+
+Upgrades:
+- _frames() now honors BREAKWATER_SPOT_CANDLE_COUNT / BREAKWATER_PERP_CANDLE_COUNT
+  (instead of hardcoding 300).
+- research_pass() now supports multi-horizon research via BREAKWATER_RESEARCH_HORIZONS.
+  When multiple horizons are used, slice_id is tagged with :h{horizon} to avoid
+  collisions in the book (sync_book uses slice_id as the primary key).
+"""
 
 from __future__ import annotations
 
@@ -58,55 +66,60 @@ def _coerce_int(value, default: int) -> int:
 def _parse_horizons_env() -> list[int]:
     """Parse research horizons.
 
-    Supported env:
-      - BREAKWATER_RESEARCH_HORIZONS="6,12,24"  (preferred)
-      - BREAKWATER_RESEARCH_HORIZON_BARS="6"    (fallback)
+    Preferred:
+      BREAKWATER_RESEARCH_HORIZONS="6,12,24"
 
-    Returns a de-duplicated list preserving input order (after cleaning).
+    Fallback (existing behavior):
+      BREAKWATER_RESEARCH_HORIZON_BARS="6"
     """
     raw = str(os.getenv("BREAKWATER_RESEARCH_HORIZONS", "")).strip()
     if raw:
-        parts = []
+        horizons: list[int] = []
         for chunk in raw.split(","):
             chunk = chunk.strip()
             if not chunk:
                 continue
             try:
-                value = int(chunk)
+                h = int(chunk)
             except ValueError:
                 continue
-            if value >= 1 and value not in parts:
-                parts.append(value)
-        if parts:
-            return parts
+            if h < 1:
+                continue
+            if h not in horizons:
+                horizons.append(h)
+        if horizons:
+            # Safety clamp: avoid accidental huge runs from bad config.
+            return horizons[:8]
 
-    # Fallback
-    single = _coerce_int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"), 1)
-    if single < 1:
-        single = 1
-    return [single]
+    horizon = _coerce_int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"), 1)
+    if horizon < 1:
+        horizon = 1
+    return [horizon]
 
 
-def _slice_id_with_horizon(slice_id: str, horizon_bars: int, *, multi: bool) -> str:
-    """Make slice IDs horizon-unique when multi-horizon is enabled."""
+def _tag_slice_id(slice_id: str, horizon_bars: int, *, multi: bool) -> str:
+    """Ensure slice_id is unique per horizon when multi-horizon research is enabled."""
     if not multi:
         return slice_id
     suffix = f":h{int(horizon_bars)}"
-    if str(slice_id).endswith(suffix):
-        return slice_id
-    return f"{slice_id}{suffix}"
+    text = str(slice_id)
+    return text if text.endswith(suffix) else f"{text}{suffix}"
 
 
-def _retag_discovered_with_horizon(found, *, horizon_bars: int, multi: bool):
-    """Return a list of SliceStat with slice_id tagged when needed."""
+def _retag_candidates_for_horizon(candidates, *, horizon_bars: int, multi: bool):
+    """Return new candidate objects with horizon-tagged slice_id if multi-horizon enabled.
+
+    Works for both discovery.SliceStat and validation.ValidatedSlice because both are
+    dataclasses and both include slice_id.
+    """
     if not multi:
-        return found
-    tagged = []
-    for row in found:
+        return candidates
+    retagged = []
+    for row in candidates:
         payload = asdict(row)
-        payload["slice_id"] = _slice_id_with_horizon(payload["slice_id"], horizon_bars, multi=True)
-        tagged.append(type(row)(**payload))
-    return tagged
+        payload["slice_id"] = _tag_slice_id(payload["slice_id"], horizon_bars, multi=True)
+        retagged.append(type(row)(**payload))
+    return retagged
 
 
 class BreakwaterEngine:
@@ -157,19 +170,22 @@ class BreakwaterEngine:
         return snapshot
 
     def _frames(self, targets: list[tuple[str, str]], server_time: datetime):
+        """Fetch frames for targets.
+
+        Env:
+          - BREAKWATER_SPOT_CANDLE_COUNT (default 300, max 5000)
+          - BREAKWATER_PERP_CANDLE_COUNT (default 300, max 5000)
+
+        Notes:
+          - Spot supports counts > 300 because market.fetch_recent_candles() pages now.
+          - Perps supports counts up to 5000 via Hyperliquid public API.
+        """
         frames = {}
         errors = {}
 
-        def _coerce_int_local(value, default: int) -> int:
-            try:
-                return int(value)
-            except (TypeError, ValueError):
-                return default
+        spot_count = _coerce_int(os.getenv("BREAKWATER_SPOT_CANDLE_COUNT", "300"), 300)
+        perp_count = _coerce_int(os.getenv("BREAKWATER_PERP_CANDLE_COUNT", "300"), 300)
 
-        spot_count = _coerce_int_local(os.getenv("BREAKWATER_SPOT_CANDLE_COUNT", "300"), 300)
-        perp_count = _coerce_int_local(os.getenv("BREAKWATER_PERP_CANDLE_COUNT", "300"), 300)
-
-        # Safety clamps (spot paging supports up to 5000; perps already supports up to 5000)
         spot_count = max(60, min(5000, spot_count))
         perp_count = max(60, min(5000, perp_count))
 
@@ -178,7 +194,9 @@ class BreakwaterEngine:
                 if kind == "PERP":
                     candles = fetch_perp_candles_for_pair(pair, count=perp_count)
                 else:
-                    candles = fetch_recent_candles(self.client, pair, server_time, count=spot_count)
+                    candles = fetch_recent_candles(
+                        self.client, pair, server_time, count=spot_count
+                    )
                 frame = candle_frame(candles)
                 frame["symbol"] = pair.upper()
                 frames[pair.upper()] = frame
@@ -308,7 +326,6 @@ class BreakwaterEngine:
             frame = frames.get(pair.upper())
             if frame is not None:
                 frames_by_kind[kind][pair.upper()] = frame
-
         signals: list[SliceSignal] = []
         blocked: list[dict] = []
         if book_rows:
@@ -317,7 +334,6 @@ class BreakwaterEngine:
             )
         else:
             signals = self._big_wave_fallback(targets, frames, server_time)
-
         paper_result = None
         if self.settings.mode in {"shadow", "live"} and self.risk is not None:
             valuator = EquityValuator(self.client, self.catalog.refresh())
@@ -331,7 +347,9 @@ class BreakwaterEngine:
                 frames=frames,
                 policy=self.risk.policy,
                 usdc_zar=usdc_zar,
-                positions_path=self.settings.data_dir / "research" / "paper_positions.json",
+                positions_path=self.settings.data_dir
+                / "research"
+                / "paper_positions.json",
                 log_path=self.settings.paper_log_path,
                 cooldown_path=self.settings.cooldown_path,
                 book_path=self.settings.book_path,
@@ -361,7 +379,6 @@ class BreakwaterEngine:
                     },
                 )
             paper_result["regime_blocked"] = len(blocked)
-
         payloads = []
         for signal in signals:
             payload = {
@@ -376,11 +393,12 @@ class BreakwaterEngine:
                 strategy_id=signal.slice_id,
                 pair=signal.pair,
             )
-
         errors = [{"pair": pair, "error": error} for pair, error in sorted(frame_errors.items())]
         result = {
             "server_time": server_time.isoformat(),
-            "universe_symbols": {kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")},
+            "universe_symbols": {
+                kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
+            },
             "book_slices": len(book_rows),
             "pairs_checked": len(frames),
             "pair_errors": errors,
@@ -540,7 +558,6 @@ class BreakwaterEngine:
         from breakwater.validation import validate_slices, write_validated
 
         write_universe(self.settings.universe_path, universe)
-
         spot_targets = [(pair, "SPOT") for pair in universe.ranked("SPOT", max_pairs)]
         perp_targets = [(pair, "PERP") for pair in universe.ranked("PERP", max_pairs)]
         all_targets = spot_targets + perp_targets
@@ -559,6 +576,7 @@ class BreakwaterEngine:
         validated = []
 
         for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
+            # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
             for pair, k in all_targets:
                 if k != kind:
@@ -578,9 +596,13 @@ class BreakwaterEngine:
                     prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars
                 )
 
-                found = _retag_discovered_with_horizon(found, horizon_bars=horizon_bars, multi=multi)
+                # Make IDs horizon-unique if multi-horizon research is enabled.
+                found = _retag_candidates_for_horizon(
+                    found, horizon_bars=horizon_bars, multi=multi
+                )
 
                 checked = validate_slices(prepared, found)
+
                 discovered.extend(found)
                 validated.extend(checked)
 
@@ -593,31 +615,35 @@ class BreakwaterEngine:
             now=server_time,
         )
 
-        validation_require_bonferroni = os.getenv("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "")
-        validation_relaxed_min_passes = os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "")
-
-        spot_count = _coerce_int(os.getenv("BREAKWATER_SPOT_CANDLE_COUNT", "300"), 300)
-        perp_count = _coerce_int(os.getenv("BREAKWATER_PERP_CANDLE_COUNT", "300"), 300)
-
-        discovered_positive_mean = sum(1 for row in discovered if float(getattr(row, "mean_ret_costadj", 0.0)) > 0.0)
-        discovered_bonf_pass = sum(1 for row in discovered if bool(getattr(row, "bonferroni_pass", False)))
+        # Record knob state in the committed research_done payload
+        validation_require_bonferroni = os.getenv(
+            "BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", ""
+        )
+        validation_relaxed_min_passes = os.getenv(
+            "BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", ""
+        )
 
         result = {
             "server_time": server_time.isoformat(),
             "universe": {k: len(universe.symbols(k)) for k in ("SPOT", "PERP")},
             "pairs_researched": len(frames),
-            "frame_errors": [{"pair": pair, "error": error} for pair, error in sorted(frame_errors.items())],
+            "frame_errors": [
+                {"pair": pair, "error": error}
+                for pair, error in sorted(frame_errors.items())
+            ],
             "research_horizons": horizons,
-            "spot_candle_count": spot_count,
-            "perp_candle_count": perp_count,
+            "spot_candle_count": _coerce_int(os.getenv("BREAKWATER_SPOT_CANDLE_COUNT", "300"), 300),
+            "perp_candle_count": _coerce_int(os.getenv("BREAKWATER_PERP_CANDLE_COUNT", "300"), 300),
             "discovery_state_quantiles": os.getenv("BREAKWATER_DISCOVERY_STATE_QUANTILES", ""),
             "discovery_rolling_min_periods": os.getenv("BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS", ""),
             "discovered_slices": len(discovered),
-            "discovered_positive_mean": discovered_positive_mean,
-            "discovered_bonferroni_pass": discovered_bonf_pass,
             "validated_slices": len([row for row in validated if row.validated]),
-            "regime_confounded_slices": len([row for row in validated if row.regime_confounded]),
-            "hostile_unproven_slices": len([row for row in validated if row.hostile_unproven]),
+            "regime_confounded_slices": len(
+                [row for row in validated if row.regime_confounded]
+            ),
+            "hostile_unproven_slices": len(
+                [row for row in validated if row.hostile_unproven]
+            ),
             "validation_require_bonferroni": validation_require_bonferroni,
             "validation_relaxed_min_passes": validation_relaxed_min_passes,
             "book": book_summary,
@@ -632,7 +658,13 @@ class BreakwaterEngine:
         return result
 
     def health(self) -> dict:
-        """Local one-glance heartbeat; performs no network calls."""
+        """Local one-glance heartbeat; performs no network calls.
+
+        Standing lesson (green != live): a green workflow run is not proof
+        that anything traded or that the book is alive. This digest
+        surfaces universe freshness, book composition and paper activity
+        from the committed state files.
+        """
         from collections import Counter
 
         result: dict = {"mode": self.settings.mode}
@@ -655,19 +687,24 @@ class BreakwaterEngine:
                 "spot_symbols": len(snapshot.symbols("SPOT")),
                 "perp_symbols": len(snapshot.symbols("PERP")),
             }
-
         book_rows = read_book(self.settings.book_path)
         result["book"] = {
             "rows": len(book_rows),
             "statuses": dict(Counter(row.get("status") for row in book_rows)),
             "kinds": dict(Counter(row.get("kind") for row in book_rows)),
             "sides": dict(Counter(row.get("side") for row in book_rows)),
-            "hostile_unproven": sum(1 for row in book_rows if row.get("hostile_unproven") == "True"),
+            "hostile_unproven": sum(
+                1 for row in book_rows if row.get("hostile_unproven") == "True"
+            ),
         }
         positions = read_positions(self.settings.data_dir / "research" / "paper_positions.json")
         result["paper_open_positions"] = len(positions)
         result["paper_positions"] = [
-            {"pair": position.get("pair"), "side": position.get("side"), "bars_held": position.get("bars_held")}
+            {
+                "pair": position.get("pair"),
+                "side": position.get("side"),
+                "bars_held": position.get("bars_held"),
+            }
             for position in positions
         ]
         return result
