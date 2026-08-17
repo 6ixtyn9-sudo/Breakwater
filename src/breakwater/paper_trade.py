@@ -724,7 +724,7 @@ def run_paper_cycle(
             reference - risk_distance if signal.side.value == "BUY" else reference + risk_distance
         )
 
-      # Stop tightness diagnostics (entry-time).
+        # Stop tightness diagnostics (entry-time).
         initial_risk_distance = abs(reference - initial_stop_price)
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
         stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
