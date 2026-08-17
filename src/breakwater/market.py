@@ -1,13 +1,27 @@
-"""VALR-native catalog, time and candle completeness checks."""
+"""VALR-native catalog, time and candle completeness checks.
+
+Upgrade:
+- fetch_recent_candles now supports counts > 300 by paging backwards in time.
+  VALR enforces per-request limit <= 300 (see ValrClient.candles), but we can
+  call it multiple times with earlier (start,end) windows to build longer history.
+
+Env:
+- BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS (default 0.05): politeness delay between pages
+"""
 
 from __future__ import annotations
 
+import os
+import time
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from breakwater.decimal_utils import D
 from breakwater.models import Candle, MarketSummary, PairSpec, PairType
 from breakwater.valr import ValrClient, ValrError
+
+MAX_VALR_LIMIT = 300
+MAX_PAGED_COUNT = 5000
 
 
 class MarketStateError(RuntimeError):
@@ -56,7 +70,8 @@ class MarketCatalog:
             self.refresh()
         return sorted(
             [
-                spec for spec in self._specs.values()
+                spec
+                for spec in self._specs.values()
                 if spec.active and (pair_type is None or spec.pair_type == pair_type)
             ],
             key=lambda spec: spec.symbol,
@@ -67,9 +82,7 @@ class MarketCatalog:
         symbols = {str(row.get("currencyPair", "")).upper() for row in info}
         metadata = {spec.symbol for spec in self.active(PairType.FUTURE)}
         if symbols != metadata:
-            raise MarketStateError(
-                "VALR futures-info and active pair metadata disagree"
-            )
+            raise MarketStateError("VALR futures-info and active pair metadata disagree")
         return symbols
 
 
@@ -113,21 +126,68 @@ def fetch_recent_candles(
     period_seconds: int = 3600,
     count: int = 220,
 ) -> list[Candle]:
-    if count < 2 or count > 300:
-        raise ValueError("candle count must be between 2 and 300")
-    end = int(server_time.timestamp())
-    start = end - period_seconds * (count + 2)
+    """Fetch up to `count` completed candles, paging if needed.
+
+    - VALR per-request candle limit is <= 300.
+    - We page backwards by moving end_epoch to just before the oldest candle
+      returned on the previous page.
+    """
+    if count < 2 or count > MAX_PAGED_COUNT:
+        raise ValueError(f"candle count must be between 2 and {MAX_PAGED_COUNT}")
+
+    # Politeness delay for multi-page fetches.
     try:
-        candles = client.candles(
-            pair,
-            period_seconds=period_seconds,
-            start_epoch=start,
-            end_epoch=end,
-            limit=count,
-        )
-    except ValrError as exc:
-        raise MarketStateError(f"could not fetch {pair} candles: {exc}") from exc
-    complete = completed_candles(candles, server_time)
-    if len(complete) < 60:
+        sleep_seconds = float(str(os.getenv("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05")))
+    except Exception:
+        sleep_seconds = 0.05
+    if sleep_seconds < 0:
+        sleep_seconds = 0.0
+
+    end_epoch = int(server_time.timestamp())
+    page_end = end_epoch
+    collected: dict[datetime, Candle] = {}
+
+    # Bound pagination so a weird API response can't spin forever.
+    max_pages = max(1, (count + MAX_VALR_LIMIT - 1) // MAX_VALR_LIMIT) + 3
+    pages = 0
+
+    while len(collected) < count and pages < max_pages:
+        remaining = count - len(collected)
+        page_limit = min(MAX_VALR_LIMIT, remaining)
+
+        # Slightly wider-than-necessary window reduces off-by-one gaps.
+        start_epoch = max(0, page_end - period_seconds * (page_limit + 5))
+
+        try:
+            candles = client.candles(
+                pair,
+                period_seconds=period_seconds,
+                start_epoch=start_epoch,
+                end_epoch=page_end,
+                limit=page_limit,
+            )
+        except ValrError as exc:
+            raise MarketStateError(f"could not fetch {pair} candles: {exc}") from exc
+
+        complete = completed_candles(candles, server_time)
+        if not complete:
+            break
+
+        for candle in complete:
+            collected[candle.start] = candle
+
+        oldest = min(candle.start for candle in complete)
+        next_end = int(oldest.timestamp()) - period_seconds
+        if next_end >= page_end:
+            break
+
+        page_end = next_end
+        pages += 1
+
+        if sleep_seconds and count > MAX_VALR_LIMIT:
+            time.sleep(sleep_seconds)
+
+    ordered = sorted(collected.values(), key=lambda candle: candle.start)
+    if len(ordered) < 60:
         raise MarketStateError(f"insufficient completed candles for {pair}")
-    return complete[-count:]
+    return ordered[-count:]
