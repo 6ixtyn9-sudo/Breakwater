@@ -38,12 +38,11 @@ jobs:
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
-
           BREAKWATER_MODE: readonly
 
           # Preferred: multi-horizon research (you added this secret)
-          BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '6,12,24' }}
-          # Back-compat fallback (only used if BREAKWATER_RESEARCH_HORIZONS is blank in code)
+          BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
+          # Back-compat fallback (used if code ignores horizons or if horizons is blank)
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
 
           # === Research scale knobs ===
@@ -58,9 +57,7 @@ jobs:
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
 
           # RELAXED VALIDATION (still strict walk-forward + hostile-regime + net-positive)
-          # 0 => do NOT require discovery Bonferroni to validate
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
-          # when Bonferroni not required, require at least this many passing folds (out of 5)
           BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "3"
 
         run: PYTHONPATH=src python scripts/breakwater.py research
