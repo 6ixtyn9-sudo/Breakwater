@@ -1,6 +1,6 @@
 [
   {
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_guard": "passed",
     "entry_price": "1887.585714285714288125000000",
     "horizon_bars": "6",
@@ -19,7 +19,7 @@
     "trough_price": "1887.585714285714288125000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "58.96178571428571440000000000",
     "horizon_bars": "6",
@@ -38,7 +38,7 @@
     "trough_price": "58.96178571428571440000000000"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "63338.41071428571428500000000",
     "horizon_bars": "6",
@@ -57,7 +57,7 @@
     "trough_price": "63338.41071428571428500000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "103.8589285714285712750000001",
     "horizon_bars": "6",
@@ -74,5 +74,24 @@
     "stop_price": "102.0344285714285730380000001",
     "trail_active": "0",
     "trough_price": "103.8589285714285712750000001"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "9860.107142857142857500000003",
+    "horizon_bars": "24",
+    "initial_stop_price": "9690.607142857142852500000003",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BNBZAR",
+    "peak_price": "9860.107142857142857500000003",
+    "regime": "bear",
+    "side": "BUY",
+    "signal_id": "905f94475b11937a",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h24",
+    "stop_price": "9690.607142857142852500000003",
+    "trail_active": "0",
+    "trough_price": "9860.107142857142857500000003"
   }
 ]
