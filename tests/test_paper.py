@@ -171,7 +171,10 @@ def test_new_book_signal_opens_position_when_slot_free(tmp_path):
     assert positions[0]["entry_guard"] == "passed"
 
 
-def test_winner_capture_premium_raises_long_reference(tmp_path):
+def test_winner_capture_premium_raises_long_reference(tmp_path, monkeypatch):
+    # Premium is opt-in; default mode is aligned.
+    monkeypatch.setenv("BREAKWATER_PAPER_ENTRY_MODE", "premium")
+
     cycle(
         tmp_path,
         signals=[signal(entry="100", stop="95", atr="1")],
@@ -204,9 +207,12 @@ def test_missing_price_fails_open_with_visible_guard(tmp_path):
         signals=[signal()],
         frames={},
     )
-    assert result["open"] == 1
-    positions = read_positions(tmp_path / "positions.json")
-    assert positions[0]["entry_guard"] == "no_price"
+    assert result["open"] == 0
+    assert result["skipped"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["outcome"] == "skipped"
+    assert log.iloc[0]["entry_guard"] == "no_price"
+    assert log.iloc[0]["exit_reason"] == "no_price"
 
 
 def test_unvalidated_signal_is_not_paper_traded(tmp_path):
