@@ -1,25 +1,6 @@
 [
   {
-    "bars_held": "4",
-    "entry_guard": "passed",
-    "entry_price": "62902.94642857142857250000000",
-    "horizon_bars": "6",
-    "initial_stop_price": "63184.82871428571427602000000",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "BTCUSDC",
-    "peak_price": "62902.94642857142857250000000",
-    "regime": "bear",
-    "side": "SELL",
-    "signal_id": "b4605405d179a75d",
-    "slice_id": "feat_trend_strength_20:0:SHORT",
-    "stop_price": "63184.82871428571427602000000",
-    "trail_active": "0",
-    "trough_price": "62902.94642857142857250000000"
-  },
-  {
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_guard": "passed",
     "entry_price": "103.0285714285714288750000000",
     "horizon_bars": "6",
@@ -38,7 +19,7 @@
     "trough_price": "103.0285714285714288750000000"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "1887.585714285714288125000000",
     "horizon_bars": "6",
@@ -55,5 +36,43 @@
     "stop_price": "1904.122457142857120572500000",
     "trail_active": "0",
     "trough_price": "1887.585714285714288125000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "58.96178571428571440000000000",
+    "horizon_bars": "6",
+    "initial_stop_price": "60.29944285714285577600000000",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "HYPEUSDC",
+    "peak_price": "58.96178571428571440000000000",
+    "regime": "bull",
+    "side": "SELL",
+    "signal_id": "c50679d851cb73c5",
+    "slice_id": "feat_ret_1:2:SHORT",
+    "stop_price": "60.29944285714285577600000000",
+    "trail_active": "0",
+    "trough_price": "58.96178571428571440000000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "63338.41071428571428500000000",
+    "horizon_bars": "6",
+    "initial_stop_price": "63816.58785714285714932000000",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BTCUSDC",
+    "peak_price": "63338.41071428571428500000000",
+    "regime": "neutral",
+    "side": "SELL",
+    "signal_id": "45183301023e0836",
+    "slice_id": "feat_trend_strength_20:0:SHORT",
+    "stop_price": "63816.58785714285714932000000",
+    "trail_active": "0",
+    "trough_price": "63338.41071428571428500000000"
   }
 ]
