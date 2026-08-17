@@ -73,6 +73,8 @@ jobs:
           # Optional spot margin shorts
           BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS: ${{ secrets.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || vars.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || '0' }}
           BREAKWATER_SPOT_MARGIN_ACK: ${{ secrets.BREAKWATER_SPOT_MARGIN_ACK || vars.BREAKWATER_SPOT_MARGIN_ACK || 'off' }}
+          BREAKWATER_PAPER_ENTRY_MODE: ${{ secrets.BREAKWATER_PAPER_ENTRY_MODE || vars.BREAKWATER_PAPER_ENTRY_MODE || 'aligned' }}
+          BREAKWATER_PAPER_SELECTION_MODE: ${{ secrets.BREAKWATER_PAPER_SELECTION_MODE || vars.BREAKWATER_PAPER_SELECTION_MODE || 'explore' }}
 
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
       - name: Persist bounded state
