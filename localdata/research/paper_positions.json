@@ -2,44 +2,6 @@
   {
     "bars_held": "5",
     "entry_guard": "passed",
-    "entry_price": "58.96178571428571440000000000",
-    "horizon_bars": "6",
-    "initial_stop_price": "60.29944285714285577600000000",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "HYPEUSDC",
-    "peak_price": "58.96178571428571440000000000",
-    "regime": "bull",
-    "side": "SELL",
-    "signal_id": "c50679d851cb73c5",
-    "slice_id": "feat_ret_1:2:SHORT",
-    "stop_price": "60.29944285714285577600000000",
-    "trail_active": "0",
-    "trough_price": "58.96178571428571440000000000"
-  },
-  {
-    "bars_held": "5",
-    "entry_guard": "passed",
-    "entry_price": "63338.41071428571428500000000",
-    "horizon_bars": "6",
-    "initial_stop_price": "63816.58785714285714932000000",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "BTCUSDC",
-    "peak_price": "63338.41071428571428500000000",
-    "regime": "neutral",
-    "side": "SELL",
-    "signal_id": "45183301023e0836",
-    "slice_id": "feat_trend_strength_20:0:SHORT",
-    "stop_price": "63816.58785714285714932000000",
-    "trail_active": "0",
-    "trough_price": "63338.41071428571428500000000"
-  },
-  {
-    "bars_held": "4",
-    "entry_guard": "passed",
     "entry_price": "103.8589285714285712750000001",
     "horizon_bars": "6",
     "initial_stop_price": "102.0344285714285730380000001",
@@ -57,7 +19,7 @@
     "trough_price": "103.8589285714285712750000001"
   },
   {
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "9860.107142857142857500000003",
     "horizon_bars": "24",
@@ -76,7 +38,7 @@
     "trough_price": "9860.107142857142857500000003"
   },
   {
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "1905.819642857142850000000000",
     "horizon_bars": "24",
@@ -93,5 +55,24 @@
     "stop_price": "1876.144642857142950000000000",
     "trail_active": "0",
     "trough_price": "1905.819642857142850000000000"
+  },
+  {
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "59.32575000000000008750000002",
+    "horizon_bars": "12",
+    "initial_stop_price": "57.73324999999999886250000002",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "HYPEUSDC",
+    "peak_price": "59.32575000000000008750000002",
+    "regime": "bull",
+    "side": "BUY",
+    "signal_id": "9f78292660fe3400",
+    "slice_id": "feat_trend_slope_20:2:LONG:h12",
+    "stop_price": "57.73324999999999886250000002",
+    "trail_active": "0",
+    "trough_price": "59.32575000000000008750000002"
   }
 ]
