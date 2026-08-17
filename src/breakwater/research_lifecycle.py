@@ -34,7 +34,6 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-
 from breakwater.validation import ValidatedSlice, read_validated
 
 BOOK_HEADERS = [
@@ -79,7 +78,6 @@ def _coerce_int(value, default: int = 0) -> int:
     except (TypeError, ValueError):
         return default
 
-
 def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> int:
     changed = 0
     for row in rows:
@@ -119,13 +117,12 @@ def read_book(path: Path) -> list[dict]:
 
 
 def _min_net_edge() -> float:
-    raw = os.getenv("BREAKWATER_MIN_NET_EDGE", "0.0005")
+    raw = os.getenv("BREAKWATER_MIN_NET_EDGE", "0")
     try:
         value = float(raw)
     except (TypeError, ValueError):
         value = 0.0
     return max(0.0, value)
-
 
 def _directional_edge(row: ValidatedSlice) -> bool:
     # mean_ret_costadj is NET return for the chosen side (already cost-aware).
@@ -154,7 +151,6 @@ def _convert_legacy_semantics_inplace(row: dict) -> None:
     else:
         row["edge_is_directional_net"] = _truthy_bool_str(flag)
 
-
 def sync_book(
     *,
     validated_path: Path,
@@ -167,12 +163,12 @@ def sync_book(
     validated = [row for row in read_validated(validated_path) if row.validated]
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
-    rows: list[dict] = []
 
-    # FIX: carry is determined by kinds that were actually promoted into `rows`,
-    # not merely by kinds that had `validated=True` rows.
+    # Carry-forward must be keyed off what actually promoted, not what merely validated,
+    # otherwise a kind can be wiped when it validates rows but none pass promotion filters.
     promoted_kinds: set[str] = set()
 
+    rows: list[dict] = []
     summary: dict = {
         "validated": len(validated),
         "monitored": 0,
@@ -185,12 +181,13 @@ def sync_book(
         "carried_decayed": 0,
         "rows_total_after_sync": 0,
     }
-
     # Promote newly validated slices
     for row in validated:
         prior = existing.get(row.slice_id)
         if row.n < MIN_BOOK_ROWS or not _directional_edge(row):
             continue
+
+        promoted_kinds.add(row.kind)
 
         cooldown_until = _coerce_int(prior.get("cooldown_until"), 0) if prior else 0
         if cooldown_until > now_epoch:
@@ -212,7 +209,6 @@ def sync_book(
         else:
             status = MONITORED
             summary["monitored"] += 1
-
         rows.append(
             {
                 "slice_id": row.slice_id,
@@ -238,10 +234,9 @@ def sync_book(
                 "edge_is_directional_net": "True",
             }
         )
-        promoted_kinds.add(str(row.kind))
 
-    # Carry rows for kinds that did not get promoted in this run
-    carried = [r for r in existing_rows if str(r.get("kind") or "") not in promoted_kinds]
+    # Carry rows for kinds that did not promote anything in this run.
+    carried = [r for r in existing_rows if r.get("kind") not in promoted_kinds]
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
         summary["carried_total"] = len(carried)
@@ -262,7 +257,6 @@ def sync_book(
 
     _write_book(book_path, rows)
     return summary
-
 
 def apply_signal_feedback(
     book_path: Path,
@@ -329,7 +323,6 @@ def _write_book(path: Path, rows: list[dict]) -> None:
         except OSError:
             pass
         raise
-
 
 def read_cooldown_journal(path: Path) -> list[dict]:
     if not path.exists():
