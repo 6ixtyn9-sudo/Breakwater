@@ -17,7 +17,8 @@ defaults:
 jobs:
   guardian:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -44,8 +45,18 @@ jobs:
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+
           BREAKWATER_MODE: ${{ vars.BREAKWATER_MODE || 'readonly' }}
+
+          # Keep monitoring aligned with research binning + history depth
+          BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
+          BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '300' }}
+          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
+          BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
+
           BREAKWATER_LIVE_ACK: ${{ secrets.BREAKWATER_LIVE_ACK }}
+
           BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
           BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR: ${{ secrets.BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR }}
           BREAKWATER_MAX_TOTAL_LOSS_ZAR: ${{ secrets.BREAKWATER_MAX_TOTAL_LOSS_ZAR }}
@@ -58,6 +69,7 @@ jobs:
           BREAKWATER_MAX_EFFECTIVE_LEVERAGE: ${{ secrets.BREAKWATER_MAX_EFFECTIVE_LEVERAGE }}
           BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
           BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
+
         run: PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
 
       - name: Persist bounded state
