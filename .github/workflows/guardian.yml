@@ -22,7 +22,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
@@ -32,7 +31,6 @@ jobs:
 
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.lock
-
       - name: Restore transactional cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
@@ -45,8 +43,10 @@ jobs:
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
-
           BREAKWATER_MODE: ${{ vars.BREAKWATER_MODE || 'readonly' }}
+
+          # Keep consistent env across workflows
+          BREAKWATER_MIN_NET_EDGE: ${{ secrets.BREAKWATER_MIN_NET_EDGE || vars.BREAKWATER_MIN_NET_EDGE || '0' }}
 
           # Keep monitoring aligned with research binning + history depth
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
@@ -54,7 +54,6 @@ jobs:
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
-
           # Mandate / arming
           BREAKWATER_LIVE_ACK: ${{ secrets.BREAKWATER_LIVE_ACK }}
           BREAKWATER_INITIAL_EQUITY_ZAR: ${{ secrets.BREAKWATER_INITIAL_EQUITY_ZAR }}
@@ -69,7 +68,6 @@ jobs:
           BREAKWATER_MAX_EFFECTIVE_LEVERAGE: ${{ secrets.BREAKWATER_MAX_EFFECTIVE_LEVERAGE }}
           BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
           BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
-
           # Optional spot margin shorts
           BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS: ${{ secrets.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || vars.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || '0' }}
           BREAKWATER_SPOT_MARGIN_ACK: ${{ secrets.BREAKWATER_SPOT_MARGIN_ACK || vars.BREAKWATER_SPOT_MARGIN_ACK || 'off' }}
@@ -79,7 +77,6 @@ jobs:
       - name: Persist bounded state
         if: always()
         run: bash scripts/commit_state.sh "guardian"
-
       - name: Save transactional cache
         if: always()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
