@@ -1,29 +1,23 @@
 """Walk-forward validation of discovered slices.
 
-Pooled research rows are split into contiguous time folds.
+Fix (core):
+- Validation now scores and validates slices using a stop-aware forward trade model
+  matching paper trading for horizon-based slices:
+    - Entry at close[t]
+    - Stop at +/- stop_atr_mult * ATR(14)
+    - Exit at stop if breached within horizon, else exit at close[t+h]
+    - Directional gross return minus cost => net return
 
-IMPORTANT (side + cost correctness):
-Prepared rows carry `fwd_ret_raw` (no cost, no side) and a constant `cost`.
-Validation converts raw returns to net returns for the candidate side:
+This replaces the prior close-to-close-only net return metric during validation,
+eliminating research/execution mismatch.
 
-- LONG net:  r - cost
-- SHORT net: -r - cost
-
-All fold tests, hostile regime tests, and session audit stats use those net returns.
-
-Validation gating knobs:
-- By default, validation REQUIRES discovery Bonferroni: candidate.bonferroni_pass must be True.
-- You can relax this to allow "walk-forward-only" validation (still requires strong fold
-  consistency + latest fold + hostile-regime check + net-positive mean).
-
-Env:
-- BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "1" (default) or "0"
-- BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: integer (default 4) used when Bonferroni not required
+No new knobs. CSV schema unchanged.
 """
 
 from __future__ import annotations
 
 import csv
+import math
 import os
 import tempfile
 from dataclasses import asdict, dataclass
@@ -31,7 +25,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 
 VALIDATED_HEADERS = [
     "slice_id",
@@ -115,7 +108,6 @@ class ValidatedSlice:
     hostile_mean_ret: float = 0.0
     regime_confounded: bool = False
     hostile_unproven: bool = False
-
     # Session breakdown (audit-only)
     session_asia_n: int = 0
     session_asia_mean_ret_costadj: float = 0.0
@@ -128,20 +120,18 @@ class ValidatedSlice:
     session_us_hit_rate: float = 0.0
 
 
-def _net_returns(raw_returns: np.ndarray, side: str, cost: float) -> np.ndarray:
-    if side == "LONG":
-        return raw_returns - cost
-    return (-raw_returns) - cost
+def _normal_p(t_stat: float) -> float:
+    return 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(t_stat) / math.sqrt(2.0))))
 
 
 def _fold_pass(net_returns: np.ndarray) -> bool:
     if len(net_returns) < MIN_ROWS_PER_FOLD:
         return False
-    return float(np.mean(net_returns)) > 0
+    # Keep legacy behavior (sign-based); promotion floor already enforces effect size.
+    return float(np.mean(net_returns)) > 0.0
 
 
 def _regime_series(frame: pd.DataFrame) -> pd.Series:
-    """Per-row bull / bear / neutral / unknown from the SMA-50/200 prior."""
     close = frame["close"].astype(float)
     sma50 = close.rolling(50).mean()
     sma200 = close.rolling(200).mean()
@@ -164,11 +154,6 @@ def _attach_regime_labels(prepared: pd.DataFrame) -> pd.DataFrame:
 
 
 def _hostile_regime_check(net_hostile_returns: np.ndarray) -> tuple[int, float, bool, bool]:
-    """Return (hostile_n, hostile_mean, confounded, unproven).
-
-    Net returns are oriented so profitable returns are > 0 for BOTH sides.
-    Confounded => hostile mean <= 0 (if enough hostile rows).
-    """
     hostile_n = len(net_hostile_returns)
     hostile_mean = float(np.mean(net_hostile_returns)) if hostile_n else 0.0
     if hostile_n < HOSTILE_MIN_ROWS:
@@ -177,38 +162,88 @@ def _hostile_regime_check(net_hostile_returns: np.ndarray) -> tuple[int, float, 
 
 
 def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: str) -> float:
-    """90th percentile of the slice's adverse-atr distribution, clamped."""
     mae_col = "fwd_mae_atr" if "fwd_mae_atr" in prepared.columns else "fwd_mae_atr_5"
     if mae_col not in prepared.columns:
         return 2.0
-
     subset = prepared.dropna(subset=[state_column, mae_col])
     mask = subset[state_column] == candidate.state
     values = subset.loc[mask, mae_col].to_numpy()
     if len(values) < MIN_ROWS_PER_FOLD:
         return 2.0
-
     percentile = float(np.percentile(values, 90))
     return min(STOP_ATR_CEIL, max(STOP_ATR_FLOOR, percentile))
 
 
-def _session_stats(
+def _atr14(df: pd.DataFrame) -> pd.Series:
+    close = df["close"].astype(float)
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    high_low = high - low
+    high_close_prev = (high - close.shift(1)).abs()
+    low_close_prev = (low - close.shift(1)).abs()
+    true_range = pd.concat([high_low, high_close_prev, low_close_prev], axis=1).max(axis=1)
+    return true_range.rolling(14).mean()
+
+
+def _trade_net_series_for_candidate(
+    subset: pd.DataFrame,
+    *,
+    side: str,
+    horizon_bars: int,
+    stop_atr_mult: float,
+    cost: float,
+) -> pd.Series:
+    """Compute per-row stop-aware net returns (directional, cost-adjusted), per symbol."""
+    net = pd.Series(np.nan, index=subset.index, dtype=float)
+
+    direction = 1.0 if side == "LONG" else -1.0
+
+    for _, g in subset.groupby("symbol", sort=False):
+        g = g.sort_values("start")
+
+        close = g["close"].astype(float)
+        high = g["high"].astype(float)
+        low = g["low"].astype(float)
+
+        atr = g["atr_14"] if "atr_14" in g.columns else _atr14(g)
+        atr = atr.replace(0, np.nan)
+
+        fwd_close = g["fwd_close_h"] if "fwd_close_h" in g.columns else close.shift(-horizon_bars)
+        fwd_min_low = g["fwd_min_low_h"] if "fwd_min_low_h" in g.columns else low.rolling(horizon_bars).min().shift(-horizon_bars)
+        fwd_max_high = g["fwd_max_high_h"] if "fwd_max_high_h" in g.columns else high.rolling(horizon_bars).max().shift(-horizon_bars)
+
+        if side == "LONG":
+            stop = close - stop_atr_mult * atr
+            hit = fwd_min_low <= stop
+        else:
+            stop = close + stop_atr_mult * atr
+            hit = fwd_max_high >= stop
+
+        exit_price = np.where(hit.to_numpy(dtype=bool), stop.to_numpy(), fwd_close.to_numpy())
+        gross_dir = ((exit_price - close.to_numpy()) / close.to_numpy()) * direction
+        net_dir = gross_dir - float(cost)
+
+        series = pd.Series(net_dir, index=g.index)
+        net.loc[g.index] = series
+
+    return net
+
+
+def _session_stats_from_net(
     subset: pd.DataFrame,
     slice_mask: np.ndarray,
     session_label: str,
-    *,
-    side: str,
-    cost: float,
+    net_values: np.ndarray,
 ) -> tuple[int, float, float]:
     if "session_utc" not in subset.columns:
         return 0, 0.0, 0.0
     sess = subset["session_utc"].to_numpy()
-    raw = subset.loc[(slice_mask & (sess == session_label)), "fwd_ret_raw"].to_numpy()
-    n = len(raw)
+    values = net_values[slice_mask & (sess == session_label)]
+    values = values[np.isfinite(values)]
+    n = len(values)
     if n == 0:
         return 0, 0.0, 0.0
-    net = _net_returns(raw, side, cost)
-    return n, float(np.mean(net)), float(np.mean(net > 0))
+    return n, float(np.mean(values)), float(np.mean(values > 0))
 
 
 def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
@@ -217,37 +252,60 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
 
     labelled = _attach_regime_labels(prepared)
     rows = (
-        labelled.dropna(subset=["fwd_ret_raw"])
+        labelled.dropna(subset=["close", "high", "low"])
         .sort_values("start")
         .reset_index(drop=True)
     )
-
     cost = float(rows["cost"].iloc[0]) if "cost" in rows.columns and len(rows) else 0.0
 
     validated: list[ValidatedSlice] = []
+
     for candidate in candidates:
         state_column = f"state_{candidate.feature}"
         if state_column not in rows.columns:
             continue
 
-        subset = rows.dropna(subset=[state_column, "fwd_ret_raw"])
-        mask = (subset[state_column] == candidate.state).to_numpy(dtype=bool)
+        subset = rows.dropna(subset=[state_column, "close", "high", "low"])
+        slice_mask = (subset[state_column] == candidate.state).to_numpy(dtype=bool)
 
+        stop_atr_mult = _calibrate_stop_atr_mult(prepared, candidate, state_column)
+
+        net_series = _trade_net_series_for_candidate(
+            subset,
+            side=str(candidate.side),
+            horizon_bars=int(candidate.horizon_bars),
+            stop_atr_mult=float(stop_atr_mult),
+            cost=float(cost),
+        )
+        net_values = net_series.to_numpy()
+
+        # Only consider rows where the net return is defined (horizon exists, ATR exists)
+        valid = np.isfinite(net_values)
+        slice_mask = slice_mask & valid
+
+        slice_net = net_values[slice_mask]
+        n = int(len(slice_net))
+        mean_net = float(np.mean(slice_net)) if n else 0.0
+        std = float(np.std(slice_net, ddof=1)) if n > 1 else 0.0
+        t_stat = mean_net / (std / math.sqrt(n)) if std > 0 else 0.0
+        p_value = _normal_p(t_stat)
+
+        # Walk-forward folds over time (subset already sorted by start)
         fold_ids = np.linspace(0, len(subset), FOLD_COUNT + 1).astype(int)
-        fold_results = []
-        fold_means = []
-        fold_sizes = []
+        fold_results: list[str] = []
+        fold_means: list[float] = []
+        fold_sizes: list[int] = []
+
         for fold in range(FOLD_COUNT):
             fold_mask = np.zeros(len(subset), dtype=bool)
             fold_mask[fold_ids[fold] : fold_ids[fold + 1]] = True
 
-            raw = subset.loc[(mask & fold_mask), "fwd_ret_raw"].to_numpy()
-            net = _net_returns(raw, candidate.side, cost)
+            fold_returns = net_values[slice_mask & fold_mask]
+            passed = _fold_pass(fold_returns)
 
-            passed = _fold_pass(net)
             fold_results.append("1" if passed else "0")
-            fold_means.append(float(np.mean(net)) if len(net) else 0.0)
-            fold_sizes.append(len(net))
+            fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
+            fold_sizes.append(int(len(fold_returns)))
 
         pattern = "".join(fold_results)
         pass_count = pattern.count("1")
@@ -261,48 +319,47 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         if REQUIRE_BONFERRONI:
             temporal_pass = temporal_pass and bool(candidate.bonferroni_pass)
 
-        hostile_label = "bear" if candidate.side == "LONG" else "bull"
-        hostile_mask = mask & (subset["regime_row"].to_numpy() == hostile_label)
-        hostile_raw = subset.loc[hostile_mask, "fwd_ret_raw"].to_numpy()
-        hostile_net = _net_returns(hostile_raw, candidate.side, cost)
-
+        hostile_label = "bear" if str(candidate.side) == "LONG" else "bull"
+        hostile_mask = slice_mask & (subset["regime_row"].to_numpy() == hostile_label)
+        hostile_net = net_values[hostile_mask]
+        hostile_net = hostile_net[np.isfinite(hostile_net)]
         hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(hostile_net)
 
-        asia_n, asia_mean, asia_hit = _session_stats(subset, mask, SESSION_ASIA, side=candidate.side, cost=cost)
-        eu_n, eu_mean, eu_hit = _session_stats(subset, mask, SESSION_EU, side=candidate.side, cost=cost)
-        us_n, us_mean, us_hit = _session_stats(subset, mask, SESSION_US, side=candidate.side, cost=cost)
+        asia_n, asia_mean, asia_hit = _session_stats_from_net(subset, slice_mask, SESSION_ASIA, net_values)
+        eu_n, eu_mean, eu_hit = _session_stats_from_net(subset, slice_mask, SESSION_EU, net_values)
+        us_n, us_mean, us_hit = _session_stats_from_net(subset, slice_mask, SESSION_US, net_values)
 
         validated.append(
             ValidatedSlice(
                 slice_id=candidate.slice_id,
                 kind=candidate.kind,
                 feature=candidate.feature,
-                state=candidate.state,
-                side=candidate.side,
+                state=int(candidate.state),
+                side=str(candidate.side),
                 folds=FOLD_COUNT,
                 walk_forward_pass_pattern=pattern,
-                walk_forward_pass_count=pass_count,
+                walk_forward_pass_count=int(pass_count),
                 fold_mean_rets=",".join(f"{value:.6f}" for value in fold_means),
                 fold_sizes=",".join(str(size) for size in fold_sizes),
-                n=candidate.n,
-                mean_ret_costadj=candidate.mean_ret_costadj,
-                p_value=candidate.p_value,
-                validated=(temporal_pass and not confounded and candidate.mean_ret_costadj > 0),
-                horizon_bars=candidate.horizon_bars,
-                stop_atr_mult=_calibrate_stop_atr_mult(prepared, candidate, state_column),
-                hostile_n=hostile_n,
-                hostile_mean_ret=hostile_mean,
-                regime_confounded=confounded,
-                hostile_unproven=hostile_unproven,
-                session_asia_n=asia_n,
-                session_asia_mean_ret_costadj=asia_mean,
-                session_asia_hit_rate=asia_hit,
-                session_eu_n=eu_n,
-                session_eu_mean_ret_costadj=eu_mean,
-                session_eu_hit_rate=eu_hit,
-                session_us_n=us_n,
-                session_us_mean_ret_costadj=us_mean,
-                session_us_hit_rate=us_hit,
+                n=n,
+                mean_ret_costadj=mean_net,
+                p_value=float(p_value),
+                validated=(temporal_pass and not confounded and mean_net > 0.0),
+                horizon_bars=int(candidate.horizon_bars),
+                stop_atr_mult=float(stop_atr_mult),
+                hostile_n=int(hostile_n),
+                hostile_mean_ret=float(hostile_mean),
+                regime_confounded=bool(confounded),
+                hostile_unproven=bool(hostile_unproven),
+                session_asia_n=int(asia_n),
+                session_asia_mean_ret_costadj=float(asia_mean),
+                session_asia_hit_rate=float(asia_hit),
+                session_eu_n=int(eu_n),
+                session_eu_mean_ret_costadj=float(eu_mean),
+                session_eu_hit_rate=float(eu_hit),
+                session_us_n=int(us_n),
+                session_us_mean_ret_costadj=float(us_mean),
+                session_us_hit_rate=float(us_hit),
             )
         )
 
@@ -314,7 +371,6 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         return []
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-
         optional = {
             "stop_atr_mult",
             "hostile_n",
@@ -334,13 +390,11 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         required = set(VALIDATED_HEADERS) - optional
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise RuntimeError("validated slices file has an unsupported schema")
-
         fieldnames = set(reader.fieldnames or [])
         has_stop = "stop_atr_mult" in fieldnames
         has_hostile = "hostile_n" in fieldnames
         has_unproven = "hostile_unproven" in fieldnames
         has_session = "session_asia_n" in fieldnames
-
         out = []
         for row in reader:
             out.append(
@@ -382,9 +436,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
 def write_validated(path, rows: list[ValidatedSlice]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = [asdict(row) for row in rows]
-    file_descriptor, temporary_name = tempfile.mkstemp(
-        prefix=path.name + ".", suffix=".tmp", dir=path.parent
-    )
+    file_descriptor, temporary_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(file_descriptor, "w", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=VALIDATED_HEADERS)
