@@ -1,9 +1,7 @@
 """VALR-native catalog, time and candle completeness checks.
 
-Upgrade:
-- fetch_recent_candles now supports counts > 300 by paging backwards in time.
-  VALR enforces per-request limit <= 300 (see ValrClient.candles), but we can
-  call it multiple times with earlier (start,end) windows to build longer history.
+Patch: enable paging in fetch_recent_candles() so research can request >300 SPOT
+candles (VALR per-request limit remains 300; we page backwards).
 
 Env:
 - BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS (default 0.05): politeness delay between pages
@@ -126,28 +124,32 @@ def fetch_recent_candles(
     period_seconds: int = 3600,
     count: int = 220,
 ) -> list[Candle]:
-    """Fetch up to `count` completed candles, paging if needed.
+    """Fetch up to `count` completed candles.
 
-    - VALR per-request candle limit is <= 300.
-    - We page backwards by moving end_epoch to just before the oldest candle
-      returned on the previous page.
+    VALR limits each candle request to <= 300 rows. For count > 300, we page
+    backwards in time by shifting `end_epoch` earlier after each page.
+
+    Returns the newest `count` completed candles in chronological order.
     """
     if count < 2 or count > MAX_PAGED_COUNT:
         raise ValueError(f"candle count must be between 2 and {MAX_PAGED_COUNT}")
 
-    # Politeness delay for multi-page fetches.
+    # Politeness delay when paging (avoid hammering public endpoint)
+    raw_sleep = str(os.getenv("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05")).strip()
     try:
-        sleep_seconds = float(str(os.getenv("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05")))
-    except Exception:
+        sleep_seconds = float(raw_sleep) if raw_sleep else 0.05
+    except ValueError:
         sleep_seconds = 0.05
     if sleep_seconds < 0:
         sleep_seconds = 0.0
 
     end_epoch = int(server_time.timestamp())
     page_end = end_epoch
+
+    # Use a dict keyed by candle start to dedupe overlaps across pages
     collected: dict[datetime, Candle] = {}
 
-    # Bound pagination so a weird API response can't spin forever.
+    # Safety: cap page count so we can't loop forever on weird API behavior
     max_pages = max(1, (count + MAX_VALR_LIMIT - 1) // MAX_VALR_LIMIT) + 3
     pages = 0
 
@@ -155,7 +157,7 @@ def fetch_recent_candles(
         remaining = count - len(collected)
         page_limit = min(MAX_VALR_LIMIT, remaining)
 
-        # Slightly wider-than-necessary window reduces off-by-one gaps.
+        # Fetch a slightly wider time window than strictly required (robustness)
         start_epoch = max(0, page_end - period_seconds * (page_limit + 5))
 
         try:
@@ -178,6 +180,8 @@ def fetch_recent_candles(
 
         oldest = min(candle.start for candle in complete)
         next_end = int(oldest.timestamp()) - period_seconds
+
+        # If the endpoint isn't moving us back in time, stop.
         if next_end >= page_end:
             break
 
@@ -190,4 +194,5 @@ def fetch_recent_candles(
     ordered = sorted(collected.values(), key=lambda candle: candle.start)
     if len(ordered) < 60:
         raise MarketStateError(f"insufficient completed candles for {pair}")
+
     return ordered[-count:]
