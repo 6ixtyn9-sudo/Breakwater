@@ -17,6 +17,7 @@ defaults:
 jobs:
   refresh:
     runs-on: ubuntu-24.04
+    # Multi-horizon + paged candles can take longer.
     timeout-minutes: 90
 
     steps:
@@ -37,24 +38,29 @@ jobs:
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+
           BREAKWATER_MODE: readonly
 
-          # Multi-horizon research (preferred). Example: "6,12,24"
+          # Preferred: multi-horizon research (you added this secret)
           BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '6,12,24' }}
-          # Back-compat fallback (used only if BREAKWATER_RESEARCH_HORIZONS is empty)
+          # Back-compat fallback (only used if BREAKWATER_RESEARCH_HORIZONS is blank in code)
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
 
-          # Scale knobs
-          BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '1200' }}
-          BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '1200' }}
-          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
+          # === Research scale knobs ===
+          BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
+          BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '300' }}
 
-          # Discovery binning knobs
-          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.2,0.8' }}
+          # === Discovery binning knobs ===
+          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
 
-          # Relaxed validation gate (still requires net-positive mean + fold consistency + hostile-regime check)
+          # Optional politeness delay for paged candle fetches
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
+
+          # RELAXED VALIDATION (still strict walk-forward + hostile-regime + net-positive)
+          # 0 => do NOT require discovery Bonferroni to validate
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
+          # when Bonferroni not required, require at least this many passing folds (out of 5)
           BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "3"
 
         run: PYTHONPATH=src python scripts/breakwater.py research
