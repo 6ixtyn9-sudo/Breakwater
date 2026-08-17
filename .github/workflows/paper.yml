@@ -40,14 +40,13 @@ jobs:
 
           BREAKWATER_MODE: shadow
 
-          # Align paper scan depth + binning with research
+          # Keep monitoring aligned with research binning + history depth
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
           BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '300' }}
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
 
-          # Paper controls
           BREAKWATER_PAPER_TIME_STOP_BARS: "12"
           BREAKWATER_PAPER_MAX_POSITIONS: "10"
           BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: "5"
@@ -73,7 +72,7 @@ jobs:
           BREAKWATER_PERP_LEVERAGE_CAP: ${{ secrets.BREAKWATER_PERP_LEVERAGE_CAP }}
           BREAKWATER_MAX_POSITIONS: ${{ secrets.BREAKWATER_MAX_POSITIONS }}
 
-          # Optional spot margin shorts (if your code reads these)
+          # Optional spot margin shorts
           BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS: ${{ secrets.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || vars.BREAKWATER_ENABLE_SPOT_MARGIN_SHORTS || '0' }}
           BREAKWATER_SPOT_MARGIN_ACK: ${{ secrets.BREAKWATER_SPOT_MARGIN_ACK || vars.BREAKWATER_SPOT_MARGIN_ACK || 'off' }}
 
