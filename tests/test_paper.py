@@ -34,34 +34,49 @@ def policy():
 
 
 def frame_with_bar(close, high=None, low=None):
-    return pd.DataFrame([{
-        "start": pd.Timestamp("2026-08-14T10:00:00Z"),
-        "symbol": "BTCUSDC",
-        "open": close,
-        "high": high if high is not None else close,
-        "low": low if low is not None else close,
-        "close": close,
-        "volume": 100,
-    }])
+    return pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp("2026-08-14T10:00:00Z"),
+                "symbol": "BTCUSDC",
+                "open": close,
+                "high": high if high is not None else close,
+                "low": low if low is not None else close,
+                "close": close,
+                "volume": 100,
+            }
+        ]
+    )
 
 
 def open_position(side="BUY", entry="100", stop="95", bars="3"):
-    return [{
-        "signal_id": "sig1",
-        "pair": "BTCUSDC",
-        "kind": "PERP",
-        "slice_id": "feat:0:LONG",
-        "side": side,
-        "entry_price": entry,
-        "stop_price": stop,
-        "notional_zar": "150",
-        "bars_held": bars,
-        "missing_bars": "0",
-        "entry_guard": "passed",
-    }]
+    return [
+        {
+            "signal_id": "sig1",
+            "pair": "BTCUSDC",
+            "kind": "PERP",
+            "slice_id": "feat:0:LONG",
+            "side": side,
+            "entry_price": entry,
+            "stop_price": stop,
+            "notional_zar": "150",
+            "bars_held": bars,
+            "missing_bars": "0",
+            "entry_guard": "passed",
+        }
+    ]
 
 
-def signal(pair="BTCZAR", slice_id="feat:0:LONG", side=Side.BUY, entry="100", stop="95", atr="1", kind="SPOT", edge=0.001):
+def signal(
+    pair="BTCZAR",
+    slice_id="feat:0:LONG",
+    side=Side.BUY,
+    entry="100",
+    stop="95",
+    atr="1",
+    kind="SPOT",
+    edge=0.001,
+):
     now = datetime.now(timezone.utc)
     return SliceSignal(
         signal_id=f"sig-{slice_id}-{pair}",
@@ -83,15 +98,19 @@ def signal(pair="BTCZAR", slice_id="feat:0:LONG", side=Side.BUY, entry="100", st
 
 
 def spot_frame(close, high=None, low=None):
-    return pd.DataFrame([{
-        "start": pd.Timestamp("2026-08-14T10:00:00Z"),
-        "symbol": "BTCZAR",
-        "open": close,
-        "high": high if high is not None else close,
-        "low": low if low is not None else close,
-        "close": close,
-        "volume": 100,
-    }])
+    return pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp("2026-08-14T10:00:00Z"),
+                "symbol": "BTCZAR",
+                "open": close,
+                "high": high if high is not None else close,
+                "low": low if low is not None else close,
+                "close": close,
+                "volume": 100,
+            }
+        ]
+    )
 
 
 def cycle(tmp_path, signals, frames, positions=None, book=BOOK):
@@ -329,7 +348,7 @@ def test_one_position_per_pair(tmp_path):
 
 
 def test_log_header_migration_preserves_audit_columns(tmp_path):
-    """A legacy 13-column log must be migrated to the 16-column header with
+    """A legacy 13-column log must be migrated to the 20-column header with
     no data lost, so exit_reason / entry_guard / regime become readable."""
     legacy_header = (
         "closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,"
@@ -343,34 +362,57 @@ def test_log_header_migration_preserves_audit_columns(tmp_path):
             "t1,id2,SHIBZAR,SPOT,s:1:LONG,SELL,1,1.01,1.01,200,-3.5,loss,2,"
             "stop,passed,bear\n"
         )
-    append_log(path, {
-        "closed_at": "t2",
-        "signal_id": "id3",
-        "pair": "ETHZAR",
-        "kind": "SPOT",
-        "slice_id": "s:2:LONG",
-        "side": "SELL",
-        "entry_price": "",
-        "exit_price": "",
-        "stop_price": "",
-        "notional_zar": "0",
-        "pnl_zar": "0",
-        "outcome": "skipped",
-        "bars_held": "0",
-        "exit_reason": "regime",
-        "entry_guard": "regime_blocked",
-        "regime": "bull",
-    })
+
+    append_log(
+        path,
+        {
+            "closed_at": "t2",
+            "signal_id": "id3",
+            "pair": "ETHZAR",
+            "kind": "SPOT",
+            "slice_id": "s:2:LONG",
+            "side": "SELL",
+            "entry_price": "",
+            "exit_price": "",
+            "stop_price": "",
+            "notional_zar": "0",
+            "pnl_zar": "0",
+            "outcome": "skipped",
+            "bars_held": "0",
+            "exit_reason": "regime",
+            "entry_guard": "regime_blocked",
+            "regime": "bull",
+        },
+    )
+
     import csv
+
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         assert reader.fieldnames == [
-            "closed_at", "signal_id", "pair", "kind", "slice_id", "side",
-            "entry_price", "exit_price", "stop_price", "notional_zar",
-            "pnl_zar", "outcome", "bars_held", "exit_reason",
-            "entry_guard", "regime",
+            "closed_at",
+            "signal_id",
+            "pair",
+            "kind",
+            "slice_id",
+            "side",
+            "entry_price",
+            "exit_price",
+            "stop_price",
+            "notional_zar",
+            "pnl_zar",
+            "outcome",
+            "bars_held",
+            "exit_reason",
+            "entry_guard",
+            "regime",
+            "pnl_outcome",
+            "atr",
+            "stop_atr_mult",
+            "risk_fraction",
         ]
         rows = list(reader)
+
     assert len(rows) == 3
     assert rows[0]["exit_reason"] == ""
     assert rows[1]["exit_reason"] == "stop"
@@ -382,29 +424,78 @@ def test_log_header_migration_preserves_audit_columns(tmp_path):
 
 def test_log_header_migration_is_idempotent(tmp_path):
     path = tmp_path / "log.csv"
-    append_log(path, {
-        "closed_at": "t0", "signal_id": "x", "pair": "A", "kind": "SPOT",
-        "slice_id": "s", "side": "SELL", "entry_price": "", "exit_price": "",
-        "stop_price": "", "notional_zar": "0", "pnl_zar": "0",
-        "outcome": "skipped", "bars_held": "0", "exit_reason": "",
-        "entry_guard": "", "regime": "",
-    })
+    append_log(
+        path,
+        {
+            "closed_at": "t0",
+            "signal_id": "x",
+            "pair": "A",
+            "kind": "SPOT",
+            "slice_id": "s",
+            "side": "SELL",
+            "entry_price": "",
+            "exit_price": "",
+            "stop_price": "",
+            "notional_zar": "0",
+            "pnl_zar": "0",
+            "outcome": "skipped",
+            "bars_held": "0",
+            "exit_reason": "",
+            "entry_guard": "",
+            "regime": "",
+        },
+    )
+
     import csv
+
     with path.open(newline="") as handle:
         first = next(csv.reader(handle))
+
     assert first == [
-        "closed_at", "signal_id", "pair", "kind", "slice_id", "side",
-        "entry_price", "exit_price", "stop_price", "notional_zar",
-        "pnl_zar", "outcome", "bars_held", "exit_reason",
-        "entry_guard", "regime",
+        "closed_at",
+        "signal_id",
+        "pair",
+        "kind",
+        "slice_id",
+        "side",
+        "entry_price",
+        "exit_price",
+        "stop_price",
+        "notional_zar",
+        "pnl_zar",
+        "outcome",
+        "bars_held",
+        "exit_reason",
+        "entry_guard",
+        "regime",
+        "pnl_outcome",
+        "atr",
+        "stop_atr_mult",
+        "risk_fraction",
     ]
-    append_log(path, {
-        "closed_at": "t1", "signal_id": "y", "pair": "B", "kind": "PERP",
-        "slice_id": "s", "side": "SELL", "entry_price": "", "exit_price": "",
-        "stop_price": "", "notional_zar": "0", "pnl_zar": "0",
-        "outcome": "skipped", "bars_held": "0", "exit_reason": "",
-        "entry_guard": "", "regime": "",
-    })
+
+    append_log(
+        path,
+        {
+            "closed_at": "t1",
+            "signal_id": "y",
+            "pair": "B",
+            "kind": "PERP",
+            "slice_id": "s",
+            "side": "SELL",
+            "entry_price": "",
+            "exit_price": "",
+            "stop_price": "",
+            "notional_zar": "0",
+            "pnl_zar": "0",
+            "outcome": "skipped",
+            "bars_held": "0",
+            "exit_reason": "",
+            "entry_guard": "",
+            "regime": "",
+        },
+    )
+
     with path.open(newline="") as handle:
         lines = handle.read().strip().splitlines()
     assert len(lines) == 3
