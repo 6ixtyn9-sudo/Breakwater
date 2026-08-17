@@ -1,4 +1,11 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net
-feat_trend_slope_20:2:LONG,PERP,feat_trend_slope_20,2,LONG,monitored,2026-08-17T05:43:37+00:00,,0,0,0,0,,0.000841,703,0.291068,6,3.101,validated_walk_forward,True,True
-feat_ret_20:2:LONG,PERP,feat_ret_20,2,LONG,monitored,2026-08-17T05:43:37+00:00,,0,0,0,0,,0.000086,744,0.909341,6,3.232,validated_walk_forward,True,True
-feat_ext_vs_ma_50:2:SHORT,SPOT,feat_ext_vs_ma_50,2,SHORT,monitored,2026-08-17T05:24:33+00:00,,0,0,0,0,,0.000476,370,0.208265,6,3.500,validated_walk_forward,False,True
+feat_ext_vs_ma_50:2:SHORT:h24,SPOT,feat_ext_vs_ma_50,2,SHORT,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.001196,3759,0.007532,24,3.500,validated_walk_forward,False,True
+feat_ext_vs_ma_50:0:LONG:h24,SPOT,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.001162,5210,0.000051,24,3.500,validated_walk_forward,False,True
+feat_trend_slope_20:2:LONG:h6,PERP,feat_trend_slope_20,2,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.000830,702,0.298429,6,3.104,validated_walk_forward,True,True
+feat_ret_20:2:LONG:h6,PERP,feat_ret_20,2,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.000028,741,0.970430,6,3.247,validated_walk_forward,True,True
+feat_trend_slope_20:2:LONG:h12,PERP,feat_trend_slope_20,2,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.002456,702,0.018234,12,3.500,validated_walk_forward,True,True
+feat_ret_20:2:LONG:h12,PERP,feat_ret_20,2,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.001874,741,0.070068,12,3.500,validated_walk_forward,True,True
+feat_realized_vol_20:0:LONG:h24,PERP,feat_realized_vol_20,0,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.003673,1963,0.000005,24,3.500,validated_walk_forward,False,True
+feat_trend_strength_20:2:LONG:h24,PERP,feat_trend_strength_20,2,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.003336,1145,0.001043,24,3.500,validated_walk_forward,False,True
+feat_vol_regime:1:LONG:h24,PERP,feat_vol_regime,1,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.001321,3218,0.032645,24,3.500,validated_walk_forward,False,True
+feat_ret_1:1:LONG:h24,PERP,feat_ret_1,1,LONG,monitored,2026-08-17T06:03:30+00:00,,0,0,0,0,,0.000018,3967,0.973725,24,3.500,validated_walk_forward,False,True
