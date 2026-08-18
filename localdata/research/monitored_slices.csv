@@ -1,5 +1,5 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net
-feat_ext_vs_ma_50:0:LONG:h24,SPOT,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-17T12:26:44+00:00,1787029200,1,0,1,-0.1385,,0.000207,5137,0.798554,24,3.500,validated_walk_forward,False,True
+feat_ext_vs_ma_50:2:SHORT:h24,SPOT,feat_ext_vs_ma_50,2,SHORT,monitored,2026-08-18T12:01:29+00:00,,0,0,0,0,,0.001006,3690,0.088123,24,3.500,validated_walk_forward,False,True
 feat_trend_slope_20:2:LONG:h6,PERP,feat_trend_slope_20,2,LONG,monitored,2026-08-17T08:25:30+00:00,,0,0,0,0,,0.000682,695,0.400904,6,3.094,validated_walk_forward,True,True
 feat_trend_slope_20:2:LONG:h12,PERP,feat_trend_slope_20,2,LONG,monitored,2026-08-17T08:25:30+00:00,1787000400,1,0,1,-2.4846,,0.002348,695,0.023757,12,3.500,validated_walk_forward,True,True
 feat_ret_20:2:LONG:h12,PERP,feat_ret_20,2,LONG,monitored,2026-08-17T08:25:30+00:00,,0,0,0,0,,0.002150,736,0.034869,12,3.500,validated_walk_forward,True,True
