@@ -1,3 +1,4 @@
+```python
 """Walk-forward validation of discovered slices.
 
 Fixes the remaining "quant trap" issues:
@@ -65,6 +66,8 @@ VALIDATED_HEADERS = [
     "temporal_pass",
     "direction_ok",
     "breadth_ok",
+    "breadth_symbols_used",
+    "breadth_positive_fraction",
     "recency_ok",
     "mean_positive",
     "side_train",
@@ -123,7 +126,9 @@ def _coerce_int(value, default: int) -> int:
 
 
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
-RELAXED_MIN_PASSES = _coerce_int(os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4)
+RELAXED_MIN_PASSES = _coerce_int(
+    os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4
+)
 
 
 @dataclass(frozen=True)
@@ -149,6 +154,8 @@ class ValidatedSlice:
     temporal_pass: bool = False
     direction_ok: bool = False
     breadth_ok: bool = False
+    breadth_symbols_used: int = 0
+    breadth_positive_fraction: float = 0.0
     recency_ok: bool = False
     mean_positive: bool = False
     side_train: str = ""
@@ -315,27 +322,44 @@ def _session_stats_from_net(
     return n, float(np.mean(values)), float(np.mean(values > 0))
 
 
-def _symbol_breadth_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.ndarray) -> bool:
+def _symbol_breadth_stats(
+    subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.ndarray
+) -> tuple[bool, int, float]:
+    """Return (breadth_ok, breadth_symbols_used, breadth_positive_fraction).
+
+    symbols_used counts how many symbols met BREADTH_MIN_ROWS_PER_SYMBOL.
+    positive_fraction is the fraction of those symbol-means that are > 0.
+    """
     if "symbol" not in subset.columns:
-        return False
+        return False, 0, 0.0
     df = subset.loc[slice_mask, ["symbol"]].copy()
     if df.empty:
-        return False
+        return False, 0, 0.0
     df["net"] = net_values[slice_mask]
     df = df[np.isfinite(df["net"].to_numpy())]
     if df.empty:
-        return False
+        return False, 0, 0.0
 
-    means = []
-    for sym, g in df.groupby("symbol"):
+    means: list[float] = []
+    for _, g in df.groupby("symbol"):
         if len(g) < BREADTH_MIN_ROWS_PER_SYMBOL:
             continue
         means.append(float(g["net"].mean()))
 
-    if len(means) < BREADTH_MIN_SYMBOLS:
-        return False
+    symbols_used = int(len(means))
+    if symbols_used == 0:
+        return False, 0, 0.0
+
     pos_frac = float(np.mean(np.array(means) > 0.0))
-    return pos_frac >= BREADTH_MIN_POSITIVE_FRACTION
+    ok = (symbols_used >= BREADTH_MIN_SYMBOLS) and (pos_frac >= BREADTH_MIN_POSITIVE_FRACTION)
+    return ok, symbols_used, pos_frac
+
+
+def _symbol_breadth_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.ndarray) -> bool:
+    if "symbol" not in subset.columns:
+        return False
+    ok, _, _ = _symbol_breadth_stats(subset, slice_mask, net_values)
+    return ok
 
 
 def _recency_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.ndarray) -> bool:
@@ -415,7 +439,9 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         mean_positive = mean_net > 0.0
 
         # Symbol-breadth check (pooled illusion fix)
-        breadth_ok = _symbol_breadth_ok(subset, slice_mask, net_values)
+        breadth_ok, breadth_symbols_used, breadth_positive_fraction = _symbol_breadth_stats(
+            subset, slice_mask, net_values
+        )
         # Recency check (latest-fold brittleness fix)
         recency_ok = _recency_ok(subset, slice_mask, net_values)
 
@@ -480,9 +506,15 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         hostile_net = net_values[hostile_mask]
         hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(hostile_net)
 
-        asia_n, asia_mean, asia_hit = _session_stats_from_net(subset, slice_mask, SESSION_ASIA, net_values)
-        eu_n, eu_mean, eu_hit = _session_stats_from_net(subset, slice_mask, SESSION_EU, net_values)
-        us_n, us_mean, us_hit = _session_stats_from_net(subset, slice_mask, SESSION_US, net_values)
+        asia_n, asia_mean, asia_hit = _session_stats_from_net(
+            subset, slice_mask, SESSION_ASIA, net_values
+        )
+        eu_n, eu_mean, eu_hit = _session_stats_from_net(
+            subset, slice_mask, SESSION_EU, net_values
+        )
+        us_n, us_mean, us_hit = _session_stats_from_net(
+            subset, slice_mask, SESSION_US, net_values
+        )
 
         is_validated = (
             temporal_pass
@@ -528,6 +560,8 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
                 temporal_pass=bool(temporal_pass),
                 direction_ok=bool(direction_ok),
                 breadth_ok=bool(breadth_ok),
+                breadth_symbols_used=int(breadth_symbols_used),
+                breadth_positive_fraction=float(breadth_positive_fraction),
                 recency_ok=bool(recency_ok),
                 mean_positive=bool(mean_positive),
                 side_train=str(side_train),
@@ -581,6 +615,8 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
             "temporal_pass",
             "direction_ok",
             "breadth_ok",
+            "breadth_symbols_used",
+            "breadth_positive_fraction",
             "recency_ok",
             "mean_positive",
             "side_train",
@@ -597,6 +633,9 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         has_unproven = "hostile_unproven" in fieldnames
         has_session = "session_asia_n" in fieldnames
         has_diag = "fail_reasons" in fieldnames or "temporal_pass" in fieldnames
+        has_breadth_stats = (
+            "breadth_symbols_used" in fieldnames or "breadth_positive_fraction" in fieldnames
+        )
 
         out = []
         for row in reader:
@@ -621,6 +660,12 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     temporal_pass=(row.get("temporal_pass") == "True") if has_diag else False,
                     direction_ok=(row.get("direction_ok") == "True") if has_diag else False,
                     breadth_ok=(row.get("breadth_ok") == "True") if has_diag else False,
+                    breadth_symbols_used=int(row.get("breadth_symbols_used") or 0)
+                    if (has_diag and has_breadth_stats)
+                    else 0,
+                    breadth_positive_fraction=float(row.get("breadth_positive_fraction") or 0.0)
+                    if (has_diag and has_breadth_stats)
+                    else 0.0,
                     recency_ok=(row.get("recency_ok") == "True") if has_diag else False,
                     mean_positive=(row.get("mean_positive") == "True") if has_diag else False,
                     side_train=str(row.get("side_train") or "") if has_diag else "",
@@ -629,17 +674,39 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     stop_atr_mult=float(row["stop_atr_mult"]) if has_stop else 2.0,
                     hostile_n=int(row["hostile_n"]) if has_hostile else 0,
                     hostile_mean_ret=float(row["hostile_mean_ret"]) if has_hostile else 0.0,
-                    regime_confounded=(row.get("regime_confounded") == "True" if has_hostile else False),
-                    hostile_unproven=(row.get("hostile_unproven") == "True" if has_unproven else False),
-                    session_asia_n=int(row["session_asia_n"]) if has_session and row.get("session_asia_n") else 0,
-                    session_asia_mean_ret_costadj=float(row["session_asia_mean_ret_costadj"]) if has_session and row.get("session_asia_mean_ret_costadj") else 0.0,
-                    session_asia_hit_rate=float(row["session_asia_hit_rate"]) if has_session and row.get("session_asia_hit_rate") else 0.0,
-                    session_eu_n=int(row["session_eu_n"]) if has_session and row.get("session_eu_n") else 0,
-                    session_eu_mean_ret_costadj=float(row["session_eu_mean_ret_costadj"]) if has_session and row.get("session_eu_mean_ret_costadj") else 0.0,
-                    session_eu_hit_rate=float(row["session_eu_hit_rate"]) if has_session and row.get("session_eu_hit_rate") else 0.0,
-                    session_us_n=int(row["session_us_n"]) if has_session and row.get("session_us_n") else 0,
-                    session_us_mean_ret_costadj=float(row["session_us_mean_ret_costadj"]) if has_session and row.get("session_us_mean_ret_costadj") else 0.0,
-                    session_us_hit_rate=float(row["session_us_hit_rate"]) if has_session and row.get("session_us_hit_rate") else 0.0,
+                    regime_confounded=(
+                        row.get("regime_confounded") == "True" if has_hostile else False
+                    ),
+                    hostile_unproven=(
+                        row.get("hostile_unproven") == "True" if has_unproven else False
+                    ),
+                    session_asia_n=int(row["session_asia_n"])
+                    if has_session and row.get("session_asia_n")
+                    else 0,
+                    session_asia_mean_ret_costadj=float(row["session_asia_mean_ret_costadj"])
+                    if has_session and row.get("session_asia_mean_ret_costadj")
+                    else 0.0,
+                    session_asia_hit_rate=float(row["session_asia_hit_rate"])
+                    if has_session and row.get("session_asia_hit_rate")
+                    else 0.0,
+                    session_eu_n=int(row["session_eu_n"])
+                    if has_session and row.get("session_eu_n")
+                    else 0,
+                    session_eu_mean_ret_costadj=float(row["session_eu_mean_ret_costadj"])
+                    if has_session and row.get("session_eu_mean_ret_costadj")
+                    else 0.0,
+                    session_eu_hit_rate=float(row["session_eu_hit_rate"])
+                    if has_session and row.get("session_eu_hit_rate")
+                    else 0.0,
+                    session_us_n=int(row["session_us_n"])
+                    if has_session and row.get("session_us_n")
+                    else 0,
+                    session_us_mean_ret_costadj=float(row["session_us_mean_ret_costadj"])
+                    if has_session and row.get("session_us_mean_ret_costadj")
+                    else 0.0,
+                    session_us_hit_rate=float(row["session_us_hit_rate"])
+                    if has_session and row.get("session_us_hit_rate")
+                    else 0.0,
                 )
             )
         return out
@@ -648,7 +715,9 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
 def write_validated(path, rows: list[ValidatedSlice]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = [asdict(row) for row in rows]
-    file_descriptor, temporary_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
     try:
         with os.fdopen(file_descriptor, "w", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=VALIDATED_HEADERS)
@@ -663,3 +732,4 @@ def write_validated(path, rows: list[ValidatedSlice]) -> None:
         except OSError:
             pass
         raise
+```
