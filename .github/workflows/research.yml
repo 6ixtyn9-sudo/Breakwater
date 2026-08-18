@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-24.04
     # Multi-horizon + paged candles can take longer.
     timeout-minutes: 90
-
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -29,7 +28,6 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements.lock
-
       - name: Install dependencies
         run: python -m pip install --require-hashes -r requirements.lock
       - name: Ingest universe and run slice research
@@ -41,6 +39,10 @@ jobs:
           # Promotion floor for net-edge (sync_book directional gate)
           BREAKWATER_MIN_NET_EDGE: ${{ secrets.BREAKWATER_MIN_NET_EDGE || vars.BREAKWATER_MIN_NET_EDGE || '0' }}
 
+          # Multi-horizon robustness promotion gate (optional)
+          BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ secrets.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '1' }}
+          BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ secrets.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
+
           # Preferred: multi-horizon research (you added this secret)
           BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
           # Back-compat fallback (used if code ignores horizons or if horizons is blank)
@@ -51,7 +53,6 @@ jobs:
           # === Discovery binning knobs ===
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
-
           # Optional politeness delay for paged candle fetches
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
           # RELAXED VALIDATION (still strict walk-forward + hostile-regime + net-positive)
@@ -59,7 +60,6 @@ jobs:
           BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "3"
 
         run: PYTHONPATH=src python scripts/breakwater.py research
-
       - name: Persist research inputs and status
         if: always()
         run: bash scripts/commit_state.sh "research refresh"
