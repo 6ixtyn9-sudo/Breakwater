@@ -17,8 +17,8 @@ defaults:
 jobs:
   refresh:
     runs-on: ubuntu-24.04
-    # Multi-horizon + paged candles can take longer.
-    timeout-minutes: 90
+    # 24 horizons can take a while. Bump this if you ever see timeouts.
+    timeout-minutes: 240
 
     steps:
       - name: Checkout
@@ -47,8 +47,11 @@ jobs:
           BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ secrets.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '1' }}
           BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ secrets.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
 
-          # Preferred: multi-horizon research (you added this secret)
+          # Preferred: multi-horizon research
           BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
+          # NEW: allow >8 horizons (engine clamp is now configurable)
+          BREAKWATER_RESEARCH_HORIZONS_MAX: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS_MAX || vars.BREAKWATER_RESEARCH_HORIZONS_MAX || '8' }}
+
           # Back-compat fallback (used if code ignores horizons or if horizons is blank)
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
 
