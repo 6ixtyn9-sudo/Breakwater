@@ -1,25 +1,6 @@
 [
   {
-    "bars_held": "23",
-    "entry_guard": "passed",
-    "entry_price": "1905.819642857142850000000000",
-    "horizon_bars": "24",
-    "initial_stop_price": "1876.144642857142950000000000",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "ETHUSDC",
-    "peak_price": "1905.819642857142850000000000",
-    "regime": "neutral",
-    "side": "BUY",
-    "signal_id": "70b9cf500dc424b4",
-    "slice_id": "feat_realized_vol_20:0:LONG:h24",
-    "stop_price": "1876.144642857142950000000000",
-    "trail_active": "0",
-    "trough_price": "1905.819642857142850000000000"
-  },
-  {
-    "bars_held": "19",
+    "bars_held": "20",
     "entry_guard": "passed",
     "entry_price": "63670.28571428571428500000001",
     "horizon_bars": "24",
@@ -36,5 +17,27 @@
     "stop_price": "62896.28571428571429500000001",
     "trail_active": "0",
     "trough_price": "63670.28571428571428500000001"
+  },
+  {
+    "atr": "0.4607857142857138",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "60.173",
+    "horizon_bars": "12",
+    "initial_stop_price": "58.56025000000000170",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "HYPEUSDC",
+    "peak_price": "60.173",
+    "regime": "bull",
+    "risk_fraction": "0.02680189",
+    "side": "BUY",
+    "signal_id": "ff23cd561e5fdebd",
+    "slice_id": "feat_ext_vs_ma_20:2:LONG:h12",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "58.56025000000000170",
+    "trail_active": "0",
+    "trough_price": "60.173"
   }
 ]
