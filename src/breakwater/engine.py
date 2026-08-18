@@ -89,7 +89,10 @@ def _parse_horizons_env() -> list[int]:
                 horizons.append(h)
         if horizons:
             # Safety clamp: avoid accidental huge runs from bad config.
-            return horizons[:8]
+            # Default stays 8; raise via BREAKWATER_RESEARCH_HORIZONS_MAX.
+            max_h = _coerce_int(os.getenv("BREAKWATER_RESEARCH_HORIZONS_MAX", "8"), 8)
+            max_h = max(1, min(24, max_h))
+            return horizons[:max_h]
 
     horizon = _coerce_int(os.getenv("BREAKWATER_RESEARCH_HORIZON_BARS", "1"), 1)
     if horizon < 1:
