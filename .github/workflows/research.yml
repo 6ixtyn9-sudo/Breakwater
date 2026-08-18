@@ -1,65 +1,71 @@
-name: Breakwater Research Refresh
+      - name: Validation diagnostics summary
+        run: |
+          python - <<'PY'
+          import csv
+          from collections import Counter, defaultdict
 
-on:
-  workflow_dispatch:
+          path = "localdata/research/validated_slices.csv"
 
-concurrency:
-  group: breakwater-state
-  cancel-in-progress: false
+          total = 0
+          validated_true = 0
+          by_reason = Counter()
+          by_gate = Counter()
+          near_miss = []  # (mean, slice_id, reasons)
 
-permissions:
-  contents: write
+          def split_reasons(s):
+            s = (s or "").strip()
+            if not s:
+              return []
+            return [t.strip() for t in s.split(",") if t.strip()]
 
-defaults:
-  run:
-    shell: bash
+          with open(path, newline="") as f:
+            r = csv.DictReader(f)
+            required_cols = ["slice_id","validated","mean_ret_costadj","fail_reasons",
+                             "temporal_pass","direction_ok","breadth_ok","recency_ok","mean_positive",
+                             "regime_confounded"]
+            missing = [c for c in required_cols if c not in (r.fieldnames or [])]
+            if missing:
+              raise SystemExit(f"validated_slices.csv missing columns: {missing}")
 
-jobs:
-  refresh:
-    runs-on: ubuntu-24.04
-    # Multi-horizon + paged candles can take longer.
-    timeout-minutes: 90
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements.lock
-      - name: Install dependencies
-        run: python -m pip install --require-hashes -r requirements.lock
-      - name: Ingest universe and run slice research
-        env:
-          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
-          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
-          BREAKWATER_MODE: readonly
+            for row in r:
+              total += 1
+              ok = (row["validated"] == "True")
+              if ok:
+                validated_true += 1
 
-          # Promotion floor for net-edge (sync_book directional gate)
-          BREAKWATER_MIN_NET_EDGE: ${{ secrets.BREAKWATER_MIN_NET_EDGE || vars.BREAKWATER_MIN_NET_EDGE || '0' }}
+              # Gate failure counters
+              for g in ["temporal_pass","direction_ok","breadth_ok","recency_ok","mean_positive"]:
+                if row.get(g) == "False":
+                  by_gate[g] += 1
+              if row.get("regime_confounded") == "True":
+                by_gate["regime_confounded"] += 1
 
-          # Multi-horizon robustness promotion gate (optional)
-          BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ secrets.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '1' }}
-          BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ secrets.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
+              reasons = split_reasons(row.get("fail_reasons",""))
+              for t in reasons:
+                by_reason[t] += 1
 
-          # Preferred: multi-horizon research (you added this secret)
-          BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
-          # Back-compat fallback (used if code ignores horizons or if horizons is blank)
-          BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
-          # === Research scale knobs ===
-          BREAKWATER_SPOT_CANDLE_COUNT: ${{ secrets.BREAKWATER_SPOT_CANDLE_COUNT || vars.BREAKWATER_SPOT_CANDLE_COUNT || '300' }}
-          BREAKWATER_PERP_CANDLE_COUNT: ${{ secrets.BREAKWATER_PERP_CANDLE_COUNT || vars.BREAKWATER_PERP_CANDLE_COUNT || '300' }}
-          # === Discovery binning knobs ===
-          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ secrets.BREAKWATER_DISCOVERY_STATE_QUANTILES || vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
-          BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
-          # Optional politeness delay for paged candle fetches
-          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
-          # RELAXED VALIDATION (still strict walk-forward + hostile-regime + net-positive)
-          BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
-          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "3"
+              # Near-miss list: failed only 1 reason
+              if (not ok) and len(reasons) == 1:
+                try:
+                  mean = float(row["mean_ret_costadj"])
+                except Exception:
+                  mean = float("-inf")
+                near_miss.append((mean, row["slice_id"], reasons[0]))
 
-        run: PYTHONPATH=src python scripts/breakwater.py research
-      - name: Persist research inputs and status
-        if: always()
-        run: bash scripts/commit_state.sh "research refresh"
+          print(f"Rows: {total}")
+          print(f"Validated True: {validated_true}")
+          print("")
+          print("Gate failures (count of rows where gate is False):")
+          for k,v in by_gate.most_common():
+            print(f"  {k:18s} {v}")
+          print("")
+          print("Fail reasons (token counts):")
+          for k,v in by_reason.most_common(20):
+            print(f"  {k:18s} {v}")
+
+          near_miss.sort(reverse=True)
+          print("")
+          print("Top near-misses (failed exactly 1 reason):")
+          for mean, sid, reason in near_miss[:15]:
+            print(f"  mean={mean:+.6f}  {sid}  reason={reason}")
+          PY
