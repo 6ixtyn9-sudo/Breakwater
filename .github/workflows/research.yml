@@ -49,8 +49,10 @@ jobs:
 
           # Preferred: multi-horizon research
           BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
-          # NEW: allow >8 horizons (engine clamp is now configurable)
+
+          # Allow >8 horizons (engine clamp is configurable)
           BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
+
           # Back-compat fallback (used if code ignores horizons or if horizons is blank)
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
 
@@ -156,6 +158,124 @@ jobs:
           print("Top near-misses (failed exactly 1 reason):")
           for mean, sid, reason in near_miss[:15]:
               print(f"  mean={mean:+.6f}  {sid}  reason={reason}")
+          PY
+
+      - name: Horizon curve summary (no new files)
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [ ! -f localdata/research/validated_slices.csv ]; then
+            echo "No localdata/research/validated_slices.csv found; skipping horizon summary."
+            exit 0
+          fi
+
+          python - <<'PY'
+          import csv
+          from collections import defaultdict
+          from math import isnan
+
+          PATH = "localdata/research/validated_slices.csv"
+
+          def as_int(x, default=0):
+              try:
+                  return int(x)
+              except Exception:
+                  return default
+
+          def as_float(x, default=float("nan")):
+              try:
+                  return float(x)
+              except Exception:
+                  return default
+
+          def is_true(x):
+              return str(x) == "True"
+
+          # family -> horizon -> row
+          fam = defaultdict(dict)
+          by_h = defaultdict(list)
+
+          with open(PATH, newline="") as f:
+              r = csv.DictReader(f)
+              for row in r:
+                  h = as_int(row.get("horizon_bars"), 0)
+                  row["_h"] = h
+                  row["_mean"] = as_float(row.get("mean_ret_costadj"))
+                  by_h[h].append(row)
+                  key = (row.get("kind",""), row.get("feature",""), row.get("state",""), row.get("side",""))
+                  fam[key][h] = row
+
+          horizons = sorted(h for h in by_h.keys() if h > 0)
+          print(f"rows={sum(len(v) for v in by_h.values())} horizons={len(horizons)} range={min(horizons)}..{max(horizons)}")
+
+          print("\nPer-horizon summary (avg_mean, mean_positive%, temporal_pass%, breadth_ok%, confounded%):")
+          for h in horizons:
+              rr = by_h[h]
+              means = [r["_mean"] for r in rr if not isnan(r["_mean"])]
+              avg = (sum(means)/len(means)) if means else float("nan")
+              pos = sum(1 for r in rr if is_true(r.get("mean_positive")))
+              temp = sum(1 for r in rr if is_true(r.get("temporal_pass")))
+              breadth = sum(1 for r in rr if is_true(r.get("breadth_ok")))
+              conf = sum(1 for r in rr if is_true(r.get("regime_confounded")))
+              n = len(rr)
+              print(
+                  f"h={h:2d} n={n:4d} mean={avg:+.6f} "
+                  f"pos%={pos/n:6.1%} temp%={temp/n:6.1%} breadth%={breadth/n:6.1%} conf%={conf/n:6.1%}"
+              )
+
+          def edge_per_bar(row):
+              h = max(1, row["_h"])
+              m = row["_mean"]
+              return (m / h) if not isnan(m) else float("-inf")
+
+          summaries = []
+          for fk, byh in fam.items():
+              rr = [byh[h] for h in sorted(byh.keys()) if h > 0]
+              # Choose best horizon among those that look directionally sane and not confounded.
+              candidates = [
+                  r for r in rr
+                  if is_true(r.get("direction_ok")) and not is_true(r.get("regime_confounded"))
+              ]
+              if not candidates:
+                  continue
+              best = max(candidates, key=edge_per_bar)
+
+              # Flip points
+              hs = sorted(byh.keys())
+              def first_h(pred):
+                  for h in hs:
+                      if h <= 0:
+                          continue
+                      if pred(byh[h]):
+                          return h
+                  return None
+
+              first_pos = first_h(lambda r: is_true(r.get("mean_positive")))
+              first_temp = first_h(lambda r: is_true(r.get("temporal_pass")))
+              first_breadth = first_h(lambda r: is_true(r.get("breadth_ok")))
+
+              summaries.append((
+                  edge_per_bar(best),
+                  best["_mean"],
+                  best["_h"],
+                  fk,
+                  first_pos, first_temp, first_breadth,
+                  best.get("walk_forward_pass_pattern",""),
+                  best.get("breadth_ok",""),
+              ))
+
+          summaries.sort(reverse=True)
+
+          print("\nTop families by edge_per_bar (direction_ok & not confounded):")
+          for ebar, mean, hbest, fk, first_pos, first_temp, first_breadth, passes, breadth_best in summaries[:25]:
+              kind, feature, state, side = fk
+              print(
+                  f"{kind:4s} {feature}:{state}:{side}  "
+                  f"best_h={hbest:2d} mean={mean:+.6f} edge/bar={ebar:+.8f}  "
+                  f"first_pos={first_pos} first_temporal={first_temp} first_breadth={first_breadth}  "
+                  f"breadth_ok@best={breadth_best} passes={passes}"
+              )
           PY
 
       - name: Persist research inputs and status
