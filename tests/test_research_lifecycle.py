@@ -8,9 +8,18 @@ from breakwater.research_lifecycle import (
 )
 from breakwater.validation import ValidatedSlice, write_validated
 
-def validated_row(mean=0.001, n=80, validated=True, side="LONG"):
+
+def validated_row(
+    mean=0.001,
+    n=80,
+    validated=True,
+    side="LONG",
+    *,
+    slice_id="feat:0:LONG",
+    horizon_bars=1,
+):
     return ValidatedSlice(
-        slice_id="feat:0:LONG",
+        slice_id=slice_id,
         kind="SPOT",
         feature="feat",
         state=0,
@@ -24,8 +33,9 @@ def validated_row(mean=0.001, n=80, validated=True, side="LONG"):
         mean_ret_costadj=mean,
         p_value=0.001,
         validated=validated,
-        horizon_bars=1,
+        horizon_bars=horizon_bars,
     )
+
 
 def test_sync_book_promotes_validated_slices(tmp_path):
     validated_path = tmp_path / "validated.csv"
@@ -37,12 +47,97 @@ def test_sync_book_promotes_validated_slices(tmp_path):
     assert rows[0]["status"] == MONITORED
     assert rows[0]["slice_id"] == "feat:0:LONG"
 
+
 def test_sync_book_skips_too_few_rows(tmp_path):
     validated_path = tmp_path / "validated.csv"
     book_path = tmp_path / "book.csv"
     write_validated(validated_path, [validated_row(n=30)])
     summary = sync_book(validated_path=validated_path, book_path=book_path)
     assert summary["monitored"] == 0
+
+
+def test_sync_book_multi_horizon_gate_promotes_only_if_two_horizons_pass(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "2")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "edge_per_bar")
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+
+    rows = [
+        validated_row(slice_id="feat:0:LONG:h6", horizon_bars=6, mean=0.00120),
+        validated_row(slice_id="feat:0:LONG:h12", horizon_bars=12, mean=0.00130),
+    ]
+    write_validated(validated_path, rows)
+
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["monitored"] == 1
+
+    book = read_book(book_path)
+    assert len(book) == 1
+    # edge_per_bar prefers h6 here (0.0012/6 > 0.0013/12)
+    assert book[0]["slice_id"] == "feat:0:LONG:h6"
+
+
+def test_sync_book_multi_horizon_gate_filters_thin_single_horizon(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "2")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "edge_per_bar")
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+
+    write_validated(validated_path, [validated_row(slice_id="feat:0:LONG:h6", horizon_bars=6, mean=0.00120)])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["monitored"] == 0
+    assert read_book(book_path) == []
+
+
+def test_sync_book_multi_horizon_gate_does_not_wipe_existing_kind(tmp_path, monkeypatch):
+    """If a kind has promotable rows but fails the multi-horizon gate, it must carry forward."""
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "2")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "edge_per_bar")
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+
+    from breakwater.research_lifecycle import _write_book
+
+    existing_row = {
+        "slice_id": "feat:0:LONG",
+        "kind": "SPOT",
+        "feature": "feat",
+        "state": "0",
+        "side": "LONG",
+        "status": "monitored",
+        "validated_at": "",
+        "last_signal_bar": "",
+        "paper_trades": "7",
+        "paper_wins": "3",
+        "paper_losses": "4",
+        "paper_pnl_zar": "-0.10",
+        "cooldown_until": "",
+        "mean_ret_costadj": "0.001000",
+        "n": "100",
+        "p_value": "0.000001",
+        "horizon_bars": "1",
+        "stop_atr_mult": "2.000",
+        "source": "validated_walk_forward",
+        "hostile_unproven": "False",
+    }
+    _write_book(book_path, [existing_row])
+
+    # One promotable horizon validates, but fails multi-horizon gate (min_passes=2).
+    write_validated(validated_path, [validated_row(slice_id="feat:0:LONG:h6", horizon_bars=6, mean=0.00120)])
+
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["monitored"] == 0
+    rows = read_book(book_path)
+    assert len(rows) == 1
+    assert rows[0]["slice_id"] == "feat:0:LONG"
+    assert rows[0]["paper_trades"] == "7"
+
 
 def test_sync_book_demotes_stale_monitored_slices(tmp_path):
     validated_path = tmp_path / "validated.csv"
@@ -60,6 +155,7 @@ def test_sync_book_demotes_stale_monitored_slices(tmp_path):
     )
     summary = sync_book(validated_path=validated_path, book_path=book_path, now=now)
     assert summary["decayed"] == 1
+
 
 def test_stopout_sets_cooldown_then_recovers(tmp_path):
     validated_path = tmp_path / "validated.csv"
@@ -81,8 +177,10 @@ def test_stopout_sets_cooldown_then_recovers(tmp_path):
     assert int(rows[0]["cooldown_until"]) > int(now.timestamp())
     assert rows[0]["paper_losses"] == "1"
 
+
 def test_book_carries_stop_calibration_and_provenance(tmp_path):
     from breakwater.research_lifecycle import PROVENANCE_VALIDATED
+
     validated_path = tmp_path / "validated.csv"
     book_path = tmp_path / "book.csv"
     write_validated(validated_path, [validated_row()])
@@ -91,6 +189,7 @@ def test_book_carries_stop_calibration_and_provenance(tmp_path):
     assert rows[0]["stop_atr_mult"]
     assert float(rows[0]["stop_atr_mult"]) >= 1.5
     assert rows[0]["source"] == PROVENANCE_VALIDATED
+
 
 def test_sync_book_preserves_kind_when_validated_but_not_promoted(tmp_path):
     """Regression: if a kind has validated rows, but none pass promotion filters
@@ -124,7 +223,6 @@ def test_sync_book_preserves_kind_when_validated_but_not_promoted(tmp_path):
         "hostile_unproven": "False",
     }
     _write_book(book_path, [existing_row])
-
     # Validated row exists (so SPOT is "validated") but it cannot promote due to MIN_BOOK_ROWS.
     write_validated(validated_path, [validated_row(n=30, validated=True)])
 
@@ -132,12 +230,12 @@ def test_sync_book_preserves_kind_when_validated_but_not_promoted(tmp_path):
     assert summary["validated"] == 1
     assert summary["monitored"] == 0
     assert summary["carried_kinds"] == ["SPOT"]
-
     rows = read_book(book_path)
     assert len(rows) == 1
     assert rows[0]["slice_id"] == "feat:0:LONG"
     assert rows[0]["paper_trades"] == "7"
     assert rows[0]["status"] == "monitored"
+
 
 def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
     """Standing lesson (rerun wipe): a run that produces no validated rows for
@@ -145,6 +243,7 @@ def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
     validated_path = tmp_path / "validated.csv"
     book_path = tmp_path / "book.csv"
     from breakwater.research_lifecycle import _write_book
+
     perp_row = {
         "slice_id": "perp:0:SHORT",
         "kind": "PERP",
@@ -177,11 +276,13 @@ def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
     assert carried["paper_trades"] == "2"
     assert carried["status"] == "monitored"
 
+
 def test_sync_book_never_wipes_on_empty_validated(tmp_path):
     """A totally empty validated file (data failure) leaves the book intact."""
     validated_path = tmp_path / "validated.csv"
     book_path = tmp_path / "book.csv"
     from breakwater.research_lifecycle import _write_book
+
     existing_row = {
         "slice_id": "feat:0:LONG",
         "kind": "SPOT",
