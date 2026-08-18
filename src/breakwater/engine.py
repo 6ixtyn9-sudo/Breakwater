@@ -625,6 +625,27 @@ class BreakwaterEngine:
         validation_relaxed_min_passes = os.getenv(
             "BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", ""
         )
+        # Optional knobs (may be blank if not set)
+        validation_strict_pass_floor = os.getenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", "")
+        breadth_min_symbols = os.getenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "")
+        breadth_min_rows_per_symbol = os.getenv("BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", "")
+        breadth_min_positive_fraction = os.getenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "")
+        promotion_min_passes = os.getenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "")
+        promotion_select = os.getenv("BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "")
+        promotion_require_contiguous = os.getenv(
+            "BREAKWATER_PROMOTION_MULTI_HORIZON_REQUIRE_CONTIGUOUS", ""
+        )
+        min_net_edge = os.getenv("BREAKWATER_MIN_NET_EDGE", "")
+
+        # Summarize dominant fail reasons (compact; durable)
+        from collections import Counter
+
+        fail_tokens = Counter()
+        for row in validated:
+            for tok in str(getattr(row, "fail_reasons", "") or "").split(","):
+                tok = tok.strip()
+                if tok:
+                    fail_tokens[tok] += 1
 
         result = {
             "server_time": server_time.isoformat(),
@@ -652,11 +673,36 @@ class BreakwaterEngine:
             "book": book_summary,
         }
 
+        # status.csv has a 1000-char cap per row: keep it compact and keep the key knobs early.
+        status_detail = {
+            "server_time": server_time.isoformat(),
+            "pairs_researched": len(frames),
+            "frame_errors": len(frame_errors),
+            "research_horizons": horizons,
+            "discovered_slices": len(discovered),
+            "validated_slices": len([row for row in validated if row.validated]),
+            "regime_confounded_slices": len([row for row in validated if row.regime_confounded]),
+            "hostile_unproven_slices": len([row for row in validated if row.hostile_unproven]),
+            "fail_top": fail_tokens.most_common(6),
+            "knobs": {
+                "BREAKWATER_MIN_NET_EDGE": min_net_edge,
+                "BREAKWATER_VALIDATION_REQUIRE_BONFERRONI": validation_require_bonferroni,
+                "BREAKWATER_VALIDATION_RELAXED_MIN_PASSES": validation_relaxed_min_passes,
+                "BREAKWATER_VALIDATION_STRICT_PASS_FLOOR": validation_strict_pass_floor,
+                "BREAKWATER_BREADTH_MIN_SYMBOLS": breadth_min_symbols,
+                "BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL": breadth_min_rows_per_symbol,
+                "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION": breadth_min_positive_fraction,
+                "BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES": promotion_min_passes,
+                "BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT": promotion_select,
+                "BREAKWATER_PROMOTION_MULTI_HORIZON_REQUIRE_CONTIGUOUS": promotion_require_contiguous,
+            },
+            "book": book_summary,
+        }
         append_status(
             self.settings.status_path,
             "research_done",
             self.settings.mode,
-            json.dumps(result, sort_keys=True),
+            json.dumps(status_detail, sort_keys=True),
         )
         return result
 
