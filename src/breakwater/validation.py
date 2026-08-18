@@ -1,4 +1,3 @@
-```python
 """Walk-forward validation of discovered slices.
 
 Fixes the remaining "quant trap" issues:
@@ -732,4 +731,4 @@ def write_validated(path, rows: list[ValidatedSlice]) -> None:
         except OSError:
             pass
         raise
-```
+
