@@ -1,5 +1,4 @@
 """Slice lifecycle: discovered to validated to monitored, with decay.
-
 Key behaviors:
 - Monitored slices decay out when they stop firing or lose money on paper.
 - Cooldown is reserved for STOP-OUT style losses (hard adverse outcomes),
@@ -9,7 +8,6 @@ Key behaviors:
 IMPORTANT COMPATIBILITY:
 Paper trading calls apply_signal_feedback(..., stopout=bool). This module must
 accept that kwarg and must not cooldown on every non-win.
-
 Edge meaning marker:
 Breakwater needs one bit of information:
 
@@ -20,7 +18,6 @@ vs
 We store that as a plain boolean string:
 - edge_is_directional_net="True" for newly validated/promoted rows
 - edge_is_directional_net="False" for carried legacy rows (or when unknown)
-
 For backwards compatibility, if a carried row has edge_semantics_version
 (net_v1/legacy_v0), we convert it into edge_is_directional_net and remove the
 old field before writing.
@@ -32,8 +29,10 @@ import csv
 import json
 import os
 import tempfile
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+
 from breakwater.validation import ValidatedSlice, read_validated
 
 BOOK_HEADERS = [
@@ -78,6 +77,7 @@ def _coerce_int(value, default: int = 0) -> int:
     except (TypeError, ValueError):
         return default
 
+
 def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> int:
     changed = 0
     for row in rows:
@@ -112,7 +112,6 @@ def read_book(path: Path) -> list[dict]:
     now_epoch = int(datetime.now(timezone.utc).timestamp())
     if _refresh_expired_cooldowns_inplace(rows, now_epoch=now_epoch):
         _write_book(path, rows)
-
     return rows
 
 
@@ -124,9 +123,54 @@ def _min_net_edge() -> float:
         value = 0.0
     return max(0.0, value)
 
+
 def _directional_edge(row: ValidatedSlice) -> bool:
     # mean_ret_costadj is NET return for the chosen side (already cost-aware).
     return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge()
+
+
+# === Multi-horizon robustness gate (promotion-time) ===
+def _promotion_multi_horizon_min_passes() -> int:
+    """Minimum number of distinct horizons per slice family required for promotion.
+
+    Default: 1 (off / legacy behavior).
+    Suggested quick-win: 2 (robustness without nuking the book).
+    """
+    raw = os.getenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        value = 1
+    return max(1, value)
+
+
+def _promotion_multi_horizon_select() -> str:
+    """How to select which horizon to promote within a passing family."""
+    mode = str(os.getenv("BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "edge_per_bar")).strip().lower()
+    allowed = {"edge", "edge_per_bar", "shortest", "longest"}
+    return mode if mode in allowed else "edge_per_bar"
+
+
+def _family_key(row: ValidatedSlice) -> tuple[str, str, int, str]:
+    # Horizon intentionally excluded: defines a slice family.
+    return (str(row.kind), str(row.feature), int(row.state), str(row.side))
+
+
+def _select_family_candidate(candidates: list[ValidatedSlice], *, mode: str) -> ValidatedSlice:
+    if mode == "shortest":
+        return min(candidates, key=lambda r: int(r.horizon_bars))
+    if mode == "longest":
+        return max(candidates, key=lambda r: int(r.horizon_bars))
+    if mode == "edge":
+        return max(candidates, key=lambda r: float(r.mean_ret_costadj))
+    # default: edge_per_bar (tie-breaker: raw edge)
+    return max(
+        candidates,
+        key=lambda r: (
+            float(r.mean_ret_costadj) / max(1, int(r.horizon_bars)),
+            float(r.mean_ret_costadj),
+        ),
+    )
 
 
 def _truthy_bool_str(value) -> str:
@@ -151,6 +195,7 @@ def _convert_legacy_semantics_inplace(row: dict) -> None:
     else:
         row["edge_is_directional_net"] = _truthy_bool_str(flag)
 
+
 def sync_book(
     *,
     validated_path: Path,
@@ -160,17 +205,53 @@ def sync_book(
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
 
-    validated = [row for row in read_validated(validated_path) if row.validated]
+    validated_all = [row for row in read_validated(validated_path) if row.validated]
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
+
+    # Base promotability filter (legacy rules)
+    promotable = [
+        row
+        for row in validated_all
+        if row.n >= MIN_BOOK_ROWS and _directional_edge(row)
+    ]
+
+    # Optional multi-horizon robustness promotion gate
+    min_passes = _promotion_multi_horizon_min_passes()
+    select_mode = _promotion_multi_horizon_select()
+    families_considered = 0
+    families_promoted = 0
+
+    if min_passes <= 1:
+        to_promote = promotable
+    else:
+        by_family: dict[tuple[str, str, int, str], list[ValidatedSlice]] = defaultdict(list)
+        for row in promotable:
+            by_family[_family_key(row)].append(row)
+        families_considered = len(by_family)
+
+        to_promote = []
+        for _, candidates in by_family.items():
+            horizons = {int(r.horizon_bars) for r in candidates if int(r.horizon_bars) > 0}
+            if len(horizons) < min_passes:
+                continue
+            chosen = _select_family_candidate(candidates, mode=select_mode)
+            to_promote.append(chosen)
+
+        families_promoted = len(to_promote)
 
     # Carry-forward must be keyed off what actually promoted, not what merely validated,
     # otherwise a kind can be wiped when it validates rows but none pass promotion filters.
     promoted_kinds: set[str] = set()
-
     rows: list[dict] = []
+
     summary: dict = {
-        "validated": len(validated),
+        "validated": len(validated_all),
+        "promotable": len(promotable),
+        "multi_horizon_min_passes": min_passes,
+        "multi_horizon_select": select_mode,
+        "families_considered": families_considered,
+        "families_promoted": families_promoted,
         "monitored": 0,
         "decayed": 0,
         "cooldown": 0,
@@ -181,11 +262,10 @@ def sync_book(
         "carried_decayed": 0,
         "rows_total_after_sync": 0,
     }
-    # Promote newly validated slices
-    for row in validated:
+
+    # Promote newly validated slices (filtered and/or gated)
+    for row in to_promote:
         prior = existing.get(row.slice_id)
-        if row.n < MIN_BOOK_ROWS or not _directional_edge(row):
-            continue
 
         promoted_kinds.add(row.kind)
 
@@ -199,7 +279,6 @@ def sync_book(
             paper_pnl = float(prior.get("paper_pnl_zar") or 0)
             stale = last_signal > 0 and (now_epoch - last_signal) > LIVE_DECAY_BARS * BAR_SECONDS
             losing = paper_trades >= PNL_DECAY_MIN_TRADES and paper_pnl < 0
-
             if stale or losing:
                 status = DECAYED
                 summary["decayed"] += 1
@@ -209,6 +288,7 @@ def sync_book(
         else:
             status = MONITORED
             summary["monitored"] += 1
+
         rows.append(
             {
                 "slice_id": row.slice_id,
@@ -240,7 +320,6 @@ def sync_book(
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
         summary["carried_total"] = len(carried)
-
         for r in carried:
             _convert_legacy_semantics_inplace(r)
             status = str(r.get("status") or "")
@@ -254,9 +333,9 @@ def sync_book(
         rows.extend(carried)
 
     summary["rows_total_after_sync"] = len(rows)
-
     _write_book(book_path, rows)
     return summary
+
 
 def apply_signal_feedback(
     book_path: Path,
@@ -274,7 +353,6 @@ def apply_signal_feedback(
     """
     now = now or datetime.now(timezone.utc)
     rows = read_book(book_path)
-
     for row in rows:
         if row["slice_id"] != slice_id:
             continue
@@ -282,7 +360,6 @@ def apply_signal_feedback(
 
         trades = _coerce_int(row.get("paper_trades"), 0) + 1
         row["paper_trades"] = str(trades)
-
         current_pnl = float(row.get("paper_pnl_zar") or 0.0)
         row["paper_pnl_zar"] = f"{(current_pnl + pnl_zar):.4f}"
         if outcome == "win":
@@ -323,6 +400,7 @@ def _write_book(path: Path, rows: list[dict]) -> None:
         except OSError:
             pass
         raise
+
 
 def read_cooldown_journal(path: Path) -> list[dict]:
     if not path.exists():
