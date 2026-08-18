@@ -1,26 +1,7 @@
 [
   {
-    "bars_held": "23",
-    "entry_guard": "passed",
-    "entry_price": "63670.28571428571428500000001",
-    "horizon_bars": "24",
-    "initial_stop_price": "62896.28571428571429500000001",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "BTCUSDC",
-    "peak_price": "63670.28571428571428500000001",
-    "regime": "neutral",
-    "side": "BUY",
-    "signal_id": "331425ec177d0f31",
-    "slice_id": "feat_atr_norm_ext:2:LONG:h24",
-    "stop_price": "62896.28571428571429500000001",
-    "trail_active": "0",
-    "trough_price": "63670.28571428571428500000001"
-  },
-  {
     "atr": "0.012214285714285702",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "2.518",
     "horizon_bars": "24",
@@ -39,5 +20,27 @@
     "stop_price": "2.4752500000000000430",
     "trail_active": "0",
     "trough_price": "2.518"
+  },
+  {
+    "atr": "3192.714285714286",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "1051999.0",
+    "horizon_bars": "24",
+    "initial_stop_price": "1063173.5000000000010",
+    "kind": "SPOT",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BTCZAR",
+    "peak_price": "1051999.0",
+    "regime": "bull",
+    "risk_fraction": "0.01062216",
+    "side": "SELL",
+    "signal_id": "7521576de2a871b4",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT:h24",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "1063173.5000000000010",
+    "trail_active": "0",
+    "trough_price": "1051999.0"
   }
 ]
