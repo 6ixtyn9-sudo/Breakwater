@@ -50,8 +50,7 @@ jobs:
           # Preferred: multi-horizon research
           BREAKWATER_RESEARCH_HORIZONS: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS || vars.BREAKWATER_RESEARCH_HORIZONS || '' }}
           # NEW: allow >8 horizons (engine clamp is now configurable)
-          BREAKWATER_RESEARCH_HORIZONS_MAX: ${{ secrets.BREAKWATER_RESEARCH_HORIZONS_MAX || vars.BREAKWATER_RESEARCH_HORIZONS_MAX || '8' }}
-
+         BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
           # Back-compat fallback (used if code ignores horizons or if horizons is blank)
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ secrets.BREAKWATER_RESEARCH_HORIZON_BARS || vars.BREAKWATER_RESEARCH_HORIZON_BARS || '6' }}
 
