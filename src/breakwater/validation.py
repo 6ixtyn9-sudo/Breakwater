@@ -9,6 +9,7 @@ Fixes the remaining "quant trap" issues:
    - stop triggers if breached within the NEXT horizon bars (excludes entry bar)
    - if not stopped, exit at close[t+h]
    - subtract constant cost
+
 2) Side-selection leakage:
    Discovery chooses side using the full sample. Validation now re-chooses side
    on a training-only window and requires the candidate side to match that
@@ -17,6 +18,7 @@ Fixes the remaining "quant trap" issues:
 3) Pooled-row illusion:
    Requires symbol breadth: the edge must exist across many symbols, not just
    a pooled burst.
+
 4) Latest-fold brittleness + horizon overlap leakage:
    Uses a recency-window mean gate in addition to fold pass count, and purges
    the last `horizon_bars` rows of each fold from evaluation so forward windows
@@ -24,10 +26,9 @@ Fixes the remaining "quant trap" issues:
 
 No new knobs: uses only existing validation env vars.
 
-CSV schema note:
-- We append optional diagnostic columns to validated_slices.csv so operators can
-  see *why* a row failed validation (temporal/direction/breadth/recency/mean/confound).
-- Backwards compatible: read_validated() accepts older files that don't have these columns.
+Schema policy:
+- validated_slices.csv is *append-only* (we add diagnostic columns but do not create new files).
+- read_validated() is backwards-compatible with older validated_slices.csv files.
 """
 
 from __future__ import annotations
@@ -58,7 +59,7 @@ VALIDATED_HEADERS = [
     "mean_ret_costadj",
     "p_value",
     "validated",
-    # --- Diagnostics (optional; filled by validate_slices; kept for operator visibility) ---
+    # --- Diagnostics (append-only; helps operators see *why* a row failed validation) ---
     "required_passes",
     "latest_fold_passes",
     "temporal_pass",
@@ -68,7 +69,7 @@ VALIDATED_HEADERS = [
     "mean_positive",
     "side_train",
     "fail_reasons",
-    # --- Parameters / attributes ---
+    # --- Params / attributes ---
     "horizon_bars",
     "stop_atr_mult",
     "hostile_n",
@@ -141,14 +142,8 @@ class ValidatedSlice:
     mean_ret_costadj: float
     p_value: float
     validated: bool
-    horizon_bars: int
-    stop_atr_mult: float = 2.0
-    hostile_n: int = 0
-    hostile_mean_ret: float = 0.0
-    regime_confounded: bool = False
-    hostile_unproven: bool = False
 
-    # --- Diagnostics (optional; for operator visibility) ---
+    # Diagnostics (append-only; defaults keep compatibility with old readers/tests)
     required_passes: int = 0
     latest_fold_passes: bool = False
     temporal_pass: bool = False
@@ -158,6 +153,13 @@ class ValidatedSlice:
     mean_positive: bool = False
     side_train: str = ""
     fail_reasons: str = ""
+
+    horizon_bars: int = 0
+    stop_atr_mult: float = 2.0
+    hostile_n: int = 0
+    hostile_mean_ret: float = 0.0
+    regime_confounded: bool = False
+    hostile_unproven: bool = False
 
     # Session breakdown (audit-only)
     session_asia_n: int = 0
@@ -241,7 +243,7 @@ def _forward_extremes_excluding_entry_bar(
     low: pd.Series,
     horizon_bars: int,
 ) -> tuple[pd.Series, pd.Series]:
-    """Min low / max high over the NEXT `horizon_bars` bars (excludes the entry bar)."""
+    """Min low / max high over the NEXT `horizon_bars` bars (excludes entry bar)."""
     if horizon_bars < 1:
         raise ValueError("horizon_bars must be >= 1")
 
@@ -323,6 +325,7 @@ def _symbol_breadth_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values:
     df = df[np.isfinite(df["net"].to_numpy())]
     if df.empty:
         return False
+
     means = []
     for sym, g in df.groupby("symbol"):
         if len(g) < BREADTH_MIN_ROWS_PER_SYMBOL:
@@ -381,6 +384,7 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
             stop_atr_mult=stop_atr_mult,
             cost=cost,
         )
+
         # Slice mask and validity
         slice_mask = (subset[state_column].to_numpy() == candidate.state)
         valid_long = np.isfinite(net_long)
@@ -398,7 +402,6 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         mean_long_train = float(np.mean(long_train)) if len(long_train) else -1e9
         mean_short_train = float(np.mean(short_train)) if len(short_train) else -1e9
         side_train = "LONG" if mean_long_train >= mean_short_train else "SHORT"
-
         direction_ok = (str(candidate.side).upper() == side_train)
 
         # Candidate-side net series
@@ -417,7 +420,6 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         recency_ok = _recency_ok(subset, slice_mask, net_values)
 
         # Symbol-level p-value (more conservative than pooled rows)
-        # Compute mean net per symbol for slice rows, then t-stat across symbols.
         symbol_means = []
         if "symbol" in subset.columns and n_slice:
             df_sym = subset.loc[slice_mask, ["symbol"]].copy()
@@ -457,15 +459,16 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
             fold_sizes.append(int(len(fold_returns)))
 
         pattern = "".join(fold_results)
-        pass_count = pattern.count("1")
-        latest_passes = bool(pattern[-1] == "1") if pattern else False
+        pass_count = int(pattern.count("1"))
+        latest_fold_passes = bool(pattern[-1] == "1") if pattern else False
 
         strict_required = max(3, int(0.75 * FOLD_COUNT))
         relaxed_required = max(strict_required, min(FOLD_COUNT, max(1, RELAXED_MIN_PASSES)))
         required_passes = int(strict_required if REQUIRE_BONFERRONI else relaxed_required)
 
         # Replace "latest fold must pass" with (recency OR latest) to reduce brittleness
-        temporal_pass = (pass_count >= required_passes) and (recency_ok or latest_passes)
+        temporal_pass = (pass_count >= required_passes) and (recency_ok or latest_fold_passes)
+
         bonferroni_ok = True
         if REQUIRE_BONFERRONI:
             bonferroni_ok = bool(getattr(candidate, "bonferroni_pass", False))
@@ -489,7 +492,6 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
             and mean_positive
         )
 
-        # Reasons: include the gate *names* that were not satisfied.
         reasons: list[str] = []
         if not temporal_pass:
             reasons.append("temporal_pass")
@@ -514,7 +516,7 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
                 side=str(candidate.side).upper(),
                 folds=FOLD_COUNT,
                 walk_forward_pass_pattern=pattern,
-                walk_forward_pass_count=int(pass_count),
+                walk_forward_pass_count=pass_count,
                 fold_mean_rets=",".join(f"{value:.6f}" for value in fold_means),
                 fold_sizes=",".join(str(size) for size in fold_sizes),
                 n=n_slice,
@@ -522,7 +524,7 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
                 p_value=float(p_value),
                 validated=bool(is_validated),
                 required_passes=int(required_passes),
-                latest_fold_passes=bool(latest_passes),
+                latest_fold_passes=bool(latest_fold_passes),
                 temporal_pass=bool(temporal_pass),
                 direction_ok=bool(direction_ok),
                 breadth_ok=bool(breadth_ok),
@@ -547,6 +549,7 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
                 session_us_hit_rate=float(us_hit),
             )
         )
+
     return sorted(validated, key=lambda row: (not row.validated, -row.mean_ret_costadj))
 
 
@@ -556,8 +559,8 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
 
-        # Treat these as optional so older validated_slices.csv files still read.
         optional = {
+            # Params/attrs that weren't always present historically
             "stop_atr_mult",
             "hostile_n",
             "hostile_mean_ret",
@@ -572,7 +575,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
             "session_us_n",
             "session_us_mean_ret_costadj",
             "session_us_hit_rate",
-            # Diagnostics (optional)
+            # Diagnostics (append-only)
             "required_passes",
             "latest_fold_passes",
             "temporal_pass",
@@ -583,6 +586,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
             "side_train",
             "fail_reasons",
         }
+
         required = set(VALIDATED_HEADERS) - optional
         if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
             raise RuntimeError("validated slices file has an unsupported schema")
@@ -592,7 +596,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         has_hostile = "hostile_n" in fieldnames
         has_unproven = "hostile_unproven" in fieldnames
         has_session = "session_asia_n" in fieldnames
-        has_diag = "temporal_pass" in fieldnames or "fail_reasons" in fieldnames
+        has_diag = "fail_reasons" in fieldnames or "temporal_pass" in fieldnames
 
         out = []
         for row in reader:
@@ -612,7 +616,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     mean_ret_costadj=float(row["mean_ret_costadj"]),
                     p_value=float(row["p_value"]),
                     validated=row["validated"] == "True",
-                    required_passes=int(row["required_passes"]) if has_diag and row.get("required_passes") else 0,
+                    required_passes=int(row.get("required_passes") or 0) if has_diag else 0,
                     latest_fold_passes=(row.get("latest_fold_passes") == "True") if has_diag else False,
                     temporal_pass=(row.get("temporal_pass") == "True") if has_diag else False,
                     direction_ok=(row.get("direction_ok") == "True") if has_diag else False,
