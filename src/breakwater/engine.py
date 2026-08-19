@@ -35,7 +35,7 @@ from breakwater.market import (
 from breakwater.models import Candle, Lifecycle, PairType
 from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
 from breakwater.paper_trade import append_log, read_positions, run_paper_cycle
-from breakwater.perpdata import fetch_perp_candles_for_pair
+from breakwater.perpdata import fetch_perp_candles_for_pair, pair_to_coin
 from breakwater.promotion import PromotionRegistry
 from breakwater.research_lifecycle import read_book
 from breakwater.risk import RiskManager
@@ -198,6 +198,9 @@ class BreakwaterEngine:
         perp_count = max(60, min(5000, perp_count))
 
         for pair, kind in targets:
+            if kind == "PERP" and pair_to_coin(pair) is None:
+                # Designed skip (HIP-3 xyz: / unmapped). Not a fetch error.
+                continue
             try:
                 if kind == "PERP":
                     candles = fetch_perp_candles_for_pair(pair, count=perp_count)
