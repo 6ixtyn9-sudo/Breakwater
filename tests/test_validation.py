@@ -110,21 +110,16 @@ def test_read_validated_tolerates_legacy_schema_without_hostile_columns(tmp_path
 def test_hostile_regime_check_flags_regime_confounds():
     from breakwater.validation import _hostile_regime_check
 
-    hostile_n, hostile_mean, confounded, unproven = _hostile_regime_check(
-        "LONG", np.full(30, -0.01)
-    )
+    hostile_n, hostile_mean, confounded, unproven = _hostile_regime_check(np.full(30, -0.01))
     assert hostile_n == 30
     assert hostile_mean < 0
     assert confounded is True
     assert unproven is False
 
-    _, _, ok_long, _ = _hostile_regime_check("LONG", np.full(30, 0.01))
-    assert ok_long is False
+    _, _, conf_ok, _ = _hostile_regime_check(np.full(30, 0.01))
+    assert conf_ok is False
 
-    _, _, short_confounded, _ = _hostile_regime_check("SHORT", np.full(30, 0.01))
-    assert short_confounded is True
-
-    _, _, _, small_unproven = _hostile_regime_check("LONG", np.full(5, -0.01))
+    _, _, _, small_unproven = _hostile_regime_check(np.full(5, -0.01))
     assert small_unproven is True
 
 
@@ -192,9 +187,35 @@ def test_thin_hostile_evidence_is_flagged_unproven_not_confounded():
     unproven, not silently treated as regime-independent."""
     from breakwater.validation import _hostile_regime_check
 
-    hostile_n, hostile_mean, confounded, unproven = _hostile_regime_check(
-        "LONG", np.full(5, -0.01)
-    )
+    hostile_n, hostile_mean, confounded, unproven = _hostile_regime_check(np.full(5, -0.01))
     assert hostile_n == 5
     assert confounded is False
     assert unproven is True
+
+
+def test_relaxed_min_passes_can_be_lower_than_strict(monkeypatch):
+    import importlib
+    import breakwater.validation as v
+
+    monkeypatch.setenv("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "0")
+    monkeypatch.setenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "2")
+    monkeypatch.setenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", "3")
+    monkeypatch.setenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "1")
+    monkeypatch.setenv("BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", "1")
+    monkeypatch.setenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.0")
+
+    v = importlib.reload(v)
+    frame = rising_frame()
+    prepared = prepare_pooled(frame, ["close"], cost_bps=0.0, horizon_bars=1)
+    try:
+        rows = v.validate_slices(prepared, [candidate(state=0, side="LONG")])
+        assert rows
+        assert rows[0].required_passes == 2
+    finally:
+        monkeypatch.delenv("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", raising=False)
+        monkeypatch.delenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", raising=False)
+        monkeypatch.delenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", raising=False)
+        monkeypatch.delenv("BREAKWATER_BREADTH_MIN_SYMBOLS", raising=False)
+        monkeypatch.delenv("BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", raising=False)
+        monkeypatch.delenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", raising=False)
+        importlib.reload(v)
