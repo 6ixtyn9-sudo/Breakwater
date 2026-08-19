@@ -295,4 +295,4 @@ jobs:
 
       - name: Persist research inputs and status
         if: always()
-        run: bash scripts/commit_state.sh "research refresh"
+        run: bash scripts/commit_state.sh research
