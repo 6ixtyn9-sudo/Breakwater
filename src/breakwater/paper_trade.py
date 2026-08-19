@@ -364,6 +364,23 @@ def _slice_trade_counts(book_path: Path) -> dict[str, int]:
     return counts
 
 
+def _slice_paper_pnl(book_path: Path) -> dict[str, float]:
+    try:
+        rows = read_book(book_path)
+    except Exception:
+        return {}
+    out: dict[str, float] = {}
+    for row in rows:
+        sid = str(row.get("slice_id") or "")
+        if not sid:
+            continue
+        try:
+            out[sid] = float(row.get("paper_pnl_zar") or 0.0)
+        except (TypeError, ValueError):
+            out[sid] = 0.0
+    return out
+
+
 def run_paper_cycle(
     *,
     signals: list[SliceSignal],
@@ -624,6 +641,7 @@ def run_paper_cycle(
             open_slice_counts[sid] = open_slice_counts.get(sid, 0) + 1
 
     trade_counts = _slice_trade_counts(book_path)
+    paper_pnls = _slice_paper_pnl(book_path)
 
     selection_mode = str(os.getenv("BREAKWATER_PAPER_SELECTION_MODE", "explore")).strip().lower()
     if selection_mode == "profit":
@@ -644,6 +662,9 @@ def run_paper_cycle(
             continue
         if open_slice_counts.get(signal.slice_id, 0) >= MAX_PAPER_POSITIONS_PER_SLICE:
             slice_full += 1
+            continue
+        if trade_counts.get(signal.slice_id, 0) >= 3 and paper_pnls.get(signal.slice_id, 0.0) < 0:
+            skipped += 1
             continue
 
         if signal.pair.upper() in open_pairs:
