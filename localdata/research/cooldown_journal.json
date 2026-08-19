@@ -38,5 +38,13 @@
     "signal_id": "23a09601b2e7062b",
     "slice_id": "feat_atr_norm_ext:2:SHORT",
     "stopped_at": "2026-08-17T07:15:23+00:00"
+  },
+  {
+    "pair": "LTCZAR",
+    "pnl_zar": "-4.2378",
+    "reason": "stop",
+    "signal_id": "2877184c4cf6069b",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT:h22",
+    "stopped_at": "2026-08-19T16:15:20+00:00"
   }
 ]
