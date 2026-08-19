@@ -129,6 +129,39 @@ def _directional_edge(row: ValidatedSlice) -> bool:
     return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge()
 
 
+def _env_bool(name: str, default: str = "0") -> bool:
+    value = str(os.getenv(name, default)).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
+def _concentrated_min_mean() -> float:
+    raw = os.getenv("BREAKWATER_CONCENTRATED_MIN_MEAN", "0.004")
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        return 0.004
+
+
+def _is_concentrated_candidate(row: ValidatedSlice) -> bool:
+    """Fat, temporally honest edges that fail only the 40% name-breadth rule.
+
+    Hunt path (OFF unless BREAKWATER_CONCENTRATED_PROMOTE=1): do not lower
+    global posf; promote a labelled concentrated family instead.
+    """
+    if not _env_bool("BREAKWATER_CONCENTRATED_PROMOTE", "0"):
+        return False
+    reasons = {tok.strip() for tok in str(row.fail_reasons or "").split(",") if tok.strip()}
+    if reasons - {"breadth_ok"}:
+        return False
+    if not (row.temporal_pass and row.direction_ok and row.mean_positive):
+        return False
+    if row.regime_confounded:
+        return False
+    if int(row.n) < 2000 or int(row.breadth_symbols_used) < 10:
+        return False
+    return float(row.mean_ret_costadj) >= _concentrated_min_mean()
+
+
 # === Multi-horizon robustness gate (promotion-time) ===
 def _promotion_multi_horizon_min_passes() -> int:
     """Minimum number of distinct horizons per slice family required for promotion.
@@ -205,7 +238,9 @@ def sync_book(
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
 
-    validated_all = [row for row in read_validated(validated_path) if row.validated]
+    validated_rows = read_validated(validated_path)
+    validated_all = [row for row in validated_rows if row.validated]
+    validated_by_id = {row.slice_id: row for row in validated_rows}
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
 
@@ -215,6 +250,13 @@ def sync_book(
         for row in validated_all
         if row.n >= MIN_BOOK_ROWS and _directional_edge(row)
     ]
+    concentrated = [
+        row for row in validated_rows
+        if (not row.validated) and _is_concentrated_candidate(row)
+    ]
+    # Prefer full validation; concentrated fills only if the family is absent.
+    promotable_ids = {row.slice_id for row in promotable}
+    promotable.extend(row for row in concentrated if row.slice_id not in promotable_ids)
 
     # Optional multi-horizon robustness promotion gate
     min_passes = _promotion_multi_horizon_min_passes()
@@ -247,6 +289,7 @@ def sync_book(
 
     summary: dict = {
         "validated": len(validated_all),
+        "concentrated": len(concentrated),
         "promotable": len(promotable),
         "multi_horizon_min_passes": min_passes,
         "multi_horizon_select": select_mode,
@@ -309,7 +352,11 @@ def sync_book(
                 "p_value": f"{row.p_value:.6f}",
                 "horizon_bars": str(row.horizon_bars),
                 "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
-                "source": PROVENANCE_VALIDATED,
+                "source": (
+                    "validated_concentrated"
+                    if (not row.validated and _is_concentrated_candidate(row))
+                    else PROVENANCE_VALIDATED
+                ),
                 "hostile_unproven": "True" if row.hostile_unproven else "False",
                 "edge_is_directional_net": "True",
             }
