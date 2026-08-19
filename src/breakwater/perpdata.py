@@ -2,8 +2,13 @@
 
 VALR Perps executes on Hyperliquid. Market data such as candles is served
 by Hyperliquid's public info API and needs no VALR credentials, which the
-VALR web application itself relies on. Pairs listed by builder venues
-(xyz: prefixed) are skipped until their coin mapping is known.
+VALR web application itself relies on.
+
+HIP-3 builder venues (VALR symbols like ``xyz:NVDAUSDC``) *do* have a
+Hyperliquid coin id (``xyz:NVDA``). This crypto research/paper path still
+skips them on purpose: they are equity/commodity/index oracles, not the
+crypto book, and must not fill ``max_pairs`` or inflate pair-error counts.
+A later dedicated HIP-3 pass can map them; do not mix them into this pool.
 """
 
 from __future__ import annotations
