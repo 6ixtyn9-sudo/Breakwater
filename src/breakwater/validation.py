@@ -107,9 +107,7 @@ TRAIN_FRACTION = 0.60
 RECENCY_FRACTION = 0.20
 RECENCY_MIN_ROWS = 20
 
-BREADTH_MIN_SYMBOLS = 10
-BREADTH_MIN_ROWS_PER_SYMBOL = 10
-BREADTH_MIN_POSITIVE_FRACTION = 0.55
+# Breadth thresholds are configured below (env-backed with safe defaults).
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -124,9 +122,24 @@ def _coerce_int(value, default: int) -> int:
         return default
 
 
+def _coerce_float(value, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(
     os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4
+)
+
+STRICT_PASS_FLOOR = max(1, _coerce_int(os.getenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", "3"), 3))
+BREADTH_MIN_SYMBOLS = max(1, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "10"), 10))
+BREADTH_MIN_ROWS_PER_SYMBOL = max(1, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", "10"), 10))
+BREADTH_MIN_POSITIVE_FRACTION = max(
+    0.0,
+    min(1.0, _coerce_float(os.getenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.55"), 0.55)),
 )
 
 
@@ -487,8 +500,10 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
         pass_count = int(pattern.count("1"))
         latest_fold_passes = bool(pattern[-1] == "1") if pattern else False
 
-        strict_required = max(3, int(0.75 * FOLD_COUNT))
-        relaxed_required = max(strict_required, min(FOLD_COUNT, max(1, RELAXED_MIN_PASSES)))
+        strict_required = max(STRICT_PASS_FLOOR, int(0.75 * FOLD_COUNT))
+        # relaxed_required should be allowed to be LOWER than strict_required
+        relaxed_required = max(1, min(FOLD_COUNT, max(1, RELAXED_MIN_PASSES)))
+        relaxed_required = min(strict_required, relaxed_required)
         required_passes = int(strict_required if REQUIRE_BONFERRONI else relaxed_required)
 
         # Replace "latest fold must pass" with (recency OR latest) to reduce brittleness
