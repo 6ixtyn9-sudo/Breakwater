@@ -66,7 +66,27 @@ class UniverseSnapshot:
             if kind is None or row.kind == kind
         ]
 
-    def ranked(self, kind: str, limit: int) -> list[str]:
+    def ranked(self, kind: str, limit: int, *, mappable_only: bool = True) -> list[str]:
+        """Return the first ``limit`` symbols of ``kind`` by liquidity rank.
+
+        When ``mappable_only`` (default), PERP names with no crypto Hyperliquid
+        mapping (HIP-3 ``xyz:`` builder symbols, non-USDC quotes) are skipped
+        *before* the quota fills so ``max_pairs=60`` means 60 researchable
+        crypto perps, not 36 crypto + 24 designed skips.
+        """
+        if kind == "PERP" and mappable_only:
+            from breakwater.perpdata import pair_to_coin
+
+            picked: list[str] = []
+            for row in sorted(self.rows, key=lambda row: row.liquidity_rank):
+                if row.kind != kind:
+                    continue
+                if pair_to_coin(row.symbol) is None:
+                    continue
+                picked.append(row.symbol)
+                if len(picked) >= limit:
+                    break
+            return picked
         return [
             row.symbol
             for row in sorted(self.rows, key=lambda row: row.liquidity_rank)
