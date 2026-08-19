@@ -27,7 +27,7 @@ def append_status(path: Path, stage: str, mode: str, detail: str = "", keep: int
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "stage": str(stage),
         "mode": str(mode),
-        "detail": str(detail)[:1000],
+        "detail": str(detail)[:4000],
     })
     rows = rows[-keep:]
     file_descriptor, temporary_name = tempfile.mkstemp(
