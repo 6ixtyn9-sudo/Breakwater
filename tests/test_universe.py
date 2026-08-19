@@ -106,6 +106,49 @@ def test_missing_universe_file_reads_none(tmp_path):
     assert read_universe(tmp_path / "missing.csv") is None
 
 
+def test_ranked_perp_skips_xyz_before_filling_quota():
+    as_of = datetime.now(timezone.utc).isoformat()
+    rows = [
+        UniverseRow(
+            symbol="XYZ:NVDAUSDC", kind="PERP", base="XYZ:NVDA", quote="USDC",
+            active=True, liquidity_rank=1, quote_volume=Decimal("9e8"),
+            mark_price=Decimal("200"), max_leverage=Decimal("10"),
+            min_notional=Decimal("11"), min_margin=Decimal("2"), as_of=as_of,
+        ),
+        UniverseRow(
+            symbol="BTCUSDC", kind="PERP", base="BTC", quote="USDC",
+            active=True, liquidity_rank=2, quote_volume=Decimal("8e8"),
+            mark_price=Decimal("60000"), max_leverage=Decimal("40"),
+            min_notional=Decimal("11"), min_margin=Decimal("2"), as_of=as_of,
+        ),
+        UniverseRow(
+            symbol="XYZ:GOLDUSDC", kind="PERP", base="XYZ:GOLD", quote="USDC",
+            active=True, liquidity_rank=3, quote_volume=Decimal("7e8"),
+            mark_price=Decimal("4000"), max_leverage=Decimal("25"),
+            min_notional=Decimal("11"), min_margin=Decimal("2"), as_of=as_of,
+        ),
+        UniverseRow(
+            symbol="ETHUSDC", kind="PERP", base="ETH", quote="USDC",
+            active=True, liquidity_rank=4, quote_volume=Decimal("6e8"),
+            mark_price=Decimal("2000"), max_leverage=Decimal("25"),
+            min_notional=Decimal("11"), min_margin=Decimal("2"), as_of=as_of,
+        ),
+        UniverseRow(
+            symbol="SOLUSDC", kind="PERP", base="SOL", quote="USDC",
+            active=True, liquidity_rank=5, quote_volume=Decimal("5e8"),
+            mark_price=Decimal("80"), max_leverage=Decimal("20"),
+            min_notional=Decimal("11"), min_margin=Decimal("2"), as_of=as_of,
+        ),
+    ]
+    snapshot = UniverseSnapshot(rows=tuple(rows), as_of=as_of)
+    assert snapshot.ranked("PERP", 2) == ["BTCUSDC", "ETHUSDC"]
+    assert snapshot.ranked("PERP", 2, mappable_only=False) == [
+        "XYZ:NVDAUSDC",
+        "BTCUSDC",
+    ]
+    assert snapshot.ranked("PERP", 10) == ["BTCUSDC", "ETHUSDC", "SOLUSDC"]
+
+
 def test_legacy_universe_with_zero_perp_volumes_is_detected():
     from breakwater.universe import ingest_universe
 
