@@ -59,6 +59,33 @@ FILTER_NON_DIRECTIONAL_BOOK = _env_bool("BREAKWATER_FILTER_NON_DIRECTIONAL_BOOK"
 FILTER_NONPOSITIVE_BOOK = _env_bool("BREAKWATER_FILTER_NONPOSITIVE_BOOK", "0")
 
 
+def _paper_sessions() -> set[str]:
+    raw = str(os.getenv("BREAKWATER_PAPER_SESSIONS", "")).strip().lower()
+    if not raw:
+        return set()
+    allowed = {"asia", "eu", "us"}
+    return {part.strip() for part in raw.split(",") if part.strip() in allowed}
+
+
+def _utc_session(ts) -> str:
+    try:
+        stamp = pd.Timestamp(ts)
+        if stamp.tzinfo is None:
+            stamp = stamp.tz_localize("UTC")
+        else:
+            stamp = stamp.tz_convert("UTC")
+        hour = int(stamp.hour)
+    except Exception:
+        return "unknown"
+    if 0 <= hour <= 7:
+        return "asia"
+    if 8 <= hour <= 15:
+        return "eu"
+    if 16 <= hour <= 23:
+        return "us"
+    return "unknown"
+
+
 def _coerce_float(value, default: float = 0.0) -> float:
     try:
         return float(value)
@@ -209,6 +236,12 @@ def monitor_book(
             latest_state, latest_row = _latest_state(featured, feature)
             if latest_state != state:
                 continue
+
+            allowed_sessions = _paper_sessions()
+            if allowed_sessions:
+                sess = _utc_session(latest_row["start"])
+                if sess not in allowed_sessions:
+                    continue
 
             if regime_blocks(side, regime, hostile_unproven):
                 blocked.append(
