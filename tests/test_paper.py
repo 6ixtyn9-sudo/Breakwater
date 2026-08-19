@@ -145,6 +145,55 @@ def test_open_position_stops_out_and_journals(tmp_path):
     assert journal[0]["pnl_zar"].startswith("-")
 
 
+def test_horizon_does_not_cut_a_plus_one_r_winner(tmp_path):
+    """R-gate: once MFE >= +1R, horizon is a loser timer only."""
+    position = open_position(entry="100", stop="95", bars="5")
+    position[0]["horizon_bars"] = "6"
+    position[0]["initial_stop_price"] = "95"
+    position[0]["peak_price"] = "100"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=106, high=106, low=105)},
+        positions=position,
+    )
+    assert result["closed"] == 0
+    assert result["open"] == 1
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["trail_active"] == "1"
+
+
+def test_horizon_still_cuts_a_thesis_that_never_confirmed(tmp_path):
+    position = open_position(entry="100", stop="95", bars="5")
+    position[0]["horizon_bars"] = "6"
+    position[0]["initial_stop_price"] = "95"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=101, high=101, low=100)},
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "horizon"
+
+
+def test_two_r_target_fires_even_with_horizon(tmp_path):
+    position = open_position(entry="100", stop="95", bars="1")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=110, high=111, low=109)},
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "target"
+    assert float(log.iloc[0]["pnl_zar"]) > 0
+
+
 def test_open_position_hits_target_and_wins(tmp_path):
     result = cycle(
         tmp_path,
@@ -237,7 +286,7 @@ def test_hostile_regime_entry_is_blocked_and_visible(tmp_path):
     )
     assert result["open"] == 0
     log = pd.read_csv(tmp_path / "log.csv")
-    assert log.iloc[0]["entry_guard"] == "regime_blocked"
+    assert str(log.iloc[0]["entry_guard"]).startswith("regime_blocked")
 
 
 def test_stale_data_exits_instead_of_living_forever(tmp_path):
@@ -272,7 +321,7 @@ def test_one_paper_slot_per_kind(tmp_path):
     perp signals are considered."""
     spot_a = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:0:LONG")
     spot_b = signal(pair="ETHZAR", kind="SPOT", slice_id="feat:1:LONG")
-    perp = signal(pair="BTCUSDC", kind="PERP", entry="1500", stop="1485", atr="3")
+    perp = signal(pair="BTCUSDC", kind="PERP", slice_id="feat:perp:LONG", entry="1500", stop="1485", atr="3")
     result = cycle(
         tmp_path,
         signals=[spot_a, spot_b, perp],
@@ -281,7 +330,7 @@ def test_one_paper_slot_per_kind(tmp_path):
             "ETHZAR": spot_frame(close=100),
             "BTCUSDC": frame_with_bar(close=1500),
         },
-        book={"feat:0:LONG", "feat:1:LONG", "feat:0:SHORT"},
+        book={"feat:0:LONG", "feat:1:LONG", "feat:perp:LONG"},
     )
     assert result["open"] == 3
     positions = read_positions(tmp_path / "positions.json")
