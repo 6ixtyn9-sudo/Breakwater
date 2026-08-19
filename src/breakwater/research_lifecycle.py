@@ -66,7 +66,7 @@ PROVENANCE_VALIDATED = "validated_walk_forward"
 
 MIN_BOOK_ROWS = 60
 LIVE_DECAY_BARS = 96
-PNL_DECAY_MIN_TRADES = 5
+PNL_DECAY_MIN_TRADES = 3
 STOPOUT_COOLDOWN_BARS = 24
 BAR_SECONDS = 3600
 
@@ -315,8 +315,21 @@ def sync_book(
             }
         )
 
-    # Carry rows for kinds that did not promote anything in this run.
-    carried = [r for r in existing_rows if r.get("kind") not in promoted_kinds]
+    def _carry_eligible(row: dict) -> bool:
+        try:
+            edge = float(row.get("mean_ret_costadj") or 0.0)
+            n_rows = int(row.get("n") or 0)
+        except (TypeError, ValueError):
+            return False
+        return n_rows >= MIN_BOOK_ROWS and edge >= _min_net_edge()
+
+    # Carry rows for kinds that did not promote this run, but drop thin leftovers
+    # that would fail today's net-edge / n floors.
+    carried = [
+        r
+        for r in existing_rows
+        if r.get("kind") not in promoted_kinds and _carry_eligible(r)
+    ]
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
         summary["carried_total"] = len(carried)
