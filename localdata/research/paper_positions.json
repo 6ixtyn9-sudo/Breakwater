@@ -1,7 +1,7 @@
 [
   {
     "atr": "3192.714285714286",
-    "bars_held": "22",
+    "bars_held": "23",
     "entry_guard": "passed",
     "entry_price": "1051999.0",
     "horizon_bars": "24",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "233.0",
-    "bars_held": "19",
+    "bars_held": "20",
     "entry_guard": "passed",
     "entry_price": "64718.0",
     "horizon_bars": "24",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "0.5236428571428574",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "58.716",
     "horizon_bars": "24",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "1.4735714285714323",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "158.44",
     "horizon_bars": "23",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "36.0",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "9811.0",
     "horizon_bars": "24",
@@ -111,7 +111,7 @@
   },
   {
     "atr": "4.028571428571419",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "734.8",
     "horizon_bars": "22",
@@ -133,7 +133,7 @@
   },
   {
     "atr": "6.585714285714338",
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "1917.8",
     "horizon_bars": "24",
@@ -152,5 +152,27 @@
     "stop_price": "1894.7499999999998170",
     "trail_active": "0",
     "trough_price": "1917.8"
+  },
+  {
+    "atr": "0.3157142857142828",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "77.292",
+    "horizon_bars": "21",
+    "initial_stop_price": "76.18700000000001020",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "SOLUSDC",
+    "peak_price": "77.292",
+    "regime": "bull",
+    "risk_fraction": "0.01429643",
+    "side": "BUY",
+    "signal_id": "cbf5282fd47285f8",
+    "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "76.18700000000001020",
+    "trail_active": "0",
+    "trough_price": "77.292"
   }
 ]
