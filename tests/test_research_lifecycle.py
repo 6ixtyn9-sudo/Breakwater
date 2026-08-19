@@ -258,7 +258,7 @@ def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
         "paper_losses": "1",
         "paper_pnl_zar": "-0.50",
         "cooldown_until": "",
-        "mean_ret_costadj": "-0.001000",
+        "mean_ret_costadj": "0.002500",
         "n": "120",
         "p_value": "0.000001",
         "horizon_bars": "1",
@@ -275,6 +275,39 @@ def test_sync_book_preserves_kinds_without_fresh_validation(tmp_path):
     carried = next(row for row in rows if row["slice_id"] == "perp:0:SHORT")
     assert carried["paper_trades"] == "2"
     assert carried["status"] == "monitored"
+
+
+def test_concentrated_promote_takes_fail_only_breadth_fat_family(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
+    monkeypatch.setenv("BREAKWATER_CONCENTRATED_PROMOTE", "1")
+    monkeypatch.setenv("BREAKWATER_CONCENTRATED_MIN_MEAN", "0.004")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "2")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "edge_per_bar")
+
+    def fat(slice_id, horizon, mean):
+        row = validated_row(mean=mean, n=2200, validated=False, slice_id=slice_id, horizon_bars=horizon)
+        return ValidatedSlice(
+            **{
+                **row.__dict__,
+                "temporal_pass": True,
+                "direction_ok": True,
+                "mean_positive": True,
+                "breadth_ok": False,
+                "breadth_symbols_used": 17,
+                "fail_reasons": "breadth_ok",
+                "regime_confounded": False,
+            }
+        )
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, [fat("feat:2:LONG:h18", 18, 0.0042), fat("feat:2:LONG:h24", 24, 0.0059)])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["concentrated"] == 2
+    assert summary["monitored"] == 1
+    book = read_book(book_path)
+    assert book[0]["slice_id"] == "feat:2:LONG:h24"
+    assert book[0]["source"] == "validated_concentrated"
 
 
 def test_sync_book_never_wipes_on_empty_validated(tmp_path):
