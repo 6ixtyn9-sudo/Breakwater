@@ -63,6 +63,11 @@ def _coerce_int(value, default: int) -> int:
         return default
 
 
+def _research_max_pairs(default: int = 60) -> int:
+    raw = _coerce_int(os.getenv("BREAKWATER_RESEARCH_MAX_PAIRS", str(default)), default)
+    return max(8, min(200, raw))
+
+
 def _parse_horizons_env() -> list[int]:
     """Parse research horizons.
 
@@ -551,7 +556,9 @@ class BreakwaterEngine:
             break
         return result
 
-    def research_pass(self, *, max_pairs: int = 30) -> dict:
+    def research_pass(self, *, max_pairs: int | None = None) -> dict:
+        if max_pairs is None:
+            max_pairs = _research_max_pairs()
         server_time, _ = self._server_state()
         self.catalog.refresh()
         universe = self._universe()
@@ -673,7 +680,7 @@ class BreakwaterEngine:
             "book": book_summary,
         }
 
-        # status.csv has a 1000-char cap per row: keep it compact and keep the key knobs early.
+        # status.csv detail is capped (4000 chars); keep knobs early.
         status_detail = {
             "server_time": server_time.isoformat(),
             "pairs_researched": len(frames),
@@ -695,6 +702,9 @@ class BreakwaterEngine:
                 "BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES": promotion_min_passes,
                 "BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT": promotion_select,
                 "BREAKWATER_PROMOTION_MULTI_HORIZON_REQUIRE_CONTIGUOUS": promotion_require_contiguous,
+                "BREAKWATER_RESEARCH_MAX_PAIRS": str(max_pairs),
+                "BREAKWATER_SPOT_CANDLE_COUNT": os.getenv("BREAKWATER_SPOT_CANDLE_COUNT", ""),
+                "BREAKWATER_PERP_CANDLE_COUNT": os.getenv("BREAKWATER_PERP_CANDLE_COUNT", ""),
             },
             "book": book_summary,
         }
