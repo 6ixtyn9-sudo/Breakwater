@@ -1,29 +1,7 @@
 [
   {
-    "atr": "233.0",
-    "bars_held": "23",
-    "entry_guard": "passed",
-    "entry_price": "64718.0",
-    "horizon_bars": "24",
-    "initial_stop_price": "63902.50",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "BTCUSDC",
-    "peak_price": "64718.0",
-    "regime": "bull",
-    "risk_fraction": "0.01260082",
-    "side": "BUY",
-    "signal_id": "a49dad595fab32b2",
-    "slice_id": "feat_atr_norm_ext:2:LONG:h24",
-    "stop_atr_mult": "3.500000",
-    "stop_price": "63902.50",
-    "trail_active": "0",
-    "trough_price": "64718.0"
-  },
-  {
     "atr": "0.5236428571428574",
-    "bars_held": "13",
+    "bars_held": "14",
     "entry_guard": "passed",
     "entry_price": "58.716",
     "horizon_bars": "24",
@@ -45,7 +23,7 @@
   },
   {
     "atr": "1.4735714285714323",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "158.44",
     "horizon_bars": "23",
@@ -67,7 +45,7 @@
   },
   {
     "atr": "36.0",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "9811.0",
     "horizon_bars": "24",
@@ -89,7 +67,7 @@
   },
   {
     "atr": "4.028571428571419",
-    "bars_held": "5",
+    "bars_held": "6",
     "entry_guard": "passed",
     "entry_price": "734.8",
     "horizon_bars": "22",
@@ -111,7 +89,7 @@
   },
   {
     "atr": "6.585714285714338",
-    "bars_held": "4",
+    "bars_held": "5",
     "entry_guard": "passed",
     "entry_price": "1917.8",
     "horizon_bars": "24",
@@ -133,7 +111,7 @@
   },
   {
     "atr": "0.3157142857142828",
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "77.292",
     "horizon_bars": "21",
@@ -152,5 +130,27 @@
     "stop_price": "77.635000000000010200",
     "trail_active": "1",
     "trough_price": "77.292"
+  },
+  {
+    "atr": "182.07142857142858",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "64895.0",
+    "horizon_bars": "21",
+    "initial_stop_price": "64257.749999999999970",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BTCUSDC",
+    "peak_price": "64895.0",
+    "regime": "bull",
+    "risk_fraction": "0.00981971",
+    "side": "BUY",
+    "signal_id": "fde35f8483f518d6",
+    "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "64257.749999999999970",
+    "trail_active": "0",
+    "trough_price": "64895.0"
   }
 ]
