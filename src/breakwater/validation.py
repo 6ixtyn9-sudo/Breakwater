@@ -7,8 +7,10 @@ Fixes the remaining "quant trap" issues:
    - entry at close[t]
    - stop at +/- stop_atr_mult * ATR(14)
    - stop triggers if breached within the NEXT horizon bars (excludes entry bar)
-   - if not stopped, exit at close[t+h]
+   - else if a 2R target is touched in that window, exit at the target
+   - else exit at close[t+h]
    - subtract constant cost
+   Stop wins if both stop and target are touched in the window (same as paper).
 
 2) Side-selection leakage:
    Discovery chooses side using the full sample. Validation now re-chooses side
@@ -298,14 +300,24 @@ def _compute_stop_aware_net_returns(
         fwd_min_low, fwd_max_high = _forward_extremes_excluding_entry_bar(high, low, horizon_bars)
 
         stop_long = close - stop_atr_mult * atr
-        hit_long = fwd_min_low <= stop_long
-        exit_long = np.where(hit_long.to_numpy(dtype=bool), stop_long.to_numpy(), fwd_close.to_numpy())
+        risk_long = close - stop_long
+        target_long = close + (2.0 * risk_long)
+        hit_long_stop = fwd_min_low <= stop_long
+        hit_long_target = fwd_max_high >= target_long
+        exit_long = fwd_close.to_numpy()
+        exit_long = np.where(hit_long_target.to_numpy(dtype=bool), target_long.to_numpy(), exit_long)
+        exit_long = np.where(hit_long_stop.to_numpy(dtype=bool), stop_long.to_numpy(), exit_long)
         gross_long = (exit_long - close.to_numpy()) / close.to_numpy()
         net_l = gross_long - cost
 
         stop_short = close + stop_atr_mult * atr
-        hit_short = fwd_max_high >= stop_short
-        exit_short = np.where(hit_short.to_numpy(dtype=bool), stop_short.to_numpy(), fwd_close.to_numpy())
+        risk_short = stop_short - close
+        target_short = close - (2.0 * risk_short)
+        hit_short_stop = fwd_max_high >= stop_short
+        hit_short_target = fwd_min_low <= target_short
+        exit_short = fwd_close.to_numpy()
+        exit_short = np.where(hit_short_target.to_numpy(dtype=bool), target_short.to_numpy(), exit_short)
+        exit_short = np.where(hit_short_stop.to_numpy(dtype=bool), stop_short.to_numpy(), exit_short)
         gross_short = (exit_short - close.to_numpy()) / close.to_numpy() * (-1.0)
         net_s = gross_short - cost
 
