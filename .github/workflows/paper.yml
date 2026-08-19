@@ -49,7 +49,9 @@ jobs:
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
           BREAKWATER_PAPER_TIME_STOP_BARS: "12"
           BREAKWATER_PAPER_MAX_POSITIONS: "10"
-          BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: "5"
+          # Observation: one hunt family — allow several names, don't let leftovers hog kind slots
+          BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND || '8' }}
+          BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE || '5' }}
 
           # Trailing (profit-protecting stop) - OFF by default
           BREAKWATER_TRAIL_ENABLE: "0"
