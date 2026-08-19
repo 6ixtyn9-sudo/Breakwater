@@ -35,7 +35,7 @@ def main() -> int:
             elif args.command == "operate":
                 result = engine.operational_pass(max_pairs=args.max_pairs)
             elif args.command == "research":
-                result = engine.research_pass(max_pairs=30)
+                result = engine.research_pass()
             else:
                 result = engine.shadow_scan(max_pairs=args.max_pairs)
     except Exception as exc:
