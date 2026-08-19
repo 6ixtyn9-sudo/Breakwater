@@ -46,5 +46,13 @@
     "signal_id": "2877184c4cf6069b",
     "slice_id": "feat_ext_vs_ma_50:2:SHORT:h22",
     "stopped_at": "2026-08-19T16:15:20+00:00"
+  },
+  {
+    "pair": "LINKZAR",
+    "pnl_zar": "-6.9104",
+    "reason": "stop",
+    "signal_id": "db8435c9d19b7658",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT:h23",
+    "stopped_at": "2026-08-19T21:15:21+00:00"
   }
 ]
