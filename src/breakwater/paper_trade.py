@@ -31,8 +31,11 @@ Optional trailing (profit-protection) feature (OFF by default):
 - If enabled, a stop can become a profitable exit (so "stop" can be a win).
 
 Horizon alignment (IMPORTANT):
-If a position carries `horizon_bars` (>0), paper trading will exit at the bar
-close once that many bars have elapsed (while still honoring the stop intrabar).
+If a position carries `horizon_bars` (>0), a thesis that never reached +1R
+exits at the bar close once that many bars have elapsed (stop still wins
+intrabar). A trade that has already made +1R (R-gate) is NOT horizon-cut:
+the 2R target may fire, and the existing trail ratchets the stop. Horizon
+is a loser timer, not a winner cap. Disable with BREAKWATER_PAPER_R_GATE=0.
 
 Migration (IMPORTANT):
 Legacy open positions may predate `horizon_bars`/`regime` persistence. Each
@@ -113,11 +116,15 @@ def _env_decimal(name: str, default: str) -> Decimal:
         return Decimal(default)
 
 
-# Trailing feature flags (OFF by default).
+# Trailing feature flags (OFF by default unless R-gate has already activated).
 TRAIL_ENABLE = _env_bool("BREAKWATER_TRAIL_ENABLE", "0")
 TRAIL_ACTIVATE_R = _env_decimal("BREAKWATER_TRAIL_ACTIVATE_R", "1.0")
 TRAIL_DISTANCE_R = _env_decimal("BREAKWATER_TRAIL_DISTANCE_R", "1.0")
 TRAIL_IGNORE_TIME_STOP = _env_bool("BREAKWATER_TRAIL_IGNORE_TIME_STOP", "0")
+
+# Let winners win: horizon is a loser timer. Default ON.
+R_GATE_ENABLE = _env_bool("BREAKWATER_PAPER_R_GATE", "1")
+R_GATE_SUPPRESS_R = _env_decimal("BREAKWATER_PAPER_R_GATE_R", "1.0")
 
 
 def read_positions(path: Path) -> list[dict]:
@@ -462,32 +469,44 @@ def run_paper_cycle(
         high = Decimal(str(last["high"]))
         low = Decimal(str(last["low"]))
         bars_held = _coerce_int(position.get("bars_held"), 0) + 1
+        initial_stop_price = Decimal(str(position.get("initial_stop_price") or stop))
+        r_dist = abs(entry - initial_stop_price)
+        peak_seen = max(Decimal(str(position.get("peak_price") or entry)), high)
+        trough_seen = min(Decimal(str(position.get("trough_price") or entry)), low)
+        mfe_r = Decimal(0)
+        if r_dist > 0:
+            mfe_r = ((peak_seen - entry) / r_dist) if side == "BUY" else ((entry - trough_seen) / r_dist)
+        r_gate_on = bool(R_GATE_ENABLE and r_dist > 0 and mfe_r >= R_GATE_SUPPRESS_R)
         target = (
-            entry + (entry - stop) * TARGET_R_MULTIPLE
+            entry + (entry - initial_stop_price) * TARGET_R_MULTIPLE
             if side == "BUY"
-            else entry - (stop - entry) * TARGET_R_MULTIPLE
+            else entry - (initial_stop_price - entry) * TARGET_R_MULTIPLE
         )
 
         exit_price = None
         exit_reason = None
         outcome = None
+        allow_target = (horizon_bars == 0) or R_GATE_ENABLE
         if side == "BUY":
             if low <= stop:
                 exit_price = stop
                 outcome = "win" if stop >= entry else "loss"
-                initial_stop = Decimal(str(position.get("initial_stop_price") or stop))
-                exit_reason = "trail_stop" if stop != initial_stop else "stop"
-            elif horizon_bars == 0 and high >= target:
+                exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
+            elif allow_target and high >= target:
                 exit_price, exit_reason, outcome = target, "target", "win"
         else:
             if high >= stop:
                 exit_price = stop
                 outcome = "win" if stop <= entry else "loss"
-                initial_stop = Decimal(str(position.get("initial_stop_price") or stop))
-                exit_reason = "trail_stop" if stop != initial_stop else "stop"
-            elif horizon_bars == 0 and low <= target:
+                exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
+            elif allow_target and low <= target:
                 exit_price, exit_reason, outcome = target, "target", "win"
-        if exit_price is None and horizon_bars > 0 and bars_held >= horizon_bars:
+        if (
+            exit_price is None
+            and horizon_bars > 0
+            and bars_held >= horizon_bars
+            and not r_gate_on
+        ):
             exit_price = close
             exit_reason = "horizon"
             outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
@@ -497,14 +516,15 @@ def run_paper_cycle(
             and horizon_bars == 0
             and bars_held >= TIME_STOP_BARS
             and not (TRAIL_ENABLE and TRAIL_IGNORE_TIME_STOP and trail_active)
+            and not r_gate_on
         ):
             exit_price = close
             exit_reason = "time_stop"
             outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
         if exit_price is None:
-            if TRAIL_ENABLE and horizon_bars == 0:
-                initial_stop_price = Decimal(str(position.get("initial_stop_price") or position["stop_price"]))
-                r = abs(entry - initial_stop_price)
+            trail_allowed = (TRAIL_ENABLE and horizon_bars == 0) or r_gate_on
+            if trail_allowed:
+                r = r_dist
                 if r > 0:
                     peak_price = Decimal(str(position.get("peak_price") or entry))
                     trough_price = Decimal(str(position.get("trough_price") or entry))
