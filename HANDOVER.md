@@ -3,7 +3,7 @@ Date: 2026-08-20 (Africa/Johannesburg)
 
 This is the canonical handover. Plain text. Copy this whole file.
 
-Spine: Price is equities. Breakwater is VALR-native crypto (spot + mapped crypto perps).
+Breakwater is VALR-native crypto (spot + mapped crypto perps).
 Do not port Hermes/YouTube agents here.
 Do not mix HIP-3 equity perps (xyz:) into this book.
 
@@ -83,7 +83,6 @@ Files:
 Git: https://github.com/6ixtyn9-sudo/Breakwater.git
 Operator: 6ixtyn9. Mac died. Actions + cron are the computer.
 Humans commit source only. If localdata dirty: git checkout -- localdata/ then pull.
-Never git add -A on Edge Factory (bot owns localdata there too).
 
 
 3) HUNT DOCTRINE (FROZEN)
@@ -165,7 +164,7 @@ Carry: if a kind promotes 0 rows, existing eligible book rows carry. Why h21 sur
 Paper-green veto: if monitored/cooldown has paper_trades >= 1 AND paper_pnl_zar > 0,
 it STAYS even if the same kind promotes a different family. New family can be ADDED.
 Losers still decay (stale 96 bars; or trades>=3 and pnl<0; stopout cooldown).
-This is Edge Factory money judge, not a lower edge floor.
+Paper PnL is the eviction judge, not a lower edge floor.
 
 Book vs log hole (fixed):
   Paper wrote the book in the runner; commit_state.sh paper did not persist
@@ -253,15 +252,7 @@ Do not panic if hunt fails in-sample on rank-window research; carry + paper-gree
 Job search > retune. Cloud is the computer.
 
 
-11) RELATED LABS (DO NOT MERGE)
-
-Edge Factory: soccer; auto-tickets ROI gates; empty ticket valid; Wilson floor 0.50; noon freeze SAST.
-Price: Alpaca paper, no leverage/options/forex/cash; TF cull floors 1d=5, 1h=15, 15m=20; about a month of paper.
-Tempest / Halcyon / STST / Slipstream: not this hunt. Slipstream: accept no-edge.
-XYZ HIP-3: second lab, isolated book/paper/fees/sessions, later.
-
-
-12) WHAT NOT TO BREAK
+11) WHAT NOT TO BREAK
 
 Horizon on positions; 2R cap; R-gate as loser-timer vs winner-cap.
 Rank window (no tail fill). xyz: skip (no equity in this pool).
@@ -273,7 +264,7 @@ MIN_NET_EDGE 0.002; PER_SLICE 5; do not lift 2R.
 Do not port self-improving agents into Breakwater.
 
 
-13) TAPE CHEAT-SHEET (2026-08-20)
+12) TAPE CHEAT-SHEET (2026-08-20)
 
 Hunt closes: 5 target, +34.80 ZAR, 0 stops.
 All-time fills: 31, +30.57 ZAR.
