@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: breakwater-state
+  group: breakwater-paper
   cancel-in-progress: false
 
 permissions:
