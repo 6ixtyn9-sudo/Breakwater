@@ -331,6 +331,15 @@ class BreakwaterEngine:
             for kind in ("SPOT", "PERP")
             for pair in universe.ranked(kind, max_pairs)
         ]
+        seen = {(pair.upper(), kind) for pair, kind in targets}
+        for position in read_positions(
+            self.settings.data_dir / "research" / "paper_positions.json"
+        ):
+            pair = str(position.get("pair") or "").upper()
+            kind = str(position.get("kind") or "")
+            if pair and kind and (pair, kind) not in seen:
+                targets.append((pair, kind))
+                seen.add((pair, kind))
         frames, frame_errors = self._frames(targets, server_time)
         frames_by_kind: dict[str, dict] = {"SPOT": {}, "PERP": {}}
         for pair, kind in targets:
