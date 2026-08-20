@@ -422,6 +422,7 @@ class BreakwaterEngine:
             "pairs_checked": len(frames),
             "signals": len(signals),
             "errors": len(errors),
+            "pair_errors": errors[:8],
             "regime_blocked": len(blocked),
         }
         if paper_result is not None:
@@ -688,6 +689,10 @@ class BreakwaterEngine:
             "server_time": server_time.isoformat(),
             "pairs_researched": len(frames),
             "frame_errors": len(frame_errors),
+            "pair_errors": [
+                {"pair": pair, "error": error}
+                for pair, error in sorted(frame_errors.items())
+            ][:8],
             "research_horizons": horizons,
             "discovered_slices": len(discovered),
             "validated_slices": len([row for row in validated if row.validated]),
