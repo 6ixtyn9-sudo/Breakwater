@@ -21,6 +21,7 @@ paper_files=(
   localdata/research/paper_trade_log.csv
   localdata/research/paper_positions.json
   localdata/research/cooldown_journal.json
+  localdata/research/monitored_slices.csv
 )
 
 guardian_files=(
