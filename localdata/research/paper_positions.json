@@ -1,7 +1,7 @@
 [
   {
     "atr": "580.7142857142857",
-    "bars_held": "19",
+    "bars_held": "20",
     "entry_guard": "passed",
     "entry_price": "68630.0",
     "horizon_bars": "21",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "0.961428571428571",
-    "bars_held": "10",
+    "bars_held": "11",
     "entry_guard": "passed",
     "entry_price": "93.113",
     "horizon_bars": "21",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "0.0006456428571428595",
-    "bars_held": "10",
+    "bars_held": "11",
     "entry_guard": "passed",
     "entry_price": "0.073051",
     "horizon_bars": "21",
@@ -54,20 +54,20 @@
     "missing_bars": "0",
     "notional_zar": "200.00",
     "pair": "DOGEUSDC",
-    "peak_price": "0.077374",
+    "peak_price": "0.077508",
     "regime": "bull",
     "risk_fraction": "0.03093387",
     "side": "BUY",
     "signal_id": "117357f80802f5b8",
     "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
     "stop_atr_mult": "3.500000",
-    "stop_price": "0.075114249999999991750",
+    "stop_price": "0.075248249999999991750",
     "trail_active": "1",
     "trough_price": "0.073051"
   },
   {
     "atr": "21.485714285714103",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "4511.8",
     "horizon_bars": "21",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "5.860714285714282",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "644.77",
     "horizon_bars": "21",
