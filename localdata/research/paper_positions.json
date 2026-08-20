@@ -1,7 +1,7 @@
 [
   {
     "atr": "580.7142857142857",
-    "bars_held": "18",
+    "bars_held": "19",
     "entry_guard": "passed",
     "entry_price": "68630.0",
     "horizon_bars": "21",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "0.961428571428571",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "93.113",
     "horizon_bars": "21",
@@ -32,20 +32,20 @@
     "missing_bars": "0",
     "notional_zar": "183.4588974739971100113956050",
     "pair": "AAVEUSDC",
-    "peak_price": "98.098",
+    "peak_price": "98.168",
     "regime": "bull",
     "risk_fraction": "0.03613889",
     "side": "BUY",
     "signal_id": "dacb83bead29ac85",
     "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
     "stop_atr_mult": "3.500000",
-    "stop_price": "94.73300000000000150",
+    "stop_price": "94.80300000000000150",
     "trail_active": "1",
     "trough_price": "93.113"
   },
   {
     "atr": "0.0006456428571428595",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "0.073051",
     "horizon_bars": "21",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "21.485714285714103",
-    "bars_held": "8",
+    "bars_held": "9",
     "entry_guard": "passed",
     "entry_price": "4511.8",
     "horizon_bars": "21",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "5.860714285714282",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "644.77",
     "horizon_bars": "21",
