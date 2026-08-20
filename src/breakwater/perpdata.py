@@ -7,7 +7,8 @@ VALR web application itself relies on.
 HIP-3 builder venues (VALR symbols like ``xyz:NVDAUSDC``) *do* have a
 Hyperliquid coin id (``xyz:NVDA``). This crypto research/paper path still
 skips them on purpose: they are equity/commodity/index oracles, not the
-crypto book, and must not fill ``max_pairs`` or inflate pair-error counts.
+crypto book. They occupy volume-rank slots but are dropped from the
+window rather than replaced by tail dust, and must not inflate pair-error counts.
 A later dedicated HIP-3 pass can map them; do not mix them into this pool.
 """
 
