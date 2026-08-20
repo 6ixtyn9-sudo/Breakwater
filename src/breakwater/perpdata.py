@@ -23,6 +23,11 @@ from breakwater.models import Candle
 
 HYPERLIQUID_INFO_URL = "https://api.hyperliquid.xyz/info"
 
+# VALR/base upper -> Hyperliquid info coin (case-sensitive on a few names).
+HL_COIN_ALIASES = {
+    "KPEPE": "kPEPE",
+}
+
 INTERVAL_SECONDS = {
     "1m": 60,
     "5m": 300,
@@ -39,7 +44,9 @@ def pair_to_coin(pair: str) -> str | None:
     if ":" in symbol or not symbol.endswith("USDC"):
         return None
     coin = symbol[:-4]
-    return coin or None
+    if not coin:
+        return None
+    return HL_COIN_ALIASES.get(coin, coin)
 
 
 def fetch_perp_candles_for_pair(pair: str, **kwargs) -> list[Candle]:
@@ -68,7 +75,7 @@ def fetch_perp_candles(
     payload = {
         "type": "candleSnapshot",
         "req": {
-            "coin": coin.upper(),
+            "coin": HL_COIN_ALIASES.get(str(coin).upper(), str(coin).upper()),
             "interval": interval,
             "startTime": start_ms,
             "endTime": end_ms,
