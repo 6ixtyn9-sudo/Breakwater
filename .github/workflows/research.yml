@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: breakwater-state
+  group: breakwater-research
   cancel-in-progress: false
 
 permissions:
@@ -18,7 +18,7 @@ jobs:
   refresh:
     runs-on: ubuntu-24.04
     # 24 horizons can take a while. Bump this if you ever see timeouts.
-    timeout-minutes: 240
+    timeout-minutes: 3600
 
     steps:
       - name: Checkout
