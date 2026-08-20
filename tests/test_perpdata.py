@@ -46,6 +46,7 @@ def test_pair_to_coin_maps_valr_symbols():
     assert pair_to_coin("ethusdc") == "ETH"
     assert pair_to_coin("xyz:SNDKUSDC") is None
     assert pair_to_coin("BTCUSDT") is None
+    assert pair_to_coin("KPEPEUSDC") == "kPEPE"
 
 
 def test_fetch_perp_candles_maps_hyperliquid_schema():
