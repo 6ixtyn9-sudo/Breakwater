@@ -60,7 +60,11 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from breakwater.monitor import SliceSignal, regime_blocks, regime_of
-from breakwater.research_lifecycle import apply_signal_feedback, read_book
+from breakwater.research_lifecycle import (
+    apply_signal_feedback,
+    read_book,
+    reconcile_paper_stats_from_log,
+)
 
 
 PAPER_LOG_HEADERS = [
@@ -396,6 +400,7 @@ def run_paper_cycle(
     missing_bars_exit: int = MISSING_BARS_EXIT,
 ) -> dict:
     closed_rows: list[dict] = []
+    reconcile_paper_stats_from_log(book_path, log_path)
     open_positions = read_positions(positions_path)
     # Migration: upgrade legacy positions so horizon exits engage.
     book_horizon_map = _load_book_horizon_map(book_path)
