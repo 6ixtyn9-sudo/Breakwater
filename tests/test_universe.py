@@ -106,7 +106,7 @@ def test_missing_universe_file_reads_none(tmp_path):
     assert read_universe(tmp_path / "missing.csv") is None
 
 
-def test_ranked_perp_skips_xyz_before_filling_quota():
+def test_ranked_perp_drops_xyz_inside_rank_window_without_tail_fill():
     as_of = datetime.now(timezone.utc).isoformat()
     rows = [
         UniverseRow(
@@ -141,11 +141,13 @@ def test_ranked_perp_skips_xyz_before_filling_quota():
         ),
     ]
     snapshot = UniverseSnapshot(rows=tuple(rows), as_of=as_of)
-    assert snapshot.ranked("PERP", 2) == ["BTCUSDC", "ETHUSDC"]
+    # Top-2 window is NVDA + BTC; drop xyz → BTC only. Do not pull ETH.
+    assert snapshot.ranked("PERP", 2) == ["BTCUSDC"]
     assert snapshot.ranked("PERP", 2, mappable_only=False) == [
         "XYZ:NVDAUSDC",
         "BTCUSDC",
     ]
+    assert snapshot.ranked("PERP", 4) == ["BTCUSDC", "ETHUSDC"]
     assert snapshot.ranked("PERP", 10) == ["BTCUSDC", "ETHUSDC", "SOLUSDC"]
 
 
