@@ -1,7 +1,7 @@
 [
   {
     "atr": "580.7142857142857",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "68630.0",
     "horizon_bars": "21",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "0.961428571428571",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "93.113",
     "horizon_bars": "21",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "2.9607142857142725",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "617.32",
     "horizon_bars": "21",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "0.0006456428571428595",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "0.073051",
     "horizon_bars": "21",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "21.485714285714103",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "4511.8",
     "horizon_bars": "21",
