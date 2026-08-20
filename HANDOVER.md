@@ -1,215 +1,217 @@
-# Breakwater Handover / Runbook (2026-08-16)
+Breakwater Handover / Runbook (2026-08-20)
+Date: Thursday, 2026-08-20 (Africa/Johannesburg). Trust this over older stamps.
 
-Date: Sunday, 2026-08-16 (UTC)
+This is the canonical handover for operators and future agents.
+Copy-paste safe: ASCII markdown, no smart quotes.
 
-This document is the canonical handover for future agents/operators:
-- where Breakwater is today
-- what was broken and fixed
-- what “good” looks like next
-- when (and how) to go live + add leverage
-- operational guardrails to avoid over-tuning
+Spine: Price is the parent research lab for equities. Breakwater is VALR-native crypto (spot + mapped crypto perps). Do not port Hermes/YouTube agents here. Do not mix HIP-3 equity perps (xyz:) into this book.
 
----
+0) Executive summary (read this first)
+Breakwater is hands-off paper on one hunt slice:
 
-## 0) Executive Summary (read this first)
+PERP feat_ext_vs_ma_50:2:LONG:h21
 
-Breakwater initially ran in a **mismatch state**: slices were discovered/validated using a fixed forward-return horizon (`horizon_bars`), but paper trading used stop/target/time-stop exits. This caused biased/low-quality evidence and early poor paper results.
+Source: validated_concentrated (19 Aug). Mean +0.005465, n=2282, 17 names, fail only breadth_ok, hostile_n=0 at promote time.
+Paper (score this only): n=5 closes, all target, 0 stops, +34.80 ZAR on R200 notionals (SOL +5.20, BTC +3.41, BTC +5.86, ETH +9.61, SOL +10.72). Last close 2026-08-19T21:15Z.
+All-time paper fills (every slice, 16-19 Aug): n=31, +30.57 ZAR. Hunt is the profit; other slices ~ -4.2.
+Live: locked. VALR authenticated /simple-futures/* still HTTP 401 code -93. Guardian equity ~R345-352 ZAR, 0 live positions. Paper marks public Hyperliquid candles, not VALR perps API.
+Operator posture: hawk, not pig. Do not click research. Cron research is daily 02:25 UTC. Do not raise 2R, MIN_NET_EDGE, or PER_SLICE.
+If you only remember one rule: score only h21 closes (target / trail_stop / horizon / stop). First honest stop has not printed.
 
-As of 2026-08-16, Breakwater has been updated to:
-1) **Align paper execution to slice horizon** (horizon exits) and automatically **migrate legacy open positions** to include `horizon_bars` and `regime`.
-2) **Reduce biased evidence** from strict regime gating via **evidence-aware regime blocking** using `hostile_unproven`.
-3) Track and act on **truth after fees** via `pnl_outcome` (while keeping legacy `outcome`).
+1) Current operating mode
+BREAKWATER_MODE: paper workflow = shadow; guardian often readonly; research = readonly.
+No live orders. Mandate env is present; writes not armed for perps.
+Cron (cron-job.org) dispatches filenames (do not rename workflows):
+guardian.yml ~ :05 and :35
+paper.yml ~ :15
+research.yml daily 02:25 UTC
+Concurrency groups (internal; cron URLs unchanged):
+breakwater-guardian
+breakwater-paper
+breakwater-research
+Shared lock used to queue guardian behind 60x1000 candle paper jobs. Split on purpose. commit_state.sh rebase-retries and merges status.csv.
+2) System map
+2.1 Pipeline
+text
 
-Primary goal for the week: **hands-off paper trading** across sessions, gather clean evidence, avoid frequent code changes.
+VALR spot + VALR perp symbol dump
+        |
+        v
+universe.csv (ranked by venue volume; 7-day cache)
+        |
+        v
+Rank window: top max_pairs by rank, DROP xyz: (no tail fill)
+        |
+        v
+OHLCV: spot VALR public/auth candles; perps Hyperliquid public info
+        |
+        v
+Features -> discovery -> walk-forward validation
+        |
+        v
+sync_book: promote (net edge + 2-horizon) OR concentrated OR carry OR paper-green veto
+        |
+        v
+monitor (EU/US sessions for paper) -> paper (R-gate, 2R cap, fees)
+        |
+        v
+live path still big-wave + perps execute locked (401)
+Nothing is a hand-authored strategy. Features are price states.
 
----
+2.2 Files of record
+Book: 
+monitored_slices.csv
 
-## 1) Current Operating Mode
+Paper: 
+paper_positions.json
+, paper_trade_log.csv, cooldown_journal.json
+Research: discovered_slices.csv, validated_slices.csv, universe.csv
+Ops: 
+status.csv
+, risk_state.json
+Code: src/breakwater/{universe,perpdata,engine,paper_trade,research_lifecycle,monitor,validation,discovery}.py
+Persist: 
+commit_state.sh
+ roles research | paper | guardian
 
-- Exchange mode: `readonly` (no live orders)
-- Trading mode: paper/shadow (“paper positions” + “paper trade log”)
-- We are awaiting VALR support response (API/perps/auth questions).
+paper now also persists monitored_slices.csv (was the hole that left paper_trades=0 in git)
+2.3 Identity / git
+Public: https://github.com/6ixtyn9-sudo/Breakwater.git
+Operator: 6ixtyn9. Mac died; Actions + cron are the computer.
+Never git add -A on Edge Factory; here bot owns localdata/ via commit_state. Humans: source files only, then git checkout -- localdata/ before pull if dirty.
+3) Hunt doctrine (frozen)
+Do not retune these because the tape is green.
 
----
+MIN_NET_EDGE=0.002
+RESEARCH_MAX_PAIRS=60 (rank window, not 60 crypto from the tail)
+Paper --max-pairs 30
+Candles 1000 spot/perp
+Horizons 1-24; Bonferroni off
+Concentrated promote: fail subset {breadth_ok} only; temporal+direction+mean_positive; not confounded; n>=2000; symbols>=10; mean>=0.004; selector edge_per_bar -> h21
+Paper: MAX_POSITIONS=10, PER_KIND=8, PER_SLICE=5
+Sessions: eu,us (skip Asia 00-07 UTC)
+FILTER_NONPOSITIVE_BOOK=1
+R-gate ON. Trail ENABLE=0 but R-gate arms trail at +1R, TRAIL_DISTANCE_R=1.0
+Validation/paper: stop else 2R else horizon. Do not drop 2R mid-sample.
+Same-bar: stop checked before target/trail (full -1R possible)
+TIME_STOP_BARS=12 only if horizon_bars==0
+Cousins (ret_20, trend_slope_20, atr_norm_ext, ext_vs_ma_20) failed temporal and/or confounded. Leave them.
+Falsified earlier: PERP feat_realized_vol_20:0:LONG:h24 (fat on 6 names, died at 60x1000+2R)
+Exit menu: no +1R -> original stop / horizon; after clean +1R bar -> trail giveback 1R from peak; max banked +2R.
 
-## 2) System Map (where things live)
+4) Universe, xyz:, rank window (2026-08-19/20)
+4.1 What xyz: is
+VALR lists HIP-3 builder perps as XYZ:NVDAUSDC etc. (trade.xyz: equities, gold, SP500). Hyperliquid coin id is xyz:NVDA. This crypto lab must not pool them with BTC. Different oracle, session, fees, weekend.
 
-### 2.1 Core research/decision pipeline (conceptual)
-1) Bars pulled for pooled universe
-2) Feature computation
-3) Discovery (`discovery.py`): find candidate slices, with Bonferroni correction
-4) Validation (`validation.py`): walk-forward + hostile regime audit
-5) Book build/promote -> `monitored_slices.csv`
-6) Monitor (`monitor.py`) emits signals from the book
-7) Paper trade (`paper_trade.py`) executes signals and logs outcomes
-8) Feedback loop updates slice lifecycle/book metrics
+4.2 What we did wrong, then fixed
+xyz: in the top-30/60 counted as pair errors (24/35). Designed skip, noisy telemetry.
+First fix filled max_pairs with the next mappable crypto (walked into rank 80 dust: CASHCAT, ACE, ...).
+Research #78 (2026-08-20 02:25 UTC, 10m55s): 109 frames, 2 frame errors. Same hunt id on the wide pool: mean -0.00237, n=7962, 58 names, posf 0.26, fail temporal+direction+breadth+mean<=0, hostile_n=2. validated=False. 25 "validated" rows were SPOT shorts ~3-16 bp (under 0.002, not promoted). concentrated this pass: 0.
+Book carried the 19 Aug hunt (PERP promoted nothing). Paper kept trading it.
+Rank window (landed): take top limit by liquidity_rank, then drop unmappable. No tail fill. Research 60 ~= the sample that found the hunt (~36 crypto). Paper 30 ~= ~6 mappable in that window (BTC, ETH, HYPE, SOL, PUMP, ZEC on the 14 Aug file).
+Do not undo xyz skip. Do not fill the tail again to "make 60 crypto". Do not shrink to 17 names to p-hack the mean green.
 
-### 2.2 Files of record (operator should know these)
+4.3 7-day universe cache
+universe.csv as_of 2026-08-14T13:58Z. _universe() re-ingests if age >= 7 days (~21 Aug 13:58 UTC; 21 Aug 02:25 research may still be inside the window; 22 Aug 02:25 is the safe first photo).
 
-**Book / strategy config**
-- `localdata/research/monitored_slices.csv`
-  - includes: `slice_id`, `kind`, `feature`, `state`, `side`, `horizon_bars`, `stop_atr_mult`, `hostile_unproven`, plus performance counters
+Ingest = new volume ranking photo, not a bigger brain. Rank window still top N minus xyz:. Hunt does not auto-re-promote on ingest.
 
-**Paper trading state**
-- `localdata/research/paper_positions.json`
-  - open paper positions (must remain consistent with paper log)
-  - should include: `horizon_bars`, `regime`, `bars_held`
+4.4 KPEPE flake
+Hyperliquid coin is kPEPE, not KPEPE. Alias in perpdata.py HL_COIN_ALIASES. Was paper errors: 1 / research frame_errors class. Status now stores up to 8 {pair, error} strings (pair_errors).
 
-**Paper trade audit**
-- `localdata/research/paper_trade_log.csv`
-  - authoritative event log for closed and skipped paper actions
-  - includes: `exit_reason`, `bars_held`, `pnl_zar`, `outcome`, `pnl_outcome`, `regime`
+5) Paper lifecycle vs research (2026-08-20)
+5.1 Carry
+If a kind promotes 0 rows, existing eligible book rows carry. That is why h21 survived #78.
 
-**Operational status / heartbeat**
-- `localdata/status.csv`
-  - guardian snapshots, mode, and “paper cycle summary” counters
+5.2 Paper-green veto
+If a monitored/cooldown row has paper_trades >= 1 and paper_pnl_zar > 0, it stays even if the same kind promotes a different family. New family can be added. Losers still decay (stale 96 bars; or trades>=3 and pnl<0; stopout cooldown).
 
----
+This is Edge Factory's money judge, not a lower edge floor.
 
-## 3) What was broken originally (root causes)
+5.3 Book vs log hole (fixed)
+Paper apply_signal_feedback wrote the book in the runner; commit_state.sh paper did not persist monitored_slices.csv. Git showed paper_trades=0 while the log was +34.80.
 
-### 3.1 Horizon mismatch (biggest issue)
-- Research measured expectancy at a fixed horizon (`horizon_bars`)
-- Paper execution exited via stop/target/time-stop, often holding far longer
-- This invalidated evidence and created misleading results
+Fixed: paper persists the book. reconcile_paper_stats_from_log on each paper cycle recomputes paper_* from real fills (win/loss, not skips). Next paper job after that land should stamp hunt 5/5 +34.80 on the book. Confirm in monitored_slices.csv.
 
-### 3.2 Biased evidence from strict regime gate
-- Book is currently heavily SHORT skewed
-- If shorts are blocked in bull, evidence is filtered to bear/neutral pockets
-- This is not necessarily “safer”; it can be *more biased* and slow learning
+5.4 Open seats outside the rank window
+Fill-quota paper opened AAVE/BNB/DOGE/PAXG. Rank window then stopped fetching them -> missing_bars climbing toward 24 -> stale_data close at entry+fees.
 
-### 3.3 Win-rate label wasn’t “truth”
-- `outcome=win` could still have negative `pnl_zar` after fees
-- Lifecycle feedback/cooldown was previously based on `outcome` (direction), not realized PnL
+Fixed: shadow_scan unions open position pairs into _frames targets. Rank window still governs new names.
 
----
+5.5 Open book snapshot (morning 20 Aug, then rest)
+After rest: BTC 15/21 trail ON (peak 71362 vs 68630, stop ~69330). AAVE/BNB/DOGE trail on, missing_bars had been 4 before open-seat fetch fix. PAXG trail off. EU 08:15: 6 signals, slice_full 6, cap 5. errors 0.
 
-## 4) Fixes implemented (must remain true)
+Score only h21. BTC is the seat most likely to print the first trail_stop.
 
-### 4.1 Horizon alignment + migration (paper)
-In `src/breakwater/paper_trade.py`:
-- Positions carry `horizon_bars`
-- Exit at bar close when `bars_held >= horizon_bars` with `exit_reason=horizon`
-- Stop remains an intrabar safety boundary
-- Legacy open positions are auto-migrated each run:
-  - missing/0 `horizon_bars` backfilled from `monitored_slices.csv`
-  - missing `regime` filled from `monitor.regime_of(frame)` or `unknown`
+6) Paper execution rules (must remain true)
+In paper_trade.py:
 
-**Expected evidence signature:**
-- most closes show `exit_reason=horizon`
-- `bars_held` equals `horizon_bars` (often 6)
+Horizon = loser timer. If never +1R, exit at horizon bar close. Stop still wins intrabar.
+After +1R (R-gate): do not horizon-cut; 2R target may fire; trail ratchets 1R under peak.
+Do not drop 2R mid-sample (validation = stop else 2R else horizon).
+pnl_outcome after fees is truth; cooldown is stop/trail_stop/stale_data only.
+Immortal guard: missing_bars >= 24 -> close at entry with fees (stale_data).
+Sessions eu,us. FILTER_NONPOSITIVE_BOOK=1.
+Expected hunt signature: mix of target / trail_stop / horizon / stop. All-target n=5 is a bull-tape print, not a proven edge.
 
-### 4.2 Evidence-aware regime blocking + strict override
-In `src/breakwater/monitor.py`:
-- `regime_blocks(side, regime, hostile_unproven)`:
-  - if strict mode enabled → always block in hostile regime
-  - otherwise → block only if `hostile_unproven=True`
-- strict override env var:
-  - `BREAKWATER_REGIME_GATE_STRICT=1`
+7) Research / promotion (must remain true)
+Net LONG = r - cost; SHORT = -r - cost. Perp cost 26 bps, spot 20.
+Promote walk-forward validated rows with n>=60 and mean >= MIN_NET_EDGE, and 2 distinct horizons per family (edge_per_bar pick).
+Concentrated path (env on): fail only breadth_ok, plus temporal/direction/mean_positive, not confounded, n>=2000, symbols>=10, mean>=0.004.
+25 WF-validated SPOT shorts under 0.002 stay off the book. Do not loosen posf / MIN_NET_EDGE / max_pairs to revive dust.
+#78 wider pool failing the hunt is sample change (tail alts), not automatic "regime flipped". hostile_n 0->2 is a note, not a kill switch.
+If a better family passes floors, it promotes. Green hunt also stays (paper veto). Empty promote -> carry.
+Do not click research to soothe. Cron 02:25 UTC is the sample.
 
-In `src/breakwater/paper_trade.py`:
-- paper regime gating must pass `signal.hostile_unproven` into `regime_blocks(...)`
-- otherwise paper would re-block trades even if monitor allowed them
+8) Live / VALR
+Public symbol-info OK. Authenticated simple-futures: 401 -93. Snow escalated. Tickets auto-close 3 days.
+Live path still big-wave + perp execute code-locked.
+Paper outgrew live. No cash, no leverage, no options, no forex on this lab.
+Funding not in net returns.
+Go-live: not because n=5 is green. Need VALR auth, 15-20 hunt closes including stops, stable ops. Then micro-live spot only if ever. Perps after API is real.
 
-### 4.3 Two outcome metrics + truth-based feedback
-In `src/breakwater/paper_trade.py`:
-- `outcome` = legacy directional label
-- `pnl_outcome` = truth after fees (`win` if `pnl_zar > 0` else `loss`)
-- lifecycle feedback + cooldown uses `pnl_outcome`
+9) Cron / workflows
+Filenames (cron-job.org POSTs these; do not rename):
 
-**Expected signature:**
-- you may see `outcome=win` but `pnl_outcome=loss` on tiny moves/fees
-- that’s correct; it prevents false reinforcement
 
----
+guardian.yml
 
-## 5) Operator Controls / Environment Variables
+paper.yml
 
-### 5.1 Regime gating
-- `BREAKWATER_REGIME_GATE_STRICT=1`
-  - restore “always block hostile regime” behavior
+research.yml
+YAML under .github/ may be hidden in some agent UIs; use COPY_INTO_* if needed.
 
-### 5.2 Paper limits (if present in your paper file)
-- `BREAKWATER_PAPER_TIME_STOP_BARS`
-- `BREAKWATER_PAPER_MAX_POSITIONS`
-- `BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND`
+Paper command: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 30
+Guardian: operate --max-pairs 12
+Research: research
 
-### 5.3 Trailing feature (legacy; typically off)
-- `BREAKWATER_TRAIL_ENABLE`
-- `BREAKWATER_TRAIL_ACTIVATE_R`
-- `BREAKWATER_TRAIL_DISTANCE_R`
-- `BREAKWATER_TRAIL_IGNORE_TIME_STOP`
-
----
-
-## 6) What we want to see this week (positive signs)
-
-### 6.1 Process integrity (first priority)
-- positions have `horizon_bars` + `regime`
-- closes primarily via `exit_reason=horizon`
-- `bars_held` ≈ `horizon_bars`
-- low incidence of `stale_data` forced closes
-- no duplicated signal IDs / same-bar re-entries
-
-### 6.2 Evidence quality (avoid biased sampling)
-- regime-blocked skips should reduce materially (unless strict mode enabled)
-- trades occur across sessions (Asia/EU/US), not only in one quiet window
-
-### 6.3 Profitability (truth metric)
-- net realized `sum(pnl_zar)` positive over a meaningful sample
-- `pnl_outcome` win-rate and mean PnL/trade stable or improving
-- not dominated by one symbol/pair
-
----
-
-## 7) Go-live conditions (before real money)
-
-Do not go live because “one night was green”.
-
-Minimum conservative gate:
-- >= 100 closed horizon trades (non-skipped)
-- net realized PnL (`sum(pnl_zar)`) > 0 over that set
-- profit factor > 1 (preferably > 1.2)
-- no single pair contributes > ~40% of total pnl
-- stable ops for multiple days without intervention
-
-Rollout plan:
-1) micro-live SPOT only (no leverage), tiny notional
-2) observe live slippage/fees for ~1 week
-3) scale notional slowly
-
----
-
-## 8) Leverage conditions (before PERP leverage)
-
-Leverage introduces liquidation/margin failure modes.
-
-Require:
-- stable perps API integration (VALR response pending)
-- proven stop logic and position sizing with live fills
-- positive after-fees expectancy specifically on perps sample
-- circuit breaker / kill switch validated
-
-Ramp:
-- start at minimal leverage; increase slowly only after stable weeks
-
----
-
-## 9) Daily operator routine (restraint / anti-overfit)
-
-- Freeze code during Mon–Fri unless an operational bug is confirmed.
-- Review on a schedule (e.g., 2x/day). No “constant tweaking”.
-- Keep a change log with hypotheses and expected metric improvements.
-- If tempted to tweak: write it down and wait for review window.
-
----
-
-## 10) Notes for future agents (what not to break)
-- Do not remove `horizon_bars` from positions.
-- Do not revert paper exits back to time-stop/target as the default (it invalidates evidence).
-- Do not let paper gating re-block monitor (paper must use `signal.hostile_unproven`).
-- Keep both metrics (`outcome` and `pnl_outcome`); use truth for feedback.
-
----
+10) Daily hawk routine
+Do not fondle YAML. Do not one-knob-a-day.
+Score only feat_ext_vs_ma_50:2:LONG:h21.
+Wait for first stop / trail_stop / horizon. Target-only tape is incomplete.
+Empty book in bear is valid (hostile_unproven=True blocks new longs).
+Tomorrow research: rank window. Do not panic if hunt fails in-sample again; carry + paper-green hold it if the tape is green.
+21-22 Aug: universe re-ingest. Ranking photo only.
+Job search > retune. Cloud is the computer.
+11) Related labs (do not merge)
+Edge Factory: soccer; auto-tickets ROI gates; empty ticket valid; Wilson floor 0.50; noon freeze SAST.
+Price: Alpaca paper, no leverage/options/forex/cash; TF cull floors 1d=5, 1h=15, 15m=20; ~month paper; Mac dead -> checkout localdata + pull.
+Tempest / Halcyon / STST / Slipstream: not this hunt. Slipstream: accept no-edge.
+XYZ HIP-3: second lab, isolated book/paper/fees/sessions, later. Not tonight.
+12) What not to break
+Horizon on positions; 2R cap; R-gate as loser-timer vs winner-cap.
+Rank window (no tail fill). xyz: skip (no equity in this pool).
+Paper persist of monitored book + log reconcile.
+Fetch frames for open seats even off-window.
+Paper-green veto; decay still evicts.
+Concurrency group names can change; workflow filenames cannot (cron).
+MIN_NET_EDGE 0.002; PER_SLICE 5; do not lift 2R.
+Do not port self-improving agents into Breakwater.
+13) Tape cheat-sheet (as of 2026-08-20)
+Hunt closes: 5 target, +34.80 ZAR, 0 stops.
+All-time fills: 31, +30.57 ZAR.
+Open: 5/5 hunt (BTC trailed; others from fill-quota era still marking).
+Live: 401. Research #78 did not rotate the book.
+Operator: hawk.
 
 End.
