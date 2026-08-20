@@ -310,6 +310,47 @@ def test_concentrated_promote_takes_fail_only_breadth_fat_family(tmp_path, monke
     assert book[0]["source"] == "validated_concentrated"
 
 
+def test_sync_book_keeps_green_paper_slice_when_kind_promotes_other_family(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    from breakwater.research_lifecycle import _write_book
+
+    hunt = {
+        "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
+        "kind": "PERP",
+        "feature": "feat_ext_vs_ma_50",
+        "state": "2",
+        "side": "LONG",
+        "status": "monitored",
+        "validated_at": "",
+        "last_signal_bar": "",
+        "paper_trades": "5",
+        "paper_wins": "5",
+        "paper_losses": "0",
+        "paper_pnl_zar": "34.80",
+        "cooldown_until": "",
+        "mean_ret_costadj": "0.005465",
+        "n": "2282",
+        "p_value": "0.65",
+        "horizon_bars": "21",
+        "stop_atr_mult": "3.500",
+        "source": "validated_concentrated",
+        "hostile_unproven": "True",
+        "edge_is_directional_net": "True",
+    }
+    _write_book(book_path, [hunt])
+    other = validated_row(mean=0.003, n=80, slice_id="other:0:LONG:h6", horizon_bars=6)
+    other = ValidatedSlice(**{**other.__dict__, "kind": "PERP"})
+    write_validated(validated_path, [other])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    ids = {row["slice_id"] for row in read_book(book_path)}
+    assert "feat_ext_vs_ma_50:2:LONG:h21" in ids
+    assert "other:0:LONG:h6" in ids
+    assert summary["paper_protected"] == 1
+
+
 def test_sync_book_never_wipes_on_empty_validated(tmp_path):
     """A totally empty validated file (data failure) leaves the book intact."""
     validated_path = tmp_path / "validated.csv"
