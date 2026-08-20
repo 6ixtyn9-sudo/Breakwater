@@ -303,6 +303,7 @@ def sync_book(
         "carried_monitored": 0,
         "carried_cooldown": 0,
         "carried_decayed": 0,
+        "paper_protected": 0,
         "rows_total_after_sync": 0,
     }
 
@@ -370,6 +371,14 @@ def sync_book(
             return False
         return n_rows >= MIN_BOOK_ROWS and edge >= _min_net_edge()
 
+    def _paper_green(row: dict) -> bool:
+        trades = _coerce_int(row.get("paper_trades"), 0)
+        try:
+            pnl = float(row.get("paper_pnl_zar") or 0.0)
+        except (TypeError, ValueError):
+            pnl = 0.0
+        return trades >= 1 and pnl > 0.0
+
     # Carry rows for kinds that did not promote this run, but drop thin leftovers
     # that would fail today's net-edge / n floors.
     carried = [
@@ -392,9 +401,81 @@ def sync_book(
 
         rows.extend(carried)
 
+    # Paper veto: a slice that is printing green stays even if this pass
+    # promoted a different family of the same kind. Decay still kills losers.
+    kept_ids = {str(r.get("slice_id") or "") for r in rows}
+    paper_protected = []
+    for r in existing_rows:
+        sid = str(r.get("slice_id") or "")
+        if not sid or sid in kept_ids:
+            continue
+        if str(r.get("status") or "") not in {MONITORED, COOLDOWN}:
+            continue
+        if not _carry_eligible(r) or not _paper_green(r):
+            continue
+        _convert_legacy_semantics_inplace(r)
+        paper_protected.append(r)
+        kept_ids.add(sid)
+    if paper_protected:
+        rows.extend(paper_protected)
+    summary["paper_protected"] = len(paper_protected)
+
     summary["rows_total_after_sync"] = len(rows)
     _write_book(book_path, rows)
     return summary
+
+
+def reconcile_paper_stats_from_log(book_path: Path, log_path: Path) -> None:
+    """Overwrite book paper_* from the realised trade log (source of truth).
+
+    Paper persist used to omit the book, so git showed paper_trades=0 while
+    the log was green. Idempotent: counts and pnl are recomputed from fills.
+    """
+    if not book_path.exists() or not log_path.exists():
+        return
+    totals: dict[str, dict] = {}
+    try:
+        with log_path.open(newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                if str(row.get("outcome") or "") not in {"win", "loss"}:
+                    continue
+                if str(row.get("exit_reason") or "") in {"regime", "not_book", "no_price", "adverse"}:
+                    continue
+                sid = str(row.get("slice_id") or "")
+                if not sid:
+                    continue
+                bucket = totals.setdefault(sid, {"trades": 0, "wins": 0, "losses": 0, "pnl": 0.0})
+                bucket["trades"] += 1
+                try:
+                    pnl = float(row.get("pnl_zar") or 0.0)
+                except (TypeError, ValueError):
+                    pnl = 0.0
+                bucket["pnl"] += pnl
+                if str(row.get("pnl_outcome") or row.get("outcome")) == "win" or pnl > 0:
+                    bucket["wins"] += 1
+                else:
+                    bucket["losses"] += 1
+    except OSError:
+        return
+    rows = read_book(book_path)
+    changed = False
+    for row in rows:
+        sid = str(row.get("slice_id") or "")
+        stats = totals.get(sid)
+        if not stats:
+            continue
+        new_trades = str(stats["trades"])
+        new_pnl = f"{stats['pnl']:.4f}"
+        if row.get("paper_trades") != new_trades or row.get("paper_pnl_zar") != new_pnl:
+            row["paper_trades"] = new_trades
+            row["paper_wins"] = str(stats["wins"])
+            row["paper_losses"] = str(stats["losses"])
+            row["paper_pnl_zar"] = new_pnl
+            changed = True
+        _convert_legacy_semantics_inplace(row)
+    if changed:
+        _write_book(book_path, rows)
 
 
 def apply_signal_feedback(
