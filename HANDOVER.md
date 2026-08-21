@@ -272,4 +272,93 @@ Open: 5/5 hunt (BTC trailed; others from fill-quota era still marking).
 Live: 401. Research #78 did not rotate the book.
 Operator: hawk.
 
+
+13) VENUE DIRECTION + GO-LIVE MODEL (2026-08-21, DECIDED)
+
+VALR support reply (asked 14 Aug, answered 21 Aug):
+  Perps are NOT on the VALR API. No timeline. 401 = signature OR permissions.
+  Only docs.valr.com routes are supported. /simple-futures/* stays unsupported.
+  This is confirmation, not a new break: the canary already records 401 -93.
+  Nothing to fix. Spot on VALR is unaffected.
+
+Do NOT tear down HL/VALR work. All of it stays. Paper keeps marking public
+  Hyperliquid candles. VALR spot untouched. The hunt (feat_ext_vs_ma_50:2:LONG:h21)
+  keeps printing.
+
+New direction (parallel by function, not redundancy):
+  VALR = spot (ZAR).          Keep as-is; keep hunting a promotable spot slice.
+  OKX  = perps (USDT, single-currency, perp-only).  New live path when ready.
+
+OKX is a RE-RESEARCH, not a port.
+  Feature library carries over (price-state features are venue-independent).
+  Slices do NOT carry: HL tape != OKX tape (liquidity, funding, fee schedule).
+  Slices must find themselves again on OKX candles. Do not seed the hunt as a
+  granted edge; seed the same FAMILIES as hypotheses to re-test.
+
+Go-live gate = mechanism canary, NOT "wait for a paper stop" (agreed).
+  Prove the stop system works mechanically: tiny real OKX position -> SL/TP
+  reduce-only -> trigger -> verify it closed. That is "a system that can stop".
+  Ladder: OKX paper -> canary -> micro-live-capped -> scale.
+  Calibration (3.5-ATR stop level on OKX tape) still comes from OKX paper.
+
+Custody (OKX exchange, no wallet involved for perp collateral):
+  Bot gets a SUB-ACCOUNT + trade-only API key (read_only,trade, NO withdraw)
+  + passphrase + IP binding. Main account: 2FA + withdrawal whitelist/freeze.
+  Trade-only key = venue-level kill switch: a fully owned bot cannot withdraw.
+
+"Switch of a button" (decided shape):
+  One engine, two fail-closed executors behind a venue abstraction:
+    VALR spot executor + OKX perp executor.
+  Arm only via GitHub secrets/vars: mode=live + live_ack + per-venue canary
+  passed. Fail closed if venue unreachable or positions unverifiable in live.
+  Nothing lives on the machine. (This is already the VALR pattern; add OKX.)
+
+Open items (decide later, do not code yet):
+  a) Account mode: USDT single-currency margin.
+  b) IP binding vs GitHub Actions shared/rotating egress (or rely on OKX
+     14-day idle-key auto-expiry as a backstop).
+  c) Fee/cost refit: OKX taker ~0.05% one-way + funding; re-fit cost_bps and
+     MIN_NET_EDGE for OKX (current 26 bps perp is HL/VALR-derived).
+  d) Equity aggregation: guardian sums VALR ZAR + OKX USDT via USDTZAR
+     (VALR lists USDTZAR, so the rate path already exists).
+
+Tape snapshot (2026-08-21): hunt 13 closes, 12W/1L, +113.9994 ZAR, 0 stops
+  (the 1 loss is a horizon exit, PAXG). Open 2 (atr_norm_ext: ETH, BNB).
+  Still stop-free; mechanism canary is the unlock, not waiting for a stop.
+
+
+14) BOOK ROTATION + ZERO-TRADE SLICES (2026-08-21, EXPLAINED)
+
+Research #79 (21 Aug 00:25Z) promoted SIX new LONG slices onto the book:
+  feat_trend_slope_20:2:LONG:h10   (hostile_unproven=False)
+  feat_ext_vs_ma_50:2:LONG:h11     (hostile_unproven=True)  <- hunt family, 2nd horizon
+  feat_ret_20:2:LONG:h14           (False)
+  feat_atr_norm_ext:2:LONG:h21     (False)  <- has 2 OPEN paper positions (ETH, BNB)
+  feat_trend_strength_20:0:LONG:h16(False)
+  feat_ext_vs_ma_10:2:LONG:h23     (False)
+
+Why they all show paper_trades=0 (expected, NOT failure):
+  1) They are ~12h old (promoted 00:25Z).
+  2) paper_trades counts CLOSED trades only. atr_norm_ext holds 2 OPEN
+     positions (ETH, BNB) not yet closed -> still 0.
+  3) One-position-per-pair: paper holds at most ONE position per pair. These
+     are all LONG on the SAME crypto universe (BTC/ETH/SOL/HYPE/BNB...). Their
+     signals fire on pairs the hunt/atr_norm_ext already hold or recently held
+     -> skipped as pair_held. Status shows pair_held up to 23 per scan.
+     pair_held/slot_full/slice_full skips are SILENT (no log row); only
+     not_book/regime/adverse/no_price are logged. Read status.csv counters.
+  4) Feature state must be ACTIVE: a slice signals only while its feature
+     state equals the slice state (mostly state=2 = price extended). Off that
+     state -> no signal at all. This also silences the hunt between waves.
+
+The important read: h11 is the HUNT FAMILY (ext_vs_ma_50:2:LONG) re-passing
+  walk-forward at a SECOND horizon (h11 vs h21), with higher mean (.00619 vs
+  .00547) and lower p (.098 vs .652). Same family confirming itself, not
+  noise. The old "score only h21" rule hid it. Watch h11's first fills like
+  you watched h21's.
+
+Do not change anything. The 6 new slices should earn their own fills over
+  the coming days. If they stay 0 while the hunt keeps filling, the reason is
+  pair-competition (one seat per pair), not a dead book.
+
 END
