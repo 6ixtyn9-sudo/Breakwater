@@ -5,4 +5,4 @@ feat_ret_20:2:LONG:h14,PERP,feat_ret_20,2,LONG,monitored,2026-08-21T00:25:20+00:
 feat_atr_norm_ext:2:LONG:h21,PERP,feat_atr_norm_ext,2,LONG,monitored,2026-08-21T00:25:20+00:00,,0,0,0,0,,0.008155,2807,0.134734,21,3.500,validated_walk_forward,False,True
 feat_trend_strength_20:0:LONG:h16,PERP,feat_trend_strength_20,0,LONG,monitored,2026-08-21T00:25:20+00:00,,0,0,0,0,,0.002515,2971,0.410216,16,3.500,validated_walk_forward,False,True
 feat_ext_vs_ma_10:2:LONG:h23,PERP,feat_ext_vs_ma_10,2,LONG,monitored,2026-08-21T00:25:20+00:00,,0,0,0,0,,0.004454,2717,0.248470,23,3.500,validated_walk_forward,False,True
-feat_ext_vs_ma_50:2:LONG:h21,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-08-19T10:30:31+00:00,1787274000,10,9,1,76.2796,,0.005465,2282,0.651513,21,3.500,validated_concentrated,True,True
+feat_ext_vs_ma_50:2:LONG:h21,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-08-19T10:30:31+00:00,1787302800,13,12,1,113.9994,,0.005465,2282,0.651513,21,3.500,validated_concentrated,True,True
