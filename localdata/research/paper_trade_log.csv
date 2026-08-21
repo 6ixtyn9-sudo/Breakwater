@@ -217,3 +217,5 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-08-21T17:15:21+00:00,21be093da541647c,SOLUSDC,PERP,feat_ext_vs_ma_50:2:LONG:h21,BUY,91.706,,86.59475000000000930,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,1.4603571428571402,3.5,
 2026-08-21T17:15:21+00:00,fcecae7acf238e98,XRPUSDC,PERP,feat_ext_vs_ma_50:2:LONG:h21,BUY,1.4039,,1.263625000000000030,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,0.04007857142857142,3.5,
 2026-08-21T17:15:21+00:00,0e3221af997a12c2,ZECUSDC,PERP,feat_ext_vs_ma_50:2:LONG:h21,BUY,676.41,,593.630000000000005,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,23.65142857142857,3.5,
+2026-08-21T18:15:20+00:00,af5e5964f47b2d45,ENAUSDC,PERP,feat_atr_norm_ext:2:LONG:h21,BUY,0.14925,,0.1245300000000000030,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,0.007062857142857142,3.5,
+2026-08-21T18:15:20+00:00,499b8bc9d2b06bf5,ENAUSDC,PERP,feat_ext_vs_ma_50:2:LONG:h11,BUY,0.14925,,0.1245300000000000030,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,0.007062857142857142,3.5,
