@@ -1,7 +1,7 @@
 [
   {
     "atr": "5.860714285714282",
-    "bars_held": "19",
+    "bars_held": "20",
     "entry_guard": "passed",
     "entry_price": "644.77",
     "horizon_bars": "21",
@@ -10,20 +10,20 @@
     "missing_bars": "0",
     "notional_zar": "200.00",
     "pair": "BNBUSDC",
-    "peak_price": "666.13",
+    "peak_price": "671.97",
     "regime": "bull",
     "risk_fraction": "0.03181367",
     "side": "BUY",
     "signal_id": "7c03c93762750338",
     "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
     "stop_atr_mult": "3.500000",
-    "stop_price": "645.61750000000001300",
+    "stop_price": "651.45750000000001300",
     "trail_active": "1",
     "trough_price": "644.77"
   },
   {
     "atr": "0.8439285714285703",
-    "bars_held": "15",
+    "bars_held": "16",
     "entry_guard": "passed",
     "entry_price": "86.399",
     "horizon_bars": "21",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "713.3571428571429",
-    "bars_held": "12",
+    "bars_held": "13",
     "entry_guard": "passed",
     "entry_price": "72638.0",
     "horizon_bars": "21",
@@ -54,14 +54,14 @@
     "missing_bars": "0",
     "notional_zar": "192.8867287473715714697068941",
     "pair": "BTCUSDC",
-    "peak_price": "75518.0",
+    "peak_price": "76430.0",
     "regime": "bull",
     "risk_fraction": "0.03437250",
     "side": "BUY",
     "signal_id": "46cfc0f1baf73870",
     "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
     "stop_atr_mult": "3.500000",
-    "stop_price": "73021.249999999999850",
+    "stop_price": "73933.249999999999850",
     "trail_active": "1",
     "trough_price": "72638.0"
   }
