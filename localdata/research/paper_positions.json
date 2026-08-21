@@ -1,7 +1,7 @@
 [
   {
     "atr": "5.860714285714282",
-    "bars_held": "16",
+    "bars_held": "17",
     "entry_guard": "passed",
     "entry_price": "644.77",
     "horizon_bars": "21",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "0.8439285714285703",
-    "bars_held": "12",
+    "bars_held": "13",
     "entry_guard": "passed",
     "entry_price": "86.399",
     "horizon_bars": "21",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "713.3571428571429",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "72638.0",
     "horizon_bars": "21",
