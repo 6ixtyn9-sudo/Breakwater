@@ -239,17 +239,23 @@ def append_cooldown(path: Path, entry: dict) -> None:
         raise
 
 
-def _paper_size(signal: SliceSignal, policy, usdc_zar: Decimal) -> Decimal:
+def _paper_size(signal: SliceSignal, policy, usdc_zar: Decimal) -> tuple[Decimal, str | None]:
+    """Return (notional_zar, reason).
+
+    reason is None when the signal sizes to a positive notional, else a
+    short machine-readable token explaining why it was zero-sized, so the
+    caller can journal the skip instead of dropping it silently.
+    """
     risk_fraction = abs(signal.entry_price - signal.stop_price) / signal.entry_price
     if risk_fraction <= 0:
-        return Decimal(0)
+        return Decimal(0), "no_risk_distance"
     notional_zar = min(
         policy.risk_per_trade_zar / risk_fraction,
         policy.max_position_notional_zar,
     )
     if signal.kind == "PERP" and notional_zar / usdc_zar < Decimal("11"):
-        return Decimal(0)
-    return notional_zar
+        return Decimal(0), "below_perp_min_notional"
+    return notional_zar, None
 
 
 def _latest_close(frame):
@@ -637,6 +643,7 @@ def run_paper_cycle(
     slot_full = 0
     slice_full = 0
     pair_held = 0
+    sized_out = 0
 
     open_pairs = {str(position["pair"]).upper() for position in surviving}
     open_slice_counts: dict[str, int] = {}
@@ -796,8 +803,36 @@ def run_paper_cycle(
             skipped += 1
             continue
 
-        notional_zar = _paper_size(signal, policy, usdc_zar)
+        notional_zar, size_reason = _paper_size(signal, policy, usdc_zar)
         if notional_zar <= 0:
+            # Fail-open visibility: a zero-sized signal is a skip like any
+            # other and must be journaled with its reason, not dropped.
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": size_reason or "zero_notional",
+                    "entry_guard": size_reason or "zero_notional",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
+            sized_out += 1
             continue
 
         risk_distance = (
@@ -853,4 +888,5 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "sized_out": sized_out,
     }
