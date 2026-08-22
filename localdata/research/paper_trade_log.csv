@@ -397,3 +397,4 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-08-22T23:09:10+00:00,6c158faf1ced12c5,PUMPUSDC,PERP,feat_trend_slope_20:2:LONG:h11,BUY,0.00503,,0.004198249999999999730,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,0.00023764285714285722,3.5,
 2026-08-22T23:09:10+00:00,e55f937075ed1b23,PUMPUSDC,PERP,feat_ext_vs_ma_10:2:LONG:h14,BUY,0.00503,,0.004198249999999999730,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,0.00023764285714285722,3.5,
 2026-08-22T23:09:10+00:00,cef6b1a3fc722c86,PUMPUSDC,PERP,feat_ret_5:2:LONG:h14,BUY,0.00503,,0.004198249999999999730,0,0,skipped,0,below_perp_min_notional,below_perp_min_notional,bull,,0.00023764285714285722,3.5,
+2026-08-22T23:54:08+00:00,0e0d0fa3ac2a0a65,LITUSDC,PERP,feat_ret_20:2:LONG:h12,BUY,3.0244,3.2051,2.550624999999999910,178.7413856788559630906554565,10.2146,win,12,horizon,passed,bull,win,0.13536428571428574,3.500000,0.15665091
