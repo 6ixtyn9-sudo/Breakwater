@@ -1,29 +1,7 @@
 [
   {
-    "atr": "2.6910714285714303",
-    "bars_held": "13",
-    "entry_guard": "passed",
-    "entry_price": "95.039",
-    "horizon_bars": "14",
-    "initial_stop_price": "85.62024999999999395",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "SOLUSDC",
-    "peak_price": "95.039",
-    "regime": "bull",
-    "risk_fraction": "0.09910405",
-    "side": "BUY",
-    "signal_id": "6157af818fde866f",
-    "slice_id": "feat_ext_vs_ma_20:2:LONG:h14",
-    "stop_atr_mult": "3.500000",
-    "stop_price": "85.62024999999999395",
-    "trail_active": "0",
-    "trough_price": "95.039"
-  },
-  {
     "atr": "0.13536428571428574",
-    "bars_held": "10",
+    "bars_held": "11",
     "entry_guard": "passed",
     "entry_price": "3.0244",
     "horizon_bars": "12",
@@ -45,7 +23,7 @@
   },
   {
     "atr": "3.0528571428571434",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "127.05",
     "horizon_bars": "14",
@@ -67,7 +45,7 @@
   },
   {
     "atr": "0.0020794285714285715",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "0.09504",
     "horizon_bars": "14",
@@ -89,7 +67,7 @@
   },
   {
     "atr": "0.005575714285714281",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "0.15738",
     "horizon_bars": "14",
@@ -111,7 +89,7 @@
   },
   {
     "atr": "1.549285714285713",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "79.828",
     "horizon_bars": "14",
@@ -133,7 +111,7 @@
   },
   {
     "atr": "18.535714285714384",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "2442.1",
     "horizon_bars": "14",
@@ -155,7 +133,7 @@
   },
   {
     "atr": "0.18814285714285703",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "11.795",
     "horizon_bars": "14",
@@ -174,5 +152,27 @@
     "stop_price": "11.136500000000000395",
     "trail_active": "0",
     "trough_price": "11.795"
+  },
+  {
+    "atr": "0.04172142857142854",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "1.8992",
+    "horizon_bars": "9",
+    "initial_stop_price": "1.753175000000000110",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "NEARUSDC",
+    "peak_price": "1.8992",
+    "regime": "neutral",
+    "risk_fraction": "0.07688764",
+    "side": "BUY",
+    "signal_id": "f937843b5a68e419",
+    "slice_id": "feat_realized_vol_20:2:LONG:h9",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "1.753175000000000110",
+    "trail_active": "0",
+    "trough_price": "1.8992"
   }
 ]
