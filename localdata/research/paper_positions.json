@@ -1,7 +1,7 @@
 [
   {
     "atr": "7.115000000000017",
-    "bars_held": "15",
+    "bars_held": "16",
     "entry_guard": "passed",
     "entry_price": "671.92",
     "horizon_bars": "21",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "3.096428571428576",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "111.47",
     "horizon_bars": "21",
@@ -32,20 +32,20 @@
     "missing_bars": "0",
     "notional_zar": "200.00",
     "pair": "AAVEUSDC",
-    "peak_price": "124.0",
+    "peak_price": "124.56",
     "regime": "bull",
     "risk_fraction": "0.09722347",
     "side": "BUY",
     "signal_id": "8fad3ee08186642a",
     "slice_id": "feat_atr_norm_ext:2:LONG:h21",
     "stop_atr_mult": "3.500000",
-    "stop_price": "113.16249999999998400",
+    "stop_price": "113.72249999999998400",
     "trail_active": "1",
     "trough_price": "111.47"
   },
   {
     "atr": "0.24357142857142858",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "11.635",
     "horizon_bars": "21",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "0.09633571428571434",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "3.0514",
     "horizon_bars": "21",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "1123.142857142857",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "77389.0",
     "horizon_bars": "11",
@@ -111,7 +111,7 @@
   },
   {
     "atr": "0.0015632142857142839",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "0.084999",
     "horizon_bars": "11",
@@ -133,7 +133,7 @@
   },
   {
     "atr": "1.749285714285712",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "75.192",
     "horizon_bars": "11",
@@ -155,7 +155,7 @@
   },
   {
     "atr": "37.564285714285624",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "2534.6",
     "horizon_bars": "11",
