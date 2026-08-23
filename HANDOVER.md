@@ -392,9 +392,61 @@ Testnet stage implemented 23 Aug:
   - staged state is ignored by Git; cleanup closes, cancels and verifies flat
 
 A dead-man cancel must NOT cancel protective stops on a directional position;
-it is therefore not armed around the protected hold. Next operator gate is to
-fund/activate testnet, approve a dedicated testnet agent, run open-protected,
-then deliberately prove stop triggering and revoke the agent. Mainnet remains
-code-locked until that mechanism evidence is recorded.
+it is therefore not armed around the protected hold.
+
+Operator verification completed in Codespaces 23 Aug:
+  - read-only mainnet canary: 232 instruments, six current paper symbols mapped,
+    no unavailable names, account reachable and flat at 0 USDC
+  - read-only testnet canary: same public address reachable and flat at 0 mock USDC
+  - precision planner: ETHUSDC size step 0.0001; 0.0060 ETH was about 15.1848
+    mock USDC at the observed testnet mark
+  - pinned SDK extra installed successfully in Codespaces
+  - no agent key created or supplied; no signed action has occurred
+
+Funding gate PAUSED, not failed:
+  Hyperliquid's faucet requires prior mainnet deposit/activation. Operator has
+  no spare funds now. Do not borrow, pressure-fund, weaken the gate, use an
+  unofficial faucet, or place a mainnet trade to hurry this. Paper/research
+  continue normally. Resume by approving a dedicated TESTNET agent and running
+  open-protected only after legitimate mock funds are available. Mainnet stays
+  code-locked until protection, stop-trigger, cleanup and revocation evidence.
+
+
+16) VENUE UNIVERSE AFTER DIRECT HYPERLIQUID ACCESS (2026-08-23, DECIDED)
+
+The old reason for excluding xyz:/HIP-3 was the VALR-mediated path and the need
+not to contaminate the crypto sample. Direct Hyperliquid access removes the
+venue-access limitation. It does NOT make equities, commodities and indices
+statistically interchangeable with crypto.
+
+Three parallel lanes are now the intended shape:
+  A) VALR SPOT (ZAR): keep unchanged. This remains the South African fiat/spot lane.
+  B) HL native crypto PERPs (USDC): keep current research and paper book unchanged.
+  C) HL HIP-3 PERPs (including xyz:): add as a separate research/paper lane.
+
+Expand, but do not pool:
+  - preserve DEX-prefixed instrument identity (for example xyz:NVDA)
+  - discover/rank HIP-3 only against other HIP-3 names; no crypto tail-fill
+  - separate candles, discovered/validated/monitored books, paper state and logs
+  - separate fee, funding, slippage, oracle-staleness and minimum-notional model
+  - session/calendar features for equities, indices and commodities; account for
+    market closures, weekends, stale oracles and gap risk even if the perp trades 24/7
+  - run walk-forward research from zero; do not grant crypto slices or the h21 hunt
+    an edge on HIP-3 because the feature library happens to be reusable
+  - paper only initially; no HIP-3 signed/live path before native crypto testnet
+    mechanism canary passes
+  - one portfolio guardian eventually aggregates downside across VALR spot, HL
+    crypto and HL HIP-3; separate research books must not become separate risk silos
+
+Current code intentionally keeps xyz: excluded from the native crypto adapter.
+That guard remains correct until the dedicated HIP-3 lane lands. Do not simply
+remove the colon check or add xyz: rows to the existing crypto CSVs.
+
+Next engineering order when work resumes:
+  1) read-only HIP-3 venue metadata/instrument discovery and candle coverage
+  2) dedicated HIP-3 state paths and universe snapshots
+  3) calendar/oracle/fee-aware research and validation
+  4) HIP-3 paper cycle under the shared aggregate-risk guardian
+  5) only later consider execution, after the native crypto mechanism canary
 
 END
