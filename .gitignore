@@ -10,3 +10,4 @@ dist/
 localdata/*.db
 localdata/*.db-*
 localdata/*.tmp
+*.lock

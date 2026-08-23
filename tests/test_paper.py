@@ -118,6 +118,7 @@ def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None
     os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
     os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     os.environ.setdefault("BREAKWATER_PAPER_RISK_TO_MEAN_K", "0")
+    os.environ.setdefault("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "0")
     positions_path = tmp_path / "positions.json"
     if positions is not None:
         positions_path.write_text(json.dumps(positions))
@@ -673,7 +674,7 @@ def test_breakeven_trailing_stop_contributes_zero_aggregate_risk(tmp_path, monke
     assert result["aggregate_risk_unknown"] is False
 
 
-def test_unknown_aggregate_risk_fails_closed(tmp_path, monkeypatch):
+def test_invalid_position_is_quarantined_and_cycle_fails_closed(tmp_path, monkeypatch):
     monkeypatch.setenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR", "100")
     position = open_position(stop="105")
     position[0]["side"] = "UNKNOWN"
@@ -686,12 +687,45 @@ def test_unknown_aggregate_risk_fails_closed(tmp_path, monkeypatch):
         },
         positions=position,
     )
-    assert result["open"] == 1
+    assert result["open"] == 0
     assert result["aggregate_open_risk_zar"] is None
     assert result["aggregate_risk_unknown"] is True
     assert result["aggregate_risk_unknown_skips"] == 1
+    assert result["invalid_positions_quarantined"] == 1
+    quarantine = json.loads((tmp_path / "paper_position_quarantine.json").read_text())
+    assert quarantine[0]["reason"] == "invalid_side"
+    assert quarantine[0]["position"]["signal_id"] == "sig1"
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["exit_reason"] == "aggregate_risk_unknown"
+
+
+def test_aggregate_stress_buffer_can_block_entry(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR", "6.8")
+    monkeypatch.setenv("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "25")
+    result = cycle(
+        tmp_path,
+        signals=[signal()],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 0
+    assert result["aggregate_risk_cap_skips"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "aggregate_risk_cap"
+
+
+def test_unreadable_position_state_is_preserved_and_fails_closed(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR", "100")
+    positions_path = tmp_path / "positions.json"
+    positions_path.write_text("{broken")
+    result = cycle(
+        tmp_path,
+        signals=[signal()],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 0
+    assert result["positions_state_error"] == "invalid_json"
+    assert result["aggregate_risk_status"] == "unknown"
+    assert positions_path.read_text() == "{broken"
 
 
 def test_rotated_sibling_exits_at_close(tmp_path):

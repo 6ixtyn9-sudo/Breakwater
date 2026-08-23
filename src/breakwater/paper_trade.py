@@ -52,11 +52,14 @@ Evidence quality fixes:
 from __future__ import annotations
 
 import csv
+import fcntl
 import json
 import os
 import tempfile
+from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from functools import wraps
 from pathlib import Path
 
 from breakwater.monitor import SliceSignal, regime_blocks, regime_of
@@ -132,14 +135,23 @@ R_GATE_ENABLE = _env_bool("BREAKWATER_PAPER_R_GATE", "1")
 R_GATE_SUPPRESS_R = _env_decimal("BREAKWATER_PAPER_R_GATE_R", "1.0")
 
 
-def read_positions(path: Path) -> list[dict]:
+def _read_positions_with_error(path: Path) -> tuple[list, str | None]:
     if not path.exists():
-        return []
+        return [], None
     try:
         payload = json.loads(path.read_text())
-        return payload if isinstance(payload, list) else []
-    except (OSError, json.JSONDecodeError):
-        return []
+    except OSError:
+        return [], "unreadable"
+    except json.JSONDecodeError:
+        return [], "invalid_json"
+    if not isinstance(payload, list):
+        return [], "unsupported_schema"
+    return payload, None
+
+
+def read_positions(path: Path) -> list[dict]:
+    positions, _ = _read_positions_with_error(path)
+    return positions
 
 
 def write_positions(path: Path, positions: list[dict]) -> None:
@@ -159,6 +171,89 @@ def write_positions(path: Path, positions: list[dict]) -> None:
         except OSError:
             pass
         raise
+
+
+@contextmanager
+def _paper_cycle_lock(positions_path: Path):
+    """Serialize paper position read/modify/write cycles on this host."""
+    positions_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(f"{positions_path}.lock")
+    with lock_path.open("a+") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _serialized_paper_cycle(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        positions_path = kwargs.get("positions_path")
+        if positions_path is None:
+            raise TypeError("run_paper_cycle requires positions_path")
+        with _paper_cycle_lock(Path(positions_path)):
+            return function(*args, **kwargs)
+
+    return wrapper
+
+
+def _position_validation_error(position) -> str | None:
+    if not isinstance(position, dict):
+        return "not_an_object"
+    for key in ("signal_id", "pair", "kind", "slice_id", "side"):
+        if not str(position.get(key) or "").strip():
+            return f"missing_{key}"
+    if str(position["kind"]).upper() not in {"SPOT", "PERP"}:
+        return "invalid_kind"
+    if str(position["side"]).upper() not in {"BUY", "SELL"}:
+        return "invalid_side"
+
+    numeric_fields = ["entry_price", "stop_price", "notional_zar"]
+    numeric_fields.extend(
+        key
+        for key in ("initial_stop_price", "peak_price", "trough_price")
+        if position.get(key) is not None and position.get(key) != ""
+    )
+    parsed: dict[str, Decimal] = {}
+    for key in numeric_fields:
+        try:
+            value = Decimal(str(position[key]))
+        except (InvalidOperation, KeyError, TypeError, ValueError):
+            return f"invalid_{key}"
+        if not value.is_finite():
+            return f"invalid_{key}"
+        parsed[key] = value
+    if parsed["entry_price"] <= 0:
+        return "nonpositive_entry_price"
+    if parsed["stop_price"] <= 0:
+        return "nonpositive_stop_price"
+    if parsed["notional_zar"] < 0:
+        return "negative_notional_zar"
+    return None
+
+
+def _quarantine_positions(path: Path, invalid: list[tuple[object, str]], now: datetime) -> None:
+    if not invalid:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    records = []
+    if path.exists():
+        try:
+            payload = json.loads(path.read_text())
+            if isinstance(payload, list):
+                records = payload
+        except (OSError, json.JSONDecodeError):
+            records = []
+    records.extend(
+        {
+            "quarantined_at": now.isoformat(),
+            "reason": reason,
+            "position": position,
+        }
+        for position, reason in invalid
+    )
+    write_positions(path, records[-100:])
 
 
 def _migrate_log_header(path: Path) -> None:
@@ -298,6 +393,42 @@ def _aggregate_stop_risk_zar(positions: list[dict]) -> tuple[Decimal, bool]:
         else:
             total += risk
     return total, unknown
+
+
+def _risk_buffer_zar(position: dict) -> Decimal | None:
+    try:
+        notional = Decimal(str(position["notional_zar"]))
+    except (InvalidOperation, KeyError, TypeError, ValueError):
+        return None
+    buffer_bps = _env_decimal("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "25")
+    if not notional.is_finite() or not buffer_bps.is_finite() or buffer_bps < 0:
+        return None
+    return notional * buffer_bps / Decimal(10000)
+
+
+def _aggregate_risk_buffer_zar(positions: list[dict]) -> tuple[Decimal, bool]:
+    total = Decimal(0)
+    for position in positions:
+        buffer = _risk_buffer_zar(position)
+        if buffer is None:
+            return total, True
+        total += buffer
+    return total, False
+
+
+def _cost_adjusted_risk_zar(positions: list[dict]) -> tuple[Decimal, bool]:
+    total = Decimal(0)
+    for position in positions:
+        stop_risk = _active_stop_risk_zar(position)
+        try:
+            notional = Decimal(str(position["notional_zar"]))
+        except (InvalidOperation, KeyError, TypeError, ValueError):
+            return total, True
+        if stop_risk is None or not notional.is_finite():
+            return total, True
+        fee_bps = PERP_FEE_BPS if str(position.get("kind")).upper() == "PERP" else SPOT_FEE_BPS
+        total += stop_risk + notional * fee_bps / Decimal(10000)
+    return total, False
 
 
 def _realised_paper_pnl(log_path: Path) -> Decimal:
@@ -549,6 +680,7 @@ def _slice_paper_pnl(book_path: Path) -> dict[str, float]:
     return out
 
 
+@_serialized_paper_cycle
 def run_paper_cycle(
     *,
     signals: list[SliceSignal],
@@ -565,7 +697,17 @@ def run_paper_cycle(
 ) -> dict:
     closed_rows: list[dict] = []
     reconcile_paper_stats_from_log(book_path, log_path)
-    open_positions = read_positions(positions_path)
+    loaded_positions, positions_load_error = _read_positions_with_error(positions_path)
+    invalid_positions: list[tuple[object, str]] = []
+    open_positions: list[dict] = []
+    for position in loaded_positions:
+        error = _position_validation_error(position)
+        if error is None:
+            open_positions.append(position)
+        else:
+            invalid_positions.append((position, error))
+    quarantine_path = positions_path.with_name("paper_position_quarantine.json")
+    _quarantine_positions(quarantine_path, invalid_positions, server_time)
     # Migration: upgrade legacy positions so horizon exits engage.
     book_horizon_map = _load_book_horizon_map(book_path)
     if open_positions:
@@ -815,7 +957,23 @@ def run_paper_cycle(
     aggregate_open_risk_zar, aggregate_position_risk_unknown = _aggregate_stop_risk_zar(
         surviving
     )
+    aggregate_risk_buffer_zar, buffer_unknown = _aggregate_risk_buffer_zar(surviving)
+    aggregate_position_risk_unknown = (
+        aggregate_position_risk_unknown
+        or buffer_unknown
+        or bool(invalid_positions)
+        or positions_load_error is not None
+    )
+    aggregate_start_risk_zar = aggregate_open_risk_zar
+    aggregate_guard_risk_zar = aggregate_open_risk_zar + aggregate_risk_buffer_zar
+    aggregate_risk_added_zar = Decimal(0)
     aggregate_risk_cap_zar = _aggregate_risk_cap_zar(log_path)
+    paper_equity_zar = _paper_equity_zar(log_path)
+    aggregate_cap_source = (
+        "explicit_zar"
+        if str(os.getenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR") or "").strip()
+        else "equity_fraction"
+    )
 
     open_pairs = {str(position["pair"]).upper() for position in surviving}
     open_slice_counts: dict[str, int] = {}
@@ -1090,11 +1248,16 @@ def run_paper_cycle(
             continue
 
         proposed_risk_zar = notional_zar * risk_fraction
+        buffer_bps = _env_decimal("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "25")
+        proposed_buffer_zar = notional_zar * max(buffer_bps, Decimal(0)) / Decimal(10000)
         aggregate_reason = None
         if aggregate_position_risk_unknown or aggregate_risk_cap_zar is None:
             aggregate_reason = "aggregate_risk_unknown"
             aggregate_risk_unknown_skips += 1
-        elif aggregate_open_risk_zar + proposed_risk_zar > aggregate_risk_cap_zar:
+        elif (
+            aggregate_guard_risk_zar + proposed_risk_zar + proposed_buffer_zar
+            > aggregate_risk_cap_zar
+        ):
             aggregate_reason = "aggregate_risk_cap"
             aggregate_risk_cap_skips += 1
         if aggregate_reason is not None:
@@ -1155,16 +1318,53 @@ def run_paper_cycle(
             }
         )
         aggregate_open_risk_zar += proposed_risk_zar
+        aggregate_guard_risk_zar += proposed_risk_zar + proposed_buffer_zar
+        aggregate_risk_added_zar += proposed_risk_zar
         open_pairs.add(signal.pair.upper())
         open_slice_counts[signal.slice_id] = open_slice_counts.get(signal.slice_id, 0) + 1
 
-    write_positions(positions_path, surviving)
+    # Never overwrite an unreadable state file with an empty list. Operators
+    # need the original bytes intact for recovery and audit.
+    if positions_load_error is None:
+        write_positions(positions_path, surviving)
     aggregate_unknown = aggregate_position_risk_unknown or aggregate_risk_cap_zar is None
     remaining_risk = (
-        max(aggregate_risk_cap_zar - aggregate_open_risk_zar, Decimal(0))
+        max(aggregate_risk_cap_zar - aggregate_guard_risk_zar, Decimal(0))
         if aggregate_risk_cap_zar is not None and not aggregate_position_risk_unknown
         else None
     )
+    cost_adjusted_risk_zar, cost_risk_unknown = _cost_adjusted_risk_zar(surviving)
+    if invalid_positions or positions_load_error is not None:
+        cost_risk_unknown = True
+    position_risks = [
+        (risk, position)
+        for position in surviving
+        if (risk := _active_stop_risk_zar(position)) is not None
+    ]
+    highest_risk_position = None
+    if position_risks:
+        highest_risk, highest_position = max(position_risks, key=lambda item: item[0])
+        highest_risk_position = {
+            "signal_id": str(highest_position.get("signal_id") or ""),
+            "pair": str(highest_position.get("pair") or ""),
+            "risk_zar": f"{highest_risk:.4f}",
+        }
+    utilization = None
+    if aggregate_risk_cap_zar is not None and aggregate_risk_cap_zar > 0:
+        utilization = aggregate_guard_risk_zar / aggregate_risk_cap_zar
+    aggregate_over_cap = bool(
+        aggregate_risk_cap_zar is not None
+        and not aggregate_position_risk_unknown
+        and aggregate_guard_risk_zar > aggregate_risk_cap_zar
+    )
+    if aggregate_unknown:
+        aggregate_risk_status = "unknown"
+    elif aggregate_over_cap:
+        aggregate_risk_status = "over_cap"
+    elif utilization is not None and utilization >= Decimal("0.8"):
+        aggregate_risk_status = "warning"
+    else:
+        aggregate_risk_status = "ok"
     return {
         "closed": len(closed_rows),
         "open": len(surviving),
@@ -1173,16 +1373,39 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "paper_equity_zar": f"{paper_equity_zar:.4f}",
+        "aggregate_risk_start_zar": (
+            None if aggregate_position_risk_unknown else f"{aggregate_start_risk_zar:.4f}"
+        ),
         "aggregate_open_risk_zar": (
             None if aggregate_position_risk_unknown else f"{aggregate_open_risk_zar:.4f}"
         ),
+        "aggregate_cost_adjusted_risk_zar": (
+            None if cost_risk_unknown else f"{cost_adjusted_risk_zar:.4f}"
+        ),
+        "aggregate_risk_buffer_zar": (
+            None
+            if aggregate_position_risk_unknown
+            else f"{aggregate_guard_risk_zar - aggregate_open_risk_zar:.4f}"
+        ),
+        "aggregate_risk_added_zar": f"{aggregate_risk_added_zar:.4f}",
         "aggregate_risk_cap_zar": (
             None if aggregate_risk_cap_zar is None else f"{aggregate_risk_cap_zar:.4f}"
         ),
+        "aggregate_risk_cap_source": aggregate_cap_source,
         "aggregate_risk_remaining_zar": (
             None if remaining_risk is None else f"{remaining_risk:.4f}"
         ),
+        "aggregate_risk_utilization": (
+            None if utilization is None else f"{utilization:.4f}"
+        ),
         "aggregate_risk_unknown": aggregate_unknown,
+        "aggregate_risk_over_cap": aggregate_over_cap,
+        "aggregate_risk_status": aggregate_risk_status,
         "aggregate_risk_cap_skips": aggregate_risk_cap_skips,
         "aggregate_risk_unknown_skips": aggregate_risk_unknown_skips,
+        "positions_state_error": positions_load_error,
+        "invalid_positions_quarantined": len(invalid_positions),
+        "invalid_position_reasons": sorted({reason for _, reason in invalid_positions}),
+        "highest_risk_position": highest_risk_position,
     }
