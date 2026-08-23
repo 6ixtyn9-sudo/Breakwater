@@ -361,4 +361,27 @@ Do not change anything. The 6 new slices should earn their own fills over
   the coming days. If they stay 0 while the hunt keeps filling, the reason is
   pair-competition (one seat per pair), not a dead book.
 
+
+15) HYPERLIQUID PREPARATION (2026-08-23, SUPERSEDES OKX-FIRST)
+
+Operator registered with Hyperliquid and selected HL as the first PERP venue.
+Reason: Breakwater research and paper already use HL candles, so HL execution
+matches the measured tape. OKX remains the fallback if agent-wallet isolation,
+South African product eligibility, or mechanism canaries are unsatisfactory.
+
+Implemented preparation only:
+  - venue-neutral read-only PERP contract
+  - normalized HL instruments, precision, candles and public-address account state
+  - positions and open-order reconciliation
+  - explicit xyz: exclusion
+  - mainnet/testnet endpoint selection
+  - read-only canary using HYPERLIQUID_ACCOUNT_ADDRESS
+  - all writes code-locked; no signer/private-key path exists
+
+Do not store a master or agent private key in the repository, .env, status,
+logs, issues, or chat. Next gate is a separate signed TESTNET executor with
+atomic nonces, deterministic cloids, native reduce-only SL/TP, scheduled
+cancel, startup reconciliation and agent revocation. Then run the minimum-size
+mechanism canary before any micro-live eligibility.
+
 END

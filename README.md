@@ -253,11 +253,34 @@ BREAKWATER_MODE=readonly PYTHONPATH=src python scripts/breakwater.py operate --m
 PYTHONPATH=src python scripts/breakwater.py health
 ```
 
-No credentials are needed for public market checks and the spot slice
-research pass. Perp candle research and account reconciliation require the
-API key.
+No credentials are needed for public market checks, the spot slice research
+pass, or Hyperliquid candles. VALR account reconciliation requires its API
+key. Hyperliquid account inspection needs only the public master/subaccount
+address.
 
-### Connectivity canary
+### Hyperliquid read-only readiness
+
+Breakwater has a venue-neutral PERP contract and a Hyperliquid adapter for
+normalized instruments, precision, candles, public-address account state,
+positions, and open orders. HIP-3 builder instruments (for example `xyz:`)
+remain excluded from the crypto strategy pool. The adapter has no signer or
+private-key path: all order and cancel methods are code-locked.
+
+Set only the public address, then run the canary:
+
+```bash
+export HYPERLIQUID_ACCOUNT_ADDRESS=0xYourPublicAddress
+export BREAKWATER_HYPERLIQUID_NETWORK=mainnet
+PYTHONPATH=src python scripts/hyperliquid_canary.py
+```
+
+Use `--testnet` for the testnet public API. Never put a master-wallet or agent
+private key in `.env`, GitHub variables, repository files, issues, logs, or
+chat. Signed testnet execution remains locked until native reduce-only SL/TP,
+reconciliation, nonce handling, and the dead-man's switch pass a mechanism
+canary.
+
+### VALR connectivity canary
 
 After creating or replacing the VALR key, probe every endpoint Breakwater
 uses from your own machine. It performs no writes:

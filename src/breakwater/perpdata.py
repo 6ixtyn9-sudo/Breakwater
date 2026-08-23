@@ -65,6 +65,7 @@ def fetch_perp_candles(
     interval: str = "1h",
     count: int = 220,
     session: requests.Session | None = None,
+    info_url: str = HYPERLIQUID_INFO_URL,
 ) -> list[Candle]:
     if interval not in INTERVAL_SECONDS:
         raise ValueError("unsupported perp candle interval")
@@ -83,9 +84,7 @@ def fetch_perp_candles(
         },
     }
     requester = session or requests
-    response = requester.post(
-        HYPERLIQUID_INFO_URL, json=payload, timeout=20
-    )
+    response = requester.post(info_url, json=payload, timeout=20)
     response.raise_for_status()
     rows = response.json()
     if not isinstance(rows, list):
