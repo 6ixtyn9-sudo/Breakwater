@@ -1,0 +1,61 @@
+# Copy to .github/workflows/hip3-research.yml from a GitHub-authorized workspace.
+name: Breakwater HIP-3 Research
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: breakwater-hip3-research
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements.lock
+      - name: Refresh HIP-3 inventory
+        env:
+          BREAKWATER_MODE: readonly
+          BREAKWATER_DATA_DIR: localdata
+        run: PYTHONPATH=src python scripts/breakwater.py hip3-discover
+      - name: Audit candles and run isolated walk-forward research
+        env:
+          BREAKWATER_MODE: readonly
+          BREAKWATER_DATA_DIR: localdata
+          BREAKWATER_HIP3_RESEARCH_MAX_PAIRS: "60"
+          BREAKWATER_HIP3_CANDLE_COUNT: "1000"
+          # Match native PERP research breadth: every horizon from 1 through 24.
+          BREAKWATER_HIP3_RESEARCH_HORIZONS: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24"
+          BREAKWATER_HIP3_MAX_ORACLE_DEVIATION: "0.02"
+          # Conservative until each DEX's effective fee/funding/slippage is measured.
+          BREAKWATER_HIP3_COST_BPS: "30"
+          BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: "200"
+          BREAKWATER_DISCOVERY_STATE_QUANTILES: "0.333333,0.666666"
+          # Match native PERP walk-forward and breadth doctrine. Promotion remains disabled.
+          BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
+          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: "2"
+          BREAKWATER_VALIDATION_STRICT_PASS_FLOOR: "3"
+          BREAKWATER_BREADTH_MIN_SYMBOLS: "6"
+          BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: "10"
+          BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: "0.40"
+        run: PYTHONPATH=src python scripts/breakwater.py hip3-research
+      - name: Persist isolated HIP-3 state
+        if: always()
+        run: bash scripts/commit_state.sh hip3
