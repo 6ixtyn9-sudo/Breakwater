@@ -13,7 +13,7 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +68,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Hyperliquid testnet mechanism canary")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("inspect", help="read-only testnet account inspection")
+    plan_parser = subparsers.add_parser(
+        "plan", help="calculate a precision-aligned mock-USDC canary quantity"
+    )
+    plan_parser.add_argument("--symbol", default="ETHUSDC")
+    plan_parser.add_argument("--notional", default="15")
 
     open_parser = subparsers.add_parser(
         "open-protected", help="open one capped testnet position and attach native SL/TP"
@@ -96,6 +101,41 @@ def main() -> int:
         raise RuntimeError("HYPERLIQUID_TESTNET_ACCOUNT_ADDRESS is missing")
     if args.command == "inspect":
         return _snapshot(address)
+    if args.command == "plan":
+        desired_notional = Decimal(args.notional)
+        if desired_notional < Decimal("10") or desired_notional > Decimal("25"):
+            raise RuntimeError("planned testnet notional must be between 10 and 25 mock USDC")
+        venue = HyperliquidReadOnlyVenue(testnet=True)
+        normalized = str(args.symbol).upper()
+        matches = [
+            instrument
+            for instrument in venue.instruments()
+            if instrument.symbol == normalized and instrument.active
+        ]
+        if len(matches) != 1:
+            raise RuntimeError(f"testnet instrument unavailable: {normalized}")
+        instrument = matches[0]
+        units = (desired_notional / instrument.mark_price / instrument.size_step).to_integral_value(
+            rounding=ROUND_CEILING
+        )
+        quantity = units * instrument.size_step
+        estimated_notional = quantity * instrument.mark_price
+        if estimated_notional > Decimal("25"):
+            raise RuntimeError("precision-aligned canary would exceed the 25 mock-USDC cap")
+        print(
+            json.dumps(
+                {
+                    "network": "testnet",
+                    "symbol": instrument.symbol,
+                    "mark_price": str(instrument.mark_price),
+                    "size_step": str(instrument.size_step),
+                    "quantity": str(quantity),
+                    "estimated_notional_usdc": str(estimated_notional),
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
 
     if not args.execute:
         raise RuntimeError("write command requires --execute")
