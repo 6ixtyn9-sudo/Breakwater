@@ -2,6 +2,17 @@ name: Breakwater Research Refresh
 
 on:
   workflow_dispatch:
+    inputs:
+      deep_audit:
+        description: Optional weighted 5000-bar, 1-48 horizon audit
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - native
+          - hip3
+          - all
 
 concurrency:
   group: breakwater-research
@@ -18,7 +29,7 @@ jobs:
   refresh:
     runs-on: ubuntu-24.04
     # 24 horizons can take a while. Bump this if you ever see timeouts.
-    timeout-minutes: 3600
+    timeout-minutes: 360
 
     steps:
       - name: Checkout
@@ -292,6 +303,15 @@ jobs:
                   f"breadth_ok@best={breadth_best} passes={passes}"
               )
           PY
+
+      - name: Run optional weighted deep-history audit
+        if: ${{ inputs.deep_audit != '' && inputs.deep_audit != 'none' }}
+        env:
+          BREAKWATER_MODE: readonly
+          BREAKWATER_DATA_DIR: localdata
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: "0.05"
+        run: |
+          PYTHONPATH=src python scripts/breakwater.py             deep-research-audit             --lane "${{ inputs.deep_audit }}"             --max-pairs 60             --candle-count 5000
 
       - name: Persist research inputs and status
         if: always()
