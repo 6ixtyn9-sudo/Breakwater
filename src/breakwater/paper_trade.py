@@ -239,23 +239,17 @@ def append_cooldown(path: Path, entry: dict) -> None:
         raise
 
 
-def _paper_size(signal: SliceSignal, policy, usdc_zar: Decimal) -> tuple[Decimal, str | None]:
-    """Return (notional_zar, reason).
-
-    reason is None when the signal sizes to a positive notional, else a
-    short machine-readable token explaining why it was zero-sized, so the
-    caller can journal the skip instead of dropping it silently.
-    """
+def _paper_size(signal: SliceSignal, policy, usdc_zar: Decimal) -> Decimal:
     risk_fraction = abs(signal.entry_price - signal.stop_price) / signal.entry_price
     if risk_fraction <= 0:
-        return Decimal(0), "no_risk_distance"
+        return Decimal(0)
     notional_zar = min(
         policy.risk_per_trade_zar / risk_fraction,
         policy.max_position_notional_zar,
     )
     if signal.kind == "PERP" and notional_zar / usdc_zar < Decimal("11"):
-        return Decimal(0), "below_perp_min_notional"
-    return notional_zar, None
+        return Decimal(0)
+    return notional_zar
 
 
 def _latest_close(frame):
@@ -372,6 +366,49 @@ def _slice_trade_counts(book_path: Path) -> dict[str, int]:
             continue
         counts[sid] = _coerce_int(row.get("paper_trades"), 0)
     return counts
+
+
+def _slice_means(book_path: Path) -> dict[str, float]:
+    try:
+        rows = read_book(book_path)
+    except Exception:
+        return {}
+    out: dict[str, float] = {}
+    for row in rows:
+        sid = str(row.get("slice_id") or "")
+        if not sid:
+            continue
+        try:
+            out[sid] = float(row.get("mean_ret_costadj") or 0.0)
+        except (TypeError, ValueError):
+            out[sid] = 0.0
+    return out
+
+
+def _incumbent_slice_ids(book_path: Path) -> set[str]:
+    """Slices that have earned a reserved paper seat.
+
+    Concentrated hunt rows, or any row with realised paper profit.
+    Untested promotions do not qualify.
+    """
+    try:
+        rows = read_book(book_path)
+    except Exception:
+        return set()
+    out: set[str] = set()
+    for row in rows:
+        sid = str(row.get("slice_id") or "")
+        if not sid:
+            continue
+        source = str(row.get("source") or "")
+        trades = _coerce_int(row.get("paper_trades"), 0)
+        try:
+            pnl = float(row.get("paper_pnl_zar") or 0.0)
+        except (TypeError, ValueError):
+            pnl = 0.0
+        if source == "validated_concentrated" or (trades >= 1 and pnl > 0.0):
+            out.add(sid)
+    return out
 
 
 def _slice_paper_pnl(book_path: Path) -> dict[str, float]:
@@ -643,7 +680,6 @@ def run_paper_cycle(
     slot_full = 0
     slice_full = 0
     pair_held = 0
-    sized_out = 0
 
     open_pairs = {str(position["pair"]).upper() for position in surviving}
     open_slice_counts: dict[str, int] = {}
@@ -654,14 +690,28 @@ def run_paper_cycle(
 
     trade_counts = _slice_trade_counts(book_path)
     paper_pnls = _slice_paper_pnl(book_path)
+    incumbents = _incumbent_slice_ids(book_path)
+    means = _slice_means(book_path)
 
     selection_mode = str(os.getenv("BREAKWATER_PAPER_SELECTION_MODE", "explore")).strip().lower()
     if selection_mode == "profit":
-        # PnL-biased ordering: take best edges first (still tie-break by trade count).
-        candidates = sorted(signals, key=lambda s: (-abs(s.edge), trade_counts.get(s.slice_id, 0), s.pair))
+        def _base_key(sig):
+            return (-abs(sig.edge), trade_counts.get(sig.slice_id, 0), sig.pair)
     else:
-        # Evidence-biased ordering: under-sampled first.
-        candidates = sorted(signals, key=lambda s: (trade_counts.get(s.slice_id, 0), -abs(s.edge), s.pair))
+        def _base_key(sig):
+            return (trade_counts.get(sig.slice_id, 0), -abs(sig.edge), sig.pair)
+
+    # Fat first (new high-mean book rows with no paper yet), then old/green
+    # incumbents (concentrated or already printing). MAX / PER_SLICE unchanged.
+    fat_sigs = sorted(
+        [sig for sig in signals if sig.slice_id not in incumbents],
+        key=lambda sig: (-means.get(sig.slice_id, 0.0),) + tuple(_base_key(sig)),
+    )
+    old_sigs = sorted(
+        [sig for sig in signals if sig.slice_id in incumbents],
+        key=lambda sig: (-paper_pnls.get(sig.slice_id, 0.0),) + tuple(_base_key(sig)),
+    )
+    candidates = fat_sigs + old_sigs
 
     for signal in candidates:
         if len(surviving) >= MAX_PAPER_POSITIONS:
@@ -803,36 +853,8 @@ def run_paper_cycle(
             skipped += 1
             continue
 
-        notional_zar, size_reason = _paper_size(signal, policy, usdc_zar)
+        notional_zar = _paper_size(signal, policy, usdc_zar)
         if notional_zar <= 0:
-            # Fail-open visibility: a zero-sized signal is a skip like any
-            # other and must be journaled with its reason, not dropped.
-            append_log(
-                log_path,
-                {
-                    "closed_at": server_time.isoformat(),
-                    "signal_id": signal.signal_id,
-                    "pair": signal.pair,
-                    "kind": signal.kind,
-                    "slice_id": signal.slice_id,
-                    "side": signal.side.value,
-                    "entry_price": str(signal.entry_price),
-                    "exit_price": "",
-                    "stop_price": str(signal.stop_price),
-                    "notional_zar": "0",
-                    "pnl_zar": "0",
-                    "outcome": "skipped",
-                    "bars_held": "0",
-                    "exit_reason": size_reason or "zero_notional",
-                    "entry_guard": size_reason or "zero_notional",
-                    "regime": str(getattr(signal, "regime", "") or ""),
-                    "pnl_outcome": "",
-                    "atr": str(getattr(signal, "atr", "") or ""),
-                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
-                    "risk_fraction": "",
-                },
-            )
-            sized_out += 1
             continue
 
         risk_distance = (
@@ -888,5 +910,4 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
-        "sized_out": sized_out,
     }
