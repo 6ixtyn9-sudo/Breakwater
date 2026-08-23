@@ -316,6 +316,10 @@ def test_perp_signal_below_minimum_notional_is_skipped(tmp_path):
         frames={"TINYUSDC": frame_with_bar(close=Decimal("0.001"))},
     )
     assert result["open"] == 0
+    assert result["skipped"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["outcome"] == "skipped"
+    assert log.iloc[0]["exit_reason"] == "below_perp_min_notional"
 
 
 def test_one_paper_slot_per_kind(tmp_path):
