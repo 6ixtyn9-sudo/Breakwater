@@ -1,7 +1,7 @@
 [
   {
     "atr": "0.005575714285714281",
-    "bars_held": "24",
+    "bars_held": "25",
     "entry_guard": "passed",
     "entry_price": "0.15738",
     "horizon_bars": "14",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "407.42857142857144",
-    "bars_held": "12",
+    "bars_held": "13",
     "entry_guard": "passed",
     "entry_price": "76270.0",
     "horizon_bars": "23",
@@ -32,20 +32,20 @@
     "missing_bars": "0",
     "notional_zar": "200.00",
     "pair": "BTCUSDC",
-    "peak_price": "77698.0",
+    "peak_price": "77814.0",
     "regime": "neutral",
     "risk_fraction": "0.01869674",
     "side": "BUY",
     "signal_id": "bacd25bedbe5d610",
     "slice_id": "feat_ret_1:2:LONG:h23",
     "stop_atr_mult": "3.500000",
-    "stop_price": "76271.9999999999999600",
+    "stop_price": "76387.9999999999999600",
     "trail_active": "1",
     "trough_price": "76270.0"
   },
   {
     "atr": "19.871428571428492",
-    "bars_held": "7",
+    "bars_held": "8",
     "entry_guard": "passed",
     "entry_price": "2434.0",
     "horizon_bars": "23",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "1.334071428571427",
-    "bars_held": "5",
+    "bars_held": "6",
     "entry_guard": "passed",
     "entry_price": "95.381",
     "horizon_bars": "23",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "1.3391428571428574",
-    "bars_held": "5",
+    "bars_held": "6",
     "entry_guard": "passed",
     "entry_price": "79.402",
     "horizon_bars": "15",
@@ -111,7 +111,7 @@
   },
   {
     "atr": "0.1723571428571425",
-    "bars_held": "5",
+    "bars_held": "6",
     "entry_guard": "passed",
     "entry_price": "11.487",
     "horizon_bars": "15",
@@ -133,7 +133,7 @@
   },
   {
     "atr": "0.0015724999999999995",
-    "bars_held": "3",
+    "bars_held": "4",
     "entry_guard": "passed",
     "entry_price": "0.092403",
     "horizon_bars": "15",
@@ -155,7 +155,7 @@
   },
   {
     "atr": "3.778571428571429",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "234.96",
     "horizon_bars": "23",
@@ -177,7 +177,7 @@
   },
   {
     "atr": "0.011107857142857145",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "0.67271",
     "horizon_bars": "24",
@@ -199,7 +199,7 @@
   },
   {
     "atr": "0.003635714285714286",
-    "bars_held": "2",
+    "bars_held": "3",
     "entry_guard": "passed",
     "entry_price": "0.22556",
     "horizon_bars": "15",
