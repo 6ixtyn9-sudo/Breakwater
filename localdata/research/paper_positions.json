@@ -1,7 +1,7 @@
 [
   {
     "atr": "3.0528571428571434",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "127.05",
     "horizon_bars": "14",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "0.0020794285714285715",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "0.09504",
     "horizon_bars": "14",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "0.005575714285714281",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "0.15738",
     "horizon_bars": "14",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "1.549285714285713",
-    "bars_held": "9",
+    "bars_held": "10",
     "entry_guard": "passed",
     "entry_price": "79.828",
     "horizon_bars": "14",
@@ -89,7 +89,7 @@
   },
   {
     "atr": "0.04172142857142854",
-    "bars_held": "7",
+    "bars_held": "8",
     "entry_guard": "passed",
     "entry_price": "1.8992",
     "horizon_bars": "9",
@@ -108,27 +108,5 @@
     "stop_price": "1.753175000000000110",
     "trail_active": "0",
     "trough_price": "1.8992"
-  },
-  {
-    "atr": "0.1111214285714285",
-    "bars_held": "6",
-    "entry_guard": "passed",
-    "entry_price": "3.2051",
-    "horizon_bars": "11",
-    "initial_stop_price": "2.81617500000000025",
-    "kind": "PERP",
-    "missing_bars": "0",
-    "notional_zar": "200.00",
-    "pair": "LITUSDC",
-    "peak_price": "3.2051",
-    "regime": "bull",
-    "risk_fraction": "0.12134567",
-    "side": "BUY",
-    "signal_id": "a6d7a2cce97345b7",
-    "slice_id": "feat_trend_slope_20:2:LONG:h11",
-    "stop_atr_mult": "3.500000",
-    "stop_price": "2.81617500000000025",
-    "trail_active": "0",
-    "trough_price": "3.2051"
   }
 ]
