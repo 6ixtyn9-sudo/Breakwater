@@ -2,7 +2,12 @@ from dataclasses import replace
 from decimal import Decimal
 
 from breakwater.hip3 import Hip3UniverseRow
-from breakwater.hip3_research import _candidate_rows, _horizons, classify_market
+from breakwater.hip3_research import (
+    _candidate_rows,
+    _horizons,
+    _methodology_parity,
+    classify_market,
+)
 
 
 def row(coin="xyz:NVDA", **changes):
@@ -36,6 +41,31 @@ def test_hip3_default_horizons_match_native_perp_sweep(monkeypatch):
     assert _horizons() == list(range(1, 25))
 
 
+def test_methodology_parity_reports_drift(monkeypatch):
+    expected_env = {
+        "BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS": "200",
+        "BREAKWATER_DISCOVERY_STATE_QUANTILES": "0.333333,0.666666",
+        "BREAKWATER_VALIDATION_REQUIRE_BONFERRONI": "0",
+        "BREAKWATER_VALIDATION_RELAXED_MIN_PASSES": "2",
+        "BREAKWATER_VALIDATION_STRICT_PASS_FLOOR": "3",
+        "BREAKWATER_BREADTH_MIN_SYMBOLS": "6",
+        "BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL": "10",
+        "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION": "0.40",
+    }
+    for name, value in expected_env.items():
+        monkeypatch.setenv(name, value)
+    parity = _methodology_parity(
+        max_pairs=60, candle_count=1000, horizons=list(range(1, 25))
+    )
+    assert parity["status"] == "parity"
+    monkeypatch.setenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "5")
+    drifted = _methodology_parity(
+        max_pairs=60, candle_count=1000, horizons=list(range(1, 25))
+    )
+    assert drifted["status"] == "mismatch"
+    assert drifted["mismatches"] == ["breadth_min_symbols"]
+
+
 def test_market_classes_keep_builder_crypto_out_of_equity_pool():
     native = {"BTC", "ETH", "SOL"}
     assert classify_market("hyna:BTC", native) == "builder_crypto"
@@ -43,6 +73,9 @@ def test_market_classes_keep_builder_crypto_out_of_equity_pool():
     assert classify_market("xyz:BRENTOIL", native) == "commodity"
     assert classify_market("xyz:SP500", native) == "index"
     assert classify_market("xyz:NVDA", native) == "provisional_equity"
+    assert classify_market("xyz:NVDA", native, "equities") == "equity"
+    assert classify_market("xyz:PRIVATE", native, "preipo") == "preipo"
+    assert classify_market("hyna:BTC", native, "equities") == "builder_crypto"
 
 
 def test_research_candidates_fail_closed_on_oracle_and_activity():

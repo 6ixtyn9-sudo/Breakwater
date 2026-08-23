@@ -26,6 +26,8 @@ HIP3_UNIVERSE_HEADERS = [
     "deployer",
     "oracle_updater",
     "coin",
+    "annotation_category",
+    "annotation_keywords",
     "collateral_token",
     "active",
     "liquidity_rank",
@@ -74,6 +76,8 @@ class Hip3UniverseRow:
     margin_mode: str
     growth_mode: str
     as_of: str
+    annotation_category: str = ""
+    annotation_keywords: str = ""
 
 
 @dataclass(frozen=True)
@@ -138,9 +142,30 @@ class HyperliquidHip3Discovery:
             )
         return tuple(sorted(dexs, key=lambda dex: dex.name))
 
+    def annotations(self) -> dict[str, tuple[str, str]]:
+        payload = self._post({"type": "perpConciseAnnotations"})
+        if not isinstance(payload, list):
+            raise PerpVenueError("Hyperliquid perpConciseAnnotations response is malformed")
+        annotations: dict[str, tuple[str, str]] = {}
+        for row in payload:
+            if not isinstance(row, list) or len(row) != 2 or not isinstance(row[1], dict):
+                raise PerpVenueError("Hyperliquid concise annotation row is malformed")
+            coin = str(row[0] or "").strip()
+            if not coin:
+                raise PerpVenueError("Hyperliquid concise annotation coin is missing")
+            detail = row[1]
+            category = str(detail.get("category") or "").strip()
+            keywords_raw = detail.get("keywords") or []
+            if not isinstance(keywords_raw, list):
+                raise PerpVenueError(f"Hyperliquid annotation keywords are malformed for {coin}")
+            keywords = ",".join(str(value).strip() for value in keywords_raw if str(value).strip())
+            annotations[coin] = (category, keywords)
+        return annotations
+
     def discover(self) -> Hip3UniverseSnapshot:
         observed = datetime.now(timezone.utc).isoformat()
         dexs = self.dexs()
+        annotations = self.annotations()
         rows: list[Hip3UniverseRow] = []
         for dex in dexs:
             payload = self._post({"type": "metaAndAssetCtxs", "dex": dex.name})
@@ -209,6 +234,8 @@ class HyperliquidHip3Discovery:
                         ),
                         growth_mode=str(instrument.get("growthMode") or "disabled"),
                         as_of=observed,
+                        annotation_category=annotations.get(coin, ("", ""))[0],
+                        annotation_keywords=annotations.get(coin, ("", ""))[1],
                     )
                 )
             dex_rows.sort(key=lambda row: (-row.day_notional_volume, row.coin))
@@ -225,7 +252,13 @@ def read_hip3_universe(path: Path) -> Hip3UniverseSnapshot | None:
     try:
         with path.open(newline="") as handle:
             reader = csv.DictReader(handle)
-            if reader.fieldnames != HIP3_UNIVERSE_HEADERS:
+            legacy_headers = [
+                name
+                for name in HIP3_UNIVERSE_HEADERS
+                if name not in {"annotation_category", "annotation_keywords"}
+            ]
+            fields = tuple(reader.fieldnames or ())
+            if fields not in {tuple(HIP3_UNIVERSE_HEADERS), tuple(legacy_headers)}:
                 raise RuntimeError("HIP-3 universe file has an unsupported schema")
             rows = []
             dexs: dict[str, Hip3Dex] = {}
@@ -253,6 +286,8 @@ def read_hip3_universe(path: Path) -> Hip3UniverseSnapshot | None:
                     margin_mode=raw["margin_mode"],
                     growth_mode=raw["growth_mode"],
                     as_of=raw["as_of"],
+                    annotation_category=raw.get("annotation_category") or "",
+                    annotation_keywords=raw.get("annotation_keywords") or "",
                 )
                 rows.append(row)
                 dexs.setdefault(

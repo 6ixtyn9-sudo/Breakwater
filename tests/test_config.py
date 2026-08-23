@@ -1,3 +1,5 @@
+import json
+import os
 from decimal import Decimal
 
 import pytest
@@ -6,6 +8,7 @@ from breakwater.config import MANDATE_ENV, get_settings
 
 
 def _set_mandate(monkeypatch):
+    monkeypatch.delenv("BREAKWATER_MANDATE_JSON", raising=False)
     for key, env_name in MANDATE_ENV.items():
         monkeypatch.delenv(env_name, raising=False)
     monkeypatch.setenv("BREAKWATER_INITIAL_EQUITY_ZAR", "331.45")
@@ -23,6 +26,7 @@ def _set_mandate(monkeypatch):
 
 
 def _clear_mandate(monkeypatch):
+    monkeypatch.delenv("BREAKWATER_MANDATE_JSON", raising=False)
     for key, env_name in MANDATE_ENV.items():
         monkeypatch.delenv(env_name, raising=False)
 
@@ -39,6 +43,39 @@ def test_mandate_loads_from_environment(monkeypatch, tmp_path):
     assert settings.mandate.max_position_notional_zar == Decimal("200.00")
     assert settings.mandate.perp_leverage_cap == Decimal("3")
     assert settings.mandate.max_positions == 1
+
+
+def test_consolidated_mandate_json_matches_legacy_policy(monkeypatch, tmp_path):
+    monkeypatch.setenv("BREAKWATER_DATA_DIR", str(tmp_path))
+    _set_mandate(monkeypatch)
+    legacy = get_settings().mandate
+    payload = {
+        key: os.environ[env_name]
+        for key, env_name in MANDATE_ENV.items()
+    }
+    _clear_mandate(monkeypatch)
+    monkeypatch.setenv("BREAKWATER_MANDATE_JSON", json.dumps(payload))
+    consolidated = get_settings().mandate
+    assert consolidated == legacy
+
+
+def test_consolidated_mandate_rejects_mixed_sources(monkeypatch, tmp_path):
+    monkeypatch.setenv("BREAKWATER_DATA_DIR", str(tmp_path))
+    _set_mandate(monkeypatch)
+    monkeypatch.setenv("BREAKWATER_MANDATE_JSON", "{}")
+    with pytest.raises(RuntimeError, match="both BREAKWATER_MANDATE_JSON"):
+        get_settings()
+
+
+def test_consolidated_mandate_rejects_partial_or_unknown_schema(monkeypatch, tmp_path):
+    monkeypatch.setenv("BREAKWATER_DATA_DIR", str(tmp_path))
+    _clear_mandate(monkeypatch)
+    monkeypatch.setenv(
+        "BREAKWATER_MANDATE_JSON",
+        json.dumps({"initial_equity_zar": "100", "surprise": "1"}),
+    )
+    with pytest.raises(RuntimeError, match="schema is invalid"):
+        get_settings()
 
 
 def test_missing_mandate_is_none(monkeypatch, tmp_path):

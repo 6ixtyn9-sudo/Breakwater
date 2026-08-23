@@ -3,7 +3,11 @@ from decimal import Decimal
 
 import pytest
 
-from breakwater.hip3 import HyperliquidHip3Discovery, write_hip3_universe
+from breakwater.hip3 import (
+    HyperliquidHip3Discovery,
+    read_hip3_universe,
+    write_hip3_universe,
+)
 from breakwater.perp_venue import PerpVenueError
 
 
@@ -37,6 +41,13 @@ def dex_payload():
             "deployer": "0x" + "1" * 40,
             "oracleUpdater": "0x" + "2" * 40,
         },
+    ]
+
+
+def annotation_payload():
+    return [
+        ["xyz:NVDA", {"category": "equities", "keywords": ["stocks", "ai"]}],
+        ["xyz:TSLA", {"category": "equities"}],
     ]
 
 
@@ -83,7 +94,7 @@ def meta_payload():
 
 
 def test_discovers_and_ranks_hip3_inside_each_dex():
-    session = Session(dex_payload(), meta_payload())
+    session = Session(dex_payload(), annotation_payload(), meta_payload())
     snapshot = HyperliquidHip3Discovery(session=session).discover()
     assert len(snapshot.dexs) == 1
     assert [row.coin for row in snapshot.rows] == ["xyz:TSLA", "xyz:NVDA"]
@@ -91,19 +102,22 @@ def test_discovers_and_ranks_hip3_inside_each_dex():
     nvda = snapshot.rows[1]
     assert nvda.oracle_mark_deviation_fraction == abs(Decimal("180") - 181) / 181
     assert nvda.margin_mode == "strictIsolated"
+    assert nvda.annotation_category == "equities"
+    assert nvda.annotation_keywords == "stocks,ai"
     assert session.calls[0][1] == {"type": "perpDexs"}
-    assert session.calls[1][1] == {"type": "metaAndAssetCtxs", "dex": "xyz"}
+    assert session.calls[1][1] == {"type": "perpConciseAnnotations"}
+    assert session.calls[2][1] == {"type": "metaAndAssetCtxs", "dex": "xyz"}
 
 
 def test_rejects_instrument_that_loses_dex_identity():
     payload = meta_payload()
     payload[0]["universe"][0]["name"] = "NVDA"
     with pytest.raises(PerpVenueError, match="does not preserve DEX prefix"):
-        HyperliquidHip3Discovery(session=Session(dex_payload(), payload)).discover()
+        HyperliquidHip3Discovery(session=Session(dex_payload(), annotation_payload(), payload)).discover()
 
 
 def test_writes_dedicated_hip3_universe(tmp_path):
-    snapshot = HyperliquidHip3Discovery(session=Session(dex_payload(), meta_payload())).discover()
+    snapshot = HyperliquidHip3Discovery(session=Session(dex_payload(), annotation_payload(), meta_payload())).discover()
     path = tmp_path / "hip3" / "universe.csv"
     write_hip3_universe(path, snapshot)
     with path.open(newline="") as handle:
@@ -111,3 +125,7 @@ def test_writes_dedicated_hip3_universe(tmp_path):
     assert len(rows) == 2
     assert rows[0]["dex"] == "xyz"
     assert rows[0]["coin"] == "xyz:TSLA"
+    loaded = read_hip3_universe(path)
+    assert loaded is not None
+    assert loaded.rows[1].annotation_category == "equities"
+    assert loaded.rows[1].annotation_keywords == "stocks,ai"

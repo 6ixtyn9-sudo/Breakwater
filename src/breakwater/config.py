@@ -7,6 +7,7 @@ control. Any partial mandate is a configuration error and fails closed.
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -74,32 +75,34 @@ def _clean_credential(name: str, value: str) -> str:
     return cleaned
 
 
-def mandate_from_env() -> RiskPolicy | None:
-    present = {
-        key: os.getenv(env_name)
-        for key, env_name in MANDATE_ENV.items()
-        if os.getenv(env_name) not in (None, "")
-    }
-    if not present:
-        return None
-    if set(present) != set(MANDATE_ENV):
-        missing = sorted(MANDATE_ENV[key] for key in MANDATE_ENV if key not in present)
-        raise RuntimeError(
-            "capital mandate is partially configured; missing: " + ", ".join(missing)
-        )
+def _policy_from_mandate_values(raw_values: dict, *, source: str) -> RiskPolicy:
+    if set(raw_values) != set(MANDATE_KEYS):
+        missing = sorted(set(MANDATE_KEYS) - set(raw_values))
+        extra = sorted(set(raw_values) - set(MANDATE_KEYS))
+        details = []
+        if missing:
+            details.append("missing: " + ", ".join(missing))
+        if extra:
+            details.append("unknown: " + ", ".join(extra))
+        raise RuntimeError(f"{source} mandate schema is invalid; " + "; ".join(details))
+    if any(isinstance(value, bool) for value in raw_values.values()):
+        raise RuntimeError(f"{source} mandate values must be numbers, not booleans")
     values = {
-        key: _decimal(MANDATE_ENV[key], present[key])
-        for key in present
+        key: _decimal(f"{source}.{key}", raw_values[key])
+        for key in MANDATE_KEYS
     }
-    max_positions = int(values["max_positions"].to_integral_value())
+    max_positions_decimal = values["max_positions"]
+    max_positions = int(max_positions_decimal.to_integral_value())
+    if max_positions_decimal != Decimal(max_positions):
+        raise RuntimeError(f"{source}.max_positions must be a whole number")
     if max_positions < 1:
-        raise RuntimeError("BREAKWATER_MAX_POSITIONS must be at least 1")
+        raise RuntimeError(f"{source}.max_positions must be at least 1")
     if values["initial_equity_zar"] <= 0:
-        raise RuntimeError("BREAKWATER_INITIAL_EQUITY_ZAR must be positive")
+        raise RuntimeError(f"{source}.initial_equity_zar must be positive")
     if values["absolute_equity_floor_zar"] >= values["initial_equity_zar"]:
         raise RuntimeError("equity floor must be below initial equity")
     if values["perp_leverage_cap"] <= 0:
-        raise RuntimeError("BREAKWATER_PERP_LEVERAGE_CAP must be positive")
+        raise RuntimeError(f"{source}.perp_leverage_cap must be positive")
     return RiskPolicy(
         initial_equity_zar=values["initial_equity_zar"],
         absolute_equity_floor_zar=values["absolute_equity_floor_zar"],
@@ -114,6 +117,37 @@ def mandate_from_env() -> RiskPolicy | None:
         perp_leverage_cap=values["perp_leverage_cap"],
         max_positions=max_positions,
     )
+
+
+def mandate_from_env() -> RiskPolicy | None:
+    json_payload = str(os.getenv("BREAKWATER_MANDATE_JSON") or "").strip()
+    present = {
+        key: os.getenv(env_name)
+        for key, env_name in MANDATE_ENV.items()
+        if os.getenv(env_name) not in (None, "")
+    }
+    if json_payload and present:
+        raise RuntimeError(
+            "capital mandate is configured through both BREAKWATER_MANDATE_JSON "
+            "and legacy variables; choose exactly one source"
+        )
+    if json_payload:
+        try:
+            decoded = json.loads(json_payload)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("BREAKWATER_MANDATE_JSON is not valid JSON") from exc
+        if not isinstance(decoded, dict):
+            raise RuntimeError("BREAKWATER_MANDATE_JSON must be a JSON object")
+        return _policy_from_mandate_values(decoded, source="BREAKWATER_MANDATE_JSON")
+    if not present:
+        return None
+    if set(present) != set(MANDATE_ENV):
+        missing = sorted(MANDATE_ENV[key] for key in MANDATE_ENV if key not in present)
+        raise RuntimeError(
+            "capital mandate is partially configured; missing: " + ", ".join(missing)
+        )
+    legacy_values = {key: present[key] for key in MANDATE_KEYS}
+    return _policy_from_mandate_values(legacy_values, source="legacy mandate")
 
 
 @dataclass(frozen=True)

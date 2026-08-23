@@ -88,10 +88,68 @@ def _horizons() -> list[int]:
     return horizons
 
 
-def classify_market(coin: str, native_crypto: set[str]) -> str:
+def _methodology_parity(*, max_pairs: int, candle_count: int, horizons: list[int]) -> dict:
+    expected = {
+        "max_pairs": 60,
+        "candle_count": 1000,
+        "horizons": list(range(1, 25)),
+        "rolling_min_periods": "200",
+        "state_quantiles": "0.333333,0.666666",
+        "require_bonferroni": "0",
+        "relaxed_min_passes": "2",
+        "strict_pass_floor": "3",
+        "breadth_min_symbols": "6",
+        "breadth_min_rows_per_symbol": "10",
+        "breadth_min_positive_fraction": "0.40",
+    }
+    actual = {
+        "max_pairs": max_pairs,
+        "candle_count": candle_count,
+        "horizons": horizons,
+        "rolling_min_periods": os.getenv("BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS", "200"),
+        "state_quantiles": os.getenv(
+            "BREAKWATER_DISCOVERY_STATE_QUANTILES", "0.333333,0.666666"
+        ),
+        "require_bonferroni": os.getenv("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1"),
+        "relaxed_min_passes": os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"),
+        "strict_pass_floor": os.getenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", "3"),
+        "breadth_min_symbols": os.getenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "10"),
+        "breadth_min_rows_per_symbol": os.getenv(
+            "BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", "10"
+        ),
+        "breadth_min_positive_fraction": os.getenv(
+            "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.55"
+        ),
+    }
+    mismatches = [key for key, expected_value in expected.items() if actual[key] != expected_value]
+    return {
+        "status": "parity" if not mismatches else "mismatch",
+        "mismatches": mismatches,
+        "expected": expected,
+        "actual": actual,
+    }
+
+
+def classify_market(coin: str, native_crypto: set[str], annotation_category: str = "") -> str:
     asset = str(coin).split(":", 1)[-1].upper()
     if asset in native_crypto:
         return "builder_crypto"
+    category = str(annotation_category or "").strip().lower().replace("-", "_")
+    authoritative = {
+        "commodity": "commodity",
+        "commodities": "commodity",
+        "crypto": "builder_crypto",
+        "equities": "equity",
+        "equity": "equity",
+        "forex": "fx",
+        "fx": "fx",
+        "index": "index",
+        "indices": "index",
+        "preipo": "preipo",
+        "stocks": "equity",
+    }
+    if category in authoritative:
+        return authoritative[category]
     if asset in FX_ASSETS:
         return "fx"
     if asset in COMMODITY_ASSETS:
@@ -156,7 +214,9 @@ def _candidate_rows(
             continue
         if row.oracle_price <= 0 or row.oracle_mark_deviation_fraction > max_oracle_deviation:
             continue
-        market_class = classify_market(row.coin, native_crypto)
+        market_class = classify_market(
+            row.coin, native_crypto, annotation_category=row.annotation_category
+        )
         # Native crypto already has a validator-operated research lane. Builder
         # duplicates remain inventoried but are excluded from HIP-3 research.
         if market_class == "builder_crypto":
@@ -273,6 +333,21 @@ def run_hip3_research(
         for token in str(row.fail_reasons or "").split(","):
             if token.strip():
                 fail_tokens[token.strip()] += 1
+    parity = _methodology_parity(
+        max_pairs=max_pairs, candle_count=candle_count, horizons=horizons
+    )
+    selected_classes = [
+        classify_market(row.coin, native_crypto, row.annotation_category)
+        for row, _ in selected
+    ]
+    promotion_blocked_reasons = [
+        "market_classification_not_fully_authoritative",
+        "market_calendars_not_enforced",
+        "historical_oracle_quality_not_available",
+        "effective_costs_not_measured",
+        "collateral_tokens_not_resolved",
+        "no_hip3_paper_evidence",
+    ]
     result = {
         "as_of": observed,
         "universe_as_of": universe.as_of,
@@ -287,7 +362,14 @@ def run_hip3_research(
         "fail_top": fail_tokens.most_common(8),
         "promotion_enabled": False,
         "paper_enabled": False,
-        "classification_status": "provisional",
+        "classification_status": (
+            "authoritative"
+            if selected_classes and all(not value.startswith("provisional") for value in selected_classes)
+            else "provisional"
+        ),
+        "annotated_selected": sum(bool(row.annotation_category) for row, _ in selected),
+        "methodology_parity": parity,
+        "promotion_blocked_reasons": promotion_blocked_reasons,
     }
     append_status(
         status_path,

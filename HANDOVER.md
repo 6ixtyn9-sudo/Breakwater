@@ -517,4 +517,43 @@ audit corpus to show where continuity and candidate edges exist; it is not yet
 permission to trade. Next gate is authoritative annotations/region calendars,
 collateral resolution and measured costs, then a reviewed promotion policy.
 
+
+19) HIP-3 PARITY + ACTIONS CONFIG HYGIENE (2026-08-23, ACTIONED)
+
+HIP-3 research now emits a durable methodology_parity block comparing the
+actual run against native-PERP doctrine: 60 names, 1000 bars, horizons 1-24,
+rolling 200, matching quantiles, fold rules and breadth. Drift is reported as
+named mismatches instead of silently changing the lane.
+
+Promotion remains hard blocked and status names every missing production gate:
+  - authoritative classification
+  - enforced market calendars
+  - historical oracle quality
+  - measured effective costs
+  - resolved collateral tokens
+  - HIP-3 paper evidence
+
+Discovery now queries Hyperliquid `perpConciseAnnotations` and persists raw
+category/keywords. Recognized categories improve research grouping, but native
+crypto identity always wins so misleading builder annotations cannot leak a
+BTC duplicate into equity research. Legacy HIP-3 universe CSV remains readable
+and the next discovery refresh upgrades it.
+
+Actions configuration direction:
+  - one private BREAKWATER_MANDATE_JSON object replaces 12 mandate Secrets
+  - mixed consolidated + legacy mandate sources fail closed
+  - malformed/partial/extra mandate keys fail closed
+  - research/paper knobs and ACK strings move to Actions Variables
+  - only VALR credentials and consolidated mandate remain repository Secrets
+    during the current architecture
+  - future HL agent key belongs in a protected live Environment; master key never GitHub
+
+Migration is intentionally operator-run because Arena cannot modify workflows
+and GitHub does not reveal existing Secret values. Follow:
+  docs/actions-config-migration.md
+Then run in Codespaces:
+  python scripts/migrate_actions_config.py
+Do not delete old Secrets until guardian, paper, native research and HIP-3
+research all pass with the migrated workflows.
+
 END

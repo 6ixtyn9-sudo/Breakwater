@@ -360,6 +360,16 @@ until classification/calendar metadata is trustworthy. Copy the template to
 `.github/workflows/hip3-research.yml`, then configure one external dispatcher
 for **03:40 UTC daily**.
 
+### Actions Secrets versus Variables
+
+Non-sensitive research, paper, horizon and acknowledgement knobs belong in
+GitHub Actions Variables. Private capital boundaries can be consolidated into
+one `BREAKWATER_MANDATE_JSON` Secret; VALR credentials remain separate Secrets.
+See `docs/actions-config-migration.md` and run
+`scripts/migrate_actions_config.py` only after the consolidated mandate Secret
+and replacement Variables exist. Legacy mandate variables remain supported for
+migration, but mixed JSON and legacy sources fail closed.
+
 ## GitHub configuration
 
 ```bash
