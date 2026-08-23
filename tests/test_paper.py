@@ -116,6 +116,8 @@ def spot_frame(close, high=None, low=None):
 def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None):
     import os
     os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
+    os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
+    os.environ.setdefault("BREAKWATER_PAPER_RISK_TO_MEAN_K", "0")
     positions_path = tmp_path / "positions.json"
     if positions is not None:
         positions_path.write_text(json.dumps(positions))
