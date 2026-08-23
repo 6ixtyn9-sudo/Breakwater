@@ -364,6 +364,22 @@ discovered slices and validated slices, but deliberately creates no monitored
 book: promotion and paper remain off until classification/calendar metadata is
 trustworthy.
 
+### Manual deep-history research audit
+
+The non-promoting challenger loads 5,000 hourly candles, applies frozen
+1/0.5/0.25/0.125/0.0625 weights per 1,000-hour age bucket, tests horizons
+1–48, uses 48-hour block bootstrap confidence, correlation-cluster breadth and
+requires contiguous three-horizon plateaus. Outputs are intentionally ignored
+by Git and cannot alter books, paper state, workflows or promotion:
+
+```bash
+PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane native
+PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane hip3
+```
+
+Results land under `localdata/deep_audit/`. Run manually to benchmark before
+replacing the daily 1,000-bar/1–24 method; do not add a workflow or cron.
+
 ### Actions Secrets versus Variables
 
 Non-sensitive research, paper, horizon and acknowledgement knobs belong in

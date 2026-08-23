@@ -590,4 +590,33 @@ trusted; status counts control comparisons and >R0.01/reason mismatches.
 Counterfactual state corruption is reported and preserved rather than
 silently overwritten; it does not stop the real paper risk cycle.
 
+
+21) DEEP-HISTORY WEIGHTED CHALLENGER (2026-08-23, MANUAL/AUDIT ONLY)
+
+Command:
+  PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane native
+  PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane hip3
+
+One shared implementation, no workflow, no cron, no committed output. Audit
+artifacts live under ignored `localdata/deep_audit/`. It cannot call sync_book,
+paper or execution.
+
+Frozen design (do not tune after seeing results):
+  - 5000 hourly candles
+  - horizons 1-48
+  - weights by bar age in 1000h blocks: 1, .5, .25, .125, .0625
+  - recent-1000, full-5000 and weighted-5000 means all reported
+  - weighted effective sample size
+  - deterministic 48h block bootstrap
+  - raw-symbol and >=0.80-correlation-cluster breadth
+  - at least 3 contiguous passing horizons for an audit plateau
+  - native and HIP-3 groups remain isolated; HIP-3 keeps DEX/class/collateral boundaries
+
+Every result remains blocked by selection-holdout, funding, slippage and
+point-in-time-universe gaps; HIP-3 additionally remains blocked by oracle
+history, calendars and provisional costs. This challenger is for deciding
+whether to replace the current method, not a second permanent research system.
+Benchmark runtime and candidate stability manually first. Actual paper remains
+2R while its independent prospective exit policies accumulate.
+
 END

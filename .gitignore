@@ -11,4 +11,5 @@ localdata/*.db
 localdata/*.db-*
 localdata/*.tmp
 localdata/.hyperliquid-testnet-canary.json
+localdata/deep_audit/
 *.lock
