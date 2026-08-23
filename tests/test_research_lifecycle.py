@@ -325,7 +325,7 @@ def test_sync_book_keeps_green_paper_slice_when_kind_promotes_other_family(tmp_p
         "side": "LONG",
         "status": "monitored",
         "validated_at": "",
-        "last_signal_bar": "",
+        "last_signal_bar": str(int(datetime.now(timezone.utc).timestamp())),
         "paper_trades": "5",
         "paper_wins": "5",
         "paper_losses": "0",
