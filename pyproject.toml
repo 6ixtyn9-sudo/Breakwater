@@ -13,6 +13,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==9.0.3", "ruff==0.16.3", "PyYAML==6.0.3"]
+hyperliquid = ["hyperliquid-python-sdk==0.24.0"]
 
 [build-system]
 requires = ["setuptools==80.9.0"]

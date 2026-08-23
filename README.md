@@ -276,9 +276,39 @@ PYTHONPATH=src python scripts/hyperliquid_canary.py
 
 Use `--testnet` for the testnet public API. Never put a master-wallet or agent
 private key in `.env`, GitHub variables, repository files, issues, logs, or
-chat. Signed testnet execution remains locked until native reduce-only SL/TP,
-reconciliation, nonce handling, and the dead-man's switch pass a mechanism
-canary.
+chat. Mainnet execution remains locked. The separate testnet mechanism-canary
+executor is structurally pinned to Hyperliquid testnet and hard-capped at
+25 mock USDC. It requires a dedicated agent key, an otherwise flat testnet
+account, an explicit acknowledgement, deterministic client order IDs, and
+native reduce-only SL/TP verification. A protection failure forces an
+emergency testnet close.
+
+Install the pinned optional SDK only in the environment used for the canary:
+
+```bash
+python -m pip install -e '.[hyperliquid]'
+```
+
+Inspect testnet without loading a signer:
+
+```bash
+export HYPERLIQUID_TESTNET_ACCOUNT_ADDRESS=0xYourTestnetMasterAddress
+PYTHONPATH=src python scripts/hyperliquid_testnet_canary.py inspect
+```
+
+The write stage additionally reads `HYPERLIQUID_TESTNET_AGENT_PRIVATE_KEY`
+from the process environment and requires:
+
+```text
+BREAKWATER_HYPERLIQUID_TESTNET_ACK=I_ACCEPT_BREAKWATER_HYPERLIQUID_TESTNET_ORDERS
+```
+
+The key must belong to a dedicated testnet API/agent wallet approved by the
+testnet account. It must never be the master key, and must never be committed,
+printed, pasted into chat, or saved in `.env`. `open-protected --execute`
+stages one position with native stop and target; `close --execute` closes it,
+cancels its known orders, and verifies the account is flat. Mainnet is not an
+available endpoint in this executor.
 
 ### VALR connectivity canary
 

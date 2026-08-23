@@ -10,4 +10,5 @@ dist/
 localdata/*.db
 localdata/*.db-*
 localdata/*.tmp
+localdata/.hyperliquid-testnet-canary.json
 *.lock

@@ -379,9 +379,22 @@ Implemented preparation only:
   - all writes code-locked; no signer/private-key path exists
 
 Do not store a master or agent private key in the repository, .env, status,
-logs, issues, or chat. Next gate is a separate signed TESTNET executor with
-atomic nonces, deterministic cloids, native reduce-only SL/TP, scheduled
-cancel, startup reconciliation and agent revocation. Then run the minimum-size
-mechanism canary before any micro-live eligibility.
+logs, issues, or chat.
+
+Testnet stage implemented 23 Aug:
+  - official SDK is a pinned optional dependency, imported only by signed canary
+  - executor is structurally testnet-only; mainnet cannot be selected
+  - dedicated agent key required and rejected if it derives to the account address
+  - explicit acknowledgement + hard 25 mock-USDC cap + flat-account precondition
+  - local process/file nonce serialization and deterministic cloids
+  - IOC entry -> independent position reconcile -> atomic native reduce-only SL/TP
+  - independent open-order/stop verification; failed protection emergency-closes
+  - staged state is ignored by Git; cleanup closes, cancels and verifies flat
+
+A dead-man cancel must NOT cancel protective stops on a directional position;
+it is therefore not armed around the protected hold. Next operator gate is to
+fund/activate testnet, approve a dedicated testnet agent, run open-protected,
+then deliberately prove stop triggering and revoke the agent. Mainnet remains
+code-locked until that mechanism evidence is recorded.
 
 END
