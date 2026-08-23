@@ -270,7 +270,13 @@ def _realised_paper_pnl(log_path: Path) -> Decimal:
                 if str(row.get("outcome") or "") not in {"win", "loss"}:
                     continue
                 if str(row.get("exit_reason") or "") in {
-                    "regime", "not_book", "no_price", "adverse", "risk_cap", "edge_cap",
+                    "regime",
+                    "not_book",
+                    "no_price",
+                    "adverse",
+                    "risk_cap",
+                    "edge_cap",
+                    "below_perp_min_notional",
                 }:
                     continue
                 try:
@@ -939,6 +945,33 @@ def run_paper_cycle(
 
         notional_zar = _paper_size(signal, policy, usdc_zar, risk_zar=risk_zar)
         if notional_zar <= 0:
+            # Venue $11 floor (or zero risk distance). Same refuse, named.
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "below_perp_min_notional",
+                    "entry_guard": "below_perp_min_notional",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
+            skipped += 1
             continue
 
         risk_distance = (
