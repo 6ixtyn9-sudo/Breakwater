@@ -70,6 +70,34 @@ def _research_max_pairs(default: int = 60) -> int:
     return max(8, min(200, raw))
 
 
+def _compact_paper_status(paper_result: dict) -> dict:
+    compact = {
+        key: value
+        for key, value in paper_result.items()
+        if key not in {"counterfactual", "performance"}
+    }
+    performance = paper_result.get("performance") or {}
+    compact["performance"] = {
+        key: performance.get(key)
+        for key in ("closed", "wins", "pnl_zar", "by_side", "by_exit")
+    }
+    counterfactual = paper_result.get("counterfactual") or {}
+    compact["counterfactual"] = {
+        key: counterfactual.get(key)
+        for key in (
+            "active_trackers",
+            "completed",
+            "completed_this_cycle",
+            "state_error",
+            "prospective_only",
+            "limitations",
+            "control",
+            "by_policy",
+        )
+    }
+    return compact
+
+
 def _parse_horizons_env() -> list[int]:
     """Parse research horizons.
 
@@ -454,7 +482,7 @@ class BreakwaterEngine:
             "regime_blocked": len(blocked),
         }
         if paper_result is not None:
-            status_detail["paper"] = paper_result
+            status_detail["paper"] = _compact_paper_status(paper_result)
         append_status(
             self.settings.status_path,
             "shadow_scan_done",

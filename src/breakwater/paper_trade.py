@@ -63,6 +63,15 @@ from functools import wraps
 from pathlib import Path
 
 from breakwater.monitor import SliceSignal, regime_blocks, regime_of
+from breakwater.paper_counterfactual import (
+    advance_counterfactuals,
+    append_counterfactual_rows,
+    attach_actual_closures,
+    counterfactual_summary,
+    read_counterfactual_trackers,
+    sync_open_positions,
+    write_counterfactual_trackers,
+)
 from breakwater.research_lifecycle import (
     apply_signal_feedback,
     read_book,
@@ -91,6 +100,16 @@ PAPER_LOG_HEADERS = [
     "atr",
     "stop_atr_mult",
     "risk_fraction",
+    # Prospective excursion/R diagnostics (legacy rows migrate with blanks).
+    "initial_stop_price",
+    "peak_price",
+    "trough_price",
+    "mfe_r",
+    "mae_r",
+    "gross_r",
+    "fee_zar",
+    "net_r",
+    "excursion_ordering",
 ]
 
 TARGET_R_MULTIPLE = Decimal("2")
@@ -355,6 +374,56 @@ def _paper_size(
     return notional_zar
 
 
+def _trade_excursion_diagnostics(
+    *,
+    side: str,
+    entry: Decimal,
+    initial_stop: Decimal,
+    peak: Decimal,
+    trough: Decimal,
+    exit_price: Decimal,
+    notional_zar: Decimal,
+    fee_zar: Decimal,
+    pnl_zar: Decimal,
+) -> dict:
+    risk_distance = abs(entry - initial_stop)
+    risk_zar = (
+        notional_zar * risk_distance / entry
+        if entry > 0 and risk_distance > 0
+        else Decimal(0)
+    )
+    if risk_distance > 0:
+        mfe_r = (
+            (peak - entry) / risk_distance
+            if side == "BUY"
+            else (entry - trough) / risk_distance
+        )
+        mae_r = (
+            (entry - trough) / risk_distance
+            if side == "BUY"
+            else (peak - entry) / risk_distance
+        )
+        gross_r = (
+            (exit_price - entry) / risk_distance
+            if side == "BUY"
+            else (entry - exit_price) / risk_distance
+        )
+    else:
+        mfe_r = mae_r = gross_r = Decimal(0)
+    net_r = pnl_zar / risk_zar if risk_zar > 0 else Decimal(0)
+    return {
+        "initial_stop_price": str(initial_stop),
+        "peak_price": str(peak),
+        "trough_price": str(trough),
+        "mfe_r": f"{mfe_r:.6f}",
+        "mae_r": f"{mae_r:.6f}",
+        "gross_r": f"{gross_r:.6f}",
+        "fee_zar": f"{fee_zar:.4f}",
+        "net_r": f"{net_r:.6f}",
+        "excursion_ordering": "ohlc_upper_bound_stop_first_exit",
+    }
+
+
 def _active_stop_risk_zar(position: dict) -> Decimal | None:
     """Return the position's current downside at its active stop.
 
@@ -458,6 +527,53 @@ def _realised_paper_pnl(log_path: Path) -> Decimal:
     except OSError:
         return Decimal(0)
     return total
+
+
+def _paper_performance_summary(log_path: Path) -> dict:
+    summary = {"closed": 0, "wins": 0, "pnl_zar": Decimal(0), "by_side": {}, "by_exit": {}}
+    if not log_path.exists():
+        return {"closed": 0, "wins": 0, "pnl_zar": "0.0000", "by_side": {}, "by_exit": {}}
+
+    def update(mapping: dict, key: str, pnl: Decimal) -> None:
+        bucket = mapping.setdefault(key or "unknown", {"trades": 0, "wins": 0, "pnl": Decimal(0)})
+        bucket["trades"] += 1
+        bucket["wins"] += int(pnl > 0)
+        bucket["pnl"] += pnl
+
+    try:
+        with log_path.open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                if str(row.get("outcome") or "") not in {"win", "loss"}:
+                    continue
+                try:
+                    pnl = Decimal(str(row.get("pnl_zar") or 0))
+                except (InvalidOperation, ValueError):
+                    continue
+                summary["closed"] += 1
+                summary["wins"] += int(pnl > 0)
+                summary["pnl_zar"] += pnl
+                update(summary["by_side"], str(row.get("side") or ""), pnl)
+                update(summary["by_exit"], str(row.get("exit_reason") or ""), pnl)
+    except OSError:
+        return {"closed": 0, "wins": 0, "pnl_zar": "0.0000", "by_side": {}, "by_exit": {}, "error": "unreadable"}
+
+    def serialize(mapping: dict) -> dict:
+        return {
+            key: {
+                "trades": value["trades"],
+                "wins": value["wins"],
+                "pnl_zar": f"{value['pnl']:.4f}",
+            }
+            for key, value in sorted(mapping.items())
+        }
+
+    return {
+        "closed": summary["closed"],
+        "wins": summary["wins"],
+        "pnl_zar": f"{summary['pnl_zar']:.4f}",
+        "by_side": serialize(summary["by_side"]),
+        "by_exit": serialize(summary["by_exit"]),
+    }
 
 
 def _paper_equity_zar(log_path: Path) -> Decimal:
@@ -714,6 +830,23 @@ def run_paper_cycle(
     if open_positions:
         _migrate_legacy_positions(open_positions, horizon_map=book_horizon_map, frames=frames)
 
+    counterfactual_path = positions_path.with_name("paper_counterfactuals.json")
+    counterfactual_log_path = positions_path.with_name("paper_counterfactual_log.csv")
+    counterfactual_trackers, counterfactual_state_error = read_counterfactual_trackers(
+        counterfactual_path
+    )
+    if counterfactual_state_error is None:
+        try:
+            sync_open_positions(
+                counterfactual_trackers,
+                open_positions,
+                server_time=server_time,
+                spot_fee_bps=SPOT_FEE_BPS,
+                perp_fee_bps=PERP_FEE_BPS,
+            )
+        except Exception as exc:
+            counterfactual_state_error = f"{type(exc).__name__}: {exc}"[:240]
+
     surviving: list[dict] = []
     # 1) Mark-to-market and close eligible existing positions
     for position in open_positions:
@@ -742,6 +875,20 @@ def run_paper_cycle(
                 pnl_zar = -fees
                 outcome = "loss"
                 pnl_outcome = "loss"
+                initial_stop = Decimal(str(position.get("initial_stop_price") or stop))
+                peak = Decimal(str(position.get("peak_price") or entry))
+                trough = Decimal(str(position.get("trough_price") or entry))
+                diagnostics = _trade_excursion_diagnostics(
+                    side=side,
+                    entry=entry,
+                    initial_stop=initial_stop,
+                    peak=peak,
+                    trough=trough,
+                    exit_price=entry,
+                    notional_zar=notional_zar,
+                    fee_zar=fees,
+                    pnl_zar=pnl_zar,
+                )
                 closed_rows.append(
                     {
                         "closed_at": server_time.isoformat(),
@@ -764,6 +911,7 @@ def run_paper_cycle(
                         "atr": str(position.get("atr") or ""),
                         "stop_atr_mult": str(position.get("stop_atr_mult") or ""),
                         "risk_fraction": str(position.get("risk_fraction") or ""),
+                        **diagnostics,
                     }
                 )
                 apply_signal_feedback(
@@ -898,6 +1046,17 @@ def run_paper_cycle(
         gross = (exit_price - entry) / entry * direction * notional_zar
         fees = notional_zar * fee_bps / Decimal(10000)
         pnl_zar = gross - fees
+        diagnostics = _trade_excursion_diagnostics(
+            side=side,
+            entry=entry,
+            initial_stop=initial_stop_price,
+            peak=peak_seen,
+            trough=trough_seen,
+            exit_price=exit_price,
+            notional_zar=notional_zar,
+            fee_zar=fees,
+            pnl_zar=pnl_zar,
+        )
 
         pnl_outcome = "win" if pnl_zar > 0 else "loss"
         stopout = exit_reason in {"stop", "trail_stop", "stale_data"}
@@ -923,6 +1082,7 @@ def run_paper_cycle(
                 "atr": str(position.get("atr") or ""),
                 "stop_atr_mult": str(position.get("stop_atr_mult") or ""),
                 "risk_fraction": str(position.get("risk_fraction") or ""),
+                **diagnostics,
             }
         )
         apply_signal_feedback(
@@ -947,6 +1107,24 @@ def run_paper_cycle(
             )
     for row in closed_rows:
         append_log(log_path, row)
+
+    counterfactual_completed_rows: list[dict] = []
+    if counterfactual_state_error is None:
+        attach_actual_closures(counterfactual_trackers, closed_rows)
+        counterfactual_advance = advance_counterfactuals(
+            counterfactual_trackers,
+            frames=frames,
+            server_time=server_time,
+            missing_bars_exit=missing_bars_exit,
+            time_stop_bars=TIME_STOP_BARS,
+        )
+        counterfactual_state_error = counterfactual_advance.state_error
+        if counterfactual_state_error is None:
+            counterfactual_trackers = counterfactual_advance.trackers
+            counterfactual_completed_rows = counterfactual_advance.completed_rows
+            append_counterfactual_rows(
+                counterfactual_log_path, counterfactual_completed_rows
+            )
 
     # 2) Open new positions from signals (diversified)
     skipped = 0
@@ -1328,6 +1506,18 @@ def run_paper_cycle(
     # need the original bytes intact for recovery and audit.
     if positions_load_error is None:
         write_positions(positions_path, surviving)
+    if counterfactual_state_error is None:
+        try:
+            sync_open_positions(
+                counterfactual_trackers,
+                surviving,
+                server_time=server_time,
+                spot_fee_bps=SPOT_FEE_BPS,
+                perp_fee_bps=PERP_FEE_BPS,
+            )
+            write_counterfactual_trackers(counterfactual_path, counterfactual_trackers)
+        except Exception as exc:
+            counterfactual_state_error = f"{type(exc).__name__}: {exc}"[:240]
     aggregate_unknown = aggregate_position_risk_unknown or aggregate_risk_cap_zar is None
     remaining_risk = (
         max(aggregate_risk_cap_zar - aggregate_guard_risk_zar, Decimal(0))
@@ -1366,6 +1556,21 @@ def run_paper_cycle(
         aggregate_risk_status = "warning"
     else:
         aggregate_risk_status = "ok"
+    performance_summary = _paper_performance_summary(log_path)
+    counterfactual_status = counterfactual_summary(counterfactual_log_path)
+    counterfactual_status.update(
+        {
+            "active_trackers": len(counterfactual_trackers),
+            "completed_this_cycle": len(counterfactual_completed_rows),
+            "state_error": counterfactual_state_error,
+            "prospective_only": True,
+            "limitations": [
+                "funding_not_modeled",
+                "slippage_not_modeled",
+                "hourly_intrabar_path_unknown",
+            ],
+        }
+    )
     return {
         "closed": len(closed_rows),
         "open": len(surviving),
@@ -1409,4 +1614,6 @@ def run_paper_cycle(
         "invalid_positions_quarantined": len(invalid_positions),
         "invalid_position_reasons": sorted({reason for _, reason in invalid_positions}),
         "highest_risk_position": highest_risk_position,
+        "performance": performance_summary,
+        "counterfactual": counterfactual_status,
     }

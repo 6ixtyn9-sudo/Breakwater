@@ -123,6 +123,13 @@ research system as first-class safeguards:
   horizon loss.
 - **Truth-metric paper feedback.** Paper logs preserve directional `outcome`,
   while lifecycle feedback is driven by after-fees truth (`pnl_outcome`).
+- **Prospective exit counterfactuals.** Every open paper position is mirrored
+  without consuming seats into 2R, 3R, 4R, no-target/1R-trail and
+  no-target/2R-trail policies. Ghost trackers continue after the real 2R exit
+  and record MFE, MAE, peak giveback, fees, R returns and delta versus actual.
+  Counterfactuals never feed promotion, cooldown, paper P&L or execution.
+- **Direction is not outcome.** `BUY`/`SELL` describe long/short direction;
+  `pnl_outcome` records win/loss after fees. A profitable short is a win.
 
 Deliberate deviations from the predecessor system's anti-drift rules,
 recorded honestly: the predecessor system forbade leverage entirely; Breakwater permits per-position
@@ -143,19 +150,18 @@ position to its allocated margin.
     - `BREAKWATER_SPOT_MARGIN_ACK=I_ACCEPT_BREAKWATER_SPOT_MARGIN_RISK`
   - Spot margin adds borrow interest and liquidation risk; paper/research do not model borrow interest or liquidation fees.
 
-- **VALR Perps**: the USDC-quoted perpetual product on the main account,
-  executing on Hyperliquid. Perp market data (candles, mark prices,
-  volume, funding) is sourced from the Hyperliquid public info API and
-  needs no VALR credentials, which is how the VALR web application
-  sources it as well. Builder-listed pairs (xyz: prefixed) are skipped
-  until their coin mapping is published. Research, shadow signals,
-  positions and paper trading are supported. Live perp entry remains
-  code-locked regardless, until the take-profit and stop-loss contracts
-  have passed an authenticated canary. Note that order execution,
-  liquidation and mark prices are provider-managed, TPSL execution is not
-  guaranteed, and position data synchronisation can lag.
+- **Hyperliquid native crypto PERPs**: Hyperliquid is authoritative for
+  metadata, candles, marks, funding and the eventual execution path. Research,
+  shadow signals, positions and paper trading are supported. Signed mainnet
+  entry remains code-locked until the native protection canary passes.
 
-- VALR-native sub-account futures are not targeted by this system.
+- **Hyperliquid HIP-3 PERPs**: builder DEXs have isolated discovery and research
+  state. Classification, calendars, historical oracle quality, collateral and
+  measured costs remain promotion blockers. No HIP-3 paper or execution path is
+  enabled.
+
+- VALR remains an optional ZAR spot/fiat rail. VALR PERP and sub-account futures
+  are not targeted.
 
 ## Capital mandate
 

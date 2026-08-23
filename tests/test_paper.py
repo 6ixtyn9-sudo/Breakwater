@@ -7,6 +7,7 @@ import pandas as pd
 from breakwater.models import Side
 from breakwater.monitor import SliceSignal
 from breakwater.paper_trade import (
+    PAPER_LOG_HEADERS,
     append_log,
     read_positions,
     run_paper_cycle,
@@ -197,6 +198,18 @@ def test_two_r_target_fires_even_with_horizon(tmp_path):
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["exit_reason"] == "target"
     assert float(log.iloc[0]["pnl_zar"]) > 0
+    assert float(log.iloc[0]["mfe_r"]) == 2.2
+    assert float(log.iloc[0]["mae_r"]) == 0.0
+    assert float(log.iloc[0]["gross_r"]) == 2.0
+    assert log.iloc[0]["excursion_ordering"] == "ohlc_upper_bound_stop_first_exit"
+    assert result["counterfactual"]["completed_this_cycle"] == 1
+    assert result["counterfactual"]["active_trackers"] == 1
+    assert result["counterfactual"]["control"] == {"comparisons": 1, "mismatches": 0}
+    assert result["performance"]["by_side"]["BUY"]["trades"] == 1
+    assert result["performance"]["by_side"]["BUY"]["wins"] == 1
+    counterfactual_log = pd.read_csv(tmp_path / "paper_counterfactual_log.csv")
+    assert list(counterfactual_log["policy"]) == ["target_2r_trail_1r"]
+    assert counterfactual_log.iloc[0]["actual_exit_reason"] == "target"
 
 
 def test_open_position_hits_target_and_wins(tmp_path):
@@ -512,28 +525,7 @@ def test_log_header_migration_preserves_audit_columns(tmp_path):
 
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        assert reader.fieldnames == [
-            "closed_at",
-            "signal_id",
-            "pair",
-            "kind",
-            "slice_id",
-            "side",
-            "entry_price",
-            "exit_price",
-            "stop_price",
-            "notional_zar",
-            "pnl_zar",
-            "outcome",
-            "bars_held",
-            "exit_reason",
-            "entry_guard",
-            "regime",
-            "pnl_outcome",
-            "atr",
-            "stop_atr_mult",
-            "risk_fraction",
-        ]
+        assert reader.fieldnames == PAPER_LOG_HEADERS
         rows = list(reader)
 
     assert len(rows) == 3
@@ -574,28 +566,7 @@ def test_log_header_migration_is_idempotent(tmp_path):
     with path.open(newline="") as handle:
         first = next(csv.reader(handle))
 
-    assert first == [
-        "closed_at",
-        "signal_id",
-        "pair",
-        "kind",
-        "slice_id",
-        "side",
-        "entry_price",
-        "exit_price",
-        "stop_price",
-        "notional_zar",
-        "pnl_zar",
-        "outcome",
-        "bars_held",
-        "exit_reason",
-        "entry_guard",
-        "regime",
-        "pnl_outcome",
-        "atr",
-        "stop_atr_mult",
-        "risk_fraction",
-    ]
+    assert first == PAPER_LOG_HEADERS
 
     append_log(
         path,

@@ -21,6 +21,8 @@ paper_files=(
   localdata/research/paper_trade_log.csv
   localdata/research/paper_positions.json
   localdata/research/paper_position_quarantine.json
+  localdata/research/paper_counterfactuals.json
+  localdata/research/paper_counterfactual_log.csv
   localdata/research/cooldown_journal.json
   localdata/research/monitored_slices.csv
 )

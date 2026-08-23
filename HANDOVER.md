@@ -556,4 +556,43 @@ Then run in Codespaces:
 Do not delete old Secrets until guardian, paper, native research and HIP-3
 research all pass with the migrated workflows.
 
+
+20) PROSPECTIVE EXIT COUNTERFACTUALS (2026-08-23, ACTIONED)
+
+Do not reinterpret SHORT as loss. BUY/SELL are direction; win/loss is
+pnl_outcome after fees. A short that profits from a price decline is a win.
+Paper status now reports performance separately by side and exit reason.
+
+The actual paper doctrine remains unchanged at 2R while evidence accumulates.
+Every surviving/new paper position is mirrored into non-trading ghost policies:
+  - target_2r_trail_1r (control; should match actual mechanics)
+  - target_3r_trail_1r
+  - target_4r_trail_1r
+  - no_target_trail_1r
+  - no_target_trail_2r
+
+Ghosts use the same entry, initial stop, fees, stop-first OHLC convention,
++1R winner gate and loser horizon. They consume no seats, write no lifecycle
+feedback and continue after the real 2R trade closes. A 240-bar diagnostic
+maximum prevents immortal ghosts. Existing open positions are migrated using
+persisted entry/initial stop/peak/trough; closed historical trades are not
+backfilled because post-exit paths cannot be reconstructed honestly.
+
+Persisted state:
+  localdata/research/paper_counterfactuals.json
+  localdata/research/paper_counterfactual_log.csv
+
+Both actual and counterfactual closes now expose enough decision data:
+  MFE/MAE in R, gross/net R, peak giveback, initial/final stop, fees, bars,
+  side, exit reason, actual PnL and policy delta versus actual. MFE/MAE use
+  hourly OHLC upper-bound extremes while exits retain stop-first ordering;
+  intrabar path is unknowable and labelled `ohlc_upper_bound_stop_first_exit`.
+
+Do not change the actual 2R target from one boom. Compare completed policy
+samples by net PnL, win rate, delta versus actual, drawdown/giveback and side.
+The 2R control must mechanically match actual exits before alternatives are
+trusted; status counts control comparisons and >R0.01/reason mismatches.
+Counterfactual state corruption is reported and preserved rather than
+silently overwritten; it does not stop the real paper risk cycle.
+
 END
