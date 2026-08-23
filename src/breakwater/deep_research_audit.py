@@ -26,7 +26,7 @@ from breakwater.hip3 import read_hip3_universe
 from breakwater.hip3_research import _candidate_rows
 from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.perpdata import fetch_perp_candles
-from breakwater.validation import _calibrate_stop_atr_mult, _compute_stop_aware_net_returns
+from breakwater.validation import _calibrate_stop_atr_mult
 
 WEIGHTS = (1.0, 0.5, 0.25, 0.125, 0.0625)
 AUDIT_HEADERS = [
@@ -132,14 +132,50 @@ def _cluster_breadth(frame: pd.DataFrame) -> tuple[int, float]:
     return len(clusters), positives / len(clusters)
 
 
+def _net_returns_from_prepared(
+    subset: pd.DataFrame, *, stop_atr_mult: float, cost: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Use horizon columns already computed by ``prepare_pooled``.
+
+    Validation recomputes ATR and forward rolling extremes for each candidate.
+    In the 48-horizon audit that repeats identical expensive work hundreds of
+    times. These prepared columns are mathematically identical and vary only by
+    horizon, while stop distance remains candidate-specific.
+    """
+    close = subset["close"].to_numpy(dtype=float)
+    atr = subset["atr_14"].to_numpy(dtype=float)
+    fwd_close = subset["fwd_close_h"].to_numpy(dtype=float)
+    fwd_min = subset["fwd_min_low_h"].to_numpy(dtype=float)
+    fwd_max = subset["fwd_max_high_h"].to_numpy(dtype=float)
+
+    stop_long = close - stop_atr_mult * atr
+    target_long = close + 2.0 * (close - stop_long)
+    exit_long = np.where(fwd_max >= target_long, target_long, fwd_close)
+    exit_long = np.where(fwd_min <= stop_long, stop_long, exit_long)
+    net_long = (exit_long - close) / close - cost
+
+    stop_short = close + stop_atr_mult * atr
+    target_short = close - 2.0 * (stop_short - close)
+    exit_short = np.where(fwd_min <= target_short, target_short, fwd_close)
+    exit_short = np.where(fwd_max >= stop_short, stop_short, exit_short)
+    net_short = (exit_short - close) / close * -1.0 - cost
+
+    # Match validation exactly: unavailable early ATR/extremes simply mean no
+    # stop/target hit and fall through to the finite horizon close.
+    invalid = ~(np.isfinite(close) & np.isfinite(fwd_close))
+    net_long[invalid] = np.nan
+    net_short[invalid] = np.nan
+    return net_long, net_short
+
+
 def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> dict:
     state_column = f"state_{candidate.feature}"
     subset = prepared.dropna(subset=[state_column, "close", "high", "low", "bar_age"])
     subset = subset.sort_values("start").reset_index(drop=True)
     stop = float(_calibrate_stop_atr_mult(prepared, candidate, state_column))
     cost = float(subset["cost"].iloc[0]) if len(subset) else 0.0
-    long_net, short_net = _compute_stop_aware_net_returns(
-        subset, horizon_bars=int(candidate.horizon_bars), stop_atr_mult=stop, cost=cost
+    long_net, short_net = _net_returns_from_prepared(
+        subset, stop_atr_mult=stop, cost=cost
     )
     values = long_net if str(candidate.side).upper() == "LONG" else short_net
     mask = (subset[state_column].to_numpy() == candidate.state) & np.isfinite(values)
