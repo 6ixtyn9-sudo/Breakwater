@@ -597,9 +597,9 @@ Command:
   PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane native
   PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane hip3
 
-One shared implementation, no workflow, no cron, no committed output. Audit
-artifacts live under ignored `localdata/deep_audit/`. It cannot call sync_book,
-paper or execution.
+One shared implementation inside the existing research workflow; no new workflow
+or cron. Normal dispatch skips it. A manual deep-audit dispatch commits transparent
+artifacts under `localdata/deep_audit/`. It cannot call sync_book, paper or execution.
 
 Frozen design (do not tune after seeing results):
   - 5000 hourly candles

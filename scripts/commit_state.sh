@@ -15,6 +15,8 @@ research_files=(
   localdata/research/discovered_slices.csv
   localdata/research/validated_slices.csv
   localdata/research/monitored_slices.csv
+  localdata/deep_audit/summary.json
+  localdata/deep_audit/candidates.csv
 )
 
 paper_files=(
