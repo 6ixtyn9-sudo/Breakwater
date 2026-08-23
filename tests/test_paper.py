@@ -113,7 +113,9 @@ def spot_frame(close, high=None, low=None):
     )
 
 
-def cycle(tmp_path, signals, frames, positions=None, book=BOOK):
+def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None):
+    import os
+    os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
     positions_path = tmp_path / "positions.json"
     if positions is not None:
         positions_path.write_text(json.dumps(positions))
@@ -614,3 +616,32 @@ def test_log_header_migration_is_idempotent(tmp_path):
         lines = handle.read().strip().splitlines()
     assert len(lines) == 3
     assert lines[0].split(",")[0] == "closed_at"
+
+
+def test_risk_cap_skips_wide_stop(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_RISK_FRACTION", "0.03")
+    result = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="2")],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 0
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "risk_cap"
+
+
+def test_rotated_sibling_exits_at_close(tmp_path):
+    position = open_position(entry="100", stop="95", bars="2")
+    position[0]["slice_id"] = "feat_ret_10:2:LONG:h14"
+    position[0]["horizon_bars"] = "14"
+    position[0]["initial_stop_price"] = "95"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=101, high=101, low=100)},
+        positions=position,
+        book={"feat_ret_10:2:LONG:h15"},
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "rotated"
