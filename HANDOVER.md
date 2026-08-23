@@ -470,10 +470,8 @@ Code posture:
     mark/oracle deviation, funding, OI, leverage and volume
   - no HIP-3 strategy promotion, paper position or execution is enabled yet
 
-Workflow filename (manual creation required because Arena cannot edit workflows):
+Workflow filename:
   .github/workflows/hip3-discovery.yml
-Template:
-  templates/hip3-discovery.yml
 External cron:
   none; keep hip3-discovery.yml as a manual inventory diagnostic
 Command:
@@ -486,9 +484,7 @@ Persistence role:
 
 Command:
   PYTHONPATH=src python scripts/breakwater.py hip3-research
-Workflow template:
-  templates/hip3-research.yml
-GitHub workflow filename (operator copies manually):
+GitHub workflow filename:
   .github/workflows/hip3-research.yml
 External cron (ONE new recurring job, discovery is included first):
   daily 03:40 UTC
@@ -548,13 +544,12 @@ Actions configuration direction:
     during the current architecture
   - future HL agent key belongs in a protected live Environment; master key never GitHub
 
-Migration is intentionally operator-run because Arena cannot modify workflows
-and GitHub does not reveal existing Secret values. Follow:
-  docs/actions-config-migration.md
-Then run in Codespaces:
-  python scripts/migrate_actions_config.py
-Do not delete old Secrets until guardian, paper, native research and HIP-3
-research all pass with the migrated workflows.
+Actions configuration migration completed on main. Workflows now reference
+only VALR_API_KEY, VALR_API_SECRET and BREAKWATER_MANDATE_JSON as Secrets;
+non-sensitive knobs use Variables. The one-time migration script, duplicate
+workflow templates and migration-only document were removed after use. Do not
+delete old Secrets until guardian, paper, native research and HIP-3 research
+all pass with the migrated workflows.
 
 
 20) PROSPECTIVE EXIT COUNTERFACTUALS (2026-08-23, ACTIONED)

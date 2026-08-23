@@ -355,47 +355,35 @@ Discovery does not enter the native crypto research book or paper cycle. The
 existing `hip3-discovery.yml` remains a useful manual inventory diagnostic;
 it does not need its own external cron.
 
-The combined daily workflow template is `templates/hip3-research.yml`. It
-refreshes discovery first, then audits up to 60 active non-crypto HIP-3 candle
-histories and runs the full 1-through-24 horizon sweep, grouped by DEX,
-provisional market class, and collateral token. Walk-forward and breadth knobs
-match native PERP research; HIP-3 retains a conservative venue-specific cost.
-It writes candle coverage, discovered slices and validated slices,
-but deliberately creates no monitored book: promotion and paper remain off
-until classification/calendar metadata is trustworthy. Copy the template to
-`.github/workflows/hip3-research.yml`, then configure one external dispatcher
-for **03:40 UTC daily**.
+The combined daily `.github/workflows/hip3-research.yml` refreshes discovery,
+audits up to 60 active non-crypto HIP-3 candle histories and runs the full
+1-through-24 horizon sweep, grouped by DEX, provisional market class and
+collateral token. Walk-forward and breadth knobs match native PERP research;
+HIP-3 retains a conservative venue-specific cost. It writes candle coverage,
+discovered slices and validated slices, but deliberately creates no monitored
+book: promotion and paper remain off until classification/calendar metadata is
+trustworthy.
 
 ### Actions Secrets versus Variables
 
 Non-sensitive research, paper, horizon and acknowledgement knobs belong in
-GitHub Actions Variables. Private capital boundaries can be consolidated into
-one `BREAKWATER_MANDATE_JSON` Secret; VALR credentials remain separate Secrets.
-See `docs/actions-config-migration.md` and run
-`scripts/migrate_actions_config.py` only after the consolidated mandate Secret
-and replacement Variables exist. Legacy mandate variables remain supported for
-migration, but mixed JSON and legacy sources fail closed.
+GitHub Actions Variables. Private capital boundaries use the single
+`BREAKWATER_MANDATE_JSON` Secret; VALR credentials remain separate Secrets.
+Legacy mandate variables remain parser-compatible for rollback, but mixed JSON
+and legacy sources fail closed.
 
 ## GitHub configuration
 
-```bash
-gh secret set VALR_API_KEY --repo 6ixtyn9-sudo/Breakwater
-gh secret set VALR_API_SECRET --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_INITIAL_EQUITY_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_ABSOLUTE_EQUITY_FLOOR_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_MAX_TOTAL_LOSS_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_MAX_TOTAL_DRAWDOWN_FRACTION --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_RISK_PER_TRADE_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_DAILY_LOSS_LIMIT_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_SEVEN_DAY_LOSS_LIMIT_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_MAX_AGGREGATE_OPEN_RISK_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_MAX_POSITION_NOTIONAL_ZAR --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_MAX_EFFECTIVE_LEVERAGE --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_PERP_LEVERAGE_CAP --repo 6ixtyn9-sudo/Breakwater
-gh secret set BREAKWATER_MAX_POSITIONS --repo 6ixtyn9-sudo/Breakwater
-gh variable set BREAKWATER_MODE --body readonly --repo 6ixtyn9-sudo/Breakwater
-gh secret list --repo 6ixtyn9-sudo/Breakwater
+Required repository Secrets:
+
+```text
+VALR_API_KEY
+VALR_API_SECRET
+BREAKWATER_MANDATE_JSON
 ```
+
+Keep non-sensitive overrides in Actions Variables. `BREAKWATER_MODE` should
+remain `readonly` until every live gate is deliberately armed.
 
 Dispatch the account guardian:
 

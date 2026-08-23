@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import yaml
@@ -31,3 +32,15 @@ def test_workflow_does_not_expose_forbidden_permissions():
     assert "VALR_API_SECRET:" in text
     assert "withdraw" not in text.lower()
     assert "transfer" not in text.lower()
+
+
+def test_only_private_values_use_actions_secrets():
+    text = "\n".join(
+        path.read_text() for path in (ROOT / ".github" / "workflows").glob("*.yml")
+    )
+    referenced = set(re.findall(r"secrets\.([A-Z0-9_]+)", text))
+    assert referenced <= {
+        "VALR_API_KEY",
+        "VALR_API_SECRET",
+        "BREAKWATER_MANDATE_JSON",
+    }
