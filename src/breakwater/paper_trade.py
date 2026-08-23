@@ -100,6 +100,8 @@ PERP_FEE_BPS = Decimal("26")
 MAX_PAPER_POSITIONS = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS", "6"))
 MAX_PAPER_POSITIONS_PER_KIND = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3"))
 MAX_PAPER_POSITIONS_PER_SLICE = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE", "1"))
+OLD_PAPER_SEATS = max(0, int(os.getenv("BREAKWATER_PAPER_OLD_SEATS", "5")))
+FAT_PAPER_SEATS = max(0, int(os.getenv("BREAKWATER_PAPER_FAT_SEATS", "10")))
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
@@ -720,6 +722,19 @@ def run_paper_cycle(
 
         kind_open = sum(1 for position in surviving if position.get("kind") == signal.kind)
         if kind_open >= MAX_PAPER_POSITIONS_PER_KIND:
+            slot_full += 1
+            continue
+        old_open = sum(
+            1
+            for position in surviving
+            if str(position.get("slice_id") or "") in incumbents
+        )
+        fat_open = len(surviving) - old_open
+        if signal.slice_id in incumbents:
+            if OLD_PAPER_SEATS and old_open >= OLD_PAPER_SEATS:
+                slot_full += 1
+                continue
+        elif FAT_PAPER_SEATS and fat_open >= FAT_PAPER_SEATS:
             slot_full += 1
             continue
         if open_slice_counts.get(signal.slice_id, 0) >= MAX_PAPER_POSITIONS_PER_SLICE:
