@@ -361,6 +361,65 @@ def test_per_kind_paper_cap_is_enforced(tmp_path):
     assert result["slot_full"] >= 1
 
 
+def test_fat_new_slices_fill_before_old_incumbents(tmp_path, monkeypatch):
+    """Untested high-mean promotions take free seats before old/green hunt."""
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_POSITIONS", "3")
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3")
+    from breakwater.research_lifecycle import _write_book
+
+    hunt_id = "feat_ext_vs_ma_50:2:LONG:h21"
+    _write_book(
+        tmp_path / "book.csv",
+        [
+            {
+                "slice_id": hunt_id,
+                "kind": "PERP",
+                "feature": "feat_ext_vs_ma_50",
+                "state": "2",
+                "side": "LONG",
+                "status": "monitored",
+                "validated_at": "",
+                "last_signal_bar": "",
+                "paper_trades": "13",
+                "paper_wins": "12",
+                "paper_losses": "1",
+                "paper_pnl_zar": "114.00",
+                "cooldown_until": "",
+                "mean_ret_costadj": "0.005465",
+                "n": "2282",
+                "p_value": "0.65",
+                "horizon_bars": "21",
+                "stop_atr_mult": "3.500",
+                "source": "validated_concentrated",
+                "hostile_unproven": "True",
+                "edge_is_directional_net": "True",
+            }
+        ],
+    )
+    frames = {
+        "BTCUSDC": frame_with_bar(close=1500),
+        "ETHUSDC": frame_with_bar(close=1500),
+        "SOLUSDC": frame_with_bar(close=1500),
+        "XRPUSDC": frame_with_bar(close=1500),
+    }
+    hunt = signal(
+        pair="BTCUSDC", kind="PERP", slice_id=hunt_id, entry="1500", stop="1485", atr="3", edge=0.001
+    )
+    fat = [
+        signal(pair=p, kind="PERP", slice_id=f"new:{i}:LONG", entry="1500", stop="1485", atr="3", edge=0.02)
+        for i, p in enumerate(["ETHUSDC", "SOLUSDC", "XRPUSDC"])
+    ]
+    result = cycle(
+        tmp_path,
+        signals=fat + [hunt],
+        frames=frames,
+        book={hunt_id, "new:0:LONG", "new:1:LONG", "new:2:LONG"},
+    )
+    opened = {p["slice_id"] for p in read_positions(tmp_path / "positions.json")}
+    assert result["open"] == 3
+    assert hunt_id not in opened
+
+
 def test_weakest_edge_is_excluded_when_slots_are_limited(tmp_path):
     """Selection is by edge strength, not iteration order: the lowest-edge
     candidate loses the slot even if it appears first."""
