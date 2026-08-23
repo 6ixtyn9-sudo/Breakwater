@@ -88,6 +88,9 @@ jobs:
           BREAKWATER_PAPER_SIZE_FROM_EQUITY: ${{ vars.BREAKWATER_PAPER_SIZE_FROM_EQUITY || '1' }}
           BREAKWATER_PAPER_RISK_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_RISK_OF_EQUITY || '0.01' }}
           BREAKWATER_PAPER_EQUITY_SEED: ${{ vars.BREAKWATER_PAPER_EQUITY_SEED || secrets.BREAKWATER_INITIAL_EQUITY_ZAR || '2000' }}
+          # Paper-only aggregate stop-risk ceiling
+          BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY || '0.05' }}
+          BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR: ${{ secrets.BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR || vars.BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR || '' }}
 
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 30
       - name: Persist bounded state
