@@ -70,5 +70,21 @@
     "signal_id": "0fc4d49a3ef607e4",
     "slice_id": "feat_ext_vs_ma_50:2:LONG:h11",
     "stopped_at": "2026-08-22T05:15:26+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-5.8331",
+    "reason": "stop",
+    "signal_id": "35d5d91fde6d993a",
+    "slice_id": "feat_ret_10:2:LONG:h14",
+    "stopped_at": "2026-08-23T05:15:23+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "-11.6857",
+    "reason": "stop",
+    "signal_id": "e0e439c81965d20e",
+    "slice_id": "feat_ret_10:2:LONG:h14",
+    "stopped_at": "2026-08-23T05:15:23+00:00"
   }
 ]
