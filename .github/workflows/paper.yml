@@ -83,7 +83,7 @@ jobs:
           # Hunt: skip Asia (00-07 UTC); juice on this book is EU/US
           BREAKWATER_PAPER_SESSIONS: ${{ secrets.BREAKWATER_PAPER_SESSIONS || vars.BREAKWATER_PAPER_SESSIONS || 'eu,us' }}
           BREAKWATER_FILTER_NONPOSITIVE_BOOK: "1"
-          BREAKWATER_PAPER_MAX_RISK_FRACTION: ${{ vars.BREAKWATER_PAPER_MAX_RISK_FRACTION || '0.03' }}
+          BREAKWATER_PAPER_MAX_RISK_FRACTION: ${{ vars.BREAKWATER_PAPER_MAX_RISK_FRACTION || '0.04' }}
 
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 30
       - name: Persist bounded state
