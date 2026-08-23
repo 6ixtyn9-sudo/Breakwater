@@ -36,6 +36,7 @@ UNIVERSE_HEADERS = [
     "min_notional",
     "min_margin",
     "as_of",
+    "venue",
 ]
 
 
@@ -53,6 +54,7 @@ class UniverseRow:
     min_notional: Decimal
     min_margin: Decimal
     as_of: str
+    venue: str = ""
 
 
 @dataclass(frozen=True)
@@ -92,7 +94,13 @@ class UniverseSnapshot:
         return picked
 
 
-def ingest_universe(client: ValrClient) -> UniverseSnapshot:
+def ingest_universe(client: ValrClient, *, perp_venue=None) -> UniverseSnapshot:
+    """Build VALR spot plus direct-Hyperliquid native PERP universe.
+
+    ``perp_venue`` is injected to keep tests and offline tools deterministic.
+    Production passes ``HyperliquidReadOnlyVenue``; the VALR symbol endpoint is
+    retained only as a compatibility fallback for callers that omit it.
+    """
     as_of = datetime.now(timezone.utc).isoformat()
     spot_rows: list[UniverseRow] = []
     perp_rows: list[UniverseRow] = []
@@ -129,6 +137,7 @@ def ingest_universe(client: ValrClient) -> UniverseSnapshot:
             min_notional=spec.min_quote,
             min_margin=Decimal(0),
             as_of=as_of,
+            venue="VALR",
         ))
     spot_rows.sort(key=lambda row: (-row.quote_volume, row.symbol))
     for index, row in enumerate(spot_rows, start=1):
@@ -145,27 +154,58 @@ def ingest_universe(client: ValrClient) -> UniverseSnapshot:
             min_notional=row.min_notional,
             min_margin=row.min_margin,
             as_of=row.as_of,
+            venue=row.venue,
         )
 
-    try:
-        perp_symbols = client.perps_symbol_info()
-    except Exception as exc:
-        raise MarketStateError(f"VALR perps symbol metadata is unavailable: {exc}") from exc
-    for symbol in perp_symbols:
-        perp_rows.append(UniverseRow(
-            symbol=symbol.pair,
-            kind="PERP",
-            base=symbol.base_asset,
-            quote="USDC",
-            active=True,
-            liquidity_rank=0,
-            quote_volume=symbol.volume,
-            mark_price=symbol.mark_price,
-            max_leverage=symbol.max_leverage,
-            min_notional=symbol.min_notional,
-            min_margin=symbol.min_margin,
-            as_of=as_of,
-        ))
+    if perp_venue is not None:
+        try:
+            perp_instruments = perp_venue.instruments()
+        except Exception as exc:
+            raise MarketStateError(
+                f"Hyperliquid native perp metadata is unavailable: {exc}"
+            ) from exc
+        for instrument in perp_instruments:
+            if not instrument.active or ":" in instrument.coin:
+                continue
+            perp_rows.append(UniverseRow(
+                symbol=instrument.symbol,
+                kind="PERP",
+                base=instrument.coin.upper(),
+                quote="USDC",
+                active=True,
+                liquidity_rank=0,
+                quote_volume=instrument.day_notional_volume,
+                mark_price=instrument.mark_price,
+                max_leverage=instrument.max_leverage,
+                min_notional=instrument.min_notional,
+                min_margin=(
+                    instrument.min_notional / instrument.max_leverage
+                    if instrument.max_leverage > 0 else instrument.min_notional
+                ),
+                as_of=as_of,
+                venue="HYPERLIQUID",
+            ))
+    else:
+        try:
+            perp_symbols = client.perps_symbol_info()
+        except Exception as exc:
+            raise MarketStateError(f"VALR perps symbol metadata is unavailable: {exc}") from exc
+        for symbol in perp_symbols:
+            perp_rows.append(UniverseRow(
+                symbol=symbol.pair,
+                kind="PERP",
+                base=symbol.base_asset,
+                quote="USDC",
+                active=True,
+                liquidity_rank=0,
+                quote_volume=symbol.volume,
+                mark_price=symbol.mark_price,
+                max_leverage=symbol.max_leverage,
+                min_notional=symbol.min_notional,
+                min_margin=symbol.min_margin,
+                as_of=as_of,
+                venue="VALR",
+            ))
     perp_rows.sort(key=lambda row: (-row.quote_volume, row.symbol))
     for index, row in enumerate(perp_rows, start=1):
         perp_rows[index - 1] = UniverseRow(
@@ -181,6 +221,7 @@ def ingest_universe(client: ValrClient) -> UniverseSnapshot:
             min_notional=row.min_notional,
             min_margin=row.min_margin,
             as_of=row.as_of,
+            venue=row.venue,
         )
 
     snapshot = UniverseSnapshot(rows=tuple(spot_rows + perp_rows), as_of=as_of)
@@ -220,7 +261,9 @@ def read_universe(path: Path) -> UniverseSnapshot | None:
     try:
         with path.open(newline="") as handle:
             reader = csv.DictReader(handle)
-            if reader.fieldnames != UNIVERSE_HEADERS:
+            legacy_headers = UNIVERSE_HEADERS[:-1]
+            fields = tuple(reader.fieldnames or ())
+            if fields not in {tuple(UNIVERSE_HEADERS), tuple(legacy_headers)}:
                 raise RuntimeError("universe file has an unsupported schema")
             rows = []
             for row in reader:
@@ -237,10 +280,16 @@ def read_universe(path: Path) -> UniverseSnapshot | None:
                     min_notional=Decimal(row["min_notional"]),
                     min_margin=Decimal(row["min_margin"]),
                     as_of=str(row["as_of"]),
+                    venue=str(row.get("venue") or "LEGACY"),
                 ))
             return UniverseSnapshot(rows=tuple(rows), as_of=rows[0].as_of if rows else "")
     except (OSError, KeyError, ValueError) as exc:
         raise RuntimeError(f"universe file is unreadable: {exc}") from exc
+
+
+def has_direct_hyperliquid_perps(snapshot: UniverseSnapshot) -> bool:
+    perps = [row for row in snapshot.rows if row.kind == "PERP"]
+    return bool(perps) and all(row.venue == "HYPERLIQUID" for row in perps)
 
 
 def is_legacy_universe(snapshot: UniverseSnapshot) -> bool:

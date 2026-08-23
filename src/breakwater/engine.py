@@ -26,6 +26,7 @@ from breakwater.config import Settings
 from breakwater.discovery import prepare_pooled
 from breakwater.execution import TradeExecutor
 from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_features
+from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.ledger import Ledger
 from breakwater.market import (
     MarketCatalog,
@@ -44,6 +45,7 @@ from breakwater.status import append_status
 from breakwater.strategy import detect_big_wave
 from breakwater.universe import (
     UniverseSnapshot,
+    has_direct_hyperliquid_perps,
     ingest_universe,
     is_legacy_universe,
     read_universe,
@@ -131,7 +133,13 @@ def _retag_candidates_for_horizon(candidates, *, horizon_bars: int, multi: bool)
 
 
 class BreakwaterEngine:
-    def __init__(self, settings: Settings, *, client: ValrClient | None = None):
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        client: ValrClient | None = None,
+        perp_venue=None,
+    ):
         self.settings = settings
         self.client = client or ValrClient(
             api_key=settings.api_key,
@@ -145,6 +153,13 @@ class BreakwaterEngine:
             ),
         )
         self.catalog = MarketCatalog(self.client)
+        # Injected VALR clients are primarily offline tests/tools; keep their
+        # explicit metadata path unless a PERP venue is also injected.
+        self.perp_venue = (
+            perp_venue
+            if perp_venue is not None
+            else (HyperliquidReadOnlyVenue() if client is None else None)
+        )
         self.risk = RiskManager(settings.mandate) if settings.mandate else None
         self.risk_state = RiskStateStore(
             settings.risk_state_path,
@@ -166,14 +181,18 @@ class BreakwaterEngine:
 
     def _universe(self) -> UniverseSnapshot:
         snapshot = read_universe(self.settings.universe_path)
-        if snapshot is not None and not is_legacy_universe(snapshot):
+        if (
+            snapshot is not None
+            and not is_legacy_universe(snapshot)
+            and has_direct_hyperliquid_perps(snapshot)
+        ):
             try:
                 as_of = datetime.fromisoformat(snapshot.as_of)
                 if datetime.now(timezone.utc) - as_of < timedelta(days=7):
                     return snapshot
             except (TypeError, ValueError):
                 pass
-        snapshot = ingest_universe(self.client)
+        snapshot = ingest_universe(self.client, perp_venue=self.perp_venue)
         write_universe(self.settings.universe_path, snapshot)
         return snapshot
 

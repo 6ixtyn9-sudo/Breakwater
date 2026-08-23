@@ -50,6 +50,17 @@ def pair_to_coin(pair: str) -> str | None:
     return HL_COIN_ALIASES.get(coin, coin)
 
 
+def _api_coin(coin: str) -> str:
+    text = str(coin).strip()
+    if ":" in text:
+        dex, asset = text.split(":", 1)
+        if not dex or not asset:
+            raise ValueError("HIP-3 coin must include DEX and asset around ':'")
+        return f"{dex.lower()}:{asset}"
+    upper = text.upper()
+    return HL_COIN_ALIASES.get(upper, upper)
+
+
 def fetch_perp_candles_for_pair(pair: str, **kwargs) -> list[Candle]:
     coin = pair_to_coin(pair)
     if coin is None:
@@ -77,7 +88,7 @@ def fetch_perp_candles(
     payload = {
         "type": "candleSnapshot",
         "req": {
-            "coin": HL_COIN_ALIASES.get(str(coin).upper(), str(coin).upper()),
+            "coin": _api_coin(coin),
             "interval": interval,
             "startTime": start_ms,
             "endTime": end_ms,

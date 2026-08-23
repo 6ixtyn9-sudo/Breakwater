@@ -173,6 +173,18 @@ class Settings:
     def cooldown_path(self) -> Path:
         return self.data_dir / "research" / "cooldown_journal.json"
 
+    @property
+    def hip3_data_dir(self) -> Path:
+        return self.data_dir / "hip3"
+
+    @property
+    def hip3_universe_path(self) -> Path:
+        return self.hip3_data_dir / "universe.csv"
+
+    @property
+    def hip3_status_path(self) -> Path:
+        return self.hip3_data_dir / "status.csv"
+
 
 def get_settings() -> Settings:
     mode = os.getenv("BREAKWATER_MODE", "readonly").strip().lower()
@@ -202,4 +214,5 @@ def get_settings() -> Settings:
     )
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     (settings.data_dir / "research").mkdir(parents=True, exist_ok=True)
+    settings.hip3_data_dir.mkdir(parents=True, exist_ok=True)
     return settings

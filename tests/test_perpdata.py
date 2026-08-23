@@ -70,6 +70,12 @@ def test_fetch_perp_candles_rejects_unknown_schema():
         fetch_perp_candles("BTC", interval="1h", count=2, session=session)
 
 
+def test_fetch_perp_candles_preserves_hip3_dex_prefix():
+    session = FakeSession(candle_payload())
+    fetch_perp_candles("xyz:NVDA", interval="1h", count=2, session=session)
+    assert session.calls[0][1]["req"]["coin"] == "xyz:NVDA"
+
+
 def test_fetch_perp_candles_for_pair_skips_builder_pairs():
     with pytest.raises(ValueError, match="no Hyperliquid coin mapping"):
         fetch_perp_candles_for_pair("xyz:SNDKUSDC")

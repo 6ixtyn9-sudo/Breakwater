@@ -1,11 +1,12 @@
 # Breakwater
 
-Breakwater is a VALR-native, self-contained crypto universe research and
-guarded execution system. It ingests the full VALR market universe, runs an
-end-to-end research cycle over price-state slices, monitors the validated
-book for signals, paper-trades those signals with stops and fees, and only
-then allows a strategy to approach live execution through layered gates.
-The venue remains authoritative for balances, orders, positions and fills.
+Breakwater is a venue-separated, self-contained market research and guarded
+execution system. VALR remains an optional ZAR spot/fiat rail; Hyperliquid is
+the authoritative PERP venue. Native crypto PERPs and HIP-3 builder PERPs use
+separate universes and evidence stores. Breakwater runs price-state research,
+monitors validated slices, paper-trades with stops and fees, and only then
+allows a strategy to approach execution through layered gates. Each venue
+remains authoritative for its own balances, orders, positions and fills.
 The system is designed for periodic cloud execution through GitHub Actions
 and does not depend on a local computer remaining powered.
 
@@ -15,10 +16,12 @@ against its predecessor system, known placeholders and the process rules.
 ## What it does, end to end
 
 ```text
-VALR spot pairs + VALR Perps symbols
+VALR ZAR spot pairs + direct Hyperliquid native crypto PERPs
+        |
+        +---- separate Hyperliquid HIP-3 DEX discovery/state lane
         |
         v
-Universe ingestion (full universe, ranked, committed)
+Venue-separated universe ingestion (ranked, committed)
         |
         v
 OHLCV research bars per symbol
@@ -248,6 +251,7 @@ source .env
 set +a
 PYTHONPATH=src python scripts/breakwater.py guardian
 PYTHONPATH=src python scripts/breakwater.py research
+PYTHONPATH=src python scripts/breakwater.py hip3-discover
 BREAKWATER_MODE=shadow PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 BREAKWATER_MODE=readonly PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
 PYTHONPATH=src python scripts/breakwater.py health
@@ -327,6 +331,25 @@ PYTHONPATH=src python scripts/perps_canary.py
 The output shows Hyperliquid candle availability, the top perps by volume,
 the key permissions VALR reports, and the exact response of each perp
 account endpoint as used by the VALR web application.
+
+### HIP-3 discovery workflow
+
+`hip3-discover` queries Hyperliquid's `perpDexs` and each DEX's
+`metaAndAssetCtxs` directly. It preserves DEX-prefixed identities, ranks only
+within each HIP-3 DEX, records collateral/margin/growth modes and oracle/mark
+deviation, and writes only:
+
+```text
+localdata/hip3/universe.csv
+localdata/hip3/status.csv
+```
+
+This is discovery only: HIP-3 does not enter the native crypto research book
+or paper cycle. A reviewed workflow template lives at
+`templates/hip3-discovery.yml`. Copy it to
+`.github/workflows/hip3-discovery.yml` from a GitHub-authorized workspace,
+then configure the external dispatcher for **03:10 UTC daily**. Do not rename
+the workflow after creating its external cron job.
 
 ## GitHub configuration
 

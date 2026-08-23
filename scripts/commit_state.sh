@@ -30,6 +30,11 @@ guardian_files=(
   localdata/risk_state.json
 )
 
+hip3_files=(
+  localdata/hip3/universe.csv
+  localdata/hip3/status.csv
+)
+
 files=("${status_files[@]}")
 case "$ROLE" in
   research|research-refresh|"research refresh")
@@ -41,8 +46,13 @@ case "$ROLE" in
   guardian)
     files+=("${guardian_files[@]}")
     ;;
+  hip3|hip3-discover|"hip3 discover")
+    files+=("${hip3_files[@]}")
+    ;;
   *)
-    files+=("${research_files[@]}" "${paper_files[@]}" "${guardian_files[@]}")
+    files+=(
+      "${research_files[@]}" "${paper_files[@]}" "${guardian_files[@]}" "${hip3_files[@]}"
+    )
     ;;
 esac
 

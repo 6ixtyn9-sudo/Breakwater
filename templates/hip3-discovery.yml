@@ -1,0 +1,41 @@
+# Copy this file to .github/workflows/hip3-discovery.yml from a GitHub-authorized
+# workspace. Arena's GitHub App cannot create workflow files.
+name: Breakwater HIP-3 Discovery
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: breakwater-hip3-discovery
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements.lock
+      - name: Discover Hyperliquid HIP-3 markets
+        env:
+          BREAKWATER_MODE: readonly
+          BREAKWATER_DATA_DIR: localdata
+        run: PYTHONPATH=src python scripts/breakwater.py hip3-discover
+      - name: Persist isolated HIP-3 state
+        if: always()
+        run: bash scripts/commit_state.sh hip3

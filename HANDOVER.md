@@ -449,4 +449,36 @@ Next engineering order when work resumes:
   4) HIP-3 paper cycle under the shared aggregate-risk guardian
   5) only later consider execution, after the native crypto mechanism canary
 
+
+17) HYPERLIQUID-AUTHORITATIVE PERPS + OPTIONAL VALR (2026-08-23, ACTIONED)
+
+Operator can fund Hyperliquid directly and does not require VALR as the PERP
+or collateral gateway. Decision:
+  - Hyperliquid is authoritative for all PERP metadata, candles and eventual execution.
+  - VALR remains available only for ZAR spot/fiat utility. No need to delete working code.
+  - Existing VALR spot evidence stays venue-specific; no slices are fabricated.
+
+Code posture:
+  - production universe refresh now takes native crypto PERP metadata directly
+    from Hyperliquid, while VALR supplies only active spot pairs and spot volume
+  - universe rows persist their source venue; legacy VALR-PERP snapshots force a
+    direct-HL refresh instead of remaining cached for seven days
+  - dedicated `hip3-discover` queries `perpDexs` plus each DEX's
+    `metaAndAssetCtxs`, preserves DEX prefixes and ranks within each DEX
+  - HIP-3 writes isolated `localdata/hip3/universe.csv` and `status.csv` only
+  - HIP-3 discovery records deployer/oracle, collateral, margin/growth mode,
+    mark/oracle deviation, funding, OI, leverage and volume
+  - no HIP-3 strategy promotion, paper position or execution is enabled yet
+
+Workflow filename (manual creation required because Arena cannot edit workflows):
+  .github/workflows/hip3-discovery.yml
+Template:
+  templates/hip3-discovery.yml
+External cron target after workflow creation:
+  daily 03:10 UTC
+Command:
+  PYTHONPATH=src python scripts/breakwater.py hip3-discover
+Persistence role:
+  bash scripts/commit_state.sh hip3
+
 END

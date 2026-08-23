@@ -2,9 +2,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from breakwater.models import MarketSummary, PairSpec, PairType, PerpSymbol
+from breakwater.perp_venue import PerpInstrument
 from breakwater.universe import (
     UniverseRow,
     UniverseSnapshot,
+    has_direct_hyperliquid_perps,
     ingest_universe,
     is_legacy_universe,
     read_universe,
@@ -81,6 +83,38 @@ class FakeClient:
                 funding_rate=Decimal("0.00002"),
             ),
         ]
+
+
+class FakeHyperliquidVenue:
+    def instruments(self):
+        return (
+            PerpInstrument(
+                venue="hyperliquid",
+                symbol="SOLUSDC",
+                coin="SOL",
+                asset_id=2,
+                size_decimals=2,
+                max_price_decimals=4,
+                max_significant_figures=5,
+                max_leverage=Decimal("20"),
+                min_notional=Decimal("10"),
+                mark_price=Decimal("100"),
+                oracle_price=Decimal("100"),
+                funding_rate=Decimal("0.00001"),
+                open_interest=Decimal("1000"),
+                day_notional_volume=Decimal("2000000"),
+            ),
+        )
+
+
+def test_direct_hyperliquid_is_authoritative_for_perp_universe():
+    snapshot = ingest_universe(FakeClient(), perp_venue=FakeHyperliquidVenue())
+    assert snapshot.symbols("PERP") == ["SOLUSDC"]
+    assert snapshot.ranked("PERP", 1) == ["SOLUSDC"]
+    assert has_direct_hyperliquid_perps(snapshot) is True
+    row = [row for row in snapshot.rows if row.kind == "PERP"][0]
+    assert row.venue == "HYPERLIQUID"
+    assert row.min_notional == Decimal("10")
 
 
 def test_universe_ingests_all_spot_and_perp_symbols():

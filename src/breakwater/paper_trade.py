@@ -349,7 +349,8 @@ def _paper_size(
     if budget <= 0:
         budget = policy.risk_per_trade_zar
     notional_zar = min(budget / risk_fraction, policy.max_position_notional_zar)
-    if signal.kind == "PERP" and usdc_zar > 0 and notional_zar / usdc_zar < Decimal("11"):
+    # Hyperliquid's native minimum order value is 10 USDC.
+    if signal.kind == "PERP" and usdc_zar > 0 and notional_zar / usdc_zar < Decimal("10"):
         return Decimal(0)
     return notional_zar
 
@@ -1171,7 +1172,7 @@ def run_paper_cycle(
 
         notional_zar = _paper_size(signal, policy, usdc_zar, risk_zar=risk_zar)
         if notional_zar <= 0:
-            # Venue $11 floor (or zero risk distance). Same refuse, named.
+            # Hyperliquid 10 USDC floor (or zero risk distance). Same refuse, named.
             append_log(
                 log_path,
                 {
