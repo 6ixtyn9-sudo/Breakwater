@@ -367,8 +367,9 @@ trustworthy.
 ### Manual deep-history research audit
 
 The non-promoting challenger loads 5,000 hourly candles, applies frozen
-1/0.5/0.25/0.125/0.0625 weights per 1,000-hour age bucket, tests horizons
-1–48, uses 48-hour block bootstrap confidence, correlation-cluster breadth and
+1/0.5/0.25/0.125/0.0625 weights per 1,000-hour age bucket, tests both LONG and
+SHORT for every feature/state across horizons 1–48, uses 48-hour block
+bootstrap confidence, correlation-cluster breadth and
 requires contiguous three-horizon plateaus. Outputs are committed as transparent
 research artifacts but cannot alter books, paper state or promotion:
 

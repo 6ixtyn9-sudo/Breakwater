@@ -604,6 +604,8 @@ artifacts under `localdata/deep_audit/`. It cannot call sync_book, paper or exec
 Frozen design (do not tune after seeing results):
   - 5000 hourly candles
   - horizons 1-48
+  - forced LONG and SHORT evaluation for every feature/state/horizon; discovery's
+    preferred side cannot suppress the opposite-direction red-team test
   - weights by bar age in 1000h blocks: 1, .5, .25, .125, .0625
   - recent-1000, full-5000 and weighted-5000 means all reported
   - weighted effective sample size

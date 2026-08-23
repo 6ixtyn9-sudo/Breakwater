@@ -13,7 +13,7 @@ import json
 import os
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -166,6 +166,20 @@ def _net_returns_from_prepared(
     net_long[invalid] = np.nan
     net_short[invalid] = np.nan
     return net_long, net_short
+
+
+def _both_directions(candidates) -> list:
+    """Audit LONG and SHORT for every discovered feature/state.
+
+    Main discovery intentionally keeps only its preferred training direction.
+    A challenger must also test the rejected direction or a bull sample can
+    nearly erase shorts before robustness checks begin.
+    """
+    expanded = []
+    for candidate in candidates:
+        expanded.append(replace(candidate, side="LONG"))
+        expanded.append(replace(candidate, side="SHORT"))
+    return expanded
 
 
 def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> dict:
@@ -377,7 +391,7 @@ def run_deep_research_audit(
             )
             rows.extend(
                 _evaluate(prepared, candidate, lane=group.lane, group=group.name)
-                for candidate in candidates
+                for candidate in _both_directions(candidates)
             )
     if not any(group_summary.values()):
         detail = "; ".join(f"{coin}={error}" for coin, error in list(fetch_errors.items())[:5])
@@ -388,6 +402,7 @@ def run_deep_research_audit(
     summary = {
         "lane": lane,
         "promotion_enabled": False,
+        "directional_symmetry": "LONG_and_SHORT_per_feature_state_horizon",
         "candles_requested": candle_count,
         "horizons": [1, 48],
         "weights_per_1000_hours": list(WEIGHTS),

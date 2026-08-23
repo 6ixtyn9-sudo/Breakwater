@@ -1,14 +1,27 @@
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 
 from breakwater.deep_research_audit import (
     _attach_plateaus,
     _block_bootstrap_p,
+    _both_directions,
     _net_returns_from_prepared,
     _weights,
 )
 from breakwater.discovery import _trade_net_cols
 from breakwater.validation import _compute_stop_aware_net_returns
+
+
+def test_deep_audit_forces_both_directions():
+    @dataclass(frozen=True)
+    class Candidate:
+        side: str
+        feature: str = "feat"
+
+    expanded = _both_directions([Candidate(side="LONG")])
+    assert [candidate.side for candidate in expanded] == ["LONG", "SHORT"]
 
 
 def test_frozen_recency_weights_halve_each_thousand_hours():
