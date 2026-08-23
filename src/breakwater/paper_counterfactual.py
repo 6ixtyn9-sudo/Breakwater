@@ -41,6 +41,7 @@ COUNTERFACTUAL_HEADERS = [
     "actual_exit_price",
     "actual_pnl_zar",
     "delta_vs_actual_zar",
+    "exit_bar_start",
 ]
 
 POLICIES = {
@@ -196,9 +197,11 @@ def sync_open_positions(
             "peak_price": str(peak),
             "trough_price": str(trough),
             "missing_bars": int(position.get("missing_bars") or 0),
+            "last_processed_bar_start": str(position.get("last_processed_bar_start") or ""),
             "actual_exit_reason": "",
             "actual_exit_price": "",
             "actual_pnl_zar": "",
+            "actual_exit_bar_start": "",
             "policies": policies,
         }
         trackers.append(tracker)
@@ -215,6 +218,7 @@ def attach_actual_closures(trackers: list[dict], closed_rows: list[dict]) -> Non
         tracker["actual_exit_reason"] = str(closed.get("exit_reason") or "")
         tracker["actual_exit_price"] = str(closed.get("exit_price") or "")
         tracker["actual_pnl_zar"] = str(closed.get("pnl_zar") or "")
+        tracker["actual_exit_bar_start"] = str(closed.get("exit_bar_start") or "")
 
 
 def _pnl(
@@ -237,6 +241,7 @@ def _completion_row(
     mae_r: Decimal,
     peak: Decimal,
     trough: Decimal,
+    exit_bar_start: str = "",
 ) -> dict:
     entry = _decimal(tracker["entry_price"], "entry_price")
     initial_stop = _decimal(tracker["initial_stop_price"], "initial_stop_price")
@@ -284,7 +289,32 @@ def _completion_row(
         "actual_exit_price": str(tracker.get("actual_exit_price") or ""),
         "actual_pnl_zar": actual_pnl_text,
         "delta_vs_actual_zar": f"{delta:.4f}" if delta is not None else "",
+        "exit_bar_start": exit_bar_start,
     }
+
+
+def _tracker_unseen_bars(tracker: dict, frame):
+    ordered = frame.sort_values("start").drop_duplicates("start")
+    raw_last = str(tracker.get("last_processed_bar_start") or "").strip()
+    if not raw_last:
+        return ordered.tail(1)
+    try:
+        last_processed = datetime.fromisoformat(raw_last.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise RuntimeError("counterfactual last_processed_bar_start is invalid") from exc
+    starts = ordered["start"]
+    if getattr(starts.dt, "tz", None) is not None and last_processed.tzinfo is None:
+        from datetime import timezone
+
+        last_processed = last_processed.replace(tzinfo=timezone.utc)
+    return ordered[starts > last_processed]
+
+
+def _tracker_bar_iso(value) -> str:
+    timestamp = value.to_pydatetime() if hasattr(value, "to_pydatetime") else value
+    if not isinstance(timestamp, datetime):
+        timestamp = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+    return timestamp.isoformat()
 
 
 def advance_counterfactuals(
@@ -341,6 +371,7 @@ def advance_counterfactuals(
                             mae_r=mae_r,
                             peak=peak,
                             trough=trough,
+                            exit_bar_start=str(tracker.get("actual_exit_bar_start") or ""),
                         )
                     )
                 continue
@@ -380,96 +411,109 @@ def advance_counterfactuals(
                 continue
 
             tracker["missing_bars"] = 0
-            last = frame.iloc[-1]
-            close = _decimal(last["close"], "close")
-            high = _decimal(last["high"], "high")
-            low = _decimal(last["low"], "low")
-            peak = max(_decimal(tracker["peak_price"], "peak_price"), high)
-            trough = min(_decimal(tracker["trough_price"], "trough_price"), low)
-            tracker["peak_price"] = str(peak)
-            tracker["trough_price"] = str(trough)
-            mfe_r = (
-                (peak - entry) / risk
-                if tracker["side"] == "BUY"
-                else (entry - trough) / risk
-            )
-            mae_r = (
-                (entry - trough) / risk
-                if tracker["side"] == "BUY"
-                else (peak - entry) / risk
-            )
-            r_gate = mfe_r >= Decimal(1)
-
-            for name, policy in active_policies.items():
-                policy["bars_held"] = int(policy.get("bars_held") or 0) + 1
-                stop = _decimal(policy["stop_price"], "policy.stop_price")
-                spec = POLICIES[name]
-                target_r = spec["target_r"]
-                target = (
-                    entry + target_r * risk
-                    if target_r is not None and tracker["side"] == "BUY"
-                    else entry - target_r * risk
-                    if target_r is not None
-                    else None
+            unseen = _tracker_unseen_bars(tracker, frame)
+            if unseen.empty:
+                surviving_trackers.append(tracker)
+                continue
+            for _, last in unseen.iterrows():
+                active_policies = {
+                    name: policy
+                    for name, policy in tracker.get("policies", {}).items()
+                    if policy.get("active")
+                }
+                if not active_policies:
+                    break
+                close = _decimal(last["close"], "close")
+                high = _decimal(last["high"], "high")
+                low = _decimal(last["low"], "low")
+                peak = max(_decimal(tracker["peak_price"], "peak_price"), high)
+                trough = min(_decimal(tracker["trough_price"], "trough_price"), low)
+                tracker["peak_price"] = str(peak)
+                tracker["trough_price"] = str(trough)
+                mfe_r = (
+                    (peak - entry) / risk
+                    if tracker["side"] == "BUY"
+                    else (entry - trough) / risk
                 )
-                exit_price = None
-                exit_reason = ""
-                if tracker["side"] == "BUY":
-                    if low <= stop:
-                        exit_price, exit_reason = stop, (
-                            "trail_stop" if stop != initial_stop else "stop"
-                        )
-                    elif target is not None and high >= target:
-                        exit_price, exit_reason = target, "target"
-                else:
-                    if high >= stop:
-                        exit_price, exit_reason = stop, (
-                            "trail_stop" if stop != initial_stop else "stop"
-                        )
-                    elif target is not None and low <= target:
-                        exit_price, exit_reason = target, "target"
+                mae_r = (
+                    (entry - trough) / risk
+                    if tracker["side"] == "BUY"
+                    else (peak - entry) / risk
+                )
+                r_gate = mfe_r >= Decimal(1)
 
-                horizon = int(tracker.get("horizon_bars") or 0)
-                if (
-                    exit_price is None
-                    and horizon > 0
-                    and policy["bars_held"] >= horizon
-                    and not r_gate
-                ):
-                    exit_price, exit_reason = close, "horizon"
-                if (
-                    exit_price is None
-                    and horizon == 0
-                    and policy["bars_held"] >= time_stop_bars
-                    and not r_gate
-                ):
-                    exit_price, exit_reason = close, "time_stop"
-                if exit_price is None and policy["bars_held"] >= max_bars:
-                    exit_price, exit_reason = close, "counterfactual_max_bars"
-
-                if exit_price is None and r_gate:
-                    distance = spec["trail_distance_r"]
-                    if tracker["side"] == "BUY":
-                        stop = max(stop, peak - distance * risk)
-                    else:
-                        stop = min(stop, trough + distance * risk)
-                    policy["stop_price"] = str(stop)
-                if exit_price is not None:
-                    policy["active"] = False
-                    completed_rows.append(
-                        _completion_row(
-                            tracker,
-                            name,
-                            policy,
-                            exit_price=exit_price,
-                            exit_reason=exit_reason,
-                            server_time=server_time,
-                            mfe_r=mfe_r,
-                            mae_r=mae_r,
-                            peak=peak,
-                            trough=trough,
-                        )
+                for name, policy in active_policies.items():
+                    policy["bars_held"] = int(policy.get("bars_held") or 0) + 1
+                    stop = _decimal(policy["stop_price"], "policy.stop_price")
+                    spec = POLICIES[name]
+                    target_r = spec["target_r"]
+                    target = (
+                        entry + target_r * risk
+                        if target_r is not None and tracker["side"] == "BUY"
+                        else entry - target_r * risk
+                        if target_r is not None
+                        else None
                     )
+                    exit_price = None
+                    exit_reason = ""
+                    if tracker["side"] == "BUY":
+                        if low <= stop:
+                            exit_price, exit_reason = stop, (
+                                "trail_stop" if stop != initial_stop else "stop"
+                            )
+                        elif target is not None and high >= target:
+                            exit_price, exit_reason = target, "target"
+                    else:
+                        if high >= stop:
+                            exit_price, exit_reason = stop, (
+                                "trail_stop" if stop != initial_stop else "stop"
+                            )
+                        elif target is not None and low <= target:
+                            exit_price, exit_reason = target, "target"
+
+                    horizon = int(tracker.get("horizon_bars") or 0)
+                    if (
+                        exit_price is None
+                        and horizon > 0
+                        and policy["bars_held"] >= horizon
+                        and not r_gate
+                    ):
+                        exit_price, exit_reason = close, "horizon"
+                    if (
+                        exit_price is None
+                        and horizon == 0
+                        and policy["bars_held"] >= time_stop_bars
+                        and not r_gate
+                    ):
+                        exit_price, exit_reason = close, "time_stop"
+                    if exit_price is None and policy["bars_held"] >= max_bars:
+                        exit_price, exit_reason = close, "counterfactual_max_bars"
+
+                    if exit_price is None and r_gate:
+                        distance = spec["trail_distance_r"]
+                        if tracker["side"] == "BUY":
+                            stop = max(stop, peak - distance * risk)
+                        else:
+                            stop = min(stop, trough + distance * risk)
+                        policy["stop_price"] = str(stop)
+                    if exit_price is not None:
+                        policy["active"] = False
+                        completed_rows.append(
+                            _completion_row(
+                                tracker,
+                                name,
+                                policy,
+                                exit_price=exit_price,
+                                exit_reason=exit_reason,
+                                server_time=server_time,
+                                mfe_r=mfe_r,
+                                mae_r=mae_r,
+                                peak=peak,
+                                trough=trough,
+                                exit_bar_start=_tracker_bar_iso(last["start"]),
+                            )
+                        )
+                tracker["last_processed_bar_start"] = _tracker_bar_iso(last["start"])
             if any(policy.get("active") for policy in tracker["policies"].values()):
                 surviving_trackers.append(tracker)
     except Exception as exc:

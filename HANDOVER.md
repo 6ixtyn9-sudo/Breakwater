@@ -627,4 +627,23 @@ restore path failed before push. `commit_state.sh` now recreates every owned
 file's parent after reset, so new nested state paths survive role-based races.
 The failed runner's local audit output was not pushed; rerun after this fix.
 
+
+22) RUNNER-DELAY BAR REPLAY (2026-08-24, ACTIONED)
+
+GitHub's ubuntu-24.04 pool queued Paper for 30+ minutes while status remained
+operational. Paper correctness no longer assumes one workflow run per bar:
+  - every real position and counterfactual tracker persists last_processed_bar_start
+  - all unseen frame bars replay chronologically on the next successful cycle
+  - each bar applies stop before target, then horizon/time stop, then trail ratchet
+  - an earlier unseen stop wins even if a later unseen bar reaches target
+  - trail ratcheted on one unseen bar can be hit on the next unseen bar
+  - a duplicate run seeing no new candle does not increment bars_held
+  - new entries stamp the current bar so they are not immediately reprocessed
+  - legacy positions/trackers migrate by processing only the latest bar once
+  - actual/counterfactual logs record exit_bar_start separately from process time
+  - status reports replayed_bars and positions_without_new_bars
+
+This protects paper evidence from hosted-runner queues; it does not require
+switching runner images or running another cron.
+
 END

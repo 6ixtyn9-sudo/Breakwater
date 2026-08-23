@@ -110,6 +110,7 @@ PAPER_LOG_HEADERS = [
     "fee_zar",
     "net_r",
     "excursion_ordering",
+    "exit_bar_start",
 ]
 
 TARGET_R_MULTIPLE = Decimal("2")
@@ -249,6 +250,12 @@ def _position_validation_error(position) -> str | None:
         return "nonpositive_stop_price"
     if parsed["notional_zar"] < 0:
         return "negative_notional_zar"
+    last_processed = str(position.get("last_processed_bar_start") or "").strip()
+    if last_processed:
+        try:
+            datetime.fromisoformat(last_processed.replace("Z", "+00:00"))
+        except ValueError:
+            return "invalid_last_processed_bar_start"
     return None
 
 
@@ -797,6 +804,124 @@ def _slice_paper_pnl(book_path: Path) -> dict[str, float]:
     return out
 
 
+def _bar_start_iso(value) -> str:
+    timestamp = value.to_pydatetime() if hasattr(value, "to_pydatetime") else value
+    if not isinstance(timestamp, datetime):
+        timestamp = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+    return timestamp.isoformat()
+
+
+def _unseen_bars(position: dict, frame):
+    """Return unseen bars in order; legacy positions process latest once."""
+    if frame is None or frame.empty:
+        return frame
+    ordered = frame.sort_values("start").drop_duplicates("start")
+    raw_last = str(position.get("last_processed_bar_start") or "").strip()
+    if not raw_last:
+        return ordered.tail(1)
+    try:
+        last_processed = datetime.fromisoformat(raw_last.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise RuntimeError("paper position last_processed_bar_start is invalid") from exc
+    starts = ordered["start"]
+    if getattr(starts.dt, "tz", None) is not None and last_processed.tzinfo is None:
+        from datetime import timezone
+
+        last_processed = last_processed.replace(tzinfo=timezone.utc)
+    return ordered[starts > last_processed]
+
+
+def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_ids: set[str]):
+    side = str(position["side"])
+    entry = Decimal(str(position["entry_price"]))
+    stop = Decimal(str(position["stop_price"]))
+    close = Decimal(str(last["close"]))
+    high = Decimal(str(last["high"]))
+    low = Decimal(str(last["low"]))
+    bars_held = _coerce_int(position.get("bars_held"), 0) + 1
+    initial_stop_price = Decimal(str(position.get("initial_stop_price") or stop))
+    r_dist = abs(entry - initial_stop_price)
+    peak_seen = max(Decimal(str(position.get("peak_price") or entry)), high)
+    trough_seen = min(Decimal(str(position.get("trough_price") or entry)), low)
+    mfe_r = Decimal(0)
+    if r_dist > 0:
+        mfe_r = (
+            (peak_seen - entry) / r_dist
+            if side == "BUY"
+            else (entry - trough_seen) / r_dist
+        )
+    r_gate_on = bool(R_GATE_ENABLE and r_dist > 0 and mfe_r >= R_GATE_SUPPRESS_R)
+    target = (
+        entry + (entry - initial_stop_price) * TARGET_R_MULTIPLE
+        if side == "BUY"
+        else entry - (initial_stop_price - entry) * TARGET_R_MULTIPLE
+    )
+    exit_price = exit_reason = outcome = None
+    allow_target = horizon_bars == 0 or R_GATE_ENABLE
+    if side == "BUY":
+        if low <= stop:
+            exit_price, outcome = stop, ("win" if stop >= entry else "loss")
+            exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
+        elif allow_target and high >= target:
+            exit_price, exit_reason, outcome = target, "target", "win"
+    else:
+        if high >= stop:
+            exit_price, outcome = stop, ("win" if stop <= entry else "loss")
+            exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
+        elif allow_target and low <= target:
+            exit_price, exit_reason, outcome = target, "target", "win"
+    if (
+        exit_price is None
+        and _is_rotated_sibling(str(position.get("slice_id") or ""), book_slice_ids)
+        and not r_gate_on
+    ):
+        exit_price, exit_reason = close, "rotated"
+        outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    if exit_price is None and horizon_bars > 0 and bars_held >= horizon_bars and not r_gate_on:
+        exit_price, exit_reason = close, "horizon"
+        outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    trail_active = _coerce_bool(position.get("trail_active"))
+    if (
+        exit_price is None
+        and horizon_bars == 0
+        and bars_held >= TIME_STOP_BARS
+        and not (TRAIL_ENABLE and TRAIL_IGNORE_TIME_STOP and trail_active)
+        and not r_gate_on
+    ):
+        exit_price, exit_reason = close, "time_stop"
+        outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    if exit_price is None:
+        if ((TRAIL_ENABLE and horizon_bars == 0) or r_gate_on) and r_dist > 0:
+            if not trail_active:
+                trail_active = (
+                    peak_seen >= entry + TRAIL_ACTIVATE_R * r_dist
+                    if side == "BUY"
+                    else trough_seen <= entry - TRAIL_ACTIVATE_R * r_dist
+                )
+            if trail_active:
+                stop = (
+                    max(stop, peak_seen - TRAIL_DISTANCE_R * r_dist)
+                    if side == "BUY"
+                    else min(stop, trough_seen + TRAIL_DISTANCE_R * r_dist)
+                )
+                position["stop_price"] = str(stop)
+            position["initial_stop_price"] = str(initial_stop_price)
+            position["peak_price"] = str(peak_seen)
+            position["trough_price"] = str(trough_seen)
+            position["trail_active"] = "1" if trail_active else "0"
+        position["bars_held"] = str(bars_held)
+        position["missing_bars"] = "0"
+        position["last_processed_bar_start"] = _bar_start_iso(last["start"])
+        if horizon_bars > 0:
+            position["horizon_bars"] = str(horizon_bars)
+        return None
+    return {
+        "exit_price": exit_price, "exit_reason": exit_reason, "outcome": outcome,
+        "bars_held": bars_held, "initial_stop_price": initial_stop_price,
+        "peak_seen": peak_seen, "trough_seen": trough_seen, "stop": stop, "bar": last,
+    }
+
+
 @_serialized_paper_cycle
 def run_paper_cycle(
     *,
@@ -848,6 +973,8 @@ def run_paper_cycle(
             counterfactual_state_error = f"{type(exc).__name__}: {exc}"[:240]
 
     surviving: list[dict] = []
+    replayed_bars = 0
+    positions_without_new_bars = 0
     # 1) Mark-to-market and close eligible existing positions
     for position in open_positions:
         frame = frames.get(str(position["pair"]).upper())
@@ -941,99 +1068,9 @@ def run_paper_cycle(
             surviving.append(position)
             continue
 
-        last = frame.iloc[-1]
-        close = Decimal(str(last["close"]))
-        high = Decimal(str(last["high"]))
-        low = Decimal(str(last["low"]))
-        bars_held = _coerce_int(position.get("bars_held"), 0) + 1
-        initial_stop_price = Decimal(str(position.get("initial_stop_price") or stop))
-        r_dist = abs(entry - initial_stop_price)
-        peak_seen = max(Decimal(str(position.get("peak_price") or entry)), high)
-        trough_seen = min(Decimal(str(position.get("trough_price") or entry)), low)
-        mfe_r = Decimal(0)
-        if r_dist > 0:
-            mfe_r = ((peak_seen - entry) / r_dist) if side == "BUY" else ((entry - trough_seen) / r_dist)
-        r_gate_on = bool(R_GATE_ENABLE and r_dist > 0 and mfe_r >= R_GATE_SUPPRESS_R)
-        target = (
-            entry + (entry - initial_stop_price) * TARGET_R_MULTIPLE
-            if side == "BUY"
-            else entry - (initial_stop_price - entry) * TARGET_R_MULTIPLE
-        )
-
-        exit_price = None
-        exit_reason = None
-        outcome = None
-        allow_target = (horizon_bars == 0) or R_GATE_ENABLE
-        if side == "BUY":
-            if low <= stop:
-                exit_price = stop
-                outcome = "win" if stop >= entry else "loss"
-                exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
-            elif allow_target and high >= target:
-                exit_price, exit_reason, outcome = target, "target", "win"
-        else:
-            if high >= stop:
-                exit_price = stop
-                outcome = "win" if stop <= entry else "loss"
-                exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
-            elif allow_target and low <= target:
-                exit_price, exit_reason, outcome = target, "target", "win"
-        if (
-            exit_price is None
-            and _is_rotated_sibling(str(position.get("slice_id") or ""), book_slice_ids)
-            and not r_gate_on
-        ):
-            # Research replaced this horizon; don't hold the leftover sibling.
-            exit_price = close
-            exit_reason = "rotated"
-            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-        if (
-            exit_price is None
-            and horizon_bars > 0
-            and bars_held >= horizon_bars
-            and not r_gate_on
-        ):
-            exit_price = close
-            exit_reason = "horizon"
-            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-        trail_active = _coerce_bool(position.get("trail_active"))
-        if (
-            exit_price is None
-            and horizon_bars == 0
-            and bars_held >= TIME_STOP_BARS
-            and not (TRAIL_ENABLE and TRAIL_IGNORE_TIME_STOP and trail_active)
-            and not r_gate_on
-        ):
-            exit_price = close
-            exit_reason = "time_stop"
-            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-        if exit_price is None:
-            trail_allowed = (TRAIL_ENABLE and horizon_bars == 0) or r_gate_on
-            if trail_allowed:
-                r = r_dist
-                if r > 0:
-                    peak_price = Decimal(str(position.get("peak_price") or entry))
-                    trough_price = Decimal(str(position.get("trough_price") or entry))
-                    peak_price = max(peak_price, high)
-                    trough_price = min(trough_price, low)
-                    if not trail_active:
-                        if side == "BUY":
-                            trail_active = peak_price >= (entry + TRAIL_ACTIVATE_R * r)
-                        else:
-                            trail_active = trough_price <= (entry - TRAIL_ACTIVATE_R * r)
-                    if trail_active:
-                        if side == "BUY":
-                            candidate_stop = peak_price - TRAIL_DISTANCE_R * r
-                            stop = max(stop, candidate_stop)
-                        else:
-                            candidate_stop = trough_price + TRAIL_DISTANCE_R * r
-                            stop = min(stop, candidate_stop)
-                        position["stop_price"] = str(stop)
-                    position["initial_stop_price"] = str(initial_stop_price)
-                    position["peak_price"] = str(peak_price)
-                    position["trough_price"] = str(trough_price)
-                    position["trail_active"] = "1" if trail_active else "0"
-            position["bars_held"] = str(bars_held)
+        unseen = _unseen_bars(position, frame)
+        if unseen is None or unseen.empty:
+            positions_without_new_bars += 1
             position["missing_bars"] = "0"
             if horizon_bars > 0:
                 position["horizon_bars"] = str(horizon_bars)
@@ -1041,6 +1078,31 @@ def run_paper_cycle(
             surviving.append(position)
             continue
 
+        replayed_bars += len(unseen)
+        exit_state = None
+        for _, bar in unseen.iterrows():
+            exit_state = _mark_position_bar(
+                position,
+                bar,
+                horizon_bars=horizon_bars,
+                book_slice_ids=book_slice_ids,
+            )
+            if exit_state is not None:
+                break
+        if exit_state is None:
+            position["regime"] = position_regime
+            surviving.append(position)
+            continue
+
+        last = exit_state["bar"]
+        exit_price = exit_state["exit_price"]
+        exit_reason = exit_state["exit_reason"]
+        outcome = exit_state["outcome"]
+        bars_held = exit_state["bars_held"]
+        initial_stop_price = exit_state["initial_stop_price"]
+        peak_seen = exit_state["peak_seen"]
+        trough_seen = exit_state["trough_seen"]
+        stop = exit_state["stop"]
         fee_bps = PERP_FEE_BPS if position["kind"] == "PERP" else SPOT_FEE_BPS
         direction = Decimal(1) if side == "BUY" else Decimal(-1)
         gross = (exit_price - entry) / entry * direction * notional_zar
@@ -1083,6 +1145,7 @@ def run_paper_cycle(
                 "stop_atr_mult": str(position.get("stop_atr_mult") or ""),
                 "risk_fraction": str(position.get("risk_fraction") or ""),
                 **diagnostics,
+                "exit_bar_start": _bar_start_iso(last["start"]),
             }
         )
         apply_signal_feedback(
@@ -1494,6 +1557,7 @@ def run_paper_cycle(
                 "atr": str(signal.atr),
                 "stop_atr_mult": (f"{stop_atr_mult:.6f}" if signal.atr > 0 else ""),
                 "risk_fraction": (f"{risk_fraction:.8f}" if reference > 0 else ""),
+                "last_processed_bar_start": _bar_start_iso(frame.iloc[-1]["start"]),
             }
         )
         aggregate_open_risk_zar += proposed_risk_zar
@@ -1579,6 +1643,8 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "replayed_bars": replayed_bars,
+        "positions_without_new_bars": positions_without_new_bars,
         "paper_equity_zar": f"{paper_equity_zar:.4f}",
         "aggregate_risk_start_zar": (
             None if aggregate_position_risk_unknown else f"{aggregate_start_risk_zar:.4f}"

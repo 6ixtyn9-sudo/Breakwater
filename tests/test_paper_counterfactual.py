@@ -31,8 +31,10 @@ def position(side="BUY", entry="100", stop="95"):
     }
 
 
-def frame(close, high, low):
-    return pd.DataFrame([{"close": close, "high": high, "low": low}])
+def frame(close, high, low, start="2026-08-23T09:00:00Z"):
+    return pd.DataFrame(
+        [{"start": pd.Timestamp(start), "close": close, "high": high, "low": low}]
+    )
 
 
 def trackers_for(pos):
@@ -71,7 +73,7 @@ def test_target_exit_continues_as_ghost_under_wider_policies():
 
     second = advance_counterfactuals(
         first.trackers,
-        frames={"BTCUSDC": frame(114, 116, 106)},
+        frames={"BTCUSDC": frame(114, 116, 106, "2026-08-23T10:00:00Z")},
         server_time=NOW,
         missing_bars_exit=24,
     )
@@ -81,7 +83,7 @@ def test_target_exit_continues_as_ghost_under_wider_policies():
 
     third = advance_counterfactuals(
         second.trackers,
-        frames={"BTCUSDC": frame(112, 117, 110)},
+        frames={"BTCUSDC": frame(112, 117, 110, "2026-08-23T11:00:00Z")},
         server_time=NOW,
         missing_bars_exit=24,
     )
@@ -92,7 +94,7 @@ def test_target_exit_continues_as_ghost_under_wider_policies():
 
     fourth = advance_counterfactuals(
         third.trackers,
-        frames={"BTCUSDC": frame(107, 118, 106)},
+        frames={"BTCUSDC": frame(107, 118, 106, "2026-08-23T12:00:00Z")},
         server_time=NOW,
         missing_bars_exit=24,
     )
@@ -113,6 +115,44 @@ def test_short_is_direction_not_losing_outcome():
     assert target2[0]["side"] == "SELL"
     assert target2[0]["pnl_outcome"] == "win"
     assert target2[0]["pnl_zar"] == "10.0000"
+
+
+def test_counterfactuals_replay_each_unseen_bar_in_order():
+    pos = position()
+    pos["last_processed_bar_start"] = "2026-08-23T08:00:00+00:00"
+    trackers = trackers_for(pos)
+    replay = pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp("2026-08-23T09:00:00Z"),
+                "close": 105,
+                "high": 106,
+                "low": 100,
+            },
+            {
+                "start": pd.Timestamp("2026-08-23T10:00:00Z"),
+                "close": 100,
+                "high": 102,
+                "low": 100,
+            },
+        ]
+    )
+    result = advance_counterfactuals(
+        trackers,
+        frames={"BTCUSDC": replay},
+        server_time=NOW,
+        missing_bars_exit=24,
+    )
+    completed = {row["policy"]: row for row in result.completed_rows}
+    assert completed["target_2r_trail_1r"]["exit_reason"] == "trail_stop"
+    assert completed["target_2r_trail_1r"]["exit_price"] == "101"
+    assert completed["target_2r_trail_1r"]["bars_held"] == "2"
+    assert completed["target_2r_trail_1r"]["exit_bar_start"].startswith(
+        "2026-08-23T10:00:00"
+    )
+    assert result.trackers[0]["last_processed_bar_start"].startswith(
+        "2026-08-23T10:00:00"
+    )
 
 
 def test_strategy_rotation_closes_all_exit_policies():

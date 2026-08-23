@@ -105,6 +105,9 @@ research system as first-class safeguards:
 - **Book-only paper trading.** Only slices promoted into the monitored
   book by walk-forward validation are paper-traded. Unvalidated
   fallback signals are research-only.
+- **Chronological bar replay.** Every position persists its last processed
+  candle. Delayed runners replay all unseen bars in order with stop-before-target
+  semantics; repeated runs in the same hour do not increment holding time twice.
 - **Immortal-trade guard.** Positions whose pair data has vanished are
   closed at entry with fees after 24 missing bars instead of living
   forever.

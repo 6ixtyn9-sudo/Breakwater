@@ -34,6 +34,23 @@ def policy():
     )
 
 
+def frame_with_bars(rows):
+    return pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp(start),
+                "symbol": "BTCUSDC",
+                "open": close,
+                "high": high,
+                "low": low,
+                "close": close,
+                "volume": 100,
+            }
+            for start, close, high, low in rows
+        ]
+    )
+
+
 def frame_with_bar(close, high=None, low=None):
     return pd.DataFrame(
         [
@@ -149,6 +166,69 @@ def test_open_position_stops_out_and_journals(tmp_path):
     journal = json.loads((tmp_path / "cooldown.json").read_text())
     assert journal[0]["slice_id"] == "feat:0:LONG"
     assert journal[0]["pnl_zar"].startswith("-")
+
+
+def test_replays_unseen_bars_stop_first_after_runner_delay(tmp_path):
+    position = open_position(entry="100", stop="95", bars="0")
+    position[0]["initial_stop_price"] = "95"
+    position[0]["last_processed_bar_start"] = "2026-08-14T08:00:00+00:00"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={
+            "BTCUSDC": frame_with_bars(
+                [
+                    ("2026-08-14T09:00:00Z", 96, 101, 94),
+                    ("2026-08-14T10:00:00Z", 111, 112, 110),
+                ]
+            )
+        },
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "stop"
+    assert log.iloc[0]["bars_held"] == 1
+    assert str(log.iloc[0]["exit_bar_start"]).startswith("2026-08-14T09:00:00")
+
+
+def test_repeated_same_bar_does_not_increment_holding_time(tmp_path):
+    position = open_position(entry="100", stop="95", bars="3")
+    position[0]["initial_stop_price"] = "95"
+    position[0]["last_processed_bar_start"] = "2026-08-14T10:00:00+00:00"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=100, high=101, low=99)},
+        positions=position,
+    )
+    assert result["closed"] == 0
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["bars_held"] == "3"
+
+
+def test_replay_ratchets_then_hits_trail_on_next_unseen_bar(tmp_path):
+    position = open_position(entry="100", stop="95", bars="0")
+    position[0]["initial_stop_price"] = "95"
+    position[0]["last_processed_bar_start"] = "2026-08-14T08:00:00+00:00"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={
+            "BTCUSDC": frame_with_bars(
+                [
+                    ("2026-08-14T09:00:00Z", 105, 106, 100),
+                    ("2026-08-14T10:00:00Z", 100, 102, 100),
+                ]
+            )
+        },
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "trail_stop"
+    assert float(log.iloc[0]["exit_price"]) == 101.0
+    assert log.iloc[0]["bars_held"] == 2
 
 
 def test_horizon_does_not_cut_a_plus_one_r_winner(tmp_path):
