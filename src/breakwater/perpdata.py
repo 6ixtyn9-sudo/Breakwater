@@ -84,7 +84,10 @@ def fetch_perp_candles(
         raise ValueError("perp candle count must be between 2 and 5000")
     period_ms = INTERVAL_SECONDS[interval] * 1000
     end_ms = int(time.time() * 1000)
-    start_ms = end_ms - period_ms * count
+    # Hyperliquid treats both boundaries as inclusive. A span of ``count``
+    # intervals can therefore request count + 1 candles and the 5,000-bar
+    # boundary returns HTTP 500. Use count - 1 intervals for at most count rows.
+    start_ms = end_ms - period_ms * (count - 1)
     payload = {
         "type": "candleSnapshot",
         "req": {

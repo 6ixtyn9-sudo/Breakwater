@@ -242,12 +242,28 @@ def _attach_plateaus(rows: list[dict]) -> None:
                 row["audit_pass"] = True
 
 
-def _fetch_group(group: AuditGroup, *, candle_count: int, sleep_seconds: float) -> pd.DataFrame:
+def _fetch_group(
+    group: AuditGroup, *, candle_count: int, sleep_seconds: float
+) -> tuple[pd.DataFrame, dict[str, str]]:
     parts = []
+    errors: dict[str, str] = {}
     for coin in group.coins:
-        candles = fetch_perp_candles(coin, interval="1h", count=candle_count)
+        candles = None
+        last_error = None
+        for attempt in range(3):
+            try:
+                candles = fetch_perp_candles(coin, interval="1h", count=candle_count)
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(0.5 * (attempt + 1))
+        if candles is None:
+            errors[coin] = f"{type(last_error).__name__}: {last_error}"[:180]
+            continue
         frame = candle_frame(candles).sort_values("start").drop_duplicates("start")
         if len(frame) < min(3000, int(candle_count * 0.75)):
+            errors[coin] = f"insufficient_history:{len(frame)}"
             continue
         featured = compute_price_features(frame)
         featured["symbol"] = coin
@@ -255,7 +271,8 @@ def _fetch_group(group: AuditGroup, *, candle_count: int, sleep_seconds: float) 
         parts.append(featured)
         if sleep_seconds > 0:
             time.sleep(sleep_seconds)
-    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+    pooled = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+    return pooled, errors
 
 
 def _groups(lane: str, *, max_pairs: int, data_dir: Path) -> list[AuditGroup]:
@@ -303,10 +320,16 @@ def run_deep_research_audit(
     groups = _groups(lane, max_pairs=max_pairs, data_dir=data_dir)
     rows = []
     group_summary = {}
+    fetch_errors: dict[str, str] = {}
     sleep_seconds = float(os.getenv("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05"))
     for group in groups:
-        pooled = _fetch_group(group, candle_count=candle_count, sleep_seconds=sleep_seconds)
-        group_summary[f"{group.lane}:{group.name}"] = int(pooled["symbol"].nunique()) if not pooled.empty else 0
+        pooled, errors = _fetch_group(
+            group, candle_count=candle_count, sleep_seconds=sleep_seconds
+        )
+        fetch_errors.update(errors)
+        group_summary[f"{group.lane}:{group.name}"] = (
+            int(pooled["symbol"].nunique()) if not pooled.empty else 0
+        )
         if pooled.empty:
             continue
         for horizon in range(1, 49):
@@ -320,6 +343,9 @@ def run_deep_research_audit(
                 _evaluate(prepared, candidate, lane=group.lane, group=group.name)
                 for candidate in candidates
             )
+    if not any(group_summary.values()):
+        detail = "; ".join(f"{coin}={error}" for coin, error in list(fetch_errors.items())[:5])
+        raise RuntimeError(f"deep audit fetched no usable candle histories: {detail}")
     _attach_plateaus(rows)
     output_dir.mkdir(parents=True, exist_ok=True)
     _atomic_csv(output_dir / "candidates.csv", rows)
@@ -330,6 +356,8 @@ def run_deep_research_audit(
         "horizons": [1, 48],
         "weights_per_1000_hours": list(WEIGHTS),
         "groups": group_summary,
+        "fetch_error_count": len(fetch_errors),
+        "fetch_errors": fetch_errors,
         "candidates": len(rows),
         "preliminary_passes": sum(bool(row["preliminary_pass"]) for row in rows),
         "plateau_passes": sum(bool(row["audit_pass"]) for row in rows),

@@ -62,6 +62,7 @@ def test_fetch_perp_candles_maps_hyperliquid_schema():
     assert body["type"] == "candleSnapshot"
     assert body["req"]["coin"] == "BTC"
     assert body["req"]["interval"] == "1h"
+    assert body["req"]["endTime"] - body["req"]["startTime"] == 3600 * 1000
 
 
 def test_fetch_perp_candles_rejects_unknown_schema():
