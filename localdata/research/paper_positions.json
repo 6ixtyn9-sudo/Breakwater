@@ -1,7 +1,7 @@
 [
   {
     "atr": "3.0528571428571434",
-    "bars_held": "11",
+    "bars_held": "12",
     "entry_guard": "passed",
     "entry_price": "127.05",
     "horizon_bars": "14",
@@ -23,7 +23,7 @@
   },
   {
     "atr": "0.0020794285714285715",
-    "bars_held": "11",
+    "bars_held": "12",
     "entry_guard": "passed",
     "entry_price": "0.09504",
     "horizon_bars": "14",
@@ -45,7 +45,7 @@
   },
   {
     "atr": "0.005575714285714281",
-    "bars_held": "11",
+    "bars_held": "12",
     "entry_guard": "passed",
     "entry_price": "0.15738",
     "horizon_bars": "14",
@@ -67,7 +67,7 @@
   },
   {
     "atr": "1.549285714285713",
-    "bars_held": "11",
+    "bars_held": "12",
     "entry_guard": "passed",
     "entry_price": "79.828",
     "horizon_bars": "14",
@@ -86,5 +86,27 @@
     "stop_price": "74.4055000000000045",
     "trail_active": "0",
     "trough_price": "79.828"
+  },
+  {
+    "atr": "407.42857142857144",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "76270.0",
+    "horizon_bars": "23",
+    "initial_stop_price": "74843.999999999999960",
+    "kind": "PERP",
+    "missing_bars": "0",
+    "notional_zar": "200.00",
+    "pair": "BTCUSDC",
+    "peak_price": "76270.0",
+    "regime": "neutral",
+    "risk_fraction": "0.01869674",
+    "side": "BUY",
+    "signal_id": "bacd25bedbe5d610",
+    "slice_id": "feat_ret_1:2:LONG:h23",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "74843.999999999999960",
+    "trail_active": "0",
+    "trough_price": "76270.0"
   }
 ]
