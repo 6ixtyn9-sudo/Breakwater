@@ -241,17 +241,45 @@ def append_cooldown(path: Path, entry: dict) -> None:
         raise
 
 
-def _paper_size(signal: SliceSignal, policy, usdc_zar: Decimal) -> Decimal:
+def _paper_size(
+    signal: SliceSignal,
+    policy,
+    usdc_zar: Decimal,
+    *,
+    risk_zar: Decimal | None = None,
+) -> Decimal:
     risk_fraction = abs(signal.entry_price - signal.stop_price) / signal.entry_price
     if risk_fraction <= 0:
         return Decimal(0)
-    notional_zar = min(
-        policy.risk_per_trade_zar / risk_fraction,
-        policy.max_position_notional_zar,
-    )
-    if signal.kind == "PERP" and notional_zar / usdc_zar < Decimal("11"):
+    budget = policy.risk_per_trade_zar if risk_zar is None else risk_zar
+    if budget <= 0:
+        budget = policy.risk_per_trade_zar
+    notional_zar = min(budget / risk_fraction, policy.max_position_notional_zar)
+    if signal.kind == "PERP" and usdc_zar > 0 and notional_zar / usdc_zar < Decimal("11"):
         return Decimal(0)
     return notional_zar
+
+
+def _realised_paper_pnl(log_path: Path) -> Decimal:
+    if not log_path.exists():
+        return Decimal(0)
+    total = Decimal(0)
+    try:
+        with log_path.open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                if str(row.get("outcome") or "") not in {"win", "loss"}:
+                    continue
+                if str(row.get("exit_reason") or "") in {
+                    "regime", "not_book", "no_price", "adverse", "risk_cap", "edge_cap",
+                }:
+                    continue
+                try:
+                    total += Decimal(str(row.get("pnl_zar") or 0))
+                except (InvalidOperation, ValueError):
+                    continue
+    except OSError:
+        return Decimal(0)
+    return total
 
 
 def _latest_close(frame):
@@ -720,6 +748,18 @@ def run_paper_cycle(
     paper_pnls = _slice_paper_pnl(book_path)
     incumbents = _incumbent_slice_ids(book_path)
     means = _slice_means(book_path)
+    size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
+    risk_zar: Decimal | None = None
+    if size_from_equity:
+        seed = _env_decimal(
+            "BREAKWATER_PAPER_EQUITY_SEED",
+            str(_env_decimal("BREAKWATER_INITIAL_EQUITY_ZAR", "2000")),
+        )
+        equity = seed + _realised_paper_pnl(log_path)
+        if equity < 0:
+            equity = Decimal(0)
+        risk_pct = _env_decimal("BREAKWATER_PAPER_RISK_OF_EQUITY", "0.01")
+        risk_zar = equity * risk_pct
 
     selection_mode = str(os.getenv("BREAKWATER_PAPER_SELECTION_MODE", "explore")).strip().lower()
     if selection_mode == "profit":
@@ -897,7 +937,7 @@ def run_paper_cycle(
             skipped += 1
             continue
 
-        notional_zar = _paper_size(signal, policy, usdc_zar)
+        notional_zar = _paper_size(signal, policy, usdc_zar, risk_zar=risk_zar)
         if notional_zar <= 0:
             continue
 
@@ -914,7 +954,12 @@ def run_paper_cycle(
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
         stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
         risk_cap = _env_decimal("BREAKWATER_PAPER_MAX_RISK_FRACTION", "0.03")
-        if risk_cap > 0 and risk_fraction > risk_cap:
+        mean = Decimal(str(means.get(signal.slice_id, 0.0) or 0.0))
+        k_mean = _env_decimal("BREAKWATER_PAPER_RISK_TO_MEAN_K", "8")
+        edge_cap_hit = mean > 0 and k_mean > 0 and risk_fraction > k_mean * mean
+        hard_cap_hit = risk_cap > 0 and risk_fraction > risk_cap
+        if edge_cap_hit or hard_cap_hit:
+            reason = "edge_cap" if edge_cap_hit and not hard_cap_hit else "risk_cap"
             append_log(
                 log_path,
                 {
@@ -931,8 +976,8 @@ def run_paper_cycle(
                     "pnl_zar": "0",
                     "outcome": "skipped",
                     "bars_held": "0",
-                    "exit_reason": "risk_cap",
-                    "entry_guard": "risk_cap",
+                    "exit_reason": reason,
+                    "entry_guard": reason,
                     "regime": str(getattr(signal, "regime", "") or ""),
                     "pnl_outcome": "",
                     "atr": str(signal.atr),
