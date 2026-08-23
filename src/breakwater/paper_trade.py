@@ -413,6 +413,23 @@ def _incumbent_slice_ids(book_path: Path) -> set[str]:
     return out
 
 
+def _slice_family(slice_id: str) -> str:
+    text = str(slice_id)
+    base, sep, rest = text.rpartition(":h")
+    if sep and rest.isdigit():
+        return base
+    return text
+
+
+def _is_rotated_sibling(slice_id: str, book_ids: set[str]) -> bool:
+    if slice_id in book_ids:
+        return False
+    family = _slice_family(slice_id)
+    if family == slice_id:
+        return False
+    return any(_slice_family(other) == family for other in book_ids)
+
+
 def _slice_paper_pnl(book_path: Path) -> dict[str, float]:
     try:
         rows = read_book(book_path)
@@ -568,6 +585,15 @@ def run_paper_cycle(
                 exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
             elif allow_target and low <= target:
                 exit_price, exit_reason, outcome = target, "target", "win"
+        if (
+            exit_price is None
+            and _is_rotated_sibling(str(position.get("slice_id") or ""), book_slice_ids)
+            and not r_gate_on
+        ):
+            # Research replaced this horizon; don't hold the leftover sibling.
+            exit_price = close
+            exit_reason = "rotated"
+            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
         if (
             exit_price is None
             and horizon_bars > 0
@@ -748,6 +774,9 @@ def run_paper_cycle(
             pair_held += 1
             continue
 
+        if _is_rotated_sibling(signal.slice_id, book_slice_ids):
+            skipped += 1
+            continue
         if signal.slice_id not in book_slice_ids:
             append_log(
                 log_path,
@@ -884,6 +913,35 @@ def run_paper_cycle(
         initial_risk_distance = abs(reference - initial_stop_price)
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
         stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
+        risk_cap = _env_decimal("BREAKWATER_PAPER_MAX_RISK_FRACTION", "0.03")
+        if risk_cap > 0 and risk_fraction > risk_cap:
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(reference),
+                    "exit_price": "",
+                    "stop_price": str(initial_stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "risk_cap",
+                    "entry_guard": "risk_cap",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(signal.atr),
+                    "stop_atr_mult": f"{stop_atr_mult:.6f}" if signal.atr > 0 else "",
+                    "risk_fraction": f"{risk_fraction:.8f}",
+                },
+            )
+            skipped += 1
+            continue
 
         signal_horizon = _coerce_int(getattr(signal, "horizon_bars", 0), 0)
         if signal_horizon <= 0:
