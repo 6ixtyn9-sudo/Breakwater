@@ -73,7 +73,8 @@ def _env_decimal(name: str, default: str) -> Decimal:
 
 
 def _horizons() -> list[int]:
-    raw = os.getenv("BREAKWATER_HIP3_RESEARCH_HORIZONS", "6,12,24")
+    default_horizons = ",".join(str(value) for value in range(1, 25))
+    raw = os.getenv("BREAKWATER_HIP3_RESEARCH_HORIZONS", default_horizons)
     horizons = []
     for token in raw.split(","):
         try:

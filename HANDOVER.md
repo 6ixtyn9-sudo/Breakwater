@@ -504,7 +504,9 @@ Safety posture:
     `kind` pools and prefixed slice IDs; deployer/margin domains never pool
   - provisional 30 bps all-in research cost; must be replaced by measured
     DEX/asset fee, funding and slippage before any promotion
-  - default horizons 6, 12 and 24; strict walk-forward/Bonferroni validation
+  - horizons 1 through 24, matching native PERP research breadth
+  - native-PERP-aligned walk-forward doctrine: Bonferroni off, relaxed minimum
+    2 passes, strict floor 3, breadth 6 names / 10 rows / 40% positive
   - writes isolated candle coverage, discovered and validated files
   - promotion_enabled=False and paper_enabled=False by design; no monitored
     HIP-3 book, signal, order or risk allocation is created

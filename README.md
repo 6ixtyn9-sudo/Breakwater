@@ -351,9 +351,10 @@ it does not need its own external cron.
 
 The combined daily workflow template is `templates/hip3-research.yml`. It
 refreshes discovery first, then audits up to 60 active non-crypto HIP-3 candle
-histories and runs isolated walk-forward research grouped by DEX, provisional
-market class, and collateral token. It writes candle coverage, discovered
-slices and validated slices,
+histories and runs the full 1-through-24 horizon sweep, grouped by DEX,
+provisional market class, and collateral token. Walk-forward and breadth knobs
+match native PERP research; HIP-3 retains a conservative venue-specific cost.
+It writes candle coverage, discovered slices and validated slices,
 but deliberately creates no monitored book: promotion and paper remain off
 until classification/calendar metadata is trustworthy. Copy the template to
 `.github/workflows/hip3-research.yml`, then configure one external dispatcher

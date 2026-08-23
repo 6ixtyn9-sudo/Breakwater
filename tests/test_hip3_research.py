@@ -2,7 +2,7 @@ from dataclasses import replace
 from decimal import Decimal
 
 from breakwater.hip3 import Hip3UniverseRow
-from breakwater.hip3_research import _candidate_rows, classify_market
+from breakwater.hip3_research import _candidate_rows, _horizons, classify_market
 
 
 def row(coin="xyz:NVDA", **changes):
@@ -29,6 +29,11 @@ def row(coin="xyz:NVDA", **changes):
         as_of="2026-08-23T00:00:00+00:00",
     )
     return replace(base, **changes)
+
+
+def test_hip3_default_horizons_match_native_perp_sweep(monkeypatch):
+    monkeypatch.delenv("BREAKWATER_HIP3_RESEARCH_HORIZONS", raising=False)
+    assert _horizons() == list(range(1, 25))
 
 
 def test_market_classes_keep_builder_crypto_out_of_equity_pool():
