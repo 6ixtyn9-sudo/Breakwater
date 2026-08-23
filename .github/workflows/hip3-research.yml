@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   research:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 120
     steps:
       - name: Checkout

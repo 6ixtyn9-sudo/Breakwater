@@ -27,7 +27,7 @@ defaults:
 
 jobs:
   refresh:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
     # 24 horizons can take a while. Bump this if you ever see timeouts.
     timeout-minutes: 360
 
