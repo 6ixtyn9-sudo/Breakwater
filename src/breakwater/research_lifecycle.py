@@ -65,7 +65,6 @@ DECAYED = "decayed"
 PROVENANCE_VALIDATED = "validated_walk_forward"
 
 MIN_BOOK_ROWS = 60
-LIVE_DECAY_BARS = 96
 PNL_DECAY_MIN_TRADES = 3
 STOPOUT_COOLDOWN_BARS = 24
 BAR_SECONDS = 3600
@@ -76,6 +75,9 @@ def _coerce_int(value, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+LIVE_DECAY_BARS = max(12, _coerce_int(os.getenv("BREAKWATER_LIVE_DECAY_BARS", "48"), 48))
 
 
 def _refresh_expired_cooldowns_inplace(rows: list[dict], *, now_epoch: int) -> int:
@@ -378,6 +380,12 @@ def sync_book(
         except (TypeError, ValueError):
             pnl = 0.0
         return trades >= 1 and pnl > 0.0
+
+    def _signal_fresh(row: dict) -> bool:
+        last_signal = _coerce_int(row.get("last_signal_bar"), 0)
+        if last_signal <= 0:
+            return False
+        return (now_epoch - last_signal) <= LIVE_DECAY_BARS * BAR_SECONDS
 
     # Carry rows for kinds that did not promote this run, but drop thin leftovers
     # that would fail today's net-edge / n floors.
