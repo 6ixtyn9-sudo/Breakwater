@@ -242,7 +242,6 @@ def sync_book(
 
     validated_rows = read_validated(validated_path)
     validated_all = [row for row in validated_rows if row.validated]
-    validated_by_id = {row.slice_id: row for row in validated_rows}
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
 

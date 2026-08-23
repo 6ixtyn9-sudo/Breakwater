@@ -636,6 +636,64 @@ def test_risk_cap_skips_wide_stop(tmp_path, monkeypatch):
     assert log.iloc[0]["exit_reason"] == "risk_cap"
 
 
+def test_aggregate_risk_cap_blocks_new_position(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR", "10")
+    result = cycle(
+        tmp_path,
+        signals=[signal(pair="ETHZAR", slice_id="feat:0:SHORT")],
+        frames={
+            "BTCUSDC": frame_with_bar(close=100, high=101, low=99),
+            "ETHZAR": spot_frame(close=100),
+        },
+        positions=open_position(),
+    )
+    assert result["open"] == 1
+    assert result["aggregate_open_risk_zar"] == "7.5000"
+    assert result["aggregate_risk_cap_skips"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "aggregate_risk_cap"
+
+
+def test_breakeven_trailing_stop_contributes_zero_aggregate_risk(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR", "7")
+    position = open_position(stop="100")
+    position[0]["initial_stop_price"] = "95"
+    position[0]["trail_active"] = "1"
+    result = cycle(
+        tmp_path,
+        signals=[signal(pair="ETHZAR", slice_id="feat:0:SHORT")],
+        frames={
+            "BTCUSDC": frame_with_bar(close=101, high=101, low=101),
+            "ETHZAR": spot_frame(close=100),
+        },
+        positions=position,
+    )
+    assert result["open"] == 2
+    assert result["aggregate_open_risk_zar"] == "6.6300"
+    assert result["aggregate_risk_unknown"] is False
+
+
+def test_unknown_aggregate_risk_fails_closed(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR", "100")
+    position = open_position(stop="105")
+    position[0]["side"] = "UNKNOWN"
+    result = cycle(
+        tmp_path,
+        signals=[signal(pair="ETHZAR", slice_id="feat:0:SHORT")],
+        frames={
+            "BTCUSDC": frame_with_bar(close=100, high=101, low=99),
+            "ETHZAR": spot_frame(close=100),
+        },
+        positions=position,
+    )
+    assert result["open"] == 1
+    assert result["aggregate_open_risk_zar"] is None
+    assert result["aggregate_risk_unknown"] is True
+    assert result["aggregate_risk_unknown_skips"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "aggregate_risk_unknown"
+
+
 def test_rotated_sibling_exits_at_close(tmp_path):
     position = open_position(entry="100", stop="95", bars="2")
     position[0]["slice_id"] = "feat_ret_10:2:LONG:h14"

@@ -195,6 +195,7 @@ def test_thin_hostile_evidence_is_flagged_unproven_not_confounded():
 
 def test_relaxed_min_passes_can_be_lower_than_strict(monkeypatch):
     import importlib
+
     import breakwater.validation as v
 
     monkeypatch.setenv("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "0")

@@ -1,9 +1,12 @@
 from decimal import Decimal
-import os
 
 import pytest
 
-from breakwater.execution import PerpetualActivationBlocked, SpotMarginActivationBlocked, TradeExecutor
+from breakwater.execution import (
+    PerpetualActivationBlocked,
+    SpotMarginActivationBlocked,
+    TradeExecutor,
+)
 from breakwater.models import OrderPlan, PairType, Side
 
 

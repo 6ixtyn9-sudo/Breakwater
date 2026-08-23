@@ -66,7 +66,6 @@ from breakwater.research_lifecycle import (
     reconcile_paper_stats_from_log,
 )
 
-
 PAPER_LOG_HEADERS = [
     "closed_at",
     "signal_id",
@@ -260,6 +259,47 @@ def _paper_size(
     return notional_zar
 
 
+def _active_stop_risk_zar(position: dict) -> Decimal | None:
+    """Return the position's current downside at its active stop.
+
+    The current (possibly trailed) stop is used rather than the initial stop.
+    Once a stop has reached or crossed breakeven, the position contributes no
+    downside risk.  ``None`` is deliberately fail-closed: a malformed legacy
+    position must not allow another entry through the aggregate guard.
+    """
+    try:
+        entry = Decimal(str(position["entry_price"]))
+        stop = Decimal(str(position["stop_price"]))
+        notional = Decimal(str(position["notional_zar"]))
+    except (InvalidOperation, KeyError, TypeError, ValueError):
+        return None
+    if not entry.is_finite() or not stop.is_finite() or not notional.is_finite():
+        return None
+    if entry <= 0 or notional < 0:
+        return None
+
+    side = str(position.get("side") or "").upper()
+    if side == "BUY":
+        risk_fraction = max((entry - stop) / entry, Decimal(0))
+    elif side == "SELL":
+        risk_fraction = max((stop - entry) / entry, Decimal(0))
+    else:
+        return None
+    return notional * risk_fraction
+
+
+def _aggregate_stop_risk_zar(positions: list[dict]) -> tuple[Decimal, bool]:
+    total = Decimal(0)
+    unknown = False
+    for position in positions:
+        risk = _active_stop_risk_zar(position)
+        if risk is None:
+            unknown = True
+        else:
+            total += risk
+    return total, unknown
+
+
 def _realised_paper_pnl(log_path: Path) -> Decimal:
     if not log_path.exists():
         return Decimal(0)
@@ -286,6 +326,34 @@ def _realised_paper_pnl(log_path: Path) -> Decimal:
     except OSError:
         return Decimal(0)
     return total
+
+
+def _paper_equity_zar(log_path: Path) -> Decimal:
+    seed = _env_decimal(
+        "BREAKWATER_PAPER_EQUITY_SEED",
+        str(_env_decimal("BREAKWATER_INITIAL_EQUITY_ZAR", "2000")),
+    )
+    return max(seed + _realised_paper_pnl(log_path), Decimal(0))
+
+
+def _aggregate_risk_cap_zar(log_path: Path) -> Decimal | None:
+    """Resolve the paper-only aggregate-risk ceiling.
+
+    An explicit ZAR override takes precedence. Invalid explicit values fail
+    closed (``None``) instead of silently falling back to a larger allowance.
+    """
+    override = os.getenv("BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR")
+    if override is not None and str(override).strip():
+        try:
+            cap = Decimal(str(override))
+        except (InvalidOperation, TypeError, ValueError):
+            return None
+        return cap if cap.is_finite() and cap >= 0 else None
+
+    fraction = _env_decimal("BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY", "0.05")
+    if not fraction.is_finite() or fraction < 0:
+        return None
+    return _paper_equity_zar(log_path) * fraction
 
 
 def _latest_close(frame):
@@ -742,6 +810,12 @@ def run_paper_cycle(
     slot_full = 0
     slice_full = 0
     pair_held = 0
+    aggregate_risk_cap_skips = 0
+    aggregate_risk_unknown_skips = 0
+    aggregate_open_risk_zar, aggregate_position_risk_unknown = _aggregate_stop_risk_zar(
+        surviving
+    )
+    aggregate_risk_cap_zar = _aggregate_risk_cap_zar(log_path)
 
     open_pairs = {str(position["pair"]).upper() for position in surviving}
     open_slice_counts: dict[str, int] = {}
@@ -757,13 +831,7 @@ def run_paper_cycle(
     size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     risk_zar: Decimal | None = None
     if size_from_equity:
-        seed = _env_decimal(
-            "BREAKWATER_PAPER_EQUITY_SEED",
-            str(_env_decimal("BREAKWATER_INITIAL_EQUITY_ZAR", "2000")),
-        )
-        equity = seed + _realised_paper_pnl(log_path)
-        if equity < 0:
-            equity = Decimal(0)
+        equity = _paper_equity_zar(log_path)
         risk_pct = _env_decimal("BREAKWATER_PAPER_RISK_OF_EQUITY", "0.01")
         risk_zar = equity * risk_pct
 
@@ -1021,6 +1089,43 @@ def run_paper_cycle(
             skipped += 1
             continue
 
+        proposed_risk_zar = notional_zar * risk_fraction
+        aggregate_reason = None
+        if aggregate_position_risk_unknown or aggregate_risk_cap_zar is None:
+            aggregate_reason = "aggregate_risk_unknown"
+            aggregate_risk_unknown_skips += 1
+        elif aggregate_open_risk_zar + proposed_risk_zar > aggregate_risk_cap_zar:
+            aggregate_reason = "aggregate_risk_cap"
+            aggregate_risk_cap_skips += 1
+        if aggregate_reason is not None:
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(reference),
+                    "exit_price": "",
+                    "stop_price": str(initial_stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": aggregate_reason,
+                    "entry_guard": aggregate_reason,
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(signal.atr),
+                    "stop_atr_mult": f"{stop_atr_mult:.6f}" if signal.atr > 0 else "",
+                    "risk_fraction": f"{risk_fraction:.8f}",
+                },
+            )
+            skipped += 1
+            continue
+
         signal_horizon = _coerce_int(getattr(signal, "horizon_bars", 0), 0)
         if signal_horizon <= 0:
             signal_horizon = book_horizon_map.get(signal.slice_id, 0)
@@ -1049,10 +1154,17 @@ def run_paper_cycle(
                 "risk_fraction": (f"{risk_fraction:.8f}" if reference > 0 else ""),
             }
         )
+        aggregate_open_risk_zar += proposed_risk_zar
         open_pairs.add(signal.pair.upper())
         open_slice_counts[signal.slice_id] = open_slice_counts.get(signal.slice_id, 0) + 1
 
     write_positions(positions_path, surviving)
+    aggregate_unknown = aggregate_position_risk_unknown or aggregate_risk_cap_zar is None
+    remaining_risk = (
+        max(aggregate_risk_cap_zar - aggregate_open_risk_zar, Decimal(0))
+        if aggregate_risk_cap_zar is not None and not aggregate_position_risk_unknown
+        else None
+    )
     return {
         "closed": len(closed_rows),
         "open": len(surviving),
@@ -1061,4 +1173,16 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "aggregate_open_risk_zar": (
+            None if aggregate_position_risk_unknown else f"{aggregate_open_risk_zar:.4f}"
+        ),
+        "aggregate_risk_cap_zar": (
+            None if aggregate_risk_cap_zar is None else f"{aggregate_risk_cap_zar:.4f}"
+        ),
+        "aggregate_risk_remaining_zar": (
+            None if remaining_risk is None else f"{remaining_risk:.4f}"
+        ),
+        "aggregate_risk_unknown": aggregate_unknown,
+        "aggregate_risk_cap_skips": aggregate_risk_cap_skips,
+        "aggregate_risk_unknown_skips": aggregate_risk_unknown_skips,
     }
