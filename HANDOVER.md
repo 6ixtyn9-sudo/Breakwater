@@ -619,4 +619,10 @@ whether to replace the current method, not a second permanent research system.
 Benchmark runtime and candidate stability manually first. Actual paper remains
 2R while its independent prospective exit policies accumulate.
 
+First hosted `all` audit completed calculations in 16m56s but its state commit
+raced another workflow. The reset removed the new deep_audit directory and the
+restore path failed before push. `commit_state.sh` now recreates every owned
+file's parent after reset, so new nested state paths survive role-based races.
+The failed runner's local audit output was not pushed; rerun after this fix.
+
 END

@@ -44,3 +44,11 @@ def test_only_private_values_use_actions_secrets():
         "VALR_API_SECRET",
         "BREAKWATER_MANDATE_JSON",
     }
+
+
+def test_state_race_restore_recreates_new_nested_directories():
+    text = (ROOT / "scripts" / "commit_state.sh").read_text()
+    restore = text.split("git reset --hard origin/main", 1)[1]
+    mkdir_position = restore.index('mkdir -p "$(dirname "$file")"')
+    copy_position = restore.index('cp "$BACKUP_DIR/$file" "$file"')
+    assert mkdir_position < copy_position

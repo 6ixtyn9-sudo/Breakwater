@@ -113,6 +113,9 @@ for attempt in 1 2 3; do
     if [ ! -f "$BACKUP_DIR/$file" ]; then
       continue
     fi
+    # A role may introduce a new nested state directory that does not yet
+    # exist on origin/main. Recreate it after reset before restoring the file.
+    mkdir -p "$(dirname "$file")"
     if [ "$file" = "localdata/status.csv" ] && git show origin/main:"$file" > "$BACKUP_DIR/orig_status.csv" 2>/dev/null; then
       {
         cat "$BACKUP_DIR/orig_status.csv"
