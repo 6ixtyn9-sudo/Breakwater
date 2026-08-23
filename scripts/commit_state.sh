@@ -33,6 +33,9 @@ guardian_files=(
 hip3_files=(
   localdata/hip3/universe.csv
   localdata/hip3/status.csv
+  localdata/hip3/research/candle_coverage.csv
+  localdata/hip3/research/discovered_slices.csv
+  localdata/hip3/research/validated_slices.csv
 )
 
 files=("${status_files[@]}")

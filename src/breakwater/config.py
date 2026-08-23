@@ -185,6 +185,22 @@ class Settings:
     def hip3_status_path(self) -> Path:
         return self.hip3_data_dir / "status.csv"
 
+    @property
+    def hip3_research_dir(self) -> Path:
+        return self.hip3_data_dir / "research"
+
+    @property
+    def hip3_coverage_path(self) -> Path:
+        return self.hip3_research_dir / "candle_coverage.csv"
+
+    @property
+    def hip3_discovered_path(self) -> Path:
+        return self.hip3_research_dir / "discovered_slices.csv"
+
+    @property
+    def hip3_validated_path(self) -> Path:
+        return self.hip3_research_dir / "validated_slices.csv"
+
 
 def get_settings() -> Settings:
     mode = os.getenv("BREAKWATER_MODE", "readonly").strip().lower()
@@ -215,4 +231,5 @@ def get_settings() -> Settings:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     (settings.data_dir / "research").mkdir(parents=True, exist_ok=True)
     settings.hip3_data_dir.mkdir(parents=True, exist_ok=True)
+    settings.hip3_research_dir.mkdir(parents=True, exist_ok=True)
     return settings

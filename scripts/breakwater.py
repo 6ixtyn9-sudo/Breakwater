@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from breakwater.config import get_settings  # noqa: E402
 from breakwater.engine import BreakwaterEngine, GuardianHalt  # noqa: E402
 from breakwater.hip3 import HyperliquidHip3Discovery, write_hip3_universe  # noqa: E402
+from breakwater.hip3_research import run_hip3_research  # noqa: E402
 from breakwater.status import append_status  # noqa: E402
 
 
@@ -20,7 +21,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "command",
-        choices=["guardian", "shadow-scan", "operate", "research", "hip3-discover", "health"],
+        choices=[
+            "guardian", "shadow-scan", "operate", "research",
+            "hip3-discover", "hip3-research", "health",
+        ],
     )
     parser.add_argument("--max-pairs", type=int, default=12)
     args = parser.parse_args()
@@ -52,6 +56,14 @@ def main() -> int:
                 "readonly",
                 json.dumps(result, sort_keys=True),
             )
+        elif args.command == "hip3-research":
+            result = run_hip3_research(
+                universe_path=settings.hip3_universe_path,
+                coverage_path=settings.hip3_coverage_path,
+                discovered_path=settings.hip3_discovered_path,
+                validated_path=settings.hip3_validated_path,
+                status_path=settings.hip3_status_path,
+            )
         else:
             engine = BreakwaterEngine(settings)
             engine.startup_assertions()
@@ -69,7 +81,7 @@ def main() -> int:
             try:
                 failure_path = (
                     settings.hip3_status_path
-                    if args.command == "hip3-discover"
+                    if args.command in {"hip3-discover", "hip3-research"}
                     else settings.status_path
                 )
                 append_status(failure_path, "failed", settings.mode, detail)

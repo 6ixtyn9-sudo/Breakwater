@@ -474,11 +474,45 @@ Workflow filename (manual creation required because Arena cannot edit workflows)
   .github/workflows/hip3-discovery.yml
 Template:
   templates/hip3-discovery.yml
-External cron target after workflow creation:
-  daily 03:10 UTC
+External cron:
+  none; keep hip3-discovery.yml as a manual inventory diagnostic
 Command:
   PYTHONPATH=src python scripts/breakwater.py hip3-discover
 Persistence role:
   bash scripts/commit_state.sh hip3
+
+
+18) HIP-3 ISOLATED RESEARCH STAGE (2026-08-23, ACTIONED)
+
+Command:
+  PYTHONPATH=src python scripts/breakwater.py hip3-research
+Workflow template:
+  templates/hip3-research.yml
+GitHub workflow filename (operator copies manually):
+  .github/workflows/hip3-research.yml
+External cron (ONE new recurring job, discovery is included first):
+  daily 03:40 UTC
+
+Safety posture:
+  - refreshes HIP-3 inventory before every research pass
+  - excludes inactive/zero-volume names, >2% current mark-oracle deviation,
+    and builder duplicates of validator-operated native crypto
+  - ranks the remaining active universe globally by observed notional volume;
+    default top 60, 1000 hourly bars each
+  - audits bar count and maximum gaps before including a frame
+  - groups evidence by DEX + market class + collateral token, with distinct
+    `kind` pools and prefixed slice IDs; deployer/margin domains never pool
+  - provisional 30 bps all-in research cost; must be replaced by measured
+    DEX/asset fee, funding and slippage before any promotion
+  - default horizons 6, 12 and 24; strict walk-forward/Bonferroni validation
+  - writes isolated candle coverage, discovered and validated files
+  - promotion_enabled=False and paper_enabled=False by design; no monitored
+    HIP-3 book, signal, order or risk allocation is created
+
+Calendar classification remains provisional. Single-name non-crypto products
+are labelled provisional_equity, not trusted equity. The research output is an
+audit corpus to show where continuity and candidate edges exist; it is not yet
+permission to trade. Next gate is authoritative annotations/region calendars,
+collateral resolution and measured costs, then a reviewed promotion policy.
 
 END

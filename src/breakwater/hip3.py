@@ -219,6 +219,61 @@ class HyperliquidHip3Discovery:
         return Hip3UniverseSnapshot(dexs=dexs, rows=tuple(rows), as_of=observed)
 
 
+def read_hip3_universe(path: Path) -> Hip3UniverseSnapshot | None:
+    if not path.exists():
+        return None
+    try:
+        with path.open(newline="") as handle:
+            reader = csv.DictReader(handle)
+            if reader.fieldnames != HIP3_UNIVERSE_HEADERS:
+                raise RuntimeError("HIP-3 universe file has an unsupported schema")
+            rows = []
+            dexs: dict[str, Hip3Dex] = {}
+            for raw in reader:
+                row = Hip3UniverseRow(
+                    dex=raw["dex"],
+                    dex_full_name=raw["dex_full_name"],
+                    deployer=raw["deployer"],
+                    oracle_updater=raw["oracle_updater"],
+                    coin=raw["coin"],
+                    collateral_token=int(raw["collateral_token"]),
+                    active=raw["active"] == "True",
+                    liquidity_rank=int(raw["liquidity_rank"]),
+                    day_notional_volume=Decimal(raw["day_notional_volume"]),
+                    mark_price=Decimal(raw["mark_price"]),
+                    oracle_price=Decimal(raw["oracle_price"]),
+                    previous_day_price=Decimal(raw["previous_day_price"]),
+                    oracle_mark_deviation_fraction=Decimal(
+                        raw["oracle_mark_deviation_fraction"]
+                    ),
+                    funding_rate=Decimal(raw["funding_rate"]),
+                    open_interest=Decimal(raw["open_interest"]),
+                    max_leverage=Decimal(raw["max_leverage"]),
+                    size_decimals=int(raw["size_decimals"]),
+                    margin_mode=raw["margin_mode"],
+                    growth_mode=raw["growth_mode"],
+                    as_of=raw["as_of"],
+                )
+                rows.append(row)
+                dexs.setdefault(
+                    row.dex,
+                    Hip3Dex(
+                        name=row.dex,
+                        full_name=row.dex_full_name,
+                        deployer=row.deployer,
+                        oracle_updater=row.oracle_updater,
+                    ),
+                )
+            as_of = rows[0].as_of if rows else ""
+            return Hip3UniverseSnapshot(
+                dexs=tuple(sorted(dexs.values(), key=lambda dex: dex.name)),
+                rows=tuple(rows),
+                as_of=as_of,
+            )
+    except (OSError, KeyError, ValueError, InvalidOperation) as exc:
+        raise RuntimeError(f"HIP-3 universe file is unreadable: {exc}") from exc
+
+
 def write_hip3_universe(path: Path, snapshot: Hip3UniverseSnapshot) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(

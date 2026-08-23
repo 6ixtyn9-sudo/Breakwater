@@ -252,6 +252,7 @@ set +a
 PYTHONPATH=src python scripts/breakwater.py guardian
 PYTHONPATH=src python scripts/breakwater.py research
 PYTHONPATH=src python scripts/breakwater.py hip3-discover
+PYTHONPATH=src python scripts/breakwater.py hip3-research
 BREAKWATER_MODE=shadow PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 BREAKWATER_MODE=readonly PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
 PYTHONPATH=src python scripts/breakwater.py health
@@ -344,12 +345,19 @@ localdata/hip3/universe.csv
 localdata/hip3/status.csv
 ```
 
-This is discovery only: HIP-3 does not enter the native crypto research book
-or paper cycle. A reviewed workflow template lives at
-`templates/hip3-discovery.yml`. Copy it to
-`.github/workflows/hip3-discovery.yml` from a GitHub-authorized workspace,
-then configure the external dispatcher for **03:10 UTC daily**. Do not rename
-the workflow after creating its external cron job.
+Discovery does not enter the native crypto research book or paper cycle. The
+existing `hip3-discovery.yml` remains a useful manual inventory diagnostic;
+it does not need its own external cron.
+
+The combined daily workflow template is `templates/hip3-research.yml`. It
+refreshes discovery first, then audits up to 60 active non-crypto HIP-3 candle
+histories and runs isolated walk-forward research grouped by DEX, provisional
+market class, and collateral token. It writes candle coverage, discovered
+slices and validated slices,
+but deliberately creates no monitored book: promotion and paper remain off
+until classification/calendar metadata is trustworthy. Copy the template to
+`.github/workflows/hip3-research.yml`, then configure one external dispatcher
+for **03:40 UTC daily**.
 
 ## GitHub configuration
 
