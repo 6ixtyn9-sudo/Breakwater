@@ -163,9 +163,45 @@ def _min_net_edge_floor(kind: str) -> float:
     return max(_min_net_edge(), _cost_bps(kind) * mult / 10000.0)
 
 
-def _directional_edge(row: ValidatedSlice) -> bool:
+def _env_float(name: str, default: str) -> float:
+    try:
+        value = float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return float(default)
+    return value if math.isfinite(value) else float(default)
+
+
+def _pool_edge_floor(pool: list[float], top_quantile: float) -> float:
+    """Net-edge value at which only ``top_quantile`` of the current pool sits
+    at/above it (top 25% -> the 75th percentile). This is the autotune term:
+    the quality bar tracks the pool, so it rises in fat regimes and relaxes
+    in thin ones with no manual number. Too-small pools return 0.0 (the bar
+    then rests on the static + cost floors, which are the safety net)."""
+    if top_quantile <= 0:
+        return 0.0
+    edges = [e for e in pool if e is not None and math.isfinite(e)]
+    if len(edges) < 10:
+        return 0.0
+    if top_quantile >= 1:
+        top_quantile = 0.25
+    ordered = sorted(edges)
+    rank = int(round((1.0 - top_quantile) * (len(ordered) - 1)))
+    return float(ordered[rank])
+
+
+def _effective_floor(kind: str, pool_floors: dict[str, float] | None) -> float:
+    """The bar a slice must clear: the highest of the static quality floor,
+    the cost-linked safety floor, and (when a pool is supplied) the
+    autotuned percentile of the current candidate pool for that kind."""
+    base = _min_net_edge_floor(kind)
+    if not pool_floors:
+        return base
+    return max(base, float(pool_floors.get(str(kind), 0.0)))
+
+
+def _directional_edge(row: ValidatedSlice, pool_floors: dict[str, float] | None = None) -> bool:
     # mean_ret_costadj is NET return for the chosen side (already cost-aware).
-    return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge_floor(row.kind)
+    return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _effective_floor(row.kind, pool_floors)
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -181,7 +217,7 @@ def _concentrated_min_mean() -> float:
         return 0.004
 
 
-def _is_concentrated_candidate(row: ValidatedSlice) -> bool:
+def _is_concentrated_candidate(row: ValidatedSlice, pool_floors: dict[str, float] | None = None) -> bool:
     """Fat, temporally honest edges that fail only the 40% name-breadth rule.
 
     Hunt path (OFF unless BREAKWATER_CONCENTRATED_PROMOTE=1): do not lower
@@ -198,11 +234,11 @@ def _is_concentrated_candidate(row: ValidatedSlice) -> bool:
         return False
     if int(row.n) < 2000 or int(row.breadth_symbols_used) < 10:
         return False
-    # The cost-linked floor applies here too, so the hunt path can never
-    # become a backdoor for a kind whose cost makes the edge uneconomic
-    # (spot at tier-1 cost would otherwise slip in at 40-140 bps).
+    # The autotuned + cost-linked floor applies here too, so the hunt path
+    # can never become a backdoor for a kind whose cost makes the edge
+    # uneconomic (spot at tier-1 cost would otherwise slip in).
     return float(row.mean_ret_costadj) >= max(
-        _concentrated_min_mean(), _min_net_edge_floor(row.kind)
+        _concentrated_min_mean(), _effective_floor(row.kind, pool_floors)
     )
 
 
@@ -287,15 +323,34 @@ def sync_book(
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
 
+    # Autotuned quality bar: a NEW slice must sit inside the top
+    # BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE of this run's candidate pool for
+    # its kind; an EXISTING slice only has to stay inside the looser KEEP
+    # quantile (hysteresis: enter top 25%, survive top 40% - no boundary
+    # flapping). Both are backstopped by the static + cost-linked floors
+    # inside _effective_floor, so the bar can never price an edge below
+    # its cost of doing business.
+    enter_q = _env_float("BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE", "0.25")
+    keep_q = _env_float("BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE", "0.40")
+    pools: dict[str, list[float]] = {}
+    for row in validated_rows:
+        try:
+            edge = float(row.mean_ret_costadj)
+        except (TypeError, ValueError):
+            continue
+        pools.setdefault(str(row.kind), []).append(edge)
+    enter_pool_floors = {k: _pool_edge_floor(v, enter_q) for k, v in pools.items()}
+    keep_pool_floors = {k: _pool_edge_floor(v, keep_q) for k, v in pools.items()}
+
     # Base promotability filter (legacy rules)
     promotable = [
         row
         for row in validated_all
-        if row.n >= MIN_BOOK_ROWS and _directional_edge(row)
+        if row.n >= MIN_BOOK_ROWS and _directional_edge(row, enter_pool_floors)
     ]
     concentrated = [
         row for row in validated_rows
-        if (not row.validated) and _is_concentrated_candidate(row)
+        if (not row.validated) and _is_concentrated_candidate(row, enter_pool_floors)
     ]
     # Prefer full validation; concentrated fills only if the family is absent.
     promotable_ids = {row.slice_id for row in promotable}
@@ -334,6 +389,14 @@ def sync_book(
         "validated": len(validated_all),
         "concentrated": len(concentrated),
         "promotable": len(promotable),
+        # The effective bar this run (bps per kind): the highest of the
+        # static floor, the cost-linked floor, and the pool percentile.
+        "net_edge_floor_enter_bps": {
+            k: f"{_effective_floor(k, enter_pool_floors) * 10000:.1f}" for k in sorted(pools)
+        },
+        "net_edge_floor_keep_bps": {
+            k: f"{_effective_floor(k, keep_pool_floors) * 10000:.1f}" for k in sorted(pools)
+        },
         "multi_horizon_min_passes": min_passes,
         "multi_horizon_select": select_mode,
         "families_considered": families_considered,
@@ -398,7 +461,7 @@ def sync_book(
                 "stop_atr_mult": f"{row.stop_atr_mult:.3f}",
                 "source": (
                     "validated_concentrated"
-                    if (not row.validated and _is_concentrated_candidate(row))
+                    if (not row.validated and _is_concentrated_candidate(row, enter_pool_floors))
                     else PROVENANCE_VALIDATED
                 ),
                 "hostile_unproven": "True" if row.hostile_unproven else "False",
@@ -412,7 +475,8 @@ def sync_book(
             n_rows = int(row.get("n") or 0)
         except (TypeError, ValueError):
             return False
-        return n_rows >= MIN_BOOK_ROWS and edge >= _min_net_edge_floor(row.get("kind", ""))
+        # Hysteresis: existing slices face the looser KEEP quantile.
+        return n_rows >= MIN_BOOK_ROWS and edge >= _effective_floor(row.get("kind", ""), keep_pool_floors)
 
     def _paper_green(row: dict) -> bool:
         trades = _coerce_int(row.get("paper_trades"), 0)

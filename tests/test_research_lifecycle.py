@@ -425,6 +425,82 @@ def test_min_net_edge_floor_mult_zero_disables_cost_term(monkeypatch):
     assert rl._min_net_edge_floor("PERP") == 0.002
 
 
+def test_pool_edge_floor_percentile():
+    from breakwater import research_lifecycle as rl
+
+    pool = list(range(1, 101))
+    assert rl._pool_edge_floor(pool, 0.25) == 75  # top 25% of 1..100 starts at 75
+    assert rl._pool_edge_floor(pool, 0.0) == 0.0
+    assert rl._pool_edge_floor([1, 2, 3], 0.25) == 0.0  # too small to trust
+
+
+def _perp_row(mean_bps, *, slice_id, validated=False, n=100):
+    return ValidatedSlice(
+        slice_id=slice_id,
+        kind="PERP",
+        feature="feat",
+        state=0,
+        side="LONG",
+        folds=5,
+        walk_forward_pass_pattern="11111",
+        walk_forward_pass_count=5,
+        fold_mean_rets="0.001,0.001,0.001,0.001,0.001",
+        fold_sizes="20,20,20,20,20",
+        n=n,
+        mean_ret_costadj=mean_bps / 10000.0,
+        p_value=0.001,
+        validated=validated,
+        horizon_bars=1,
+    )
+
+
+def _autotune_env(monkeypatch):
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE", "0.25")
+
+
+def test_autotune_bar_rises_with_a_fat_pool(tmp_path, monkeypatch):
+    """Static bar is 20 bps, but the pool's top-25% mark sits at 30 bps, so
+    the effective bar rises to 30: a 25 bps slice is refused, 35 bps passes."""
+    _autotune_env(monkeypatch)
+    pool = (
+        [_perp_row(10, slice_id=f"p10:{i}") for i in range(10)]
+        + [_perp_row(20, slice_id=f"p20:{i}") for i in range(10)]
+        + [_perp_row(30, slice_id=f"p30:{i}") for i in range(10)]
+        + [_perp_row(40, slice_id=f"p40:{i}") for i in range(8)]
+        + [_perp_row(25, slice_id="mid:25:LONG", validated=True)]
+        + [_perp_row(35, slice_id="top:35:LONG", validated=True)]
+    )
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, pool)
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["net_edge_floor_enter_bps"]["PERP"] == "30.0"
+    assert summary["promotable"] == 1
+    rows = read_book(book_path)
+    assert [r["slice_id"] for r in rows] == ["top:35:LONG"]
+
+
+def test_autotune_bar_never_stricter_than_static_in_thin_pool(tmp_path, monkeypatch):
+    """A thin pool (top-25% mark ~15 bps) must not tighten the bar below the
+    static 20 bps guarantee: the 25 bps slice still promotes."""
+    _autotune_env(monkeypatch)
+    pool = (
+        [_perp_row(5, slice_id=f"t5:{i}") for i in range(13)]
+        + [_perp_row(10, slice_id=f"t10:{i}") for i in range(13)]
+        + [_perp_row(15, slice_id=f"t15:{i}") for i in range(13)]
+        + [_perp_row(25, slice_id="solo:25:LONG", validated=True)]
+    )
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, pool)
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["net_edge_floor_enter_bps"]["PERP"] == "20.0"
+    assert summary["monitored"] == 1
+    assert read_book(book_path)[0]["slice_id"] == "solo:25:LONG"
+
+
 def test_concentrated_path_respects_cost_linked_floor(monkeypatch):
     """The hunt path must not be a backdoor: a spot edge above the static 40
     bps bar but below the cost-linked 140 bps floor is not promotable."""
