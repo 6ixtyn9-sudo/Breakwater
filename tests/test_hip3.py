@@ -199,6 +199,10 @@ def test_market_session_is_derived_from_class_not_a_variable():
     assert hip3_in_market_session("equity", datetime(2026, 1, 15, 15, 0, tzinfo=utc))  # winter 10:00 ET
     assert not hip3_in_market_session("equity", datetime(2026, 1, 15, 14, 0, tzinfo=utc))  # winter pre-open
     assert not hip3_in_market_session("equity", datetime(2026, 8, 22, 15, 0, tzinfo=utc))  # Saturday
+    # Close boundary (regression: the 19:00Z bar ends AT the 16:00 close
+    # auction and must be IN-session; the next bar is after-hours).
+    assert hip3_in_market_session("equity", datetime(2026, 8, 25, 20, 0, tzinfo=utc))  # 16:00 ET close
+    assert not hip3_in_market_session("equity", datetime(2026, 8, 25, 21, 0, tzinfo=utc))  # 17:00 ET after-hours
 
     # 24/7 classes ungated; unknown/missing fail closed.
     assert hip3_in_market_session("builder_crypto", datetime(2026, 8, 25, 3, 0, tzinfo=utc))

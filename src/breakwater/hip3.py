@@ -443,7 +443,8 @@ def hip3_in_market_session(market_class: str | None, bar_end) -> bool:
     the class's live session.
 
     24/7 classes always pass. Restricted classes must be inside NYSE regular
-    hours (Mon-Fri 09:30-16:00 America/New_York via zoneinfo; when tzdata is
+    hours (Mon-Fri 09:30-16:00 America/New_York via zoneinfo, close INCLUSIVE
+    - a fill at the 16:00 close auction is in-session; when tzdata is
     unavailable the winter UTC window 14:30-20:00 is used as a conservative
     fallback - it can delay summer entries by an hour but never admits a
     pre-open fill). Unknown or missing classes fail closed.
@@ -462,11 +463,11 @@ def hip3_in_market_session(market_class: str | None, bar_end) -> bool:
         return (
             local.weekday() < 5
             and local.time() >= _dt_time(9, 30)
-            and local.time() < _dt_time(16, 0)
+            and local.time() <= _dt_time(16, 0)
         )
     except Exception:
         return (
             stamp.weekday() < 5
             and stamp.time() >= _dt_time(14, 30)
-            and stamp.time() < _dt_time(20, 0)
+            and stamp.time() <= _dt_time(20, 0)
         )
