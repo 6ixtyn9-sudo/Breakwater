@@ -26,6 +26,8 @@ from breakwater.config import Settings
 from breakwater.discovery import prepare_pooled
 from breakwater.execution import TradeExecutor
 from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_features
+from breakwater.hip3 import read_hip3_universe
+from breakwater.hip3_research import classify_market
 from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.ledger import Ledger
 from breakwater.market import (
@@ -36,7 +38,7 @@ from breakwater.market import (
 from breakwater.models import Candle, Lifecycle, PairType
 from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
 from breakwater.paper_trade import append_log, read_positions, run_paper_cycle
-from breakwater.perpdata import fetch_perp_candles_for_pair, pair_to_coin
+from breakwater.perpdata import fetch_perp_candles, fetch_perp_candles_for_pair, pair_to_coin
 from breakwater.promotion import PromotionRegistry
 from breakwater.research_lifecycle import read_book
 from breakwater.risk import RiskManager
@@ -245,12 +247,23 @@ class BreakwaterEngine:
         perp_count = max(60, min(5000, perp_count))
 
         for pair, kind in targets:
-            if kind == "PERP" and pair_to_coin(pair) is None:
-                # Designed skip (HIP-3 xyz: / unmapped). Not a fetch error.
-                continue
+            if kind == "PERP":
+                coin = pair_to_coin(pair) or (pair if ":" in pair else None)
+                if coin is None:
+                    # Designed skip (unmapped native pair). Not a fetch error.
+                    continue
+            else:
+                coin = None
             try:
                 if kind == "PERP":
-                    candles = fetch_perp_candles_for_pair(pair, count=perp_count)
+                    # Native pairs resolve through the USDC mapping; HIP-3
+                    # prefixed coins (dex:ASSET) are their own coin on the
+                    # same public candle endpoint.
+                    candles = (
+                        fetch_perp_candles(coin, count=perp_count)
+                        if ":" in pair
+                        else fetch_perp_candles_for_pair(pair, count=perp_count)
+                    )
                 else:
                     candles = fetch_recent_candles(
                         self.client, pair, server_time, count=spot_count
@@ -364,6 +377,23 @@ class BreakwaterEngine:
         )
         return result
 
+    def _hip3_paper_ready(self) -> bool:
+        """True when the latest HIP-3 research run armed the paper book.
+
+        The gate file is written by the HIP-3 research workflow; a missing or
+        unreadable file fails closed (no HIP-3 paper entries).
+        """
+        try:
+            payload = json.loads(self.settings.hip3_gate_path.read_text())
+        except (OSError, ValueError, TypeError):
+            return False
+        return bool(payload.get("paper_ready"))
+
+    @staticmethod
+    def _hip3_group_from_slice(slice_id: str) -> str:
+        head = str(slice_id).split(":", 1)[0]
+        return head[len("hip3_"):] if head.startswith("hip3_") else head
+
     def shadow_scan(self, *, max_pairs: int = 12) -> dict:
         server_time, _ = self._server_state()
         self.catalog.refresh()
@@ -379,6 +409,53 @@ class BreakwaterEngine:
             for pair in universe.ranked(kind, max_pairs)
         ]
         seen = {(pair.upper(), kind) for pair, kind in targets}
+
+        # HIP-3 paper path: opt-in (BREAKWATER_HIP3_PAPER) AND the research
+        # run must have armed it in gate.json. Off by default, in which case
+        # the native scan below runs exactly as before.
+        hip3_active = False
+        hip3_book_rows: list[dict] = []
+        hip3_universe = None
+        native_crypto: set[str] = set()
+        hip3_flag = str(os.getenv("BREAKWATER_HIP3_PAPER", "0")).strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+        if hip3_flag and self._hip3_paper_ready():
+            hip3_book_rows = [
+                row
+                for row in read_book(self.settings.hip3_book_path)
+                if row.get("status") == "monitored"
+            ]
+            if hip3_book_rows:
+                hip3_universe = read_hip3_universe(self.settings.hip3_universe_path)
+                native_crypto = {
+                    coin
+                    for coin in (
+                        pair_to_coin(pair) for pair in universe.symbols("PERP")
+                    )
+                    if coin
+                }
+                groups_in_book = {
+                    self._hip3_group_from_slice(str(row["slice_id"]))
+                    for row in hip3_book_rows
+                }
+                if hip3_universe is not None:
+                    for row in hip3_universe.rows:
+                        if not row.active:
+                            continue
+                        market_class = classify_market(
+                            row.coin, native_crypto,
+                            annotation_category=row.annotation_category,
+                        )
+                        group = f"{row.dex}_{market_class}_c{row.collateral_token}"
+                        if group not in groups_in_book:
+                            continue
+                        key = (row.coin.upper(), "PERP")
+                        if key not in seen:
+                            targets.append((row.coin, "PERP"))
+                            seen.add(key)
+                    hip3_active = True
+
         for position in read_positions(
             self.settings.data_dir / "research" / "paper_positions.json"
         ):
@@ -389,9 +466,14 @@ class BreakwaterEngine:
                 seen.add((pair, kind))
         frames, frame_errors = self._frames(targets, server_time)
         frames_by_kind: dict[str, dict] = {"SPOT": {}, "PERP": {}}
+        hip3_frames: dict[str, dict] = {}
         for pair, kind in targets:
             frame = frames.get(pair.upper())
-            if frame is not None:
+            if frame is None:
+                continue
+            if kind == "PERP" and ":" in pair.upper():
+                hip3_frames[pair.upper()] = frame
+            else:
                 frames_by_kind[kind][pair.upper()] = frame
         signals: list[SliceSignal] = []
         blocked: list[dict] = []
@@ -399,8 +481,42 @@ class BreakwaterEngine:
             signals, blocked = monitor_book(
                 book_rows, frames_by_kind, server_time=server_time
             )
-        else:
+        elif not hip3_active:
             signals = self._big_wave_fallback(targets, frames, server_time)
+        if hip3_active:
+            # Group-scoped matching: a HIP-3 slice validated on one
+            # dex/class/collateral group must only fire on frames from that
+            # group, never on native frames or other HIP-3 groups.
+            groups_rows: dict[str, list[dict]] = {}
+            for row in hip3_book_rows:
+                groups_rows.setdefault(
+                    self._hip3_group_from_slice(str(row["slice_id"])), []
+                ).append(row)
+            groups_frames: dict[str, dict] = {}
+            if hip3_universe is not None:
+                for coin, frame in hip3_frames.items():
+                    row = next(
+                        (u for u in hip3_universe.rows if u.coin.upper() == coin),
+                        None,
+                    )
+                    if row is None:
+                        continue
+                    market_class = classify_market(
+                        row.coin, native_crypto,
+                        annotation_category=row.annotation_category,
+                    )
+                    groups_frames.setdefault(
+                        f"{row.dex}_{market_class}_c{row.collateral_token}", {}
+                    )[coin] = frame
+            for group, rows in groups_rows.items():
+                group_frames = groups_frames.get(group)
+                if not group_frames:
+                    continue
+                group_signals, group_blocked = monitor_book(
+                    rows, {"PERP": group_frames}, server_time=server_time
+                )
+                signals.extend(group_signals)
+                blocked.extend(group_blocked)
         paper_result = None
         if self.settings.mode in {"shadow", "live"} and self.risk is not None:
             valuator = EquityValuator(self.client, self.catalog.refresh())
@@ -408,7 +524,9 @@ class BreakwaterEngine:
                 usdc_zar = valuator.rate_to_zar("USDC")
             except Exception:
                 usdc_zar = Decimal("16.29")
-            book_slice_ids = {str(row["slice_id"]) for row in book_rows}
+            book_slice_ids = {
+                str(row["slice_id"]) for row in book_rows
+            } | {str(row["slice_id"]) for row in hip3_book_rows}
             paper_result = run_paper_cycle(
                 signals=signals,
                 frames=frames,
@@ -422,6 +540,7 @@ class BreakwaterEngine:
                 book_path=self.settings.book_path,
                 book_slice_ids=book_slice_ids,
                 server_time=server_time,
+                hip3_book_path=self.settings.hip3_book_path if hip3_active else None,
             )
             for entry in blocked:
                 append_log(
@@ -467,6 +586,10 @@ class BreakwaterEngine:
                 kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
             },
             "book_slices": len(book_rows),
+            "hip3_paper": {
+                "active": hip3_active,
+                "book_slices": len(hip3_book_rows),
+            },
             "pairs_checked": len(frames),
             "pair_errors": errors,
             "signals": payloads,

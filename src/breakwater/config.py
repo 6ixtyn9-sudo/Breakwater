@@ -232,6 +232,14 @@ class Settings:
         return self.hip3_research_dir / "candle_coverage.csv"
 
     @property
+    def hip3_book_path(self) -> Path:
+        return self.hip3_research_dir / "monitored_slices.csv"
+
+    @property
+    def hip3_gate_path(self) -> Path:
+        return self.hip3_data_dir / "gate.json"
+
+    @property
     def hip3_discovered_path(self) -> Path:
         return self.hip3_research_dir / "discovered_slices.csv"
 

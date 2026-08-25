@@ -94,6 +94,7 @@ def signal(
     atr="1",
     kind="SPOT",
     edge=0.001,
+    horizon=0,
 ):
     now = datetime.now(timezone.utc)
     return SliceSignal(
@@ -112,6 +113,7 @@ def signal(
         edge=float(edge),
         stop_atr_mult=2.0,
         regime="neutral",
+        horizon_bars=int(horizon),
     )
 
 
@@ -794,3 +796,160 @@ def test_rotated_sibling_exits_at_close(tmp_path):
     assert result["closed"] == 1
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["exit_reason"] == "rotated"
+
+
+HIP3_HEADERS = [
+    "slice_id", "kind", "feature", "state", "side", "status", "validated_at",
+    "last_signal_bar", "paper_trades", "paper_wins", "paper_losses",
+    "paper_pnl_zar", "cooldown_until", "mean_ret_costadj", "n", "p_value",
+    "horizon_bars", "stop_atr_mult", "source", "hostile_unproven",
+    "edge_is_directional_net",
+]
+
+
+def write_book_row(path, slice_id, *, horizon="5", kind="PERP", side="LONG"):
+    row = {header: "" for header in HIP3_HEADERS}
+    row.update(
+        {
+            "slice_id": slice_id,
+            "kind": kind,
+            "feature": "feat",
+            "state": "0",
+            "side": side,
+            "status": "monitored",
+            "validated_at": "2026-08-14T00:00:00+00:00",
+            "paper_trades": "0",
+            "paper_wins": "0",
+            "paper_losses": "0",
+            "paper_pnl_zar": "0.0000",
+            "mean_ret_costadj": "0.0021",
+            "n": "100",
+            "p_value": "0.010000",
+            "horizon_bars": horizon,
+            "stop_atr_mult": "2.000",
+            "source": "validated_walk_forward",
+            "hostile_unproven": "False",
+            "edge_is_directional_net": "True",
+        }
+    )
+    path.write_text(
+        ",".join(HIP3_HEADERS) + "\n" + ",".join(row[h] for h in HIP3_HEADERS) + "\n"
+    )
+    return path
+
+
+def read_book_rows(path):
+    import csv
+
+    with path.open(newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=BOOK):
+    import os
+
+    os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
+    os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
+    os.environ.setdefault("BREAKWATER_PAPER_RISK_TO_MEAN_K", "0")
+    os.environ.setdefault("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "0")
+    positions_path = tmp_path / "positions.json"
+    if positions is not None:
+        positions_path.write_text(json.dumps(positions))
+    return run_paper_cycle(
+        signals=signals,
+        frames=frames,
+        policy=policy(),
+        usdc_zar=Decimal("16.29"),
+        positions_path=positions_path,
+        log_path=tmp_path / "log.csv",
+        cooldown_path=tmp_path / "cooldown.json",
+        book_path=tmp_path / "book.csv",
+        book_slice_ids=book,
+        server_time=datetime.now(timezone.utc),
+        hip3_book_path=hip3_book,
+    )
+
+
+def test_hip3_position_exits_on_hip3_book_horizon(tmp_path):
+    hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
+    position = dict(open_position()[0])
+    position.update(pair="XYZ:NVDA", slice_id="hip3_xyz_index_c0:feat:0:LONG:h5", bars_held="6")
+    result = hip3_cycle(
+        tmp_path,
+        signals=[],
+        frames={"XYZ:NVDA": frame_with_bar(close=100)},
+        positions=[position],
+        hip3_book=hip3_book,
+        book={"hip3_xyz_index_c0:feat:0:LONG:h5"},
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "horizon"
+    # Feedback landed in the HIP-3 book, not the (absent) native book.
+    rows = read_book_rows(hip3_book)
+    assert rows[0]["paper_trades"] == "1"
+
+
+def recent_frame(pair, close, high=None, low=None):
+    # Bar at the current hour: a stop-out cooldown (24h) must not already be
+    # expired when read_book's reactivation pass runs.
+    start = pd.Timestamp(datetime.now(timezone.utc).replace(second=0, microsecond=0))
+    return pd.DataFrame(
+        [
+            {
+                "start": start,
+                "symbol": pair,
+                "open": close,
+                "high": high if high is not None else close,
+                "low": low if low is not None else close,
+                "close": close,
+                "volume": 100,
+            }
+        ]
+    )
+
+
+def test_hip3_stop_out_routes_feedback_to_hip3_book_only(tmp_path):
+    hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
+    native_book = write_book_row(tmp_path / "book.csv", "feat:0:LONG", horizon="5")
+    position = dict(open_position()[0])
+    position.update(pair="XYZ:NVDA", slice_id="hip3_xyz_index_c0:feat:0:LONG:h5")
+    result = hip3_cycle(
+        tmp_path,
+        signals=[],
+        frames={"XYZ:NVDA": recent_frame("XYZ:NVDA", 94, low=93)},
+        positions=[position],
+        hip3_book=hip3_book,
+        book={"feat:0:LONG", "hip3_xyz_index_c0:feat:0:LONG:h5"},
+    )
+    assert result["closed"] == 1
+    hip3_rows = read_book_rows(hip3_book)
+    assert hip3_rows[0]["paper_trades"] == "1"
+    assert hip3_rows[0]["status"] == "cooldown"
+    native_rows = read_book_rows(native_book)
+    assert native_rows[0]["paper_trades"] == "0"
+    assert native_rows[0]["status"] == "monitored"
+
+
+def test_hip3_signal_opens_position_with_hip3_book_horizon(tmp_path):
+    hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
+    sig = signal(
+        pair="XYZ:NVDA",
+        slice_id="hip3_xyz_index_c0:feat:0:LONG:h5",
+        kind="PERP",
+        entry="100",
+        stop="99",
+        atr="0.5",
+    )
+    result = hip3_cycle(
+        tmp_path,
+        signals=[sig],
+        frames={"XYZ:NVDA": frame_with_bar(close=100)},
+        hip3_book=hip3_book,
+        book={"hip3_xyz_index_c0:feat:0:LONG:h5"},
+    )
+    assert result["open"] == 1
+    positions = read_positions(tmp_path / "positions.json")
+    assert positions[0]["slice_id"] == "hip3_xyz_index_c0:feat:0:LONG:h5"
+    assert positions[0]["entry_guard"] == "passed"
+    assert positions[0]["horizon_bars"] == "5"

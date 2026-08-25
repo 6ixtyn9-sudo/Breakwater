@@ -27,6 +27,7 @@ from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_fea
 from breakwater.hip3 import Hip3UniverseRow, read_hip3_universe
 from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.perpdata import fetch_perp_candles
+from breakwater.research_lifecycle import read_book, sync_book
 from breakwater.status import append_status
 from breakwater.validation import validate_slices, write_validated
 
@@ -326,6 +327,44 @@ def _stratified_select(
     return selected
 
 
+# A live decision needs this many completed HIP-3 paper round trips (and the
+# same number of ghost comparisons) with positive net PnL before the live gate
+# can report ready.
+HIP3_LIVE_MIN_PAPER_TRADES = 25
+HIP3_SLICE_PREFIX = "hip3_"
+
+
+def _hip3_paper_evidence(paper_log_rows, cf_rows) -> dict:
+    """Count realised HIP-3 paper round trips and ghost comparisons.
+
+    Both logs are the shared paper logs; HIP-3 rows are identified by the
+    hip3_ slice-id prefix.
+    """
+    closed = [
+        row
+        for row in paper_log_rows
+        if str(row.get("slice_id") or "").startswith(HIP3_SLICE_PREFIX)
+        and str(row.get("outcome") or "") in {"win", "loss"}
+    ]
+    pnl = 0.0
+    for row in closed:
+        try:
+            pnl += float(row.get("pnl_zar") or 0.0)
+        except (TypeError, ValueError):
+            pass
+    ghosts = sum(
+        1
+        for row in cf_rows
+        if str(row.get("slice_id") or "").startswith(HIP3_SLICE_PREFIX)
+    )
+    return {
+        "closed_trades": len(closed),
+        "pnl_zar": round(pnl, 4),
+        "ghost_rows": ghosts,
+        "minimum_trades": HIP3_LIVE_MIN_PAPER_TRADES,
+    }
+
+
 def _promotion_gate(
     *,
     selected: list[tuple[Hip3UniverseRow, str]],
@@ -334,14 +373,17 @@ def _promotion_gate(
     measured_cost_bps: float | None,
     base_taker_fee_bps: float,
     confirmed_collateral_token: int | None,
+    paper_evidence: dict,
 ) -> dict:
-    """Evaluate every promotion blocker against committed, checkable evidence.
+    """Evaluate promotion blockers in two stages.
 
-    This is a status mechanism, not a promotion path: this lane writes no
-    monitored book and feeds no paper or live execution regardless of the
-    outcome. The gate exists so the lock has explicit, observable criteria
-    instead of a static list, and so each resolution is recorded where it
-    happened.
+    Paper readiness (the first three blockers) arms the HIP-3 paper book:
+    paper is a measurement instrument, not live capital, so it must not
+    require its own output (the paper-evidence blocker) to start. Live
+    readiness requires all six, including paper and ghost evidence, and is
+    the checklist that unblocks real capital. This module still writes no
+    monitored book of its own and feeds no execution; the paper book it can
+    arm is consumed only by the paper engine behind BREAKWATER_HIP3_PAPER.
     """
     provisional = [cls for _, cls in selected if cls.startswith("provisional")]
     classification_resolved = bool(selected) and not provisional
@@ -350,28 +392,25 @@ def _promotion_gate(
         and {row.collateral_token for row, _ in selected} == {confirmed_collateral_token}
     )
     costs_resolved = measured_cost_bps is not None
+    paper_resolved = (
+        paper_evidence["closed_trades"] >= HIP3_LIVE_MIN_PAPER_TRADES
+        and paper_evidence["ghost_rows"] >= HIP3_LIVE_MIN_PAPER_TRADES
+        and paper_evidence["pnl_zar"] > 0
+    )
     blockers = [
         {
             "name": "market_classification_not_fully_authoritative",
             "resolved": classification_resolved,
+            "stage": "paper",
             "evidence": (
                 f"{len(selected) - len(provisional)}/{len(selected)} selected coins in an "
                 f"authoritative class ({len(provisional)} provisional)"
             ),
         },
         {
-            "name": "market_calendars_not_enforced",
-            "resolved": False,
-            "evidence": "research treats all HIP-3 sessions as 24/7; equity/FX/commodity calendars are not modeled",
-        },
-        {
-            "name": "historical_oracle_quality_not_available",
-            "resolved": False,
-            "evidence": "oracle prints are not exposed by the API; cross-DEX divergence proxy not implemented",
-        },
-        {
             "name": "effective_costs_not_measured",
             "resolved": costs_resolved,
+            "stage": "paper",
             "evidence": (
                 f"l2 samples {len(spread_samples)}/{MIN_SPREAD_SAMPLES} minimum; "
                 + (
@@ -385,6 +424,7 @@ def _promotion_gate(
         {
             "name": "collateral_tokens_not_resolved",
             "resolved": collateral_resolved,
+            "stage": "paper",
             "evidence": (
                 f"distinct collateral token ids in selected: "
                 f"{sorted({row.collateral_token for row, _ in selected})}"
@@ -396,17 +436,62 @@ def _promotion_gate(
             ),
         },
         {
-            "name": "no_hip3_paper_evidence",
+            "name": "market_calendars_not_enforced",
             "resolved": False,
-            "evidence": "no HIP-3 paper lane exists; a paper path must be designed and run before any promotion",
+            "stage": "live",
+            "evidence": "research treats all HIP-3 sessions as 24/7; equity/FX/commodity calendars are not modeled",
+        },
+        {
+            "name": "historical_oracle_quality_not_available",
+            "resolved": False,
+            "stage": "live",
+            "evidence": "oracle prints are not exposed by the API; cross-DEX divergence proxy not implemented",
+        },
+        {
+            "name": "no_hip3_paper_evidence",
+            "resolved": paper_resolved,
+            "stage": "live",
+            "evidence": (
+                f"hip3 paper closed {paper_evidence['closed_trades']}/"
+                f"{HIP3_LIVE_MIN_PAPER_TRADES} (pnl {paper_evidence['pnl_zar']} ZAR), "
+                f"ghost rows {paper_evidence['ghost_rows']}; requires positive pnl"
+            ),
         },
     ]
-    unresolved = [blocker["name"] for blocker in blockers if not blocker["resolved"]]
+    paper_unresolved = [
+        blocker["name"]
+        for blocker in blockers
+        if blocker["stage"] == "paper" and not blocker["resolved"]
+    ]
+    live_unresolved = [blocker["name"] for blocker in blockers if not blocker["resolved"]]
     return {
         "blockers": blockers,
-        "unresolved": unresolved,
-        "all_resolved": not unresolved,
+        "paper_unresolved": paper_unresolved,
+        "live_unresolved": live_unresolved,
+        "paper_ready": not paper_unresolved,
+        "live_ready": not live_unresolved,
+        "paper_evidence": paper_evidence,
     }
+
+
+def write_paper_gate(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            json.dump(payload, handle, indent=1, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
 
 
 def run_hip3_research(
@@ -416,6 +501,10 @@ def run_hip3_research(
     discovered_path: Path,
     validated_path: Path,
     status_path: Path,
+    book_path: Path | None = None,
+    gate_path: Path | None = None,
+    paper_log_path: Path | None = None,
+    counterfactual_log_path: Path | None = None,
 ) -> dict:
     universe = read_hip3_universe(universe_path)
     if universe is None or not universe.rows:
@@ -532,7 +621,10 @@ def run_hip3_research(
     for research_group, frames in sorted(frames_by_group.items()):
         pooled = _pool(frames)
         researched_by_group[research_group] = len(frames)
-        kind = f"HIP3_{research_group.upper()}"
+        # Book-facing kind is PERP: these are perpetuals, so the paper engine's
+        # fee, sizing, and frame routing treat them exactly like native perps.
+        # Group identity lives in the hip3_-prefixed slice id.
+        kind = "PERP"
         for horizon in horizons:
             prepared = prepare_pooled(
                 pooled, FEATURE_COLUMNS, effective_cost, horizon_bars=horizon
@@ -559,6 +651,20 @@ def run_hip3_research(
         classify_market(row.coin, native_crypto, row.annotation_category)
         for row, _ in selected
     ]
+    paper_log_rows: list[dict] = []
+    if paper_log_path is not None and paper_log_path.exists():
+        try:
+            with paper_log_path.open(newline="") as handle:
+                paper_log_rows = list(csv.DictReader(handle))
+        except OSError:
+            paper_log_rows = []
+    cf_rows: list[dict] = []
+    if counterfactual_log_path is not None and counterfactual_log_path.exists():
+        try:
+            with counterfactual_log_path.open(newline="") as handle:
+                cf_rows = list(csv.DictReader(handle))
+        except OSError:
+            cf_rows = []
     promotion_gate = _promotion_gate(
         selected=selected,
         spread_samples=spread_values,
@@ -566,7 +672,34 @@ def run_hip3_research(
         measured_cost_bps=measured_cost,
         base_taker_fee_bps=base_taker_fee_bps,
         confirmed_collateral_token=confirmed_collateral,
+        paper_evidence=_hip3_paper_evidence(paper_log_rows, cf_rows),
     )
+
+    # Paper book: synced only while the paper gate is ready; frozen (kept, not
+    # maintained) otherwise. This book feeds only the HIP-3 paper path.
+    book_sync = None
+    book_rows_now = 0
+    book_frozen = True
+    if book_path is not None:
+        if promotion_gate["paper_ready"]:
+            book_sync = sync_book(validated_path=validated_path, book_path=book_path)
+            book_frozen = False
+            book_rows_now = book_sync.get("rows_total_after_sync", 0)
+        else:
+            book_rows_now = len(read_book(book_path)) if book_path.exists() else 0
+    if gate_path is not None:
+        write_paper_gate(
+            gate_path,
+            {
+                "as_of": observed,
+                "paper_ready": promotion_gate["paper_ready"],
+                "live_ready": promotion_gate["live_ready"],
+                "paper_unresolved": promotion_gate["paper_unresolved"],
+                "live_unresolved": promotion_gate["live_unresolved"],
+                "book_rows": book_rows_now,
+                "book_frozen": book_frozen,
+            },
+        )
     result = {
         "as_of": observed,
         "universe_as_of": universe.as_of,
@@ -601,7 +734,12 @@ def run_hip3_research(
             "assumed_cost_bps": cost_bps,
         },
         "methodology_parity": parity,
-        "promotion_blocked_reasons": promotion_gate["unresolved"],
+        "hip3_paper_book": {
+            "frozen": book_frozen,
+            "rows": book_rows_now,
+            "sync": book_sync,
+        },
+        "promotion_blocked_reasons": promotion_gate["live_unresolved"],
         "promotion_gate": promotion_gate,
     }
     append_status(

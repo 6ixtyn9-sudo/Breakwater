@@ -5,6 +5,7 @@ from breakwater.hip3 import Hip3UniverseRow
 from breakwater.hip3_research import (
     MIN_SPREAD_SAMPLES,
     _candidate_rows,
+    _hip3_paper_evidence,
     _horizons,
     _methodology_parity,
     _promotion_gate,
@@ -151,6 +152,14 @@ def test_measured_round_trip_cost_requires_minimum_samples():
     assert measured_round_trip_cost_bps(spreads, base_taker_fee_bps=4.5) == 19.0
 
 
+_EMPTY_EVIDENCE = {
+    "closed_trades": 0,
+    "pnl_zar": 0.0,
+    "ghost_rows": 0,
+    "minimum_trades": 25,
+}
+
+
 def _gate_kwargs(**overrides):
     kwargs = dict(
         selected=[(row("xyz:NVDA", annotation_category="equities"), "equity")],
@@ -159,6 +168,7 @@ def _gate_kwargs(**overrides):
         measured_cost_bps=None,
         base_taker_fee_bps=4.5,
         confirmed_collateral_token=None,
+        paper_evidence=dict(_EMPTY_EVIDENCE),
     )
     kwargs.update(overrides)
     return kwargs
@@ -167,7 +177,8 @@ def _gate_kwargs(**overrides):
 def test_promotion_gate_reports_all_six_blockers_and_shrinks_on_evidence():
     gate = _promotion_gate(**_gate_kwargs())
     assert len(gate["blockers"]) == 6
-    assert not gate["all_resolved"]
+    assert not gate["paper_ready"]
+    assert not gate["live_ready"]
     assert {b["name"] for b in gate["blockers"]} == {
         "market_classification_not_fully_authoritative",
         "market_calendars_not_enforced",
@@ -177,8 +188,8 @@ def test_promotion_gate_reports_all_six_blockers_and_shrinks_on_evidence():
         "no_hip3_paper_evidence",
     }
     gate2 = _promotion_gate(**_gate_kwargs(confirmed_collateral_token=0))
-    assert "market_classification_not_fully_authoritative" not in gate2["unresolved"]
-    assert "collateral_tokens_not_resolved" not in gate2["unresolved"]
+    assert "market_classification_not_fully_authoritative" not in gate2["paper_unresolved"]
+    assert "collateral_tokens_not_resolved" not in gate2["paper_unresolved"]
     gate3 = _promotion_gate(
         **_gate_kwargs(
             confirmed_collateral_token=0,
@@ -186,10 +197,63 @@ def test_promotion_gate_reports_all_six_blockers_and_shrinks_on_evidence():
             spread_samples=[10.0] * MIN_SPREAD_SAMPLES,
         )
     )
-    assert set(gate3["unresolved"]) == {
+    assert gate3["paper_unresolved"] == []
+    assert gate3["live_unresolved"] == [
         "market_calendars_not_enforced",
         "historical_oracle_quality_not_available",
         "no_hip3_paper_evidence",
+    ]
+
+
+def test_paper_stage_never_requires_paper_evidence():
+    # The deadlock guard: the paper stage arms without its own output.
+    gate = _promotion_gate(
+        **_gate_kwargs(
+            confirmed_collateral_token=0,
+            measured_cost_bps=29.0,
+            spread_samples=[10.0] * MIN_SPREAD_SAMPLES,
+            paper_evidence=dict(_EMPTY_EVIDENCE),
+        )
+    )
+    assert gate["paper_ready"] is True
+    assert gate["live_ready"] is False
+
+
+def test_paper_evidence_blocker_resolves_only_at_threshold_with_profit():
+    full = dict(_EMPTY_EVIDENCE, closed_trades=25, ghost_rows=25, pnl_zar=1.0)
+    gate = _promotion_gate(
+        **_gate_kwargs(confirmed_collateral_token=0, paper_evidence=full)
+    )
+    assert "no_hip3_paper_evidence" not in gate["live_unresolved"]
+    for change in (
+        dict(closed_trades=24),
+        dict(ghost_rows=24),
+        dict(pnl_zar=0.0),
+        dict(pnl_zar=-1.0),
+    ):
+        short = {**full, **change}
+        gate = _promotion_gate(
+            **_gate_kwargs(confirmed_collateral_token=0, paper_evidence=short)
+        )
+        assert "no_hip3_paper_evidence" in gate["live_unresolved"], change
+
+
+def test_hip3_paper_evidence_counts_only_hip3_rows():
+    paper = [
+        {"slice_id": "hip3_xyz_index_c0:feat_x:1:LONG:h24", "outcome": "win", "pnl_zar": "1.5"},
+        {"slice_id": "hip3_xyz_index_c0:feat_x:1:LONG:h24", "outcome": "loss", "pnl_zar": "-0.5"},
+        {"slice_id": "feat_x:1:LONG:h24", "outcome": "win", "pnl_zar": "9.9"},
+        {"slice_id": "hip3_xyz_index_c0:feat_x:1:LONG:h24", "outcome": "skipped", "pnl_zar": "0"},
+    ]
+    cf = [
+        {"slice_id": "hip3_xyz_index_c0:feat_x:1:LONG:h24", "policy": "target_2r_trail_1r"},
+        {"slice_id": "feat_x:1:LONG:h24", "policy": "target_2r_trail_1r"},
+    ]
+    assert _hip3_paper_evidence(paper, cf) == {
+        "closed_trades": 2,
+        "pnl_zar": 1.0,
+        "ghost_rows": 1,
+        "minimum_trades": 25,
     }
 
 
@@ -197,11 +261,11 @@ def test_promotion_gate_flags_provisional_classification():
     gate = _promotion_gate(
         **_gate_kwargs(selected=[(row("xyz:NVDA"), "provisional_equity")])
     )
-    assert "market_classification_not_fully_authoritative" in gate["unresolved"]
+    assert "market_classification_not_fully_authoritative" in gate["paper_unresolved"]
     gate = _promotion_gate(
         **_gate_kwargs(selected=[(row("xyz:NVDA", annotation_category="equities"), "equity")])
     )
-    assert "market_classification_not_fully_authoritative" not in gate["unresolved"]
+    assert "market_classification_not_fully_authoritative" not in gate["paper_unresolved"]
 
 
 def test_l2_half_spread_bps_measures_mid_relative_spread():

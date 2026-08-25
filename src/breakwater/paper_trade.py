@@ -936,9 +936,22 @@ def run_paper_cycle(
     book_slice_ids: set[str],
     server_time: datetime,
     missing_bars_exit: int = MISSING_BARS_EXIT,
+    hip3_book_path: Path | None = None,
 ) -> dict:
     closed_rows: list[dict] = []
     reconcile_paper_stats_from_log(book_path, log_path)
+    if hip3_book_path is not None:
+        reconcile_paper_stats_from_log(hip3_book_path, log_path)
+
+    def _apply_feedback(slice_id: str, **kwargs) -> None:
+        # HIP-3 slices carry their feedback in the HIP-3 book; the shared
+        # trade log is the source of truth for both books.
+        target = (
+            hip3_book_path
+            if hip3_book_path is not None and str(slice_id).startswith("hip3_")
+            else book_path
+        )
+        apply_signal_feedback(target, slice_id, **kwargs)
     loaded_positions, positions_load_error = _read_positions_with_error(positions_path)
     invalid_positions: list[tuple[object, str]] = []
     open_positions: list[dict] = []
@@ -952,6 +965,9 @@ def run_paper_cycle(
     _quarantine_positions(quarantine_path, invalid_positions, server_time)
     # Migration: upgrade legacy positions so horizon exits engage.
     book_horizon_map = _load_book_horizon_map(book_path)
+    if hip3_book_path is not None:
+        # Slice ids are namespaced (hip3_ prefix), so the maps cannot collide.
+        book_horizon_map = {**book_horizon_map, **_load_book_horizon_map(hip3_book_path)}
     if open_positions:
         _migrate_legacy_positions(open_positions, horizon_map=book_horizon_map, frames=frames)
 
@@ -1041,8 +1057,7 @@ def run_paper_cycle(
                         **diagnostics,
                     }
                 )
-                apply_signal_feedback(
-                    book_path,
+                _apply_feedback(
                     str(position["slice_id"]),
                     bar_epoch=int(server_time.timestamp()),
                     outcome=pnl_outcome,
@@ -1148,8 +1163,7 @@ def run_paper_cycle(
                 "exit_bar_start": _bar_start_iso(last["start"]),
             }
         )
-        apply_signal_feedback(
-            book_path,
+        _apply_feedback(
             str(position["slice_id"]),
             bar_epoch=int(last["start"].timestamp()),
             outcome=pnl_outcome,
@@ -1228,6 +1242,13 @@ def run_paper_cycle(
     paper_pnls = _slice_paper_pnl(book_path)
     incumbents = _incumbent_slice_ids(book_path)
     means = _slice_means(book_path)
+    if hip3_book_path is not None:
+        # Same rotation discipline across both books: HIP-3 slices are
+        # namespaced, so the merged maps never mix with native slices.
+        trade_counts.update(_slice_trade_counts(hip3_book_path))
+        paper_pnls.update(_slice_paper_pnl(hip3_book_path))
+        incumbents |= _incumbent_slice_ids(hip3_book_path)
+        means.update(_slice_means(hip3_book_path))
     size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     risk_zar: Decimal | None = None
     if size_from_equity:

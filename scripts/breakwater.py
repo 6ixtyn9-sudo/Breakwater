@@ -86,6 +86,12 @@ def main() -> int:
                 discovered_path=settings.hip3_discovered_path,
                 validated_path=settings.hip3_validated_path,
                 status_path=settings.hip3_status_path,
+                book_path=settings.hip3_book_path,
+                gate_path=settings.hip3_gate_path,
+                paper_log_path=settings.paper_log_path,
+                counterfactual_log_path=(
+                    settings.data_dir / "research" / "paper_counterfactual_log.csv"
+                ),
             )
         else:
             engine = BreakwaterEngine(settings)
