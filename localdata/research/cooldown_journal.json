@@ -102,5 +102,13 @@
     "signal_id": "6c6017b068eabefe",
     "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23",
     "stopped_at": "2026-08-25T13:15:21+00:00"
+  },
+  {
+    "pair": "XYZ:RIVN",
+    "pnl_zar": "-6.4991",
+    "reason": "stop",
+    "signal_id": "8463e8cc8db5a829",
+    "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23",
+    "stopped_at": "2026-08-25T14:00:25+00:00"
   }
 ]
