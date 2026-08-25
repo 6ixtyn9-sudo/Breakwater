@@ -539,3 +539,54 @@ def test_concentrated_path_respects_cost_linked_floor(monkeypatch):
 
     assert rl._is_concentrated_candidate(row("PERP")) is True
     assert rl._is_concentrated_candidate(row("SPOT")) is False
+
+
+def _hip3_validated_row(slice_id, blended_bps, us_bps):
+    return ValidatedSlice(
+        slice_id=slice_id,
+        kind="PERP",
+        feature="feat",
+        state=2,
+        side="LONG",
+        folds=5,
+        walk_forward_pass_pattern="11111",
+        walk_forward_pass_count=5,
+        fold_mean_rets="0.001,0.001,0.001,0.001,0.001",
+        fold_sizes="20,20,20,20,20",
+        n=2000,
+        mean_ret_costadj=blended_bps / 10000.0,
+        p_value=0.001,
+        validated=True,
+        horizon_bars=12,
+        session_us_n=4000,
+        session_us_mean_ret_costadj=us_bps / 10000.0,
+        session_us_hit_rate=0.5,
+    )
+
+
+def test_hip3_promotion_requires_session_matched_edge(tmp_path, monkeypatch):
+    """A calendar-asset slice whose edge does not exist in the tradable
+    (US) session is not promoted, even when the blended edge passes the
+    quality bar. 24/7 classes are unaffected."""
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0")
+
+    rows = [
+        # EU/pre-market-only edge (the realized_vol_20:h12 shape): US 7.0
+        # bps is < 50% of the 25.4 bps blend -> session gate refuses.
+        _hip3_validated_row("hip3_xyz_equity_c0:feat_a:2:LONG:h12", 25.4, 7.0),
+        # Matched edge: US 50.4 of 56.3 blended -> promoted.
+        _hip3_validated_row("hip3_xyz_equity_c0:feat_b:1:LONG:h19", 56.3, 50.4),
+        # 24/7 class: blended edge IS the tradable edge -> unaffected.
+        _hip3_validated_row("hip3_hyna_builder_crypto_c0:feat_c:2:LONG:h6", 25.4, 7.0),
+    ]
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, rows)
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+
+    assert summary["session_gate_blocked"] == 1
+    ids = {row["slice_id"] for row in read_book(book_path)}
+    assert "hip3_xyz_equity_c0:feat_a:2:LONG:h12" not in ids
+    assert "hip3_xyz_equity_c0:feat_b:1:LONG:h19" in ids
+    assert "hip3_hyna_builder_crypto_c0:feat_c:2:LONG:h6" in ids

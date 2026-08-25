@@ -52,11 +52,11 @@ def frame_with_bars(rows):
     )
 
 
-def frame_with_bar(close, high=None, low=None):
+def frame_with_bar(close, high=None, low=None, start="2026-08-14T10:00:00Z"):
     return pd.DataFrame(
         [
             {
-                "start": pd.Timestamp("2026-08-14T10:00:00Z"),
+                "start": pd.Timestamp(start),
                 "symbol": "BTCUSDC",
                 "open": close,
                 "high": high if high is not None else close,
@@ -1005,10 +1005,12 @@ def test_hip3_position_exits_on_hip3_book_horizon(tmp_path):
     hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
     position = dict(open_position()[0])
     position.update(pair="XYZ:NVDA", slice_id="hip3_xyz_index_c0:feat:0:LONG:h5", bars_held="6")
+    # 14:00Z bar closes 15:00Z = 11:00 ET: inside the US session, so the
+    # planned horizon exit fires (a pre-market bar would now defer it).
     result = hip3_cycle(
         tmp_path,
         signals=[],
-        frames={"XYZ:NVDA": frame_with_bar(close=100)},
+        frames={"XYZ:NVDA": frame_with_bar(close=100, start="2026-08-14T14:00:00Z")},
         positions=[position],
         hip3_book=hip3_book,
         book={"hip3_xyz_index_c0:feat:0:LONG:h5"},
@@ -1161,3 +1163,195 @@ def test_hip3_signal_opens_position_with_hip3_book_horizon(tmp_path):
     assert positions[0]["slice_id"] == "hip3_xyz_index_c0:feat:0:LONG:h5"
     assert positions[0]["entry_guard"] == "passed"
     assert positions[0]["horizon_bars"] == "5"
+
+
+def _hip3_position(**overrides):
+    position = dict(open_position()[0])
+    position.update(
+        {
+            "pair": "XYZ:COIN",
+            "slice_id": "hip3_xyz_equity_c0:feat:0:LONG:h2",
+            "entry_price": "100",
+            "stop_price": "97",
+            "initial_stop_price": "97",
+            "peak_price": "100",
+            "trough_price": "100",
+            "bars_held": "1",
+            "horizon_bars": "2",
+            "last_processed_bar_start": "2026-08-25T07:00:00+00:00",
+        }
+    )
+    position.update(overrides)
+    return position
+
+
+def _hour_frame(starts, close=101.0):
+    return pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp(start),
+                "symbol": "XYZ:COIN",
+                "open": close,
+                "high": close + 0.5,
+                "low": close - 0.5,
+                "close": close,
+                "volume": 100,
+            }
+            for start in starts
+        ]
+    )
+
+
+def test_hip3_planned_exit_defers_to_market_session(tmp_path):
+    """A US-equity position whose horizon deadline lands in the pre-market
+    must NOT exit there: the planned exit defers to the next in-session
+    close (summer dates: 14:00Z close = 10:00 ET)."""
+    bars = [f"2026-08-25T{h:02d}:00:00Z" for h in (8, 9, 10, 11, 12, 13)]
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"XYZ:COIN": _hour_frame(bars)},
+        positions=[_hip3_position()],
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "horizon"
+    # Exited on the 13:00 bar (close 14:00Z = in session), NOT on the
+    # 09:00 bar where bars_held first reached the horizon (10:00Z close,
+    # pre-market).
+    assert log.iloc[0]["exit_bar_start"].startswith("2026-08-25T13:00")
+
+
+def test_hip3_stop_still_fires_outside_session(tmp_path):
+    """Protective exits never sleep: a stop during the pre-market still
+    closes the position."""
+    bars = [
+        "2026-08-25T08:00:00Z",
+        "2026-08-25T09:00:00Z",
+    ]
+    frame = _hour_frame(bars)
+    frame.loc[frame["start"].astype(str).str.contains("08:00"), "low"] = 96.0
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"XYZ:COIN": frame},
+        positions=[_hip3_position(horizon_bars="6")],
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "stop"
+
+
+def test_native_planned_exit_unaffected_by_session(tmp_path):
+    """The same timing on a NATIVE (24/7 crypto) slice exits on the
+    horizon bar regardless of session - the gate is HIP-3 only."""
+    position = dict(open_position()[0])
+    position.update(
+        {
+            "entry_price": "100",
+            "stop_price": "97",
+            "initial_stop_price": "97",
+            "bars_held": "1",
+            "horizon_bars": "2",
+            "last_processed_bar_start": "2026-08-25T07:00:00+00:00",
+        }
+    )
+    bars = [
+        "2026-08-25T08:00:00Z",
+        "2026-08-25T09:00:00Z",
+        "2026-08-25T10:00:00Z",
+    ]
+    frame = pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp(start),
+                "symbol": "BTCUSDC",
+                "open": 101.0,
+                "high": 101.5,
+                "low": 100.5,
+                "close": 101.0,
+                "volume": 100,
+            }
+            for start in bars
+        ]
+    )
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame},
+        positions=[position],
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "horizon"
+    # Native exits on the FIRST bar that reaches the horizon (the 08:00
+    # bar, whose close at 09:00Z is outside US market hours) - no deferral,
+    # unlike the identical HIP-3 position in the test above.
+    assert log.iloc[0]["exit_bar_start"].startswith("2026-08-25T08:00")
+
+
+def _session_tape(end_start, n=220):
+    """Hourly tape ending with the bar that STARTS at end_start: flat at
+    100, then a steady rise to ~106 so feat_ext_vs_ma_10 is state 2."""
+    from datetime import timedelta
+
+    end = pd.Timestamp(end_start)
+    rows = []
+    for i in range(n):
+        start = end - timedelta(hours=n - 1 - i)
+        close = 100.0 if i < n - 10 else 100.6 + (i - (n - 10)) * 0.6
+        rows.append(
+            {
+                "start": start,
+                "symbol": "XYZ:COIN",
+                "open": close,
+                "high": close + 0.5,
+                "low": close - 0.5,
+                "close": close,
+                "volume": 100,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def test_hip3_entry_gated_to_derived_market_session(tmp_path, monkeypatch):
+    """HIP-3 equity entries are gated to the underlying's live session,
+    DERIVED from the slice's market class - the operator's crypto session
+    variable does not apply (a pre-market bar that the 'eu' variable would
+    allow is still blocked; an in-market bar signals)."""
+    from datetime import datetime, timezone
+
+    from breakwater.monitor import monitor_book
+
+    monkeypatch.setenv("BREAKWATER_PAPER_SESSIONS", "eu")
+    monkeypatch.setenv("BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS", "60")
+
+    row = {
+        "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_10:2:LONG",
+        "kind": "PERP",
+        "feature": "feat_ext_vs_ma_10",
+        "state": "2",
+        "side": "LONG",
+        "status": "monitored",
+        "stop_atr_mult": "2.0",
+        "horizon_bars": "12",
+        "mean_ret_costadj": "0.005",
+        "hostile_unproven": "False",
+        "edge_is_directional_net": "True",
+    }
+    server_time = datetime(2026, 8, 25, 10, 0, tzinfo=timezone.utc)
+
+    # Bar closes 10:00Z = 06:00 ET: pre-market. The 'eu' variable would
+    # allow this bar; the derived class gate blocks and journals it.
+    pre = _session_tape("2026-08-25T09:00:00Z")
+    signals, blocked = monitor_book([dict(row)], {"PERP": {"XYZ:COIN": pre}}, server_time=server_time)
+    assert signals == []
+    assert len(blocked) == 1
+    assert blocked[0]["guard"] == "session_blocked"
+    assert blocked[0]["market_class"] == "equity"
+
+    # Bar closes 15:00Z = 11:00 ET: in session, signals normally.
+    intraday = _session_tape("2026-08-25T14:00:00Z")
+    signals, blocked = monitor_book([dict(row)], {"PERP": {"XYZ:COIN": intraday}}, server_time=server_time)
+    assert len(signals) == 1
+    assert blocked == []

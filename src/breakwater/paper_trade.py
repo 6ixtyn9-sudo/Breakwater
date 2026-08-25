@@ -62,6 +62,7 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 from pathlib import Path
 
+from breakwater.hip3 import hip3_in_market_session, hip3_slice_market_class
 from breakwater.monitor import SliceSignal, regime_blocks, regime_of
 from breakwater.paper_counterfactual import (
     advance_counterfactuals,
@@ -945,7 +946,28 @@ def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_id
     ):
         exit_price, exit_reason = close, "rotated"
         outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-    if exit_price is None and horizon_bars > 0 and bars_held >= horizon_bars and not r_gate_on:
+    # HIP-3 calendar assets: PLANNED exits (horizon, time stop) must land on
+    # the underlying's live tape. If this bar closes outside the session,
+    # the planned exit defers to the next in-session bar (bars_held keeps
+    # counting; the position simply outlives its original deadline).
+    # Protective exits (stop, trail, target, rotated, stale-data) are
+    # untouched - protection never sleeps.
+    planned_exit_allowed = True
+    pos_slice = str(position.get("slice_id") or "")
+    if pos_slice.startswith("hip3_"):
+        bar_start = last["start"]
+        if hasattr(bar_start, "to_pydatetime"):
+            bar_start = bar_start.to_pydatetime()
+        planned_exit_allowed = hip3_in_market_session(
+            hip3_slice_market_class(pos_slice), bar_start + timedelta(hours=1)
+        )
+    if (
+        exit_price is None
+        and horizon_bars > 0
+        and bars_held >= horizon_bars
+        and not r_gate_on
+        and planned_exit_allowed
+    ):
         exit_price, exit_reason = close, "horizon"
         outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
     trail_active = _coerce_bool(position.get("trail_active"))
@@ -955,6 +977,7 @@ def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_id
         and bars_held >= TIME_STOP_BARS
         and not (TRAIL_ENABLE and TRAIL_IGNORE_TIME_STOP and trail_active)
         and not r_gate_on
+        and planned_exit_allowed
     ):
         exit_price, exit_reason = close, "time_stop"
         outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"

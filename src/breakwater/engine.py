@@ -568,12 +568,15 @@ class BreakwaterEngine:
                         "pnl_zar": "0",
                         "outcome": "skipped",
                         "bars_held": "0",
-                        "exit_reason": "regime",
-                        "entry_guard": "regime_blocked",
+                        "exit_reason": str(entry.get("reason", "regime")),
+                        "entry_guard": str(entry.get("guard", "regime_blocked")),
                         "regime": entry["regime"],
                     },
                 )
             paper_result["regime_blocked"] = len(blocked)
+            paper_result["session_blocked"] = sum(
+                1 for entry in blocked if entry.get("guard") == "session_blocked"
+            )
         payloads = []
         for signal in signals:
             payload = {

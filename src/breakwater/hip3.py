@@ -13,6 +13,7 @@ import os
 import tempfile
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from datetime import time as _dt_time
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -385,3 +386,87 @@ def write_hip3_universe(path: Path, snapshot: Hip3UniverseSnapshot) -> None:
         except OSError:
             pass
         raise
+
+
+# --- Market-session doctrine (25 Aug) -------------------------------------
+# Sessions are DERIVED from the market class, never from operator hour
+# variables. Equity-like classes trade on their underlying exchange's live
+# session (NYSE regular hours: 09:30-16:00 America/New_York, Mon-Fri,
+# DST-aware). 24/7 classes are ungated. Unknown classes fail closed.
+# This governs BOTH entry timing and planned (voluntary) exits - protective
+# exits (stops, stale-data) are unaffected and run 24/7.
+
+_SESSION_24_7_CLASSES = {"builder_crypto", "crypto", "fx", "commodity"}
+_SESSION_RESTRICTED_CLASSES = {"equity", "provisional_equity", "index", "preipo"}
+
+
+def hip3_slice_market_class(slice_id: str) -> str | None:
+    """Market class encoded in an HIP-3 slice id.
+
+    Slice ids are namespaced ``hip3_{dex}_{class}_c{N}:feature:...`` where
+    the group is built as ``{dex}_{market_class}_c{collateral_token}``.
+    Non-HIP-3 ids return None.
+    """
+    head = str(slice_id or "").split(":", 1)[0]
+    if not head.startswith("hip3_"):
+        return None
+    base = head[len("hip3_"):].rsplit("_c", 1)[0]
+    # base is "{dex}_{class}"; the class may itself contain underscores
+    # (provisional_equity), so split on the FIRST underscore only.
+    _, _, cls = base.partition("_")
+    return cls or None
+
+
+def _as_utc(ts) -> datetime | None:
+    try:
+        if hasattr(ts, "to_pydatetime"):
+            ts = ts.to_pydatetime()
+        if not isinstance(ts, datetime):
+            ts = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc)
+
+
+def hip3_session_restricted(market_class: str | None) -> bool:
+    """True when the class trades on a calendar session (needs the
+    underlying's live tape). 24/7 classes and unknown classes return
+    False here - unknowns are handled by failing closed at the entry
+    gate (hip3_in_market_session), not by promotion rules."""
+    return market_class in _SESSION_RESTRICTED_CLASSES
+
+
+def hip3_in_market_session(market_class: str | None, bar_end) -> bool:
+    """True when a fill at ``bar_end`` (the bar's close time) happens inside
+    the class's live session.
+
+    24/7 classes always pass. Restricted classes must be inside NYSE regular
+    hours (Mon-Fri 09:30-16:00 America/New_York via zoneinfo; when tzdata is
+    unavailable the winter UTC window 14:30-20:00 is used as a conservative
+    fallback - it can delay summer entries by an hour but never admits a
+    pre-open fill). Unknown or missing classes fail closed.
+    """
+    if market_class in _SESSION_24_7_CLASSES:
+        return True
+    if market_class not in _SESSION_RESTRICTED_CLASSES:
+        return False
+    stamp = _as_utc(bar_end)
+    if stamp is None:
+        return False
+    try:
+        from zoneinfo import ZoneInfo
+
+        local = stamp.astimezone(ZoneInfo("America/New_York"))
+        return (
+            local.weekday() < 5
+            and local.time() >= _dt_time(9, 30)
+            and local.time() < _dt_time(16, 0)
+        )
+    except Exception:
+        return (
+            stamp.weekday() < 5
+            and stamp.time() >= _dt_time(14, 30)
+            and stamp.time() < _dt_time(20, 0)
+        )

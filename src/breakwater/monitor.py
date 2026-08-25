@@ -31,6 +31,7 @@ import pandas as pd
 
 from breakwater.discovery import bin_states
 from breakwater.features import compute_price_features
+from breakwater.hip3 import hip3_in_market_session, hip3_slice_market_class
 from breakwater.models import Side
 
 DEFAULT_STOP_ATR_MULT = Decimal("2.0")
@@ -237,11 +238,36 @@ def monitor_book(
             if latest_state != state:
                 continue
 
-            allowed_sessions = _paper_sessions()
-            if allowed_sessions:
-                sess = _utc_session(latest_row["start"])
-                if sess not in allowed_sessions:
+            if str(slice_id).startswith("hip3_"):
+                # HIP-3 calendar assets: the tradable session is DERIVED from
+                # the slice's market class (equity/index -> NYSE regular
+                # hours, DST-aware; 24/7 classes ungated). The operator's
+                # crypto session list does not apply to calendar assets -
+                # hours are a property of the asset, not a variable. The
+                # paper fills at bar close, so the gate checks the close.
+                mkt_class = hip3_slice_market_class(slice_id)
+                bar_end = latest_row["start"] + pd.Timedelta(hours=1)
+                if not hip3_in_market_session(mkt_class, bar_end):
+                    blocked.append(
+                        {
+                            "pair": pair.upper(),
+                            "kind": kind,
+                            "slice_id": slice_id,
+                            "side": side.value,
+                            "regime": regime,
+                            "hostile_unproven": hostile_unproven,
+                            "reason": "session",
+                            "guard": "session_blocked",
+                            "market_class": mkt_class or "unknown",
+                        }
+                    )
                     continue
+            else:
+                allowed_sessions = _paper_sessions()
+                if allowed_sessions:
+                    sess = _utc_session(latest_row["start"])
+                    if sess not in allowed_sessions:
+                        continue
 
             if regime_blocks(side, regime, hostile_unproven):
                 blocked.append(

@@ -34,6 +34,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from breakwater.hip3 import hip3_session_restricted, hip3_slice_market_class
 from breakwater.validation import ValidatedSlice, read_validated
 
 BOOK_HEADERS = [
@@ -204,6 +205,32 @@ def _directional_edge(row: ValidatedSlice, pool_floors: dict[str, float] | None 
     return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _effective_floor(row.kind, pool_floors)
 
 
+def _hip3_session_edge_ok(row: ValidatedSlice) -> bool:
+    """A calendar-asset slice must keep at least half its blended edge
+    inside the session it is actually tradable in (the US session, where
+    HIP-3 entries are allowed to fire).
+
+    Motivation (25 Aug): realized_vol_20:h12 blended 25.4 bps from an
+    EU/pre-market edge (US 7.0 / EU 31.6). The blended number passed the
+    quality bar, but the trade is entered in-market and holds through the
+    open - where the edge does not exist. 24/7 classes are unaffected:
+    their blended edge IS their tradable edge.
+    """
+    if not str(row.slice_id or "").startswith("hip3_"):
+        return True
+    mkt_class = hip3_slice_market_class(row.slice_id)
+    if not hip3_session_restricted(mkt_class):
+        return True
+    try:
+        blended = float(row.mean_ret_costadj)
+        us = float(row.session_us_mean_ret_costadj)
+    except (TypeError, ValueError):
+        return False
+    if blended <= 0 or us <= 0:
+        return False
+    return us >= 0.5 * blended
+
+
 def _env_bool(name: str, default: str = "0") -> bool:
     value = str(os.getenv(name, default)).strip().lower()
     return value in {"1", "true", "yes", "y", "on"}
@@ -346,11 +373,15 @@ def sync_book(
     promotable = [
         row
         for row in validated_all
-        if row.n >= MIN_BOOK_ROWS and _directional_edge(row, enter_pool_floors)
+        if row.n >= MIN_BOOK_ROWS
+        and _directional_edge(row, enter_pool_floors)
+        and _hip3_session_edge_ok(row)
     ]
     concentrated = [
         row for row in validated_rows
-        if (not row.validated) and _is_concentrated_candidate(row, enter_pool_floors)
+        if (not row.validated)
+        and _is_concentrated_candidate(row, enter_pool_floors)
+        and _hip3_session_edge_ok(row)
     ]
     # Prefer full validation; concentrated fills only if the family is absent.
     promotable_ids = {row.slice_id for row in promotable}
@@ -385,10 +416,20 @@ def sync_book(
     promoted_kinds: set[str] = set()
     rows: list[dict] = []
 
+    session_gate_blocked = sum(
+        1
+        for row in validated_all
+        if row.n >= MIN_BOOK_ROWS
+        and _directional_edge(row, enter_pool_floors)
+        and not _hip3_session_edge_ok(row)
+    )
     summary: dict = {
         "validated": len(validated_all),
         "concentrated": len(concentrated),
         "promotable": len(promotable),
+        # HIP-3 slices that passed the quality bar but failed the
+        # session-match rule (edge not present in the tradable session).
+        "session_gate_blocked": session_gate_blocked,
         # The effective bar this run (bps per kind): the highest of the
         # static floor, the cost-linked floor, and the pool percentile.
         "net_edge_floor_enter_bps": {

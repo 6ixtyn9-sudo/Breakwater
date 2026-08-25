@@ -166,3 +166,47 @@ def test_writes_dedicated_hip3_universe(tmp_path):
     # The universe CSV carries no operator metadata; snapshots rebuilt from
     # it fall back to the empty default.
     assert loaded.dex_metadata == ()
+
+
+def test_market_session_is_derived_from_class_not_a_variable():
+    """Sessions come from the market class, never an operator hour variable.
+    Equity-like classes are gated to NYSE regular hours (DST-aware);
+    24/7 classes are ungated; unknown classes fail closed."""
+    from datetime import datetime, timezone
+
+    from breakwater.hip3 import (
+        hip3_in_market_session,
+        hip3_session_restricted,
+        hip3_slice_market_class,
+    )
+
+    # Class parsing (class may itself contain underscores).
+    assert (
+        hip3_slice_market_class("hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h12")
+        == "equity"
+    )
+    assert (
+        hip3_slice_market_class("hip3_io_provisional_equity_c0:feat:0:LONG:h5")
+        == "provisional_equity"
+    )
+    assert hip3_slice_market_class("hip3_mkts_index_c0:feat:0:LONG:h3") == "index"
+    assert hip3_slice_market_class("feat:0:LONG") is None
+
+    utc = timezone.utc
+    # DST-aware NYSE session (09:30-16:00 America/New_York).
+    assert hip3_in_market_session("equity", datetime(2026, 8, 25, 14, 0, tzinfo=utc))  # 10:00 ET
+    assert not hip3_in_market_session("equity", datetime(2026, 8, 25, 13, 0, tzinfo=utc))  # 09:00 ET pre-open
+    assert hip3_in_market_session("equity", datetime(2026, 1, 15, 15, 0, tzinfo=utc))  # winter 10:00 ET
+    assert not hip3_in_market_session("equity", datetime(2026, 1, 15, 14, 0, tzinfo=utc))  # winter pre-open
+    assert not hip3_in_market_session("equity", datetime(2026, 8, 22, 15, 0, tzinfo=utc))  # Saturday
+
+    # 24/7 classes ungated; unknown/missing fail closed.
+    assert hip3_in_market_session("builder_crypto", datetime(2026, 8, 25, 3, 0, tzinfo=utc))
+    assert hip3_in_market_session("fx", datetime(2026, 8, 25, 3, 0, tzinfo=utc))
+    assert not hip3_in_market_session("wat", datetime(2026, 8, 25, 15, 0, tzinfo=utc))
+    assert not hip3_in_market_session(None, datetime(2026, 8, 25, 15, 0, tzinfo=utc))
+
+    assert hip3_session_restricted("equity") is True
+    assert hip3_session_restricted("provisional_equity") is True
+    assert hip3_session_restricted("index") is True
+    assert hip3_session_restricted("builder_crypto") is False
