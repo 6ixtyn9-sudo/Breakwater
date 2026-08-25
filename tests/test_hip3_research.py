@@ -57,6 +57,7 @@ def test_methodology_parity_reports_drift(monkeypatch):
         "BREAKWATER_BREADTH_MIN_SYMBOLS": "6",
         "BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL": "10",
         "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION": "0.40",
+        "BREAKWATER_MIN_NET_EDGE": "0.002",
         "BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES": "2",
         "BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT": "edge_per_bar",
     }

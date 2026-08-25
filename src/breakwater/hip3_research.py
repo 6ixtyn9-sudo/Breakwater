@@ -110,6 +110,7 @@ def _methodology_parity(*, max_pairs: int, candle_count: int, horizons: list[int
         "breadth_min_symbols": "6",
         "breadth_min_rows_per_symbol": "10",
         "breadth_min_positive_fraction": "0.40",
+        "min_net_edge": "0.002",
         "promotion_multi_horizon_min_passes": "2",
         "promotion_multi_horizon_select": "edge_per_bar",
     }
@@ -132,9 +133,11 @@ def _methodology_parity(*, max_pairs: int, candle_count: int, horizons: list[int
             "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.55"
         ),
         # Book-shaping parameters: native consolidates to one horizon per
-        # family (best edge per bar). If the HIP-3 workflow drifts here, the
-        # book shape diverges from native doctrine - the 269-row sibling
-        # book of 2026-08-25 is exactly the drift this catches.
+        # family (best edge per bar) and only books actionable edges. If the
+        # HIP-3 workflow drifts here, the book shape diverges from native
+        # doctrine - the 269-row sibling book and the sub-floor 0.00003-edge
+        # rows of 2026-08-25 are exactly the drift this catches.
+        "min_net_edge": os.getenv("BREAKWATER_MIN_NET_EDGE", "0"),
         "promotion_multi_horizon_min_passes": os.getenv(
             "BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1"
         ),
