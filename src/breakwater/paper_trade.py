@@ -57,7 +57,7 @@ import json
 import os
 import tempfile
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from pathlib import Path
@@ -555,10 +555,52 @@ def _realised_paper_pnl(log_path: Path) -> Decimal:
     return total
 
 
+def _entry_session_utc(row: dict) -> str:
+    """UTC session of a closed trade's ENTRY bar (exit_bar_start - bars_held).
+
+    Sessions mirror the paper gate's hours: asia 00-07, eu 07-13, us 13-21,
+    late 21-24. Unreadable rows are "unknown", never an error.
+    """
+    try:
+        bar_start = str(row.get("exit_bar_start") or "").strip()
+        if not bar_start:
+            return "unknown"
+        ts = datetime.fromisoformat(bar_start.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        entry = ts.astimezone(timezone.utc) - timedelta(
+            hours=int(str(row.get("bars_held") or 0))
+        )
+    except (ValueError, TypeError):
+        return "unknown"
+    hour = entry.hour
+    if hour < 7:
+        return "asia"
+    if hour < 13:
+        return "eu"
+    if hour < 21:
+        return "us"
+    return "late"
+
+
 def _paper_performance_summary(log_path: Path) -> dict:
-    summary = {"closed": 0, "wins": 0, "pnl_zar": Decimal(0), "by_side": {}, "by_exit": {}}
+    summary = {
+        "closed": 0,
+        "wins": 0,
+        "pnl_zar": Decimal(0),
+        "by_side": {},
+        "by_exit": {},
+        "by_session": {},
+    }
     if not log_path.exists():
-        return {"closed": 0, "wins": 0, "pnl_zar": "0.0000", "by_side": {}, "by_exit": {}}
+        return {
+            "closed": 0,
+            "wins": 0,
+            "pnl_zar": "0.0000",
+            "by_side": {},
+            "by_exit": {},
+            "by_session": {},
+        }
 
     def update(mapping: dict, key: str, pnl: Decimal) -> None:
         bucket = mapping.setdefault(key or "unknown", {"trades": 0, "wins": 0, "pnl": Decimal(0)})
@@ -580,8 +622,9 @@ def _paper_performance_summary(log_path: Path) -> dict:
                 summary["pnl_zar"] += pnl
                 update(summary["by_side"], str(row.get("side") or ""), pnl)
                 update(summary["by_exit"], str(row.get("exit_reason") or ""), pnl)
+                update(summary["by_session"], _entry_session_utc(row), pnl)
     except OSError:
-        return {"closed": 0, "wins": 0, "pnl_zar": "0.0000", "by_side": {}, "by_exit": {}, "error": "unreadable"}
+        return {"closed": 0, "wins": 0, "pnl_zar": "0.0000", "by_side": {}, "by_exit": {}, "by_session": {}, "error": "unreadable"}
 
     def serialize(mapping: dict) -> dict:
         return {
@@ -599,6 +642,7 @@ def _paper_performance_summary(log_path: Path) -> dict:
         "pnl_zar": f"{summary['pnl_zar']:.4f}",
         "by_side": serialize(summary["by_side"]),
         "by_exit": serialize(summary["by_exit"]),
+        "by_session": serialize(summary["by_session"]),
     }
 
 
@@ -1649,6 +1693,7 @@ def run_paper_cycle(
                 "kind": signal.kind,
                 "slice_id": signal.slice_id,
                 "side": signal.side.value,
+                "opened_at": server_time.isoformat(),
                 "entry_price": str(reference),
                 "stop_price": str(initial_stop_price),
                 "initial_stop_price": str(initial_stop_price),

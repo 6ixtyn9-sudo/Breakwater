@@ -931,6 +931,43 @@ def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=B
     )
 
 
+def test_paper_performance_summary_by_session(tmp_path):
+    """The status performance block breaks PnL down by ENTRY session, so
+    timing questions ('did EU entries into US equities lose?') are answerable
+    from status.csv without a scratch script."""
+    import csv
+
+    from breakwater import paper_trade as pt
+
+    log = tmp_path / "log.csv"
+    rows = [
+        # entry = 11:00 - 2h = 09:00Z -> eu
+        {"pnl_zar": "1.0", "side": "BUY", "exit_reason": "horizon",
+         "exit_bar_start": "2026-08-25T11:00:00+00:00", "bars_held": "2"},
+        # entry = 14:00 - 1h = 13:00Z -> us
+        {"pnl_zar": "-2.0", "side": "BUY", "exit_reason": "stop",
+         "exit_bar_start": "2026-08-25T14:00:00+00:00", "bars_held": "1"},
+        # entry = 05:00 - 1h = 04:00Z -> asia
+        {"pnl_zar": "0.5", "side": "SELL", "exit_reason": "horizon",
+         "exit_bar_start": "2026-08-25T05:00:00+00:00", "bars_held": "1"},
+        # no exit_bar_start -> unknown, never an error
+        {"pnl_zar": "0.25", "side": "BUY", "exit_reason": "stale_data",
+         "exit_bar_start": "", "bars_held": "0"},
+    ]
+    with log.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=pt.PAPER_LOG_HEADERS)
+        writer.writeheader()
+        for r in rows:
+            writer.writerow({k: r.get(k, "") for k in pt.PAPER_LOG_HEADERS} | {"outcome": "win" if Decimal(r["pnl_zar"]) > 0 else "loss"})
+
+    s = pt._paper_performance_summary(log)
+    assert s["closed"] == 4
+    assert s["by_session"]["eu"] == {"trades": 1, "wins": 1, "pnl_zar": "1.0000"}
+    assert s["by_session"]["us"] == {"trades": 1, "wins": 0, "pnl_zar": "-2.0000"}
+    assert s["by_session"]["asia"] == {"trades": 1, "wins": 1, "pnl_zar": "0.5000"}
+    assert s["by_session"]["unknown"] == {"trades": 1, "wins": 1, "pnl_zar": "0.2500"}
+
+
 def test_hip3_subpool_caps_positions_per_slice(tmp_path, monkeypatch):
     """The HIP-3 sub-pool caps positions per slice (default 3) so one edge
     cannot occupy half the pool with correlated bets."""
