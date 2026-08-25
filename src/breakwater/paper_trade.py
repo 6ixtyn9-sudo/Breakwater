@@ -778,6 +778,11 @@ def _slice_family(slice_id: str) -> str:
     return text
 
 
+def _bkey_book(signal) -> str:
+    """Which book a signal belongs to: HIP-3 slices are namespaced."""
+    return "hip3" if str(getattr(signal, "slice_id") or "").startswith("hip3_") else "native"
+
+
 def _is_rotated_sibling(slice_id: str, book_ids: set[str]) -> bool:
     if slice_id in book_ids:
         return False
@@ -1283,14 +1288,30 @@ def run_paper_cycle(
     )
     candidates = fat_sigs + old_sigs
 
+    # Per-book view of the shared guard counters: which book generated how
+    # many signals and how many each guard turned away. This is what makes
+    # "how many HIP-3 trades couldn't get a seat?" a number instead of an
+    # inference. Shared counters above stay the source of truth.
+    book_stats = {
+        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0},
+        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0},
+    }
+    for sig in signals:
+        book_stats[_bkey_book(sig)]["signals"] += 1
+
+    def _deny(signal, key: str) -> None:
+        book_stats[_bkey_book(signal)][key] += 1
+
     for signal in candidates:
         if len(surviving) >= MAX_PAPER_POSITIONS:
             slot_full += 1
+            _deny(signal, "slot_full")
             continue
 
         kind_open = sum(1 for position in surviving if position.get("kind") == signal.kind)
         if kind_open >= MAX_PAPER_POSITIONS_PER_KIND:
             slot_full += 1
+            _deny(signal, "slot_full")
             continue
         old_open = 0
         hip3_open = 0
@@ -1306,27 +1327,34 @@ def run_paper_cycle(
             # old/fat seats nor is governed by the native split.
             if hip3_open >= hip3_max_positions:
                 slot_full += 1
+                _deny(signal, "slot_full")
                 continue
         elif signal.slice_id in incumbents:
             if OLD_PAPER_SEATS and old_open >= OLD_PAPER_SEATS:
                 slot_full += 1
+                _deny(signal, "slot_full")
                 continue
         elif FAT_PAPER_SEATS and fat_open >= FAT_PAPER_SEATS:
             slot_full += 1
+            _deny(signal, "slot_full")
             continue
         if open_slice_counts.get(signal.slice_id, 0) >= MAX_PAPER_POSITIONS_PER_SLICE:
             slice_full += 1
+            _deny(signal, "slice_full")
             continue
         if trade_counts.get(signal.slice_id, 0) >= 3 and paper_pnls.get(signal.slice_id, 0.0) < 0:
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         if signal.pair.upper() in open_pairs:
             pair_held += 1
+            _deny(signal, "pair_held")
             continue
 
         if _is_rotated_sibling(signal.slice_id, book_slice_ids):
             skipped += 1
+            _deny(signal, "skipped")
             continue
         if signal.slice_id not in book_slice_ids:
             append_log(
@@ -1355,6 +1383,7 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         hostile_unproven = bool(getattr(signal, "hostile_unproven", True))
@@ -1385,6 +1414,7 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         frame = frames.get(signal.pair.upper())
@@ -1417,6 +1447,7 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         if guard == "adverse_blocked":
@@ -1446,6 +1477,7 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         notional_zar = _paper_size(signal, policy, usdc_zar, risk_zar=risk_zar)
@@ -1477,6 +1509,7 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         risk_distance = (
@@ -1524,6 +1557,7 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         proposed_risk_zar = notional_zar * risk_fraction
@@ -1566,12 +1600,14 @@ def run_paper_cycle(
                 },
             )
             skipped += 1
+            _deny(signal, "skipped")
             continue
 
         signal_horizon = _coerce_int(getattr(signal, "horizon_bars", 0), 0)
         if signal_horizon <= 0:
             signal_horizon = book_horizon_map.get(signal.slice_id, 0)
 
+        book_stats[_bkey_book(signal)]["opened"] += 1
         surviving.append(
             {
                 "signal_id": signal.signal_id,
@@ -1678,6 +1714,7 @@ def run_paper_cycle(
         "hip3_open": sum(
             1 for p in surviving if str(p.get("slice_id") or "").startswith("hip3_")
         ),
+        "book_stats": book_stats,
         "new_signals": len(signals),
         "skipped": skipped,
         "slot_full": slot_full,

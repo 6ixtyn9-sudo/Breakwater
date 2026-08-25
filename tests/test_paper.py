@@ -997,6 +997,15 @@ def test_hip3_positions_respect_dedicated_seat_cap(tmp_path, monkeypatch):
     pairs = {p["pair"] for p in positions}
     assert "BTCZAR" in pairs
     assert len([p for p in positions if p["pair"].startswith("HIP3")]) == 1
+    # Per-book breakdown: the denial is attributed to the HIP-3 pool, and
+    # each book's signals/opens are counted separately.
+    bs = result["book_stats"]
+    assert bs["hip3"]["signals"] == 2
+    assert bs["hip3"]["opened"] == 1
+    assert bs["hip3"]["slot_full"] == 1
+    assert bs["native"]["signals"] == 1
+    assert bs["native"]["opened"] == 1
+    assert bs["native"]["slot_full"] == 0
 
 
 def test_hip3_signal_opens_position_with_hip3_book_horizon(tmp_path):
