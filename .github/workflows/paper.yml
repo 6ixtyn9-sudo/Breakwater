@@ -52,7 +52,7 @@ jobs:
           BREAKWATER_PAPER_OLD_SEATS: "12"
           BREAKWATER_PAPER_FAT_SEATS: "10"
           # All 15 can be PERP; kind cap must not sit below total
-          BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND || '15' }}
+          BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND || '30' }}
           BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE || '5' }}
 
           # Trailing (profit-protecting stop) - OFF by default
