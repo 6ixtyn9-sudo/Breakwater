@@ -45,6 +45,9 @@ jobs:
           BREAKWATER_HIP3_RESEARCH_HORIZONS: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24"
           BREAKWATER_HIP3_MAX_ORACLE_DEVIATION: "0.02"
           # Conservative until each DEX's effective fee/funding/slippage is measured.
+          # Operator-confirmed collateral tokens: 0=USDC (io/mkts/para/xyz), 235=USDe (hyna)
+          BREAKWATER_HIP3_USDC_TOKEN_ID: "0,235"
+          # Fallback for sparse-sample runs only; measured l2 costs are live.
           BREAKWATER_HIP3_COST_BPS: "30"
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: "200"
           BREAKWATER_DISCOVERY_STATE_QUANTILES: "0.333333,0.666666"
