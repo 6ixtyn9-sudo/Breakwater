@@ -77,6 +77,9 @@ jobs:
           BREAKWATER_PAPER_RISK_TO_MEAN_K: ${{ vars.BREAKWATER_PAPER_RISK_TO_MEAN_K || '8' }}
           BREAKWATER_PAPER_SIZE_FROM_EQUITY: ${{ vars.BREAKWATER_PAPER_SIZE_FROM_EQUITY || '1' }}
           BREAKWATER_PAPER_RISK_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_RISK_OF_EQUITY || '0.01' }}
+          # Equity mode: notional ceiling is a fraction of equity (compounds).
+          # Flat mode ignores this and keeps the mandate's absolute cap.
+          BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY || '0.20' }}
           BREAKWATER_PAPER_EQUITY_SEED: ${{ vars.BREAKWATER_PAPER_EQUITY_SEED || '2000' }}
           # Paper-only aggregate stop-risk ceiling
           BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY || '0.07' }}
