@@ -159,20 +159,22 @@ def simulate(
     intensity: float,
     days: int,
     seed: int,
+    risk_cap_zar: float | None = None,
 ) -> dict:
-    """One seeded run of the two-book paper account (shared 5% wallet).
+    """One seeded run of the two-book paper account (shared risk wallet).
 
     Native seats are two pools, exactly as the engine runs them: `native_fat`
     seats for slices without paper history (exploration) and `native_old`
     seats for incumbent slices (slices with >=1 RT). HIP-3 gets a flat pool
-    of `hip3_seats`.
+    of `hip3_seats`. `risk_cap_zar` overrides the wallet cap for sensitivity
+    runs (default: fit["risk_cap"]).
     """
-    rng = random.Random(f"capacity|{native_old}|{native_fat}|{hip3_seats}|{intensity:.0f}|{seed}")
+    rng = random.Random(f"capacity|{native_old}|{native_fat}|{hip3_seats}|{intensity:.0f}|{seed}|{risk_cap_zar}")
     holds = fit["holds"]
     risks = fit["risks"]
     n_native = fit["n_native"]
     n_hip3 = fit["n_hip3"]
-    risk_cap = fit["risk_cap"]
+    risk_cap = fit["risk_cap"] if risk_cap_zar is None else risk_cap_zar
 
     native_seats = native_old + native_fat
     lam_native = intensity / n_native if n_native else 0.0
@@ -304,7 +306,12 @@ def main() -> int:
     parser.add_argument("--data-dir", default="localdata")
     parser.add_argument("--days", type=int, default=36)
     parser.add_argument("--seeds", type=int, default=40)
+    parser.add_argument(
+        "--caps", default="0.05",
+        help="comma-separated aggregate risk cap fractions of equity to grid",
+    )
     parser.add_argument("--out-dir", default=None)
+    parser.add_argument("--tag", default="", help="suffix for output filenames")
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -324,37 +331,42 @@ def main() -> int:
     )
 
     intensities = [100.0, fit["intensity"], 300.0]  # sensitivity band
+    risk_caps = [float(x) for x in args.caps.split(",")]
     results = []
     for intensity in intensities:
         for old_cap in (3, 5, 8, 12, 15):
             for h3 in (0, 2, 4, 6):
-                runs = [
-                    simulate(
-                        fit, native_old=old_cap, native_fat=10, hip3_seats=h3,
-                        intensity=intensity, days=args.days, seed=s,
-                    )
-                    for s in range(args.seeds)
-                ]
-                cell = {
-                    "intensity": round(intensity, 1),
-                    "old_cap": old_cap,
-                    "fat_cap": 10,
-                    "total_native": old_cap + 10,
-                    "hip3_seats": h3,
-                }
-                for key, agg in (
-                    ("all10_day", statistics.median),
-                    ("native_rts", statistics.median),
-                    ("hip3_rts", statistics.median),
-                    ("min_slice_rts", statistics.median),
-                    ("peak_risk", max),
-                ):
-                    cell[f"med_{key}"] = round(float(agg(r[key] for r in runs)), 2)
-                for key in ("seat_denials", "risk_denials"):
-                    cell[f"sum_{key}"] = int(sum(r[key] for r in runs))
-                results.append(cell)
+                for cap_fraction in risk_caps:
+                    runs = [
+                        simulate(
+                            fit, native_old=old_cap, native_fat=10, hip3_seats=h3,
+                            intensity=intensity, days=args.days, seed=s,
+                            risk_cap_zar=cap_fraction * EQUITY_ZAR,
+                        )
+                        for s in range(args.seeds)
+                    ]
+                    cell = {
+                        "intensity": round(intensity, 1),
+                        "risk_cap_fraction": cap_fraction,
+                        "old_cap": old_cap,
+                        "fat_cap": 10,
+                        "total_native": old_cap + 10,
+                        "hip3_seats": h3,
+                    }
+                    for key, agg in (
+                        ("all10_day", statistics.median),
+                        ("native_rts", statistics.median),
+                        ("hip3_rts", statistics.median),
+                        ("min_slice_rts", statistics.median),
+                        ("peak_risk", max),
+                    ):
+                        cell[f"med_{key}"] = round(float(agg(r[key] for r in runs)), 2)
+                    for key in ("seat_denials", "risk_denials"):
+                        cell[f"sum_{key}"] = int(sum(r[key] for r in runs))
+                    results.append(cell)
 
-    grid_path = out_dir / "capacity_sim_grid.csv"
+    tag = f"_{args.tag}" if args.tag else ""
+    grid_path = out_dir / f"capacity_sim_grid{tag}.csv"
     with grid_path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(results[0].keys()))
         writer.writeheader()
@@ -365,6 +377,7 @@ def main() -> int:
         "days": args.days,
         "seeds_per_cell": args.seeds,
         "rt_target": RT_TARGET,
+        "risk_cap_fractions_grid": risk_caps,
         "fit": {
             "intensity_per_cycle": round(fit["intensity"], 1),
             "native_slices": fit["n_native"],
@@ -384,7 +397,7 @@ def main() -> int:
         "grid": results,
         "elapsed_seconds": round(time.time() - started, 1),
     }
-    summary_path = out_dir / "capacity_sim_summary.json"
+    summary_path = out_dir / f"capacity_sim_summary{tag}.json"
     summary_path.write_text(json.dumps(summary, indent=1) + "\n")
     print(f"wrote {summary_path} and {grid_path} in {summary['elapsed_seconds']}s")
     return 0
