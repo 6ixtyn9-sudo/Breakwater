@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import os
 import tempfile
 from collections import defaultdict
@@ -126,9 +127,45 @@ def _min_net_edge() -> float:
     return max(0.0, value)
 
 
+def _cost_bps(kind: str) -> float:
+    # Round-trip execution cost per kind. Must stay in sync with the cost
+    # model in paper_trade.py / engine.py (same env vars and defaults).
+    if str(kind).strip().upper() == "SPOT":
+        name, default = "BREAKWATER_SPOT_FEE_BPS", "70"
+    else:
+        name, default = "BREAKWATER_PERP_FEE_BPS", "9"
+    try:
+        value = float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        value = float(default)
+    return value if math.isfinite(value) and value >= 0 else float(default)
+
+
+def _min_net_edge_floor(kind: str) -> float:
+    """Effective net-edge floor for a kind: the higher of the static
+    quality bar (BREAKWATER_MIN_NET_EDGE) and k x the kind's round-trip
+    execution cost, where k = BREAKWATER_MIN_NET_EDGE_COST_MULT.
+
+    The cost term is the margin of safety: at k=2 a slice must still net
+    one full round trip even if fees or slippage double. Armed in the
+    research workflow (k=2); the code default is 0 (static bar only) so
+    bare local runs keep their legacy behavior. With k=2, spot at tier-1
+    cost (70 bps round trip) carries a 140 bps floor - dead by design,
+    no special-casing. Perp's cost term (18 bps) sits below the static
+    bar, so the static bar remains the perp quality dial.
+    """
+    try:
+        mult = float(os.getenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0"))
+    except (TypeError, ValueError):
+        mult = 0.0
+    if not math.isfinite(mult) or mult < 0:
+        mult = 0.0
+    return max(_min_net_edge(), _cost_bps(kind) * mult / 10000.0)
+
+
 def _directional_edge(row: ValidatedSlice) -> bool:
     # mean_ret_costadj is NET return for the chosen side (already cost-aware).
-    return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge()
+    return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _min_net_edge_floor(row.kind)
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -370,7 +407,7 @@ def sync_book(
             n_rows = int(row.get("n") or 0)
         except (TypeError, ValueError):
             return False
-        return n_rows >= MIN_BOOK_ROWS and edge >= _min_net_edge()
+        return n_rows >= MIN_BOOK_ROWS and edge >= _min_net_edge_floor(row.get("kind", ""))
 
     def _paper_green(row: dict) -> bool:
         trades = _coerce_int(row.get("paper_trades"), 0)

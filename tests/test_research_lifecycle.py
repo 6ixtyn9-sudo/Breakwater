@@ -387,3 +387,39 @@ def test_sync_book_never_wipes_on_empty_validated(tmp_path):
     assert len(rows) == 1
     assert rows[0]["slice_id"] == "feat:0:LONG"
     assert rows[0]["paper_trades"] == "1"
+
+
+def test_min_net_edge_floor_is_kind_aware(monkeypatch):
+    """Spot's floor is driven by its (much higher) cost; perp's by the static bar."""
+    from breakwater import research_lifecycle as rl
+
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
+    # Spot: cost term 2 x 70 bps = 140 bps dominates the static 20 bps.
+    assert rl._min_net_edge_floor("SPOT") == 0.014
+    # Perp: cost term 2 x 9 bps = 18 bps sits below the static 20 bps.
+    assert rl._min_net_edge_floor("PERP") == 0.002
+
+
+def test_min_net_edge_floor_static_bar_raises_perp(monkeypatch):
+    from breakwater import research_lifecycle as rl
+
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.004")
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
+    assert rl._min_net_edge_floor("PERP") == 0.004
+    assert rl._min_net_edge_floor("SPOT") == 0.014
+
+
+def test_min_net_edge_floor_mult_zero_disables_cost_term(monkeypatch):
+    from breakwater import research_lifecycle as rl
+
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0")
+    assert rl._min_net_edge_floor("SPOT") == 0.002
+    assert rl._min_net_edge_floor("PERP") == 0.002
