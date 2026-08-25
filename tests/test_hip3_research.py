@@ -57,6 +57,8 @@ def test_methodology_parity_reports_drift(monkeypatch):
         "BREAKWATER_BREADTH_MIN_SYMBOLS": "6",
         "BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL": "10",
         "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION": "0.40",
+        "BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES": "2",
+        "BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT": "edge_per_bar",
     }
     for name, value in expected_env.items():
         monkeypatch.setenv(name, value)
@@ -70,6 +72,14 @@ def test_methodology_parity_reports_drift(monkeypatch):
     )
     assert drifted["status"] == "mismatch"
     assert drifted["mismatches"] == ["breadth_min_symbols"]
+    # The book-shape canary: without the promotion env the code default
+    # (min_passes=1, no consolidation) must flag a parity mismatch.
+    monkeypatch.delenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES")
+    monkeypatch.setenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "6")
+    drifted = _methodology_parity(
+        max_pairs=60, candle_count=1000, horizons=list(range(1, 25))
+    )
+    assert "promotion_multi_horizon_min_passes" in drifted["mismatches"]
 
 
 def test_market_classes_keep_builder_crypto_out_of_equity_pool():

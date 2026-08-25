@@ -110,6 +110,8 @@ def _methodology_parity(*, max_pairs: int, candle_count: int, horizons: list[int
         "breadth_min_symbols": "6",
         "breadth_min_rows_per_symbol": "10",
         "breadth_min_positive_fraction": "0.40",
+        "promotion_multi_horizon_min_passes": "2",
+        "promotion_multi_horizon_select": "edge_per_bar",
     }
     actual = {
         "max_pairs": max_pairs,
@@ -128,6 +130,16 @@ def _methodology_parity(*, max_pairs: int, candle_count: int, horizons: list[int
         ),
         "breadth_min_positive_fraction": os.getenv(
             "BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.55"
+        ),
+        # Book-shaping parameters: native consolidates to one horizon per
+        # family (best edge per bar). If the HIP-3 workflow drifts here, the
+        # book shape diverges from native doctrine - the 269-row sibling
+        # book of 2026-08-25 is exactly the drift this catches.
+        "promotion_multi_horizon_min_passes": os.getenv(
+            "BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1"
+        ),
+        "promotion_multi_horizon_select": os.getenv(
+            "BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT", "edge_per_bar"
         ),
     }
     mismatches = [key for key, expected_value in expected.items() if actual[key] != expected_value]
