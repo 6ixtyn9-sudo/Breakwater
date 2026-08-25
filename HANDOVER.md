@@ -1,37 +1,43 @@
 BREAKWATER HANDOVER / RUNBOOK
-Date: 2026-08-20 (Africa/Johannesburg)
+Date: 2026-08-20 (Africa/Johannesburg); updated 2026-08-25.
 
 This is the canonical handover. Plain text. Copy this whole file.
+Sections are dated. Where sections conflict, the newest one wins.
 
-Breakwater is VALR-native crypto (spot + mapped crypto perps).
+Breakwater = Hyperliquid-authoritative perps (native crypto, plus HIP-3
+builder perps as a SEPARATE lane) + VALR ZAR spot.
 Do not port Hermes/YouTube agents here.
-Do not mix HIP-3 equity perps (xyz:) into this book.
+Do not pool HIP-3 (xyz:) evidence with the native crypto book: separate
+universe, candles, books, paper state and fees. The HIP-3 paper lane has
+been ARMED since 25 Aug (section 23) - isolation, not absence.
 
 
-0) EXECUTIVE SUMMARY
+0) EXECUTIVE SUMMARY (updated 25 Aug; supersedes the 20 Aug h21-only summary)
 
-Hands-off paper on one hunt slice:
+Hands-off paper, multi-slice book + armed HIP-3 sub-pool.
 
-PERP feat_ext_vs_ma_50:2:LONG:h21
+Book: 15 PERP slices, ALL LONG, net edge 40.0-198.3 bps, zero spot.
+  Auto-tuned floor over fact-based costs (sections 24-25). h21 (the original
+  hunt) is one of the 15: 13 closes 12W/1L +114.00 ZAR, still trading.
 
-Source: validated_concentrated (19 Aug). Mean +0.005465, n=2282, 17 names, fail only breadth_ok, hostile_n=0 at promote.
+Paper: equity 2121.09 ZAR (seed 2000 + 121.09). 79 closes, 47W/32L (60%).
+  native PERP +134.90 (68), native SPOT -7.93 (9, all pre-floor era),
+  HIP-3 -5.88 (2). 16 open positions, ~136 ZAR stop-risk vs ~148 cap (91%).
+Sizing: COMPOUNDING (section 26) - R = 1% of equity, notional cap = 20% of
+  equity. First 424 ZAR tickets printed 25 Aug; the old 200 fence is gone.
+HIP-3 paper lane ARMED 25 Aug (section 23): 6 seats, per-slice cap 3,
+  group-scoped matching, collateral set check. 6 open; first stop (CRCL,
+  -1.09R) cut clean. Live gate still needs 25 closes + 25 positive ghost rows.
+Ghosts (section 27): 2R control stays. Max MFE 2.25R, zero 3R trades; the
+  3R ghost's +2.72 ZAR is ONE trade - a whisper, not a voice.
+Live: locked. Perps = Hyperliquid (testnet funding paused, section 15).
+  Spot is walled by the 140 bps cost floor - arithmetic, not policy.
+Cron (SAST): paper every 30 min; guardian :05/:35; research daily 02:25;
+  hip3-research daily 03:40. Section 27.
 
-Paper (score this only): n=5 closes, all target, 0 stops, +34.80 ZAR on R200 notionals
-  SOL +5.20, BTC +3.41, BTC +5.86, ETH +9.61, SOL +10.72
-  Last close 2026-08-19T21:15Z
-
-All-time paper fills (every slice, 16-19 Aug): n=31, +30.57 ZAR
-  Hunt is the profit. Other slices about -4.2 ZAR.
-
-Live: locked. VALR authenticated /simple-futures/* still HTTP 401 code -93.
-Guardian equity about R345-352 ZAR, 0 live positions.
-Paper marks public Hyperliquid candles, not VALR perps API.
-
-Hawk, not pig. Do not click research. Cron research daily 02:25 UTC.
-Do not raise 2R, MIN_NET_EDGE, or PER_SLICE.
-
-One rule: score only h21 closes (target / trail_stop / horizon / stop).
-First honest stop has not printed.
+One rule (current): no knob changes without a number in status.csv.
+The 40 bps bar (BREAKWATER_MIN_NET_EDGE=0.004) is a guarantee under the
+auto-tune, not a dial. Do not lift 2R.
 
 
 1) OPERATING MODE
@@ -39,10 +45,11 @@ First honest stop has not printed.
 BREAKWATER_MODE: paper workflow = shadow; guardian often readonly; research = readonly.
 No live orders.
 
-Cron (cron-job.org) hits FILENAMES. Do not rename workflows.
-  guardian.yml  about :05 and :35
-  paper.yml     about :15
-  research.yml  daily 02:25 UTC
+Cron (cron-job.org) hits FILENAMES. Do not rename workflows. Times SAST.
+  guardian.yml     about :05 and :35
+  paper.yml        every 30 min (:00 and :30), since 25 Aug
+  research.yml     daily 02:25  (00:25 UTC)
+  hip3-research.yml daily 03:40 (01:40 UTC; discovery runs first inside it)
 
 Concurrency groups (internal; cron URLs unchanged):
   breakwater-guardian
@@ -85,7 +92,13 @@ Operator: 6ixtyn9. Mac died. Actions + cron are the computer.
 Humans commit source only. If localdata dirty: git checkout -- localdata/ then pull.
 
 
-3) HUNT DOCTRINE (FROZEN)
+3) HUNT DOCTRINE (FROZEN 19 Aug)
+
+[Partially superseded 25 Aug: MIN_NET_EDGE is now 0.004 as a guarantee under
+the auto-tune (section 25); paper caps are now MAX_POSITIONS=24, PER_KIND=30,
+PER_SLICE=5, OLD_SEATS=12, FAT_SEATS=10, HIP-3 sub-pool 6 seats / 3 per slice
+(sections 23, 26). The frozen exit doctrine - stop / 2R / horizon, R-gate,
+same-bar stop-first - is unchanged and still binding.]
 
 Do not retune because the tape is green.
 
@@ -203,6 +216,8 @@ All-target n=5 is a bull-tape print, not a proven edge.
 7) RESEARCH / PROMOTION (MUST REMAIN TRUE)
 
 Net LONG = r - cost; SHORT = -r - cost. Perp 26 bps, spot 20.
+  [SUPERSEDED 25 Aug: spot 70 bps, perp 9 bps - published venue schedules,
+  env-driven, shared by research and paper. Section 24.]
 Promote WF validated rows with n>=60 and mean >= MIN_NET_EDGE,
 AND 2 distinct horizons per family (edge_per_bar pick).
 Concentrated path (env on): fail ONLY breadth_ok, plus temporal/direction/mean_positive,
@@ -242,6 +257,9 @@ Research: PYTHONPATH=src python scripts/breakwater.py research
 
 
 10) DAILY HAWK ROUTINE
+
+[SUPERSEDED 25 Aug by section 27: the book is 15 slices, not just h21 -
+score the book, watch the auto-tuned floors in status.csv.]
 
 Do not fondle YAML. Do not one-knob-a-day.
 Score only feat_ext_vs_ma_50:2:LONG:h21
@@ -645,5 +663,153 @@ operational. Paper correctness no longer assumes one workflow run per bar:
 
 This protects paper evidence from hosted-runner queues; it does not require
 switching runner images or running another cron.
+
+
+23) HIP-3 PAPER LANE ARMED + GATE V2 (2026-08-25, ACTIONED)
+
+BREAKWATER_HIP3_PAPER=1 (paper.yml default) arms the HIP-3 paper sub-pool.
+  - Paper cycle reads the isolated hip3 book
+    (localdata/hip3/research/monitored_slices.csv); slice ids are
+    namespaced hip3_* and group-scoped matching means a dex_class_cN slice
+    only fires on its own group's frames. Never pooled with native.
+  - Sub-pool: BREAKWATER_HIP3_MAX_POSITIONS=6 seats (does not consume
+    native old/fat seats). BREAKWATER_HIP3_MAX_POSITIONS_PER_SLICE=3 -
+    one edge cannot hold half the pool. The cap governs NEW entries only;
+    the pre-cap legacy state (5/6 on realized_vol_20) converges as
+    positions rotate. Do not force-close the legacy seats.
+  - Gate v2 at book level: collateral SET check against operator-confirmed
+    tokens (BREAKWATER_HIP3_USDC_TOKEN_ID=0,235), native min-net-edge floor
+    applied to the HIP-3 book, min-net-edge parity canary.
+  - 25 Aug state: 6 open (4 xyz_equity realized_vol_20:2:LONG,
+    2 vol_regime:1:LONG; COIN MSTR PURRDAT RIVN AMAT AMD), 2 closes:
+    CRCL stop -6.59 ZAR (-1.09R) cut clean, BABA trail +0.71.
+  - HIP-3 LIVE gate unchanged (sections 18-19): 25 closed paper trades
+    AND 25 positive ghost rows AND positive PnL, plus the production gates.
+    Paper is the measurement instrument; do not shortcut it.
+
+
+24) FACT-BASED COST MODEL (2026-08-25, ACTIONED)
+
+The old 20 bps spot / 26 bps perp were assumptions, wrong in BOTH
+directions. Replaced with published venue schedules, verified 25 Aug:
+  - VALR "spot fiat-quoted" (BTCZAR class) tier 1 (zero 30-day volume -
+    exactly a paper account): taker 0.350%/side = 70 bps round trip.
+  - Hyperliquid base tier (native AND HIP-3 builder perps):
+    taker 0.045%/side = 9 bps round trip.
+
+Env (read by BOTH engine.research_pass cost-adjusted edges AND the paper
+close-fee path - one number, one place, same defaults):
+  BREAKWATER_SPOT_FEE_BPS = 70
+  BREAKWATER_PERP_FEE_BPS = 9
+
+scripts/fee_audit.py (PYTHONPATH=src python3 scripts/fee_audit.py) prints
+the modeled bps, the published schedules, and with VALR credentials the
+account's LIVE fee schedule. Run it before changing the bps; the number
+only moves when the tier does.
+
+perpdata.py now retries Hyperliquid /info 429/5xx (3 attempts, backoff,
+honours Retry-After). VALR already retried; the asymmetry caused a
+32-pair error burst on 25 Aug 10:17Z. Watch pair_errors in status.csv.
+
+The 26 bps also over-costed perp validation: at true cost 150 MORE
+candidates clear the 40 bps bar than the old model admitted, and spot's
+"validated" slices were fabricated by the under-cost (best true spot edge
+93.6 bps vs the 140 bps floor). Do not re-derive these numbers from memory.
+
+
+25) AUTO-TUNING NET-EDGE FLOOR (2026-08-25, ACTIONED)
+
+The quality bar is no longer a hand-maintained number. Per research run,
+per kind:
+  effective_floor = max( static bar, k x cost(kind), pool quantile )
+  - static bar = BREAKWATER_MIN_NET_EDGE, operator-set to 0.004 (40 bps).
+    It is a GUARANTEE (the bar never drops below it), not a dial.
+  - k = BREAKWATER_MIN_NET_EDGE_COST_MULT (2 in research.yml; code default
+    0 = static-only for bare local runs). Margin of safety: the edge must
+    survive fees/slippage doubling.
+  - pool quantile = top 25% of THIS run's candidate pool for NEW
+    promotions (BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE=0.25); existing book
+    rows carry on the looser top 40% (KEEP_QUANTILE=0.40).
+    Enter-tight / keep-loose = hysteresis, no boundary flapping.
+
+The concentrated (hunt) path also respects the floor - no backdoor.
+status.csv now reports net_edge_floor_enter_bps / net_edge_floor_keep_bps
+per kind on every research run. That is the auditable bar.
+
+First reading (25 Aug 12:27Z run): PERP enter 41.7 / keep 40.0;
+SPOT 140.0 (cost floor dominates; the pool cannot lift it, and nothing
+clears it - max observed spot edge 93.6 bps). Spot is off by arithmetic.
+
+Book after the first two honest re-scores (25 Aug): 15 PERP slices,
+ALL LONG, 40.0-198.3 bps net, zero spot; 275 of 1872 candidates validated.
+The h21-era "score only h21" rule is dead - the book breathes daily at
+02:25 SAST; multi-horizon gate re-picks horizons per family each run.
+
+LONG-ONLY NOTE: 15/15 BUY = long beta. The short side is not offering
+40 bps+ edges right now; that is the data, not a bug. The 7% aggregate
+leash caps the pull. Watch it in a red tape; do not "fix" it with knobs.
+
+
+26) COMPOUNDING PAPER SIZING (2026-08-25, ACTIONED)
+
+BREAKWATER_PAPER_SIZE_FROM_EQUITY=1 (paper.yml default):
+  - R = BREAKWATER_PAPER_RISK_OF_EQUITY (0.01) x equity
+  - notional cap = BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY (0.20)
+    x equity. The old absolute 200 ZAR mandate cap is a FLAT-MODE boundary
+    only; in equity mode it no longer caps compounding.
+  - equity = seed (BREAKWATER_PAPER_EQUITY_SEED=2000) + realized paper PnL.
+
+25 Aug state: equity 2121.09 ZAR, 79 closes 47W/32L, +121.09.
+First tickets on the new cap: 424.2 ZAR notionals (20% of 2121) vs the old
+200 fence. Pre-refactor positions ride at 200 until close - do not force-
+resize them. The 7% aggregate leash (BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_
+EQUITY=0.07, ~148 ZAR) is now the binding constraint (~91% utilized); it
+scales with equity, so the whole risk system compounds.
+
+Paper caps (paper.yml): MAX_POSITIONS=24, PER_KIND=30, PER_SLICE=5,
+OLD_SEATS=12, FAT_SEATS=10, HIP-3 sub-pool 6/3 (section 23).
+
+
+27) CADENCE, STOP FIDELITY, OPS (2026-08-25, DECIDED)
+
+VERIFIED MECHANICS (do not re-derive from vibes):
+  - The paper cycle manages positions on COMPLETED 1-hour bars only
+    (last_processed_bar_start only advances on closed bars; the forming
+    bar is never marked). Every run re-scans signals on fresh prices, so
+    entries can happen on any run.
+  - 30-min cadence: stop detection averages ~30 min, worst ~60 min.
+    DO NOT go to 15 min: 3 of 4 runs would add zero stop information at
+    4x the public-API load. The API, not the runner, is the soft limit.
+  - If 429s become chronic (pair_errors on MOST runs), the fix is candle
+    caching, not a slower cadence.
+
+Cron (cron-job.org, SAST): paper :00/:30; guardian :05/:35; research
+daily 02:25; hip3-research daily 03:40. Filenames are the API - never
+rename (section 9).
+
+CI (every push to main): ruff + pytest (240) + compileall + bash -n, ~27s.
+The Arena agent app CANNOT push .github/workflows/* - workflow edits go
+through the operator's terminal block (python heredoc); the agent pushes
+code and tests only. CI "red" = real; clean the commit, don't delete the
+commit. (25 Aug: fee_audit ruff errors fixed in d1ce23a, CI #241 green.)
+
+FIRST GHOST READING (16 mirrors, 76 rows): max MFE 2.25R, ZERO 3R+ trades.
+3R ghost +2.72 ZAR is ONE trade (BTCUSDC, +3.74 on it) - a whisper.
+Wide 2R-trail ghost is the one clearly-bad policy (keeps losers alive).
+2R control stays. Ghosts are EVIDENCE for the HIP-3 live gate (25/25),
+not a tuning menu. Revisit the target only when MFEs print 3R+.
+
+CURRENT DAILY HAWK ROUTINE (replaces section 10):
+  1) status.csv: pair_errors, aggregate_risk_status, replayed_bars.
+  2) research run: net_edge_floor_enter_bps / keep_bps, validated count.
+  3) book: any slice frozen/carried and why (status counters).
+  4) HIP-3: closed-trade count toward 25; MFEs.
+  5) In a red tape: the long-only book's leash utilization.
+  No knob change without a number. No YAML fondling.
+
+Variables (25 Aug): HIP3_USDC_TOKEN_ID=0,235; MIN_NET_EDGE=0.004;
+  MODE=readonly; PAPER_EQUITY_SEED=2000; PERP_CANDLE_COUNT=1000;
+  RESEARCH_HORIZONS=1..24; RUNNER=ubuntu-22.04; SPOT_CANDLE_COUNT=1000.
+Secrets: BREAKWATER_MANDATE_JSON, VALR_API_KEY, VALR_API_SECRET.
 
 END
