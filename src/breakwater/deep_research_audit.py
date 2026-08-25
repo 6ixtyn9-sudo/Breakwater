@@ -23,7 +23,7 @@ import pandas as pd
 from breakwater.discovery import _slice_stats, prepare_pooled
 from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_features
 from breakwater.hip3 import read_hip3_universe
-from breakwater.hip3_research import _candidate_rows
+from breakwater.hip3_research import _candidate_rows, _stratified_select
 from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.perpdata import fetch_perp_candles
 from breakwater.validation import _calibrate_stop_atr_mult
@@ -341,12 +341,12 @@ def _groups(lane: str, *, max_pairs: int, data_dir: Path) -> list[AuditGroup]:
         if universe is None:
             raise RuntimeError("HIP-3 universe is missing; run hip3-discover first")
         native_coins = {item.coin.upper() for item in native}
-        selected = _candidate_rows(
+        candidates = _candidate_rows(
             universe.rows,
             native_crypto=native_coins,
-            max_pairs=max_pairs,
             max_oracle_deviation=Decimal("0.02"),
         )
+        selected = _stratified_select(candidates, max_pairs=max_pairs)
         grouped: dict[str, list[str]] = {}
         for row, market_class in selected:
             name = f"{row.dex}_{market_class}_c{row.collateral_token}"

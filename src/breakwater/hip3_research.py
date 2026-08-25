@@ -57,6 +57,12 @@ INDEX_TOKENS = (
     "TOTAL", "UK100", "US30", "US500", "USTECH", "VIX",
 )
 
+# Every active DEX gets up to this many coins in the research sample even when
+# its instruments never crack the volume cutoff (evidence representativeness).
+PER_DEX_FLOOR = 2
+# Minimum l2Book samples before a measured cost may replace the flat assumption.
+MIN_SPREAD_SAMPLES = 30
+
 
 def _env_int(name: str, default: int, minimum: int, maximum: int) -> int:
     try:
@@ -161,6 +167,24 @@ def l2_half_spread_bps(book) -> float | None:
     return ((best_ask - best_bid) / 2.0) / mid * 10_000.0
 
 
+def measured_round_trip_cost_bps(
+    spreads: list[float],
+    *,
+    base_taker_fee_bps: float,
+) -> float | None:
+    """Round-trip cost in bps from the current book snapshot.
+
+    A round trip crosses the spread twice and pays the taker fee on each leg:
+    2 x (median half-spread + taker fee). Returns None when there are too few
+    samples for the number to be trusted, in which case callers keep the flat
+    assumed cost. The book is a point-in-time snapshot, so this is a measured
+    estimate of typical crossing cost, not a history.
+    """
+    if len(spreads) < MIN_SPREAD_SAMPLES:
+        return None
+    return round(2.0 * (statistics.median(spreads) + base_taker_fee_bps), 2)
+
+
 def classify_market(coin: str, native_crypto: set[str], annotation_category: str = "") -> str:
     asset = str(coin).split(":", 1)[-1].upper()
     if asset in native_crypto:
@@ -236,9 +260,13 @@ def _candidate_rows(
     rows: tuple[Hip3UniverseRow, ...],
     *,
     native_crypto: set[str],
-    max_pairs: int,
     max_oracle_deviation: Decimal,
 ) -> list[tuple[Hip3UniverseRow, str]]:
+    """Safety-filtered, volume-sorted candidate list (no budget applied).
+
+    Callers apply the budget via :func:`_stratified_select` so the full
+    candidate set stays available for per-DEX representation.
+    """
     candidates = []
     for row in rows:
         if not row.active or row.day_notional_volume <= 0:
@@ -254,7 +282,131 @@ def _candidate_rows(
             continue
         candidates.append((row, market_class))
     candidates.sort(key=lambda item: (-item[0].day_notional_volume, item[0].coin))
-    return candidates[:max_pairs]
+    return candidates
+
+
+def _stratified_select(
+    candidates: list[tuple[Hip3UniverseRow, str]],
+    *,
+    max_pairs: int,
+    per_dex_floor: int = PER_DEX_FLOOR,
+) -> list[tuple[Hip3UniverseRow, str]]:
+    """Top-by-volume selection with a per-DEX representation floor.
+
+    candidates must already be volume-sorted. DEXs absent from the top pick
+    receive up to per_dex_floor of their best coins; floor picks displace the
+    lowest-volume picks, so the budget never grows. Deterministic; iteration
+    is bounded and converges when every representable DEX has its floor.
+    """
+    selected = list(candidates[:max_pairs])
+    # Each pass adds at least one previously-missing DEX, so this converges in
+    # at most len(candidates) + 1 passes; the bound is a safety net.
+    for _ in range(len(candidates) + 1):
+        selected_dexs = {row.dex for row, _ in selected}
+        missing = [
+            (row, market_class)
+            for row, market_class in candidates
+            if row.dex not in selected_dexs
+        ]
+        if not missing:
+            break
+        floor_picks: list[tuple[Hip3UniverseRow, str]] = []
+        counted: dict[str, int] = {}
+        for row, market_class in missing:  # volume order
+            if len(floor_picks) >= len(selected):
+                break  # budget can never grow
+            if counted.get(row.dex, 0) >= per_dex_floor:
+                continue
+            floor_picks.append((row, market_class))
+            counted[row.dex] = counted.get(row.dex, 0) + 1
+        tail_coins = {row.coin for row, _ in selected[-len(floor_picks):]}
+        selected = [item for item in selected if item[0].coin not in tail_coins]
+        selected.extend(floor_picks)
+        selected.sort(key=lambda item: (-item[0].day_notional_volume, item[0].coin))
+    return selected
+
+
+def _promotion_gate(
+    *,
+    selected: list[tuple[Hip3UniverseRow, str]],
+    spread_samples: list[float],
+    assumed_cost_bps: float,
+    measured_cost_bps: float | None,
+    base_taker_fee_bps: float,
+    confirmed_collateral_token: int | None,
+) -> dict:
+    """Evaluate every promotion blocker against committed, checkable evidence.
+
+    This is a status mechanism, not a promotion path: this lane writes no
+    monitored book and feeds no paper or live execution regardless of the
+    outcome. The gate exists so the lock has explicit, observable criteria
+    instead of a static list, and so each resolution is recorded where it
+    happened.
+    """
+    provisional = [cls for _, cls in selected if cls.startswith("provisional")]
+    classification_resolved = bool(selected) and not provisional
+    collateral_resolved = (
+        confirmed_collateral_token is not None
+        and {row.collateral_token for row, _ in selected} == {confirmed_collateral_token}
+    )
+    costs_resolved = measured_cost_bps is not None
+    blockers = [
+        {
+            "name": "market_classification_not_fully_authoritative",
+            "resolved": classification_resolved,
+            "evidence": (
+                f"{len(selected) - len(provisional)}/{len(selected)} selected coins in an "
+                f"authoritative class ({len(provisional)} provisional)"
+            ),
+        },
+        {
+            "name": "market_calendars_not_enforced",
+            "resolved": False,
+            "evidence": "research treats all HIP-3 sessions as 24/7; equity/FX/commodity calendars are not modeled",
+        },
+        {
+            "name": "historical_oracle_quality_not_available",
+            "resolved": False,
+            "evidence": "oracle prints are not exposed by the API; cross-DEX divergence proxy not implemented",
+        },
+        {
+            "name": "effective_costs_not_measured",
+            "resolved": costs_resolved,
+            "evidence": (
+                f"l2 samples {len(spread_samples)}/{MIN_SPREAD_SAMPLES} minimum; "
+                + (
+                    f"measured round-trip cost {measured_cost_bps} bps "
+                    f"(median half-spread + {base_taker_fee_bps} bps taker, x2 legs)"
+                    if costs_resolved
+                    else f"validation using flat assumed {assumed_cost_bps} bps"
+                )
+            ),
+        },
+        {
+            "name": "collateral_tokens_not_resolved",
+            "resolved": collateral_resolved,
+            "evidence": (
+                f"distinct collateral token ids in selected: "
+                f"{sorted({row.collateral_token for row, _ in selected})}"
+                + (
+                    f"; matches operator-confirmed id {confirmed_collateral_token}"
+                    if collateral_resolved
+                    else "; operator confirmation required (BREAKWATER_HIP3_USDC_TOKEN_ID)"
+                )
+            ),
+        },
+        {
+            "name": "no_hip3_paper_evidence",
+            "resolved": False,
+            "evidence": "no HIP-3 paper lane exists; a paper path must be designed and run before any promotion",
+        },
+    ]
+    unresolved = [blocker["name"] for blocker in blockers if not blocker["resolved"]]
+    return {
+        "blockers": blockers,
+        "unresolved": unresolved,
+        "all_resolved": not unresolved,
+    }
 
 
 def run_hip3_research(
@@ -275,13 +427,16 @@ def run_hip3_research(
     candle_count = _env_int("BREAKWATER_HIP3_CANDLE_COUNT", 1000, 300, 5000)
     max_deviation = _env_decimal("BREAKWATER_HIP3_MAX_ORACLE_DEVIATION", "0.02")
     cost_bps = float(_env_decimal("BREAKWATER_HIP3_COST_BPS", "30"))
+    base_taker_fee_bps = float(_env_decimal("BREAKWATER_HIP3_BASE_TAKER_FEE_BPS", "4.5"))
+    raw_collateral = os.getenv("BREAKWATER_HIP3_USDC_TOKEN_ID", "").strip()
+    confirmed_collateral = int(raw_collateral) if raw_collateral.isdigit() else None
     sleep_seconds = float(_env_decimal("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05"))
-    selected = _candidate_rows(
+    candidates = _candidate_rows(
         universe.rows,
         native_crypto=native_crypto,
-        max_pairs=max_pairs,
         max_oracle_deviation=max_deviation,
     )
+    selected = _stratified_select(candidates, max_pairs=max_pairs)
     if not selected:
         raise RuntimeError("no active HIP-3 instruments passed pre-research safety gates")
 
@@ -349,6 +504,27 @@ def run_hip3_research(
             time.sleep(sleep_seconds)
     _write_coverage(coverage_path, coverage_rows)
 
+    # Cost decision: a measured round-trip cost replaces the flat assumption
+    # only once enough books were sampled; otherwise the assumption stands
+    # and the gate reports why.
+    spread_values = [
+        float(row["l2_half_spread_bps"])
+        for row in coverage_rows
+        if row["l2_half_spread_bps"] not in ("", None)
+    ]
+    spread_summary = {
+        "sampled": len(spread_values),
+        "unmeasured": len(coverage_rows) - len(spread_values),
+        "min": round(min(spread_values), 2) if spread_values else None,
+        "median": round(statistics.median(spread_values), 2) if spread_values else None,
+        "max": round(max(spread_values), 2) if spread_values else None,
+    }
+    measured_cost = measured_round_trip_cost_bps(
+        spread_values, base_taker_fee_bps=base_taker_fee_bps
+    )
+    effective_cost = measured_cost if measured_cost is not None else cost_bps
+    effective_cost_source = "measured_l2_roundtrip" if measured_cost is not None else "assumed_flat"
+
     horizons = _horizons()
     discovered = []
     validated = []
@@ -359,7 +535,7 @@ def run_hip3_research(
         kind = f"HIP3_{research_group.upper()}"
         for horizon in horizons:
             prepared = prepare_pooled(
-                pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon
+                pooled, FEATURE_COLUMNS, effective_cost, horizon_bars=horizon
             )
             found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon)
             found = _tag_candidates(found, research_group, horizon)
@@ -376,18 +552,6 @@ def run_hip3_research(
         for token in str(row.fail_reasons or "").split(","):
             if token.strip():
                 fail_tokens[token.strip()] += 1
-    spread_values = [
-        float(row["l2_half_spread_bps"])
-        for row in coverage_rows
-        if row["l2_half_spread_bps"] not in ("", None)
-    ]
-    spread_summary = {
-        "sampled": len(spread_values),
-        "unmeasured": len(coverage_rows) - len(spread_values),
-        "min": round(min(spread_values), 2) if spread_values else None,
-        "median": round(statistics.median(spread_values), 2) if spread_values else None,
-        "max": round(max(spread_values), 2) if spread_values else None,
-    }
     parity = _methodology_parity(
         max_pairs=max_pairs, candle_count=candle_count, horizons=horizons
     )
@@ -395,14 +559,14 @@ def run_hip3_research(
         classify_market(row.coin, native_crypto, row.annotation_category)
         for row, _ in selected
     ]
-    promotion_blocked_reasons = [
-        "market_classification_not_fully_authoritative",
-        "market_calendars_not_enforced",
-        "historical_oracle_quality_not_available",
-        "effective_costs_not_measured",
-        "collateral_tokens_not_resolved",
-        "no_hip3_paper_evidence",
-    ]
+    promotion_gate = _promotion_gate(
+        selected=selected,
+        spread_samples=spread_values,
+        assumed_cost_bps=cost_bps,
+        measured_cost_bps=measured_cost,
+        base_taker_fee_bps=base_taker_fee_bps,
+        confirmed_collateral_token=confirmed_collateral,
+    )
     result = {
         "as_of": observed,
         "universe_as_of": universe.as_of,
@@ -424,8 +588,21 @@ def run_hip3_research(
             else "provisional"
         ),
         "annotated_selected": sum(bool(row.annotation_category) for row, _ in selected),
+        "selection": {
+            "mode": "stratified_by_dex",
+            "per_dex_floor": PER_DEX_FLOOR,
+            "dexs_selected": len({row.dex for row, _ in selected}),
+            "dexs_with_candidates": len({row.dex for row, _ in candidates}),
+        },
+        "effective_cost_bps": {
+            "value": effective_cost,
+            "source": effective_cost_source,
+            "base_taker_fee_bps": base_taker_fee_bps,
+            "assumed_cost_bps": cost_bps,
+        },
         "methodology_parity": parity,
-        "promotion_blocked_reasons": promotion_blocked_reasons,
+        "promotion_blocked_reasons": promotion_gate["unresolved"],
+        "promotion_gate": promotion_gate,
     }
     append_status(
         status_path,
