@@ -171,6 +171,24 @@ def test_open_position_stops_out_and_journals(tmp_path):
     assert journal[0]["pnl_zar"].startswith("-")
 
 
+def test_paper_fee_uses_configured_bps(tmp_path, monkeypatch):
+    """The close fee must follow the configured round-trip bps, so the cost
+    model is a fact we set, not a number buried in the source."""
+    from breakwater import paper_trade
+
+    monkeypatch.setattr(paper_trade, "PERP_FEE_BPS", Decimal("100"))
+    # notional 150 @ 100 bps round trip -> 1.50 ZAR fee
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=94, low=93)},
+        positions=open_position(),
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert Decimal(str(log.iloc[0]["fee_zar"])) == Decimal("1.50")
+
+
 def test_replays_unseen_bars_stop_first_after_runner_delay(tmp_path):
     position = open_position(entry="100", stop="95", bars="0")
     position[0]["initial_stop_price"] = "95"
@@ -911,6 +929,39 @@ def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=B
         server_time=datetime.now(timezone.utc),
         hip3_book_path=hip3_book,
     )
+
+
+def test_hip3_subpool_caps_positions_per_slice(tmp_path, monkeypatch):
+    """The HIP-3 sub-pool caps positions per slice (default 3) so one edge
+    cannot occupy half the pool with correlated bets."""
+    from breakwater import paper_trade
+
+    monkeypatch.setattr(paper_trade, "MAX_PAPER_POSITIONS_PER_KIND", 6)
+    hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
+    positions = []
+    for i in range(3):
+        position = dict(open_position()[0])
+        position.update(pair=f"XYZ:TICK{i}", slice_id="hip3_xyz_index_c0:feat:0:LONG:h5")
+        positions.append(position)
+    sig = signal(
+        pair="XYZ:TICK3",
+        kind="PERP",
+        slice_id="hip3_xyz_index_c0:feat:0:LONG:h5",
+        entry="100",
+        stop="95",
+    )
+    result = hip3_cycle(
+        tmp_path,
+        signals=[sig],
+        frames={"XYZ:TICK3": frame_with_bar(close=100)},
+        positions=positions,
+        hip3_book=hip3_book,
+        book={"hip3_xyz_index_c0:feat:0:LONG:h5"},
+    )
+    # The three incumbents survive; the fourth seat on the same slice is
+    # refused at the HIP-3 per-slice cap.
+    assert result["open"] == 3
+    assert result["slice_full"] == 1
 
 
 def test_hip3_position_exits_on_hip3_book_horizon(tmp_path):

@@ -176,3 +176,16 @@ def test_universe_reingests_legacy_file_without_perp_volumes(tmp_path):
     snapshot = engine._universe()
     perps = [row for row in snapshot.rows if row.kind == "PERP"]
     assert any(row.quote_volume > 0 for row in perps)
+
+
+def test_fee_bps_env_falls_back_on_invalid_or_negative(monkeypatch):
+    from breakwater import engine
+
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "not-a-number")
+    assert engine._fee_bps_env("BREAKWATER_SPOT_FEE_BPS", "70") == 70.0
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "-5")
+    assert engine._fee_bps_env("BREAKWATER_SPOT_FEE_BPS", "70") == 70.0
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "42")
+    assert engine._fee_bps_env("BREAKWATER_SPOT_FEE_BPS", "70") == 42.0
+    monkeypatch.delenv("BREAKWATER_SPOT_FEE_BPS", raising=False)
+    assert engine._fee_bps_env("BREAKWATER_SPOT_FEE_BPS", "70") == 70.0

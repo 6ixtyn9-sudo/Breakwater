@@ -98,7 +98,24 @@ def fetch_perp_candles(
         },
     }
     requester = session or requests
-    response = requester.post(info_url, json=payload, timeout=20)
+    # The public /info API rate-limits bursts (HTTP 429) and occasionally
+    # 5xx under load. Retry with backoff (honouring Retry-After) instead of
+    # failing the pair for the whole cycle. getattr keeps test doubles that
+    # do not model status codes working as before.
+    response = None
+    for attempt in range(3):
+        response = requester.post(info_url, json=payload, timeout=20)
+        status = getattr(response, "status_code", 200)
+        if status in (429, 500, 502, 503, 504) and attempt + 1 < 3:
+            headers = getattr(response, "headers", None) or {}
+            retry_after = headers.get("Retry-After")
+            try:
+                delay = float(retry_after)
+            except (TypeError, ValueError):
+                delay = 1.0 * (attempt + 1)
+            time.sleep(max(delay, 0.1))
+            continue
+        break
     response.raise_for_status()
     rows = response.json()
     if not isinstance(rows, list):

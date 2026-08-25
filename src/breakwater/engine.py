@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
@@ -65,6 +66,14 @@ def _coerce_int(value, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _fee_bps_env(name: str, default: str) -> float:
+    try:
+        value = float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return float(default)
+    return value if math.isfinite(value) and value >= 0 else float(default)
 
 
 def _research_max_pairs(default: int = 60) -> int:
@@ -768,7 +777,13 @@ class BreakwaterEngine:
         discovered = []
         validated = []
 
-        for kind, cost_bps in (("SPOT", 20.0), ("PERP", 26.0)):
+        # Round-trip execution cost in bps, shared with the paper engine
+        # (BREAKWATER_SPOT_FEE_BPS / BREAKWATER_PERP_FEE_BPS). Spot is VALR
+        # spot fiat-quoted tier 1 (70 bps); perp is Hyperliquid base tier
+        # (9 bps). See the cost-model comment in paper_trade.py.
+        spot_cost_bps = _fee_bps_env("BREAKWATER_SPOT_FEE_BPS", "70")
+        perp_cost_bps = _fee_bps_env("BREAKWATER_PERP_FEE_BPS", "9")
+        for kind, cost_bps in (("SPOT", spot_cost_bps), ("PERP", perp_cost_bps)):
             # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
             for pair, k in all_targets:

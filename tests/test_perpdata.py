@@ -10,11 +10,14 @@ from breakwater.perpdata import (
 
 
 class FakeResponse:
-    def __init__(self, payload):
+    def __init__(self, payload, status=200, headers=None):
         self._payload = payload
+        self.status_code = status
+        self.headers = headers or {}
 
     def raise_for_status(self):
-        pass
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
 
     def json(self):
         return self._payload
@@ -28,6 +31,20 @@ class FakeSession:
     def post(self, url, json=None, timeout=None):
         self.calls.append((url, json, timeout))
         return FakeResponse(self.payload)
+
+
+class FlakySession:
+    """Returns queued HTTP statuses (e.g. 429 bursts) before a 200 payload."""
+
+    def __init__(self, payload, statuses):
+        self.payload = payload
+        self.statuses = list(statuses)
+        self.calls = 0
+
+    def post(self, url, json=None, timeout=None):
+        self.calls += 1
+        status = self.statuses.pop(0) if self.statuses else 200
+        return FakeResponse(self.payload, status=status, headers={"Retry-After": "1"})
 
 
 def candle_payload():
@@ -69,6 +86,28 @@ def test_fetch_perp_candles_rejects_unknown_schema():
     session = FakeSession([{"mystery": True}])
     with pytest.raises(RuntimeError, match="schema"):
         fetch_perp_candles("BTC", interval="1h", count=2, session=session)
+
+
+def test_fetch_perp_candles_retries_rate_limit_and_server_errors(monkeypatch):
+    import breakwater.perpdata as perpdata
+
+    slept = []
+    monkeypatch.setattr(perpdata.time, "sleep", lambda seconds: slept.append(seconds))
+    session = FlakySession(candle_payload(), [429, 503])
+    candles = fetch_perp_candles("BTC", interval="1h", count=2, session=session)
+    assert len(candles) == 2
+    assert session.calls == 3
+    assert len(slept) == 2
+
+
+def test_fetch_perp_candles_gives_up_after_three_attempts(monkeypatch):
+    import breakwater.perpdata as perpdata
+
+    monkeypatch.setattr(perpdata.time, "sleep", lambda seconds: None)
+    session = FlakySession([], [429, 429, 429])
+    with pytest.raises(RuntimeError, match="429"):
+        fetch_perp_candles("BTC", interval="1h", count=2, session=session)
+    assert session.calls == 3
 
 
 def test_fetch_perp_candles_preserves_hip3_dex_prefix():

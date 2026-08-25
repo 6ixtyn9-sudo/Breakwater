@@ -117,11 +117,13 @@ TARGET_R_MULTIPLE = Decimal("2")
 TIME_STOP_BARS = int(os.getenv("BREAKWATER_PAPER_TIME_STOP_BARS", "48"))
 MISSING_BARS_EXIT = 24
 
-SPOT_FEE_BPS = Decimal("20")
-PERP_FEE_BPS = Decimal("26")
 MAX_PAPER_POSITIONS = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS", "6"))
 MAX_PAPER_POSITIONS_PER_KIND = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND", "3"))
 MAX_PAPER_POSITIONS_PER_SLICE = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE", "1"))
+# The HIP-3 sub-pool (default 6 seats) gets a tighter per-slice cap so one
+# edge cannot occupy half the pool: five correlated positions on one slice
+# is one bet in six costumes. 0 disables new HIP-3 entries (kill switch).
+HIP3_MAX_POSITIONS_PER_SLICE = int(os.getenv("BREAKWATER_HIP3_MAX_POSITIONS_PER_SLICE", "3"))
 OLD_PAPER_SEATS = max(0, int(os.getenv("BREAKWATER_PAPER_OLD_SEATS", "5")))
 FAT_PAPER_SEATS = max(0, int(os.getenv("BREAKWATER_PAPER_FAT_SEATS", "10")))
 
@@ -142,6 +144,19 @@ def _env_decimal(name: str, default: str) -> Decimal:
         return Decimal(str(raw))
     except (InvalidOperation, TypeError, ValueError):
         return Decimal(default)
+
+
+# Round-trip execution cost in bps (entry + exit), charged once per closed
+# trade. Fact-based venue schedules (base tier, taker on both sides):
+#   VALR spot fiat-quoted (BTCZAR ...): tier 1 taker 0.350% per side, per
+#     VALR's published "Spot Fiat Quote" fee table (0.180%/0.350% at
+#     zero 30-day volume) -> 70 bps round trip. A paper account has no
+#     live volume, so tier 1 is the honest default. Verify the account
+#     tier with scripts/fee_audit.py and override if it ever upgrades.
+#   Hyperliquid perp (native + HIP-3 builder perps): base tier taker
+#     0.045% per side -> 9 bps round trip.
+SPOT_FEE_BPS = _env_decimal("BREAKWATER_SPOT_FEE_BPS", "70")
+PERP_FEE_BPS = _env_decimal("BREAKWATER_PERP_FEE_BPS", "9")
 
 
 # Trailing feature flags (OFF by default unless R-gate has already activated).
@@ -1348,7 +1363,14 @@ def run_paper_cycle(
             slot_full += 1
             _deny(signal, "slot_full")
             continue
-        if open_slice_counts.get(signal.slice_id, 0) >= MAX_PAPER_POSITIONS_PER_SLICE:
+        # HIP-3 sub-pool gets its own (tighter) per-slice cap so a single
+        # edge cannot occupy half the pool; native keeps the global cap.
+        slice_cap = (
+            HIP3_MAX_POSITIONS_PER_SLICE
+            if str(signal.slice_id or "").startswith("hip3_")
+            else MAX_PAPER_POSITIONS_PER_SLICE
+        )
+        if open_slice_counts.get(signal.slice_id, 0) >= slice_cap:
             slice_full += 1
             _deny(signal, "slice_full")
             continue
