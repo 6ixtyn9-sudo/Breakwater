@@ -5,7 +5,7 @@ feat_vol_regime:0:LONG:h20,PERP,feat_vol_regime,0,LONG,monitored,2026-08-25T00:2
 feat_trend_strength_20:1:LONG:h23,PERP,feat_trend_strength_20,1,LONG,monitored,2026-08-25T00:25:23+00:00,,0,0,0,0,,0.002969,15018,0.039679,23,3.500,validated_walk_forward,False,True
 feat_ext_vs_ma_50:2:LONG:h23,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-08-23T00:25:23+00:00,1787594400,2,2,0,7.9025,,0.019828,4855,0.000001,23,3.500,validated_walk_forward,True,True
 feat_ret_20:2:LONG:h24,PERP,feat_ret_20,2,LONG,monitored,2026-08-23T00:25:23+00:00,1787598000,1,1,0,2.3549,,0.016934,5267,0.000101,24,3.500,validated_walk_forward,False,True
-feat_ret_1:2:LONG:h23,PERP,feat_ret_1,2,LONG,monitored,2026-08-23T00:25:23+00:00,1787576400,1,1,0,6.9587,,0.007594,4929,0.000103,23,3.500,validated_walk_forward,False,True
+feat_ret_1:2:LONG:h23,PERP,feat_ret_1,2,LONG,monitored,2026-08-23T00:25:23+00:00,1787644800,2,1,1,6.0466,,0.007594,4929,0.000103,23,3.500,validated_walk_forward,False,True
 feat_ext_vs_ma_50:2:LONG:h12,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-08-22T00:25:20+00:00,1787428800,5,3,2,8.0377,,0.011732,4806,0.000000,12,3.500,validated_walk_forward,True,True
 feat_ret_20:2:LONG:h12,PERP,feat_ret_20,2,LONG,monitored,2026-08-22T00:25:20+00:00,1787439600,2,1,1,9.0186,,0.008570,5490,0.000001,12,3.500,validated_walk_forward,False,True
 feat_atr_norm_ext:2:LONG:h21,PERP,feat_atr_norm_ext,2,LONG,monitored,2026-08-21T00:25:20+00:00,1787378400,5,4,1,8.1913,,0.008155,2807,0.134734,21,3.500,validated_walk_forward,False,True
