@@ -160,6 +160,8 @@ def simulate(
     days: int,
     seed: int,
     risk_cap_zar: float | None = None,
+    total_cap: int = 24,
+    kind_cap: int = 15,
 ) -> dict:
     """One seeded run of the two-book paper account (shared risk wallet).
 
@@ -167,14 +169,17 @@ def simulate(
     seats for slices without paper history (exploration) and `native_old`
     seats for incumbent slices (slices with >=1 RT). HIP-3 gets a flat pool
     of `hip3_seats`. `risk_cap_zar` overrides the wallet cap for sensitivity
-    runs (default: fit["risk_cap"]).
+    runs (default: fit["risk_cap"]). `total_cap` and `kind_cap` mirror the
+    engine's MAX_POSITIONS and MAX_POSITIONS_PER_KIND guards (all positions
+    in this model are PERP-kind, so the kind cap applies to the sum).
     """
-    rng = random.Random(f"capacity|{native_old}|{native_fat}|{hip3_seats}|{intensity:.0f}|{seed}|{risk_cap_zar}")
+    rng = random.Random(f"capacity|{native_old}|{native_fat}|{hip3_seats}|{intensity:.0f}|{seed}|{risk_cap_zar}|{total_cap}|{kind_cap}")
     holds = fit["holds"]
     risks = fit["risks"]
     n_native = fit["n_native"]
     n_hip3 = fit["n_hip3"]
     risk_cap = fit["risk_cap"] if risk_cap_zar is None else risk_cap_zar
+    perp_cap = min(total_cap, kind_cap)
 
     native_seats = native_old + native_fat
     lam_native = intensity / n_native if n_native else 0.0
@@ -254,6 +259,9 @@ def simulate(
             if pair in pair_used:
                 continue
             is_native = sl.startswith("n")
+            if open_native + open_hip3 >= perp_cap:
+                seat_denials += 1
+                continue
             if is_native:
                 if open_native >= native_seats:
                     seat_denials += 1
@@ -310,6 +318,22 @@ def main() -> int:
         "--caps", default="0.05",
         help="comma-separated aggregate risk cap fractions of equity to grid",
     )
+    parser.add_argument(
+        "--olds", default="3,5,8,12,15",
+        help="comma-separated native old-seat caps to grid",
+    )
+    parser.add_argument(
+        "--intensities", default="band",
+        help="'band' (100/fitted/300) or comma-separated values",
+    )
+    parser.add_argument(
+        "--total-cap", type=int, default=24,
+        help="engine MAX_POSITIONS (total concurrent positions)",
+    )
+    parser.add_argument(
+        "--kind-cap", type=int, default=15,
+        help="engine MAX_POSITIONS_PER_KIND (all model positions are PERP)",
+    )
     parser.add_argument("--out-dir", default=None)
     parser.add_argument("--tag", default="", help="suffix for output filenames")
     args = parser.parse_args()
@@ -330,11 +354,15 @@ def main() -> int:
         )
     )
 
-    intensities = [100.0, fit["intensity"], 300.0]  # sensitivity band
+    if args.intensities.strip() == "band":
+        intensities = [100.0, fit["intensity"], 300.0]
+    else:
+        intensities = [float(x) for x in args.intensities.split(",")]
+    olds = [int(x) for x in args.olds.split(",")]
     risk_caps = [float(x) for x in args.caps.split(",")]
     results = []
     for intensity in intensities:
-        for old_cap in (3, 5, 8, 12, 15):
+        for old_cap in olds:
             for h3 in (0, 2, 4, 6):
                 for cap_fraction in risk_caps:
                     runs = [
@@ -342,6 +370,7 @@ def main() -> int:
                             fit, native_old=old_cap, native_fat=10, hip3_seats=h3,
                             intensity=intensity, days=args.days, seed=s,
                             risk_cap_zar=cap_fraction * EQUITY_ZAR,
+                            total_cap=args.total_cap, kind_cap=args.kind_cap,
                         )
                         for s in range(args.seeds)
                     ]
@@ -352,6 +381,8 @@ def main() -> int:
                         "fat_cap": 10,
                         "total_native": old_cap + 10,
                         "hip3_seats": h3,
+                        "total_cap": args.total_cap,
+                        "kind_cap": args.kind_cap,
                     }
                     for key, agg in (
                         ("all10_day", statistics.median),

@@ -167,7 +167,7 @@ def _gate_kwargs(**overrides):
         assumed_cost_bps=30.0,
         measured_cost_bps=None,
         base_taker_fee_bps=4.5,
-        confirmed_collateral_token=None,
+        confirmed_collateral_tokens=None,
         paper_evidence=dict(_EMPTY_EVIDENCE),
     )
     kwargs.update(overrides)
@@ -179,20 +179,22 @@ def test_promotion_gate_reports_all_six_blockers_and_shrinks_on_evidence():
     assert len(gate["blockers"]) == 6
     assert not gate["paper_ready"]
     assert not gate["live_ready"]
-    assert {b["name"] for b in gate["blockers"]} == {
-        "market_classification_not_fully_authoritative",
-        "market_calendars_not_enforced",
-        "historical_oracle_quality_not_available",
+    # The paper stage is exactly {costs, collateral}: classification is a
+    # live-stage blocker, and paper evidence must never gate the paper.
+    paper_stages = {
+        b["name"] for b in gate["blockers"] if b["stage"] == "paper"
+    }
+    assert paper_stages == {
         "effective_costs_not_measured",
         "collateral_tokens_not_resolved",
-        "no_hip3_paper_evidence",
     }
-    gate2 = _promotion_gate(**_gate_kwargs(confirmed_collateral_token=0))
-    assert "market_classification_not_fully_authoritative" not in gate2["paper_unresolved"]
+    live_stages = {b["name"] for b in gate["blockers"] if b["stage"] == "live"}
+    assert "market_classification_not_fully_authoritative" in live_stages
+    gate2 = _promotion_gate(**_gate_kwargs(confirmed_collateral_tokens={0}))
     assert "collateral_tokens_not_resolved" not in gate2["paper_unresolved"]
     gate3 = _promotion_gate(
         **_gate_kwargs(
-            confirmed_collateral_token=0,
+            confirmed_collateral_tokens={0},
             measured_cost_bps=29.0,
             spread_samples=[10.0] * MIN_SPREAD_SAMPLES,
         )
@@ -209,7 +211,7 @@ def test_paper_stage_never_requires_paper_evidence():
     # The deadlock guard: the paper stage arms without its own output.
     gate = _promotion_gate(
         **_gate_kwargs(
-            confirmed_collateral_token=0,
+            confirmed_collateral_tokens={0},
             measured_cost_bps=29.0,
             spread_samples=[10.0] * MIN_SPREAD_SAMPLES,
             paper_evidence=dict(_EMPTY_EVIDENCE),
@@ -222,7 +224,7 @@ def test_paper_stage_never_requires_paper_evidence():
 def test_paper_evidence_blocker_resolves_only_at_threshold_with_profit():
     full = dict(_EMPTY_EVIDENCE, closed_trades=25, ghost_rows=25, pnl_zar=1.0)
     gate = _promotion_gate(
-        **_gate_kwargs(confirmed_collateral_token=0, paper_evidence=full)
+        **_gate_kwargs(confirmed_collateral_tokens={0}, paper_evidence=full)
     )
     assert "no_hip3_paper_evidence" not in gate["live_unresolved"]
     for change in (
@@ -233,9 +235,29 @@ def test_paper_evidence_blocker_resolves_only_at_threshold_with_profit():
     ):
         short = {**full, **change}
         gate = _promotion_gate(
-            **_gate_kwargs(confirmed_collateral_token=0, paper_evidence=short)
+            **_gate_kwargs(confirmed_collateral_tokens={0}, paper_evidence=short)
         )
         assert "no_hip3_paper_evidence" in gate["live_unresolved"], change
+
+
+def test_collateral_blocker_requires_every_observed_token_confirmed():
+    selected = [
+        (row("xyz:NVDA", annotation_category="equities"), "equity"),
+        (row("hyna:ETH", collateral_token=235, annotation_category="equities"), "equity"),
+    ]
+    base = _gate_kwargs(
+        selected=selected,
+        measured_cost_bps=29.0,
+        spread_samples=[10.0] * MIN_SPREAD_SAMPLES,
+    )
+    base.pop("confirmed_collateral_tokens")
+    gate = _promotion_gate(confirmed_collateral_tokens={0}, **base)
+    assert "collateral_tokens_not_resolved" in gate["paper_unresolved"]
+    gate = _promotion_gate(confirmed_collateral_tokens=None, **base)
+    assert "collateral_tokens_not_resolved" in gate["paper_unresolved"]
+    gate = _promotion_gate(confirmed_collateral_tokens={0, 235}, **base)
+    assert "collateral_tokens_not_resolved" not in gate["paper_unresolved"]
+    assert gate["paper_ready"] is True
 
 
 def test_hip3_paper_evidence_counts_only_hip3_rows():
@@ -258,14 +280,17 @@ def test_hip3_paper_evidence_counts_only_hip3_rows():
 
 
 def test_promotion_gate_flags_provisional_classification():
+    # Classification is a live-stage blocker: it must not hold the paper
+    # stage hostage (group-scoped matching prevents cross-pool contamination).
     gate = _promotion_gate(
         **_gate_kwargs(selected=[(row("xyz:NVDA"), "provisional_equity")])
     )
-    assert "market_classification_not_fully_authoritative" in gate["paper_unresolved"]
+    assert "market_classification_not_fully_authoritative" in gate["live_unresolved"]
+    assert "market_classification_not_fully_authoritative" not in gate["paper_unresolved"]
     gate = _promotion_gate(
         **_gate_kwargs(selected=[(row("xyz:NVDA", annotation_category="equities"), "equity")])
     )
-    assert "market_classification_not_fully_authoritative" not in gate["paper_unresolved"]
+    assert "market_classification_not_fully_authoritative" not in gate["live_unresolved"]
 
 
 def test_l2_half_spread_bps_measures_mid_relative_spread():

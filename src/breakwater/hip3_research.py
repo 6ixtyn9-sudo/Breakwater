@@ -372,25 +372,29 @@ def _promotion_gate(
     assumed_cost_bps: float,
     measured_cost_bps: float | None,
     base_taker_fee_bps: float,
-    confirmed_collateral_token: int | None,
+    confirmed_collateral_tokens: set[int] | None,
     paper_evidence: dict,
 ) -> dict:
     """Evaluate promotion blockers in two stages.
 
-    Paper readiness (the first three blockers) arms the HIP-3 paper book:
-    paper is a measurement instrument, not live capital, so it must not
-    require its own output (the paper-evidence blocker) to start. Live
-    readiness requires all six, including paper and ghost evidence, and is
-    the checklist that unblocks real capital. This module still writes no
-    monitored book of its own and feeds no execution; the paper book it can
-    arm is consumed only by the paper engine behind BREAKWATER_HIP3_PAPER.
+    Paper readiness ({measured costs, confirmed collateral}) arms the HIP-3
+    paper book: paper is a measurement instrument, not live capital, so it
+    must not require its own output (the paper-evidence blocker) to start,
+    and group-scoped matching already guarantees no cross-pool contamination,
+    so full classification authority is a LIVE-stage requirement (real money
+    meeting product semantics), not a paper one. Live readiness requires all
+    six, including paper and ghost evidence, and is the checklist that
+    unblocks real capital. This module still writes no monitored book of its
+    own and feeds no execution; the paper book it can arm is consumed only
+    by the paper engine behind BREAKWATER_HIP3_PAPER.
     """
     provisional = [cls for _, cls in selected if cls.startswith("provisional")]
     classification_resolved = bool(selected) and not provisional
-    collateral_resolved = (
-        confirmed_collateral_token is not None
-        and {row.collateral_token for row, _ in selected} == {confirmed_collateral_token}
-    )
+    # Collateral is a SET check: different DEXs settle in different tokens
+    # (observed: 0 for io/mkts/para/xyz, 235 for hyna). Resolved when every
+    # observed token is in the operator-confirmed list.
+    observed_tokens = {row.collateral_token for row, _ in selected}
+    collateral_resolved = bool(confirmed_collateral_tokens) and observed_tokens <= confirmed_collateral_tokens
     costs_resolved = measured_cost_bps is not None
     paper_resolved = (
         paper_evidence["closed_trades"] >= HIP3_LIVE_MIN_PAPER_TRADES
@@ -401,10 +405,11 @@ def _promotion_gate(
         {
             "name": "market_classification_not_fully_authoritative",
             "resolved": classification_resolved,
-            "stage": "paper",
+            "stage": "live",
             "evidence": (
                 f"{len(selected) - len(provisional)}/{len(selected)} selected coins in an "
-                f"authoritative class ({len(provisional)} provisional)"
+                f"authoritative class ({len(provisional)} provisional); live-stage blocker - "
+                f"paper measurement is group-scoped and cannot cross-contaminate pools"
             ),
         },
         {
@@ -427,9 +432,9 @@ def _promotion_gate(
             "stage": "paper",
             "evidence": (
                 f"distinct collateral token ids in selected: "
-                f"{sorted({row.collateral_token for row, _ in selected})}"
+                f"{sorted(observed_tokens)}"
                 + (
-                    f"; matches operator-confirmed id {confirmed_collateral_token}"
+                    f"; all confirmed (operator list: {sorted(confirmed_collateral_tokens)})"
                     if collateral_resolved
                     else "; operator confirmation required (BREAKWATER_HIP3_USDC_TOKEN_ID)"
                 )
@@ -518,7 +523,14 @@ def run_hip3_research(
     cost_bps = float(_env_decimal("BREAKWATER_HIP3_COST_BPS", "30"))
     base_taker_fee_bps = float(_env_decimal("BREAKWATER_HIP3_BASE_TAKER_FEE_BPS", "4.5"))
     raw_collateral = os.getenv("BREAKWATER_HIP3_USDC_TOKEN_ID", "").strip()
-    confirmed_collateral = int(raw_collateral) if raw_collateral.isdigit() else None
+    # Comma-separated list of operator-confirmed collateral token ids, e.g.
+    # "0,235". Different DEXs settle in different tokens; the gate resolves
+    # when every observed token is in this list.
+    confirmed_collateral = {
+        int(token)
+        for token in raw_collateral.replace(";", ",").split(",")
+        if token.strip().lstrip("-").isdigit()
+    } or None
     sleep_seconds = float(_env_decimal("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05"))
     candidates = _candidate_rows(
         universe.rows,
@@ -671,7 +683,7 @@ def run_hip3_research(
         assumed_cost_bps=cost_bps,
         measured_cost_bps=measured_cost,
         base_taker_fee_bps=base_taker_fee_bps,
-        confirmed_collateral_token=confirmed_collateral,
+        confirmed_collateral_tokens=confirmed_collateral,
         paper_evidence=_hip3_paper_evidence(paper_log_rows, cf_rows),
     )
 

@@ -968,6 +968,12 @@ def run_paper_cycle(
     if hip3_book_path is not None:
         # Slice ids are namespaced (hip3_ prefix), so the maps cannot collide.
         book_horizon_map = {**book_horizon_map, **_load_book_horizon_map(hip3_book_path)}
+    # HIP-3 seat ring-fence: a dedicated sub-pool inside the shared wallet so
+    # the immature lane can neither starve the native book nor flood it.
+    # Read per cycle so it is testable and hot-adjustable via env.
+    hip3_max_positions = max(
+        0, min(50, _coerce_int(os.getenv("BREAKWATER_HIP3_MAX_POSITIONS", "6"), 6))
+    )
     if open_positions:
         _migrate_legacy_positions(open_positions, horizon_map=book_horizon_map, frames=frames)
 
@@ -1243,11 +1249,12 @@ def run_paper_cycle(
     incumbents = _incumbent_slice_ids(book_path)
     means = _slice_means(book_path)
     if hip3_book_path is not None:
-        # Same rotation discipline across both books: HIP-3 slices are
-        # namespaced, so the merged maps never mix with native slices.
+        # Per-slice stats merge so the losing-slice guard sees each book's own
+        # history (slice ids are namespaced, so nothing mixes). Incumbents
+        # stay native-only on purpose: HIP-3 runs its own sub-pool and must
+        # not interact with the native old/fat split.
         trade_counts.update(_slice_trade_counts(hip3_book_path))
         paper_pnls.update(_slice_paper_pnl(hip3_book_path))
-        incumbents |= _incumbent_slice_ids(hip3_book_path)
         means.update(_slice_means(hip3_book_path))
     size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     risk_zar: Decimal | None = None
@@ -1285,13 +1292,22 @@ def run_paper_cycle(
         if kind_open >= MAX_PAPER_POSITIONS_PER_KIND:
             slot_full += 1
             continue
-        old_open = sum(
-            1
-            for position in surviving
-            if str(position.get("slice_id") or "") in incumbents
-        )
-        fat_open = len(surviving) - old_open
-        if signal.slice_id in incumbents:
+        old_open = 0
+        hip3_open = 0
+        for position in surviving:
+            sid = str(position.get("slice_id") or "")
+            if sid.startswith("hip3_"):
+                hip3_open += 1
+            elif sid in incumbents:
+                old_open += 1
+        fat_open = len(surviving) - old_open - hip3_open
+        if str(signal.slice_id or "").startswith("hip3_"):
+            # HIP-3 runs its own sub-pool: it neither consumes native
+            # old/fat seats nor is governed by the native split.
+            if hip3_open >= hip3_max_positions:
+                slot_full += 1
+                continue
+        elif signal.slice_id in incumbents:
             if OLD_PAPER_SEATS and old_open >= OLD_PAPER_SEATS:
                 slot_full += 1
                 continue
@@ -1659,6 +1675,9 @@ def run_paper_cycle(
     return {
         "closed": len(closed_rows),
         "open": len(surviving),
+        "hip3_open": sum(
+            1 for p in surviving if str(p.get("slice_id") or "").startswith("hip3_")
+        ),
         "new_signals": len(signals),
         "skipped": skipped,
         "slot_full": slot_full,

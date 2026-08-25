@@ -931,6 +931,74 @@ def test_hip3_stop_out_routes_feedback_to_hip3_book_only(tmp_path):
     assert native_rows[0]["status"] == "monitored"
 
 
+def _frame_for(pair, close):
+    return pd.DataFrame(
+        [
+            {
+                "start": pd.Timestamp("2026-08-14T10:00:00Z"),
+                "symbol": pair,
+                "open": close,
+                "high": close,
+                "low": close,
+                "close": close,
+                "volume": 100,
+            }
+        ]
+    )
+
+
+def test_hip3_positions_respect_dedicated_seat_cap(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_HIP3_MAX_POSITIONS", "1")
+    book = {
+        "hip3_xyz_equity_c0:feat:0:LONG:h5",
+        "feat:0:LONG",
+    }
+    hip3_a = signal(
+        pair="HIP3A",
+        slice_id="hip3_xyz_equity_c0:feat:0:LONG:h5",
+        kind="PERP",
+        entry="100",
+        stop="99",
+        atr="0.5",
+    )
+    hip3_b = signal(
+        pair="HIP3B",
+        slice_id="hip3_xyz_equity_c0:feat:0:LONG:h5",
+        kind="PERP",
+        entry="100",
+        stop="99",
+        atr="0.5",
+    )
+    native = signal(
+        pair="BTCZAR",
+        slice_id="feat:0:LONG",
+        kind="PERP",
+        entry="100",
+        stop="99",
+        atr="0.5",
+    )
+    frames = {
+        "HIP3A": _frame_for("HIP3A", 100),
+        "HIP3B": _frame_for("HIP3B", 100),
+        "BTCZAR": _frame_for("BTCZAR", 100),
+    }
+    result = hip3_cycle(
+        tmp_path,
+        signals=[hip3_a, hip3_b, native],
+        frames=frames,
+        book=book,
+    )
+    # One HIP-3 seat: exactly one HIP-3 position opens, the second is
+    # slot-full, and the native book is unaffected by the HIP-3 cap.
+    assert result["open"] == 2
+    assert result["slot_full"] == 1
+    assert result["hip3_open"] == 1
+    positions = read_positions(tmp_path / "positions.json")
+    pairs = {p["pair"] for p in positions}
+    assert "BTCZAR" in pairs
+    assert len([p for p in positions if p["pair"].startswith("HIP3")]) == 1
+
+
 def test_hip3_signal_opens_position_with_hip3_book_horizon(tmp_path):
     hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
     sig = signal(
