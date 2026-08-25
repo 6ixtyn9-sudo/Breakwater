@@ -61,6 +61,7 @@ jobs:
           BREAKWATER_TRAIL_DISTANCE_R: "1.0"
           BREAKWATER_TRAIL_IGNORE_TIME_STOP: "0"
           # Mandate / arming (paper uses authenticated endpoints)
+          BREAKWATER_HIP3_PAPER: ${{ vars.BREAKWATER_HIP3_PAPER || '0' }}
           BREAKWATER_LIVE_ACK: ${{ vars.BREAKWATER_LIVE_ACK || 'off' }}
           BREAKWATER_MANDATE_JSON: ${{ secrets.BREAKWATER_MANDATE_JSON }}
           # Optional spot margin shorts
