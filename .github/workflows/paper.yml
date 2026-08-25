@@ -39,7 +39,7 @@ jobs:
           BREAKWATER_MODE: shadow
 
           # Keep consistent env across workflows (even if paper doesn't promote slices)
-          BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.002' }}
+          BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
 
           # Keep monitoring aligned with research binning + history depth
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}
