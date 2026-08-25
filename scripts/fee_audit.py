@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(ROOT / ".env", override=False)
 
@@ -90,7 +90,7 @@ def main() -> int:
         print(json.dumps(rows, indent=2)[:4000])
     print()
     print("Compare the taker rate for your *ZAR pairs against the modeled spot bps:")
-    print(f"round trip = 2 x taker one-way. Override with BREAKWATER_SPOT_FEE_BPS if it differs.")
+    print("round trip = 2 x taker one-way. Override with BREAKWATER_SPOT_FEE_BPS if it differs.")
     return 0
 
 
