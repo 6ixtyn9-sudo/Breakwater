@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import pandas as pd
+import pytest
 
 from breakwater.models import Side
 from breakwater.monitor import SliceSignal
@@ -416,6 +417,48 @@ def test_perp_signal_below_minimum_notional_is_skipped(tmp_path):
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["exit_reason"] == "below_perp_min_notional"
+
+
+@pytest.mark.parametrize(
+    ("seed", "expected_notional"),
+    [("2000", "400"), ("4000", "800")],
+)
+def test_equity_mode_notional_cap_tracks_equity(
+    tmp_path, monkeypatch, seed, expected_notional
+):
+    """Compounding sizing: in equity mode the notional ceiling is a fraction
+    of equity, so a doubled account doubles the notional it can deploy.
+    Stop 97 vs entry 100 -> rf 0.03; the 1% risk budget (20 ZAR on 2000)
+    wants 666 ZAR notional, so the 20% equity ceiling binds (400, then 800)."""
+    monkeypatch.setenv("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "1")
+    monkeypatch.setenv("BREAKWATER_PAPER_EQUITY_SEED", seed)
+    monkeypatch.setenv("BREAKWATER_PAPER_RISK_OF_EQUITY", "0.01")
+    monkeypatch.setenv("BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY", "0.20")
+    sig = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:0:LONG", entry="100", stop="97")
+    result = cycle(
+        tmp_path,
+        signals=[sig],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 1
+    positions = read_positions(tmp_path / "positions.json")
+    assert Decimal(positions[0]["notional_zar"]) == Decimal(expected_notional)
+
+
+def test_flat_mode_notional_cap_stays_absolute(tmp_path, monkeypatch):
+    """Flat mode (SIZE_FROM_EQUITY=0) is untouched by the equity fraction:
+    the mandate's absolute 200 ZAR cap still binds. R 6.63 ZAR at rf 0.02
+    wants 331.5 ZAR notional, capped at 200 ZAR."""
+    monkeypatch.setenv("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
+    sig = signal(pair="BTCZAR", kind="SPOT", slice_id="feat:0:LONG", entry="100", stop="98")
+    result = cycle(
+        tmp_path,
+        signals=[sig],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 1
+    positions = read_positions(tmp_path / "positions.json")
+    assert Decimal(positions[0]["notional_zar"]) == Decimal("200")
 
 
 def test_one_paper_slot_per_kind(tmp_path):

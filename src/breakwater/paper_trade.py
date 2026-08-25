@@ -367,6 +367,7 @@ def _paper_size(
     usdc_zar: Decimal,
     *,
     risk_zar: Decimal | None = None,
+    notional_cap_zar: Decimal | None = None,
 ) -> Decimal:
     risk_fraction = abs(signal.entry_price - signal.stop_price) / signal.entry_price
     if risk_fraction <= 0:
@@ -374,7 +375,10 @@ def _paper_size(
     budget = policy.risk_per_trade_zar if risk_zar is None else risk_zar
     if budget <= 0:
         budget = policy.risk_per_trade_zar
-    notional_zar = min(budget / risk_fraction, policy.max_position_notional_zar)
+    # Flat mode is bounded by the mandate's absolute notional cap; equity
+    # mode passes a cap that scales with equity so the position compounds.
+    cap = notional_cap_zar if notional_cap_zar is not None else policy.max_position_notional_zar
+    notional_zar = min(budget / risk_fraction, cap)
     # Hyperliquid's native minimum order value is 10 USDC.
     if signal.kind == "PERP" and usdc_zar > 0 and notional_zar / usdc_zar < Decimal("10"):
         return Decimal(0)
@@ -1263,10 +1267,16 @@ def run_paper_cycle(
         means.update(_slice_means(hip3_book_path))
     size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     risk_zar: Decimal | None = None
+    notional_cap_zar: Decimal | None = None
     if size_from_equity:
-        equity = _paper_equity_zar(log_path)
+        # Compounding sizing: the per-trade risk budget AND the notional
+        # ceiling are both fractions of current equity, so the account takes
+        # bigger absolute bets as it grows. The mandate's absolute notional
+        # cap is a flat-mode boundary and is deliberately not applied here.
         risk_pct = _env_decimal("BREAKWATER_PAPER_RISK_OF_EQUITY", "0.01")
-        risk_zar = equity * risk_pct
+        risk_zar = paper_equity_zar * risk_pct
+        notional_pct = _env_decimal("BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY", "0.20")
+        notional_cap_zar = paper_equity_zar * notional_pct
 
     selection_mode = str(os.getenv("BREAKWATER_PAPER_SELECTION_MODE", "explore")).strip().lower()
     if selection_mode == "profit":
@@ -1480,7 +1490,9 @@ def run_paper_cycle(
             _deny(signal, "skipped")
             continue
 
-        notional_zar = _paper_size(signal, policy, usdc_zar, risk_zar=risk_zar)
+        notional_zar = _paper_size(
+            signal, policy, usdc_zar, risk_zar=risk_zar, notional_cap_zar=notional_cap_zar
+        )
         if notional_zar <= 0:
             # Hyperliquid 10 USDC floor (or zero risk distance). Same refuse, named.
             append_log(
