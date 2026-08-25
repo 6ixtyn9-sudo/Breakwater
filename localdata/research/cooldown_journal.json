@@ -110,5 +110,13 @@
     "signal_id": "8463e8cc8db5a829",
     "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23",
     "stopped_at": "2026-08-25T14:00:25+00:00"
+  },
+  {
+    "pair": "XYZ:AMAT",
+    "pnl_zar": "-4.1760",
+    "reason": "stop",
+    "signal_id": "69a92715f7375c4f",
+    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h19",
+    "stopped_at": "2026-08-25T15:00:26+00:00"
   }
 ]
