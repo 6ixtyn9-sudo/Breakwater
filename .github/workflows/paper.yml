@@ -80,6 +80,11 @@ jobs:
           # Equity mode: notional ceiling is a fraction of equity (compounds).
           # Flat mode ignores this and keeps the mandate's absolute cap.
           BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_MAX_POSITION_NOTIONAL_OF_EQUITY || '0.20' }}
+          # Cost model (round-trip bps): VALR spot fiat tier 1 / Hyperliquid base
+          BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
+          BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
+          # HIP-3 subpool: max positions per slice (concentration guard)
+          BREAKWATER_HIP3_MAX_POSITIONS_PER_SLICE: ${{ vars.BREAKWATER_HIP3_MAX_POSITIONS_PER_SLICE || '3' }}
           BREAKWATER_PAPER_EQUITY_SEED: ${{ vars.BREAKWATER_PAPER_EQUITY_SEED || '2000' }}
           # Paper-only aggregate stop-risk ceiling
           BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY || '0.07' }}

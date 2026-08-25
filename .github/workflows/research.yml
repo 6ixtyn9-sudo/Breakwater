@@ -57,6 +57,9 @@ jobs:
 
           # Promotion floor for net-edge (sync_book directional gate)
           BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.002' }}
+          # Cost model (round-trip bps) - must match paper.yml
+          BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
+          BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
 
           # Multi-horizon robustness promotion gate
           BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '2' }}
