@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import statistics
 import tempfile
 import time
 from collections import Counter
@@ -41,6 +42,7 @@ COVERAGE_HEADERS = [
     "max_gap_seconds",
     "coverage_ok",
     "error",
+    "l2_half_spread_bps",
 ]
 
 FX_ASSETS = {
@@ -128,6 +130,35 @@ def _methodology_parity(*, max_pairs: int, candle_count: int, horizons: list[int
         "expected": expected,
         "actual": actual,
     }
+
+
+def l2_half_spread_bps(book) -> float | None:
+    """Mid-relative half-spread in bps from an l2Book payload.
+
+    Returns None when the book is missing, empty, or malformed so a sample can
+    be recorded as unmeasured without failing the run. The flat assumed cost
+    (BREAKWATER_HIP3_COST_BPS) is not touched; measured values are evidence
+    for that blocker, reported alongside it.
+    """
+    if not isinstance(book, dict):
+        return None
+    levels = book.get("levels")
+    if not isinstance(levels, list) or len(levels) != 2:
+        return None
+    bids, asks = levels
+    if not isinstance(bids, list) or not isinstance(asks, list):
+        return None
+    if not bids or not asks:
+        return None
+    try:
+        best_bid = float(bids[0].get("px"))
+        best_ask = float(asks[0].get("px"))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if best_bid <= 0 or best_ask <= 0:
+        return None
+    mid = (best_bid + best_ask) / 2.0
+    return ((best_ask - best_bid) / 2.0) / mid * 10_000.0
 
 
 def classify_market(coin: str, native_crypto: set[str], annotation_category: str = "") -> str:
@@ -258,6 +289,16 @@ def run_hip3_research(
     coverage_rows = []
     frames_by_group: dict[str, dict[str, pd.DataFrame]] = {}
     for row, market_class in selected:
+        # Measured crossing-cost sample. Read-only and best-effort: a missing
+        # or failing book records an unmeasured spread and never blocks the
+        # candle audit for the coin.
+        try:
+            spread_bps = l2_half_spread_bps(
+                native_venue._post_info({"type": "l2Book", "coin": row.coin})
+            )
+        except Exception:
+            spread_bps = None
+        spread_value = "" if spread_bps is None else f"{spread_bps:.2f}"
         try:
             candles = fetch_perp_candles(row.coin, interval="1h", count=candle_count)
             frame = candle_frame(candles).sort_values("start").drop_duplicates("start")
@@ -280,6 +321,7 @@ def run_hip3_research(
                     "max_gap_seconds": max_gap,
                     "coverage_ok": coverage_ok,
                     "error": error,
+                    "l2_half_spread_bps": spread_value,
                 }
             )
             if coverage_ok:
@@ -300,6 +342,7 @@ def run_hip3_research(
                     "max_gap_seconds": 0,
                     "coverage_ok": False,
                     "error": f"{type(exc).__name__}: {exc}"[:180],
+                    "l2_half_spread_bps": spread_value,
                 }
             )
         if sleep_seconds > 0:
@@ -333,6 +376,18 @@ def run_hip3_research(
         for token in str(row.fail_reasons or "").split(","):
             if token.strip():
                 fail_tokens[token.strip()] += 1
+    spread_values = [
+        float(row["l2_half_spread_bps"])
+        for row in coverage_rows
+        if row["l2_half_spread_bps"] not in ("", None)
+    ]
+    spread_summary = {
+        "sampled": len(spread_values),
+        "unmeasured": len(coverage_rows) - len(spread_values),
+        "min": round(min(spread_values), 2) if spread_values else None,
+        "median": round(statistics.median(spread_values), 2) if spread_values else None,
+        "max": round(max(spread_values), 2) if spread_values else None,
+    }
     parity = _methodology_parity(
         max_pairs=max_pairs, candle_count=candle_count, horizons=horizons
     )
@@ -357,6 +412,7 @@ def run_hip3_research(
         "researched_by_group": researched_by_group,
         "horizons": horizons,
         "cost_bps": cost_bps,
+        "l2_spread_bps": spread_summary,
         "discovered_slices": len(discovered),
         "walk_forward_validated": sum(row.validated for row in validated),
         "fail_top": fail_tokens.most_common(8),

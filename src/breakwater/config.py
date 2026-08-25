@@ -220,6 +220,10 @@ class Settings:
         return self.hip3_data_dir / "status.csv"
 
     @property
+    def hip3_dexs_path(self) -> Path:
+        return self.hip3_data_dir / "dexs.json"
+
+    @property
     def hip3_research_dir(self) -> Path:
         return self.hip3_data_dir / "research"
 

@@ -7,6 +7,7 @@ from breakwater.hip3_research import (
     _horizons,
     _methodology_parity,
     classify_market,
+    l2_half_spread_bps,
 )
 
 
@@ -95,3 +96,24 @@ def test_research_candidates_fail_closed_on_oracle_and_activity():
     assert [(item.coin, market_class) for item, market_class in selected] == [
         ("xyz:NVDA", "provisional_equity")
     ]
+
+
+def test_l2_half_spread_bps_measures_mid_relative_spread():
+    book = {
+        "coin": "xyz:NVDA",
+        "levels": [[{"px": "100", "sz": "5"}], [{"px": "100.2", "sz": "5"}]],
+    }
+    value = l2_half_spread_bps(book)
+    assert value is not None
+    assert abs(value - (0.1 / 100.1) * 10_000) < 1e-9
+
+
+def test_l2_half_spread_bps_fails_open_on_missing_or_malformed_book():
+    assert l2_half_spread_bps(None) is None
+    assert l2_half_spread_bps("levels") is None
+    assert l2_half_spread_bps({"levels": []}) is None
+    assert l2_half_spread_bps({"levels": [[{"px": "100"}]]}) is None
+    assert l2_half_spread_bps({"levels": [[], []]}) is None
+    assert l2_half_spread_bps({"levels": [[{"px": "abc"}], [{"px": "100"}]]}) is None
+    assert l2_half_spread_bps({"levels": [[{"sz": "5"}], [{"px": "100"}]]}) is None
+    assert l2_half_spread_bps({"levels": [[{"px": "0"}], [{"px": "100"}]]}) is None

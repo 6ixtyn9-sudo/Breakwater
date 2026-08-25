@@ -8,6 +8,7 @@ persists a separate snapshot. It performs no strategy promotion or execution.
 from __future__ import annotations
 
 import csv
+import json
 import os
 import tempfile
 from dataclasses import asdict, dataclass
@@ -85,6 +86,9 @@ class Hip3UniverseSnapshot:
     dexs: tuple[Hip3Dex, ...]
     rows: tuple[Hip3UniverseRow, ...]
     as_of: str
+    # Raw perpDexs rows (feeRecipient, funding multipliers, OI caps, ...).
+    # Empty when a snapshot is rebuilt from the universe CSV alone.
+    dex_metadata: tuple[dict, ...] = ()
 
 
 class HyperliquidHip3Discovery:
@@ -119,11 +123,11 @@ class HyperliquidHip3Discovery:
             raise PerpVenueError(f"HIP-3 {field} must be finite")
         return number
 
-    def dexs(self) -> tuple[Hip3Dex, ...]:
+    def _perp_dexs_payload(self) -> list[dict]:
         payload = self._post({"type": "perpDexs"})
         if not isinstance(payload, list):
             raise PerpVenueError("Hyperliquid perpDexs response is malformed")
-        dexs: list[Hip3Dex] = []
+        rows: list[dict] = []
         for row in payload:
             if row is None:
                 continue
@@ -132,15 +136,26 @@ class HyperliquidHip3Discovery:
             name = str(row.get("name") or "").strip()
             if not name or ":" in name:
                 raise PerpVenueError("Hyperliquid HIP-3 DEX name is invalid")
-            dexs.append(
-                Hip3Dex(
-                    name=name,
-                    full_name=str(row.get("fullName") or name),
-                    deployer=str(row.get("deployer") or ""),
-                    oracle_updater=str(row.get("oracleUpdater") or row.get("deployer") or ""),
-                )
+            rows.append(row)
+        return rows
+
+    @staticmethod
+    def _dex_from_row(row: dict) -> Hip3Dex:
+        name = str(row.get("name") or "").strip()
+        return Hip3Dex(
+            name=name,
+            full_name=str(row.get("fullName") or name),
+            deployer=str(row.get("deployer") or ""),
+            oracle_updater=str(row.get("oracleUpdater") or row.get("deployer") or ""),
+        )
+
+    def dexs(self) -> tuple[Hip3Dex, ...]:
+        return tuple(
+            sorted(
+                (self._dex_from_row(row) for row in self._perp_dexs_payload()),
+                key=lambda dex: dex.name,
             )
-        return tuple(sorted(dexs, key=lambda dex: dex.name))
+        )
 
     def annotations(self) -> dict[str, tuple[str, str]]:
         payload = self._post({"type": "perpConciseAnnotations"})
@@ -164,7 +179,12 @@ class HyperliquidHip3Discovery:
 
     def discover(self) -> Hip3UniverseSnapshot:
         observed = datetime.now(timezone.utc).isoformat()
-        dexs = self.dexs()
+        # Fetch perpDexs once and reuse the raw rows: dex identity for the
+        # snapshot plus the full operator metadata persisted for evidence.
+        raw_dex_rows = self._perp_dexs_payload()
+        dexs = tuple(
+            sorted((self._dex_from_row(row) for row in raw_dex_rows), key=lambda dex: dex.name)
+        )
         annotations = self.annotations()
         rows: list[Hip3UniverseRow] = []
         for dex in dexs:
@@ -243,7 +263,12 @@ class HyperliquidHip3Discovery:
                 payload_row = asdict(row)
                 payload_row["liquidity_rank"] = rank
                 rows.append(Hip3UniverseRow(**payload_row))
-        return Hip3UniverseSnapshot(dexs=dexs, rows=tuple(rows), as_of=observed)
+        return Hip3UniverseSnapshot(
+            dexs=dexs,
+            rows=tuple(rows),
+            as_of=observed,
+            dex_metadata=tuple(raw_dex_rows),
+        )
 
 
 def read_hip3_universe(path: Path) -> Hip3UniverseSnapshot | None:
@@ -307,6 +332,38 @@ def read_hip3_universe(path: Path) -> Hip3UniverseSnapshot | None:
             )
     except (OSError, KeyError, ValueError, InvalidOperation) as exc:
         raise RuntimeError(f"HIP-3 universe file is unreadable: {exc}") from exc
+
+
+def write_hip3_dexs(path: Path, snapshot: Hip3UniverseSnapshot) -> None:
+    """Persist the raw perpDexs operator metadata as a committed artifact.
+
+    The universe CSV only carries the identity fields research needs; the full
+    response (feeRecipient, per-asset funding multipliers, streaming OI caps,
+    margin table ids) is evidence for the HIP-3 cost/oracle blockers and is
+    stored verbatim so no field is lost to schema drift.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            json.dump(
+                {"as_of": snapshot.as_of, "dexs": list(snapshot.dex_metadata)},
+                handle,
+                indent=1,
+                sort_keys=True,
+            )
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
 
 
 def write_hip3_universe(path: Path, snapshot: Hip3UniverseSnapshot) -> None:

@@ -1,4 +1,5 @@
 import csv
+import json
 from decimal import Decimal
 
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from breakwater.hip3 import (
     HyperliquidHip3Discovery,
     read_hip3_universe,
+    write_hip3_dexs,
     write_hip3_universe,
 )
 from breakwater.perp_venue import PerpVenueError
@@ -109,6 +111,38 @@ def test_discovers_and_ranks_hip3_inside_each_dex():
     assert session.calls[2][1] == {"type": "metaAndAssetCtxs", "dex": "xyz"}
 
 
+def test_discover_persists_full_dex_operator_metadata(tmp_path):
+    dexs = dex_payload()
+    dexs[1].update(
+        {
+            "feeRecipient": "0x" + "9" * 40,
+            "assetToFundingMultiplier": [["xyz:NVDA", "2"], ["xyz:TSLA", "0.5"]],
+            "assetToStreamingOiCap": [["xyz:NVDA", "1000000"]],
+            "maxZlpLeverage": 10,
+        }
+    )
+    session = Session(dexs, annotation_payload(), meta_payload())
+    snapshot = HyperliquidHip3Discovery(session=session).discover()
+    assert snapshot.dex_metadata[0]["feeRecipient"] == "0x" + "9" * 40
+    assert snapshot.dex_metadata[0]["assetToFundingMultiplier"] == [
+        ["xyz:NVDA", "2"],
+        ["xyz:TSLA", "0.5"],
+    ]
+    # perpDexs is fetched exactly once per discovery run.
+    assert [call[1]["type"] for call in session.calls] == [
+        "perpDexs",
+        "perpConciseAnnotations",
+        "metaAndAssetCtxs",
+    ]
+    path = tmp_path / "hip3" / "dexs.json"
+    write_hip3_dexs(path, snapshot)
+    persisted = json.loads(path.read_text())
+    assert persisted["as_of"] == snapshot.as_of
+    assert persisted["dexs"][0]["name"] == "xyz"
+    assert persisted["dexs"][0]["feeRecipient"] == "0x" + "9" * 40
+    assert persisted["dexs"][0]["assetToFundingMultiplier"][0] == ["xyz:NVDA", "2"]
+
+
 def test_rejects_instrument_that_loses_dex_identity():
     payload = meta_payload()
     payload[0]["universe"][0]["name"] = "NVDA"
@@ -129,3 +163,6 @@ def test_writes_dedicated_hip3_universe(tmp_path):
     assert loaded is not None
     assert loaded.rows[1].annotation_category == "equities"
     assert loaded.rows[1].annotation_keywords == "stocks,ai"
+    # The universe CSV carries no operator metadata; snapshots rebuilt from
+    # it fall back to the empty default.
+    assert loaded.dex_metadata == ()

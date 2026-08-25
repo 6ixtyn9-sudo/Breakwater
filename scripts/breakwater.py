@@ -13,7 +13,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from breakwater.config import get_settings  # noqa: E402
 from breakwater.deep_research_audit import run_deep_research_audit  # noqa: E402
 from breakwater.engine import BreakwaterEngine, GuardianHalt  # noqa: E402
-from breakwater.hip3 import HyperliquidHip3Discovery, write_hip3_universe  # noqa: E402
+from breakwater.hip3 import (  # noqa: E402
+    HyperliquidHip3Discovery,
+    write_hip3_dexs,
+    write_hip3_universe,
+)
 from breakwater.hip3_research import run_hip3_research  # noqa: E402
 from breakwater.status import append_status  # noqa: E402
 
@@ -54,6 +58,7 @@ def main() -> int:
         elif args.command == "hip3-discover":
             snapshot = HyperliquidHip3Discovery().discover()
             write_hip3_universe(settings.hip3_universe_path, snapshot)
+            write_hip3_dexs(settings.hip3_dexs_path, snapshot)
             result = {
                 "as_of": snapshot.as_of,
                 "dexs": len(snapshot.dexs),
