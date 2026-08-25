@@ -423,3 +423,43 @@ def test_min_net_edge_floor_mult_zero_disables_cost_term(monkeypatch):
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0")
     assert rl._min_net_edge_floor("SPOT") == 0.002
     assert rl._min_net_edge_floor("PERP") == 0.002
+
+
+def test_concentrated_path_respects_cost_linked_floor(monkeypatch):
+    """The hunt path must not be a backdoor: a spot edge above the static 40
+    bps bar but below the cost-linked 140 bps floor is not promotable."""
+    from breakwater import research_lifecycle as rl
+
+    monkeypatch.setenv("BREAKWATER_CONCENTRATED_PROMOTE", "1")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.004")
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
+
+    def row(kind):
+        # 50 bps net: above the static 40 bps bar, below spot's 140 bps.
+        return ValidatedSlice(
+            slice_id=f"feat:0:LONG:{kind}",
+            kind=kind,
+            feature="feat",
+            state=0,
+            side="LONG",
+            folds=5,
+            walk_forward_pass_pattern="11111",
+            walk_forward_pass_count=5,
+            fold_mean_rets="0.001,0.001,0.001,0.001,0.001",
+            fold_sizes="400,400,400,400,400",
+            n=5000,
+            mean_ret_costadj=0.005,
+            p_value=0.001,
+            validated=False,
+            temporal_pass=True,
+            direction_ok=True,
+            breadth_ok=False,
+            breadth_symbols_used=20,
+            mean_positive=True,
+            fail_reasons="breadth_ok",
+        )
+
+    assert rl._is_concentrated_candidate(row("PERP")) is True
+    assert rl._is_concentrated_candidate(row("SPOT")) is False

@@ -198,7 +198,12 @@ def _is_concentrated_candidate(row: ValidatedSlice) -> bool:
         return False
     if int(row.n) < 2000 or int(row.breadth_symbols_used) < 10:
         return False
-    return float(row.mean_ret_costadj) >= _concentrated_min_mean()
+    # The cost-linked floor applies here too, so the hunt path can never
+    # become a backdoor for a kind whose cost makes the edge uneconomic
+    # (spot at tier-1 cost would otherwise slip in at 40-140 bps).
+    return float(row.mean_ret_costadj) >= max(
+        _concentrated_min_mean(), _min_net_edge_floor(row.kind)
+    )
 
 
 # === Multi-horizon robustness gate (promotion-time) ===
