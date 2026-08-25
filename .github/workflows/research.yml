@@ -59,6 +59,10 @@ jobs:
           BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
           # Quality bar = max(static, k x round-trip cost); spot dies at 2 x 70 bps
           BREAKWATER_MIN_NET_EDGE_COST_MULT: ${{ vars.BREAKWATER_MIN_NET_EDGE_COST_MULT || '2' }}
+          # Autotune: new slices must make the top X% of this run's pool (per kind)
+          BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE || '0.25' }}
+          # Existing slices survive at the looser quantile (hysteresis, no flapping)
+          BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE || '0.40' }}
           # Cost model (round-trip bps) - must match paper.yml
           BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
           BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
