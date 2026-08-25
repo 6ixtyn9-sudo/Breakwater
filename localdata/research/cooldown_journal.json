@@ -94,5 +94,13 @@
     "signal_id": "1116a424ea3f6c58",
     "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23",
     "stopped_at": "2026-08-25T11:15:22+00:00"
+  },
+  {
+    "pair": "XYZ:PURRDAT",
+    "pnl_zar": "-8.1096",
+    "reason": "stop",
+    "signal_id": "6c6017b068eabefe",
+    "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23",
+    "stopped_at": "2026-08-25T13:15:21+00:00"
   }
 ]
