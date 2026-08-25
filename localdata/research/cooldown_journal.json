@@ -118,5 +118,21 @@
     "signal_id": "69a92715f7375c4f",
     "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h19",
     "stopped_at": "2026-08-25T15:00:26+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-9.4393",
+    "reason": "stop",
+    "signal_id": "83862a70519615e3",
+    "slice_id": "feat_ret_1:2:LONG:h23",
+    "stopped_at": "2026-08-25T21:00:25+00:00"
+  },
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "-11.3581",
+    "reason": "stop",
+    "signal_id": "d52b1d23ffb2b4a0",
+    "slice_id": "feat_ret_1:2:LONG:h23",
+    "stopped_at": "2026-08-25T21:00:25+00:00"
   }
 ]
