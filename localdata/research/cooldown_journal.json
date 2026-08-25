@@ -86,5 +86,13 @@
     "signal_id": "e0e439c81965d20e",
     "slice_id": "feat_ret_10:2:LONG:h14",
     "stopped_at": "2026-08-23T05:15:23+00:00"
+  },
+  {
+    "pair": "XYZ:CRCL",
+    "pnl_zar": "-6.5885",
+    "reason": "stop",
+    "signal_id": "1116a424ea3f6c58",
+    "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23",
+    "stopped_at": "2026-08-25T11:15:22+00:00"
   }
 ]
