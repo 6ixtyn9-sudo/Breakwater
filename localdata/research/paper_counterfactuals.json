@@ -676,54 +676,6 @@
     "actual_exit_price": "",
     "actual_exit_reason": "",
     "actual_pnl_zar": "",
-    "entry_price": "961.75",
-    "fee_bps": "9",
-    "horizon_bars": 24,
-    "initial_stop_price": "958.39500000000009545",
-    "kind": "PERP",
-    "last_processed_bar_start": "2026-08-26T14:00:00+00:00",
-    "missing_bars": 0,
-    "notional_zar": "415.318320",
-    "pair": "XYZ:COST",
-    "peak_price": "961.75",
-    "policies": {
-      "no_target_trail_1r": {
-        "active": true,
-        "bars_held": 1,
-        "stop_price": "958.39500000000009545"
-      },
-      "no_target_trail_2r": {
-        "active": true,
-        "bars_held": 1,
-        "stop_price": "958.39500000000009545"
-      },
-      "target_2r_trail_1r": {
-        "active": true,
-        "bars_held": 1,
-        "stop_price": "958.39500000000009545"
-      },
-      "target_3r_trail_1r": {
-        "active": true,
-        "bars_held": 1,
-        "stop_price": "958.39500000000009545"
-      },
-      "target_4r_trail_1r": {
-        "active": true,
-        "bars_held": 1,
-        "stop_price": "958.39500000000009545"
-      }
-    },
-    "side": "BUY",
-    "signal_id": "ee688ccfb3b601ba",
-    "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
-    "tracked_at": "2026-08-26T13:30:22+00:00",
-    "trough_price": "959.77"
-  },
-  {
-    "actual_exit_bar_start": "",
-    "actual_exit_price": "",
-    "actual_exit_reason": "",
-    "actual_pnl_zar": "",
     "entry_price": "143.49",
     "fee_bps": "9",
     "horizon_bars": 24,
@@ -766,5 +718,53 @@
     "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
     "tracked_at": "2026-08-26T14:00:29+00:00",
     "trough_price": "143.0"
+  },
+  {
+    "actual_exit_bar_start": "",
+    "actual_exit_price": "",
+    "actual_exit_reason": "",
+    "actual_pnl_zar": "",
+    "entry_price": "97.122",
+    "fee_bps": "9",
+    "horizon_bars": 24,
+    "initial_stop_price": "96.6845",
+    "kind": "PERP",
+    "last_processed_bar_start": "2026-08-26T15:00:00+00:00",
+    "missing_bars": 0,
+    "notional_zar": "413.964480",
+    "pair": "XYZ:STRC",
+    "peak_price": "97.122",
+    "policies": {
+      "no_target_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "96.6845"
+      },
+      "no_target_trail_2r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "96.6845"
+      },
+      "target_2r_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "96.6845"
+      },
+      "target_3r_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "96.6845"
+      },
+      "target_4r_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "96.6845"
+      }
+    },
+    "side": "BUY",
+    "signal_id": "443e193dcdb2417a",
+    "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
+    "tracked_at": "2026-08-26T15:34:35+00:00",
+    "trough_price": "97.122"
   }
 ]

@@ -142,5 +142,13 @@
     "signal_id": "e9f12f9b283bbea5",
     "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
     "stopped_at": "2026-08-26T14:00:29+00:00"
+  },
+  {
+    "pair": "XYZ:COST",
+    "pnl_zar": "-1.8226",
+    "reason": "stop",
+    "signal_id": "ee688ccfb3b601ba",
+    "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
+    "stopped_at": "2026-08-26T15:34:35+00:00"
   }
 ]
