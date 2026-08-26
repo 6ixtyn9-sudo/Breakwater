@@ -134,7 +134,7 @@ def spot_frame(close, high=None, low=None):
     )
 
 
-def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None):
+def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None, server_time=None):
     import os
     os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
     os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
@@ -153,7 +153,7 @@ def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None
         cooldown_path=tmp_path / "cooldown.json",
         book_path=tmp_path / "book.csv",
         book_slice_ids=book,
-        server_time=datetime.now(timezone.utc),
+        server_time=server_time or datetime.now(timezone.utc),
     )
 
 
@@ -906,7 +906,7 @@ def read_book_rows(path):
         return list(csv.DictReader(handle))
 
 
-def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=BOOK):
+def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=BOOK, server_time=None):
     import os
 
     os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
@@ -926,7 +926,7 @@ def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=B
         cooldown_path=tmp_path / "cooldown.json",
         book_path=tmp_path / "book.csv",
         book_slice_ids=book,
-        server_time=datetime.now(timezone.utc),
+        server_time=server_time or datetime.now(timezone.utc),
         hip3_book_path=hip3_book,
     )
 
@@ -1005,8 +1005,10 @@ def test_hip3_position_exits_on_hip3_book_horizon(tmp_path):
     hip3_book = write_book_row(tmp_path / "hip3_book.csv", "hip3_xyz_index_c0:feat:0:LONG:h5")
     position = dict(open_position()[0])
     position.update(pair="XYZ:NVDA", slice_id="hip3_xyz_index_c0:feat:0:LONG:h5", bars_held="6")
-    # 14:00Z bar closes 15:00Z = 11:00 ET: inside the US session, so the
-    # planned horizon exit fires (a pre-market bar would now defer it).
+    from datetime import datetime, timezone
+
+    # 2026-08-14 is a Friday. Cycle at 14:00:30Z = 10:00:30 ET, in-session:
+    # the planned horizon exit fills (a pre-market fill time would defer it).
     result = hip3_cycle(
         tmp_path,
         signals=[],
@@ -1014,6 +1016,7 @@ def test_hip3_position_exits_on_hip3_book_horizon(tmp_path):
         positions=[position],
         hip3_book=hip3_book,
         book={"hip3_xyz_index_c0:feat:0:LONG:h5"},
+        server_time=datetime(2026, 8, 14, 14, 0, 30, tzinfo=timezone.utc),
     )
     assert result["closed"] == 1
     log = pd.read_csv(tmp_path / "log.csv")
@@ -1206,20 +1209,39 @@ def test_hip3_planned_exit_defers_to_market_session(tmp_path):
     """A US-equity position whose horizon deadline lands in the pre-market
     must NOT exit there: the planned exit defers to the next in-session
     close (summer dates: 14:00Z close = 10:00 ET)."""
+    from datetime import datetime, timezone
+
     bars = [f"2026-08-25T{h:02d}:00:00Z" for h in (8, 9, 10, 11, 12, 13)]
+    # Single replay cycle at 14:00:30Z (10:00:30 ET, in-session). Each
+    # replayed bar fills at its own close; the deadline (09:00 bar, close
+    # 10:00Z = 06:00 ET pre-market) defers bar by bar until the 13:00 bar,
+    # whose close 14:00Z = 10:00 ET is the first in-session fill.
     result = cycle(
         tmp_path,
         signals=[],
         frames={"XYZ:COIN": _hour_frame(bars)},
         positions=[_hip3_position()],
+        server_time=datetime(2026, 8, 25, 14, 0, 30, tzinfo=timezone.utc),
     )
     assert result["closed"] == 1
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["exit_reason"] == "horizon"
-    # Exited on the 13:00 bar (close 14:00Z = in session), NOT on the
-    # 09:00 bar where bars_held first reached the horizon (10:00Z close,
-    # pre-market).
     assert log.iloc[0]["exit_bar_start"].startswith("2026-08-25T13:00")
+
+    # Same bars, but the cycle runs at 13:00:24Z (09:00:24 ET, pre-open):
+    # the 13:00 bar's fill (min(now, close) = 13:00:24Z) is pre-market, so
+    # even the 13:00 bar defers - nothing closes. This is the 26 Aug bug:
+    # bar-close checking would have exited all four here, 30 min pre-open.
+    late = tmp_path / "late"
+    late.mkdir()
+    result = cycle(
+        late,
+        signals=[],
+        frames={"XYZ:COIN": _hour_frame(bars)},
+        positions=[_hip3_position()],
+        server_time=datetime(2026, 8, 25, 13, 0, 24, tzinfo=timezone.utc),
+    )
+    assert result["closed"] == 0
 
 
 def test_hip3_stop_still_fires_outside_session(tmp_path):
@@ -1316,9 +1338,9 @@ def _session_tape(end_start, n=220):
 
 def test_hip3_entry_gated_to_derived_market_session(tmp_path, monkeypatch):
     """HIP-3 equity entries are gated to the underlying's live session,
-    DERIVED from the slice's market class - the operator's crypto session
-    variable does not apply (a pre-market bar that the 'eu' variable would
-    allow is still blocked; an in-market bar signals)."""
+    DERIVED from the slice's market class, checked at the FILL time
+    (server_time for a forming bar) - not the bar's nominal close. The
+    operator's crypto session variable does not apply."""
     from datetime import datetime, timezone
 
     from breakwater.monitor import monitor_book
@@ -1339,19 +1361,26 @@ def test_hip3_entry_gated_to_derived_market_session(tmp_path, monkeypatch):
         "hostile_unproven": "False",
         "edge_is_directional_net": "True",
     }
-    server_time = datetime(2026, 8, 25, 10, 0, tzinfo=timezone.utc)
 
-    # Bar closes 10:00Z = 06:00 ET: pre-market. The 'eu' variable would
-    # allow this bar; the derived class gate blocks and journals it.
-    pre = _session_tape("2026-08-25T09:00:00Z")
-    signals, blocked = monitor_book([dict(row)], {"PERP": {"XYZ:COIN": pre}}, server_time=server_time)
+    # Regression (26 Aug): the 13:00Z cycle fills at 13:00:24Z = 09:00:24
+    # ET - 30 minutes PRE-OPEN - even though the bar nominally closes at
+    # 14:00Z (10:00 ET, in-session). Checking the bar close let four
+    # pre-market horizon fills through. Fill-time check blocks it.
+    pre = _session_tape("2026-08-25T13:00:00Z")
+    signals, blocked = monitor_book(
+        [dict(row)], {"PERP": {"XYZ:COIN": pre}},
+        server_time=datetime(2026, 8, 25, 13, 0, 24, tzinfo=timezone.utc),
+    )
     assert signals == []
     assert len(blocked) == 1
     assert blocked[0]["guard"] == "session_blocked"
     assert blocked[0]["market_class"] == "equity"
 
-    # Bar closes 15:00Z = 11:00 ET: in session, signals normally.
+    # 14:00:30Z cycle fills at 10:00:30 ET: in session, signals normally.
     intraday = _session_tape("2026-08-25T14:00:00Z")
-    signals, blocked = monitor_book([dict(row)], {"PERP": {"XYZ:COIN": intraday}}, server_time=server_time)
+    signals, blocked = monitor_book(
+        [dict(row)], {"PERP": {"XYZ:COIN": intraday}},
+        server_time=datetime(2026, 8, 25, 14, 0, 30, tzinfo=timezone.utc),
+    )
     assert len(signals) == 1
     assert blocked == []

@@ -243,11 +243,15 @@ def monitor_book(
                 # the slice's market class (equity/index -> NYSE regular
                 # hours, DST-aware; 24/7 classes ungated). The operator's
                 # crypto session list does not apply to calendar assets -
-                # hours are a property of the asset, not a variable. The
-                # paper fills at bar close, so the gate checks the close.
+                # hours are a property of the asset, not a variable.
+                # The paper fills at the latest known price: a forming bar
+                # fills at server_time, so the gate checks min(server_time,
+                # bar close). Checking the bar's nominal close alone would
+                # admit pre-open fills up to an hour early (the 13:00Z
+                # cycle fills at 09:00 ET, not 10:00 ET).
                 mkt_class = hip3_slice_market_class(slice_id)
                 bar_end = latest_row["start"] + pd.Timedelta(hours=1)
-                if not hip3_in_market_session(mkt_class, bar_end):
+                if not hip3_in_market_session(mkt_class, min(server_time, bar_end)):
                     blocked.append(
                         {
                             "pair": pair.upper(),

@@ -900,7 +900,7 @@ def _unseen_bars(position: dict, frame):
     return ordered[starts > last_processed]
 
 
-def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_ids: set[str]):
+def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_ids: set[str], now: datetime):
     side = str(position["side"])
     entry = Decimal(str(position["entry_price"]))
     stop = Decimal(str(position["stop_price"]))
@@ -947,19 +947,23 @@ def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_id
         exit_price, exit_reason = close, "rotated"
         outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
     # HIP-3 calendar assets: PLANNED exits (horizon, time stop) must land on
-    # the underlying's live tape. If this bar closes outside the session,
-    # the planned exit defers to the next in-session bar (bars_held keeps
-    # counting; the position simply outlives its original deadline).
-    # Protective exits (stop, trail, target, rotated, stale-data) are
-    # untouched - protection never sleeps.
+    # the underlying's live tape. The paper fills at the latest known price:
+    # a bar still forming fills at `now`, a completed (replayed) bar fills
+    # at its close - so the session is checked at min(now, bar close).
+    # If that fill time is outside the session, the planned exit defers to
+    # the next bar whose fill time is in-session (bars_held keeps counting;
+    # the position simply outlives its original deadline). Protective exits
+    # (stop, trail, target, rotated, stale-data) are untouched - protection
+    # never sleeps.
     planned_exit_allowed = True
     pos_slice = str(position.get("slice_id") or "")
     if pos_slice.startswith("hip3_"):
         bar_start = last["start"]
         if hasattr(bar_start, "to_pydatetime"):
             bar_start = bar_start.to_pydatetime()
+        fill_time = min(now, bar_start + timedelta(hours=1))
         planned_exit_allowed = hip3_in_market_session(
-            hip3_slice_market_class(pos_slice), bar_start + timedelta(hours=1)
+            hip3_slice_market_class(pos_slice), fill_time
         )
     if (
         exit_price is None
@@ -1198,6 +1202,7 @@ def run_paper_cycle(
                 bar,
                 horizon_bars=horizon_bars,
                 book_slice_ids=book_slice_ids,
+                now=server_time,
             )
             if exit_state is not None:
                 break
