@@ -150,5 +150,13 @@
     "signal_id": "ee688ccfb3b601ba",
     "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
     "stopped_at": "2026-08-26T15:34:35+00:00"
+  },
+  {
+    "pair": "XYZ:AMZN",
+    "pnl_zar": "-3.5522",
+    "reason": "stop",
+    "signal_id": "bd664e3677dfedc0",
+    "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
+    "stopped_at": "2026-08-26T16:00:44+00:00"
   }
 ]
