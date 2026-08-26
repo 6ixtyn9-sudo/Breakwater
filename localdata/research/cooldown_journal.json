@@ -134,5 +134,13 @@
     "signal_id": "d52b1d23ffb2b4a0",
     "slice_id": "feat_ret_1:2:LONG:h23",
     "stopped_at": "2026-08-25T21:00:25+00:00"
+  },
+  {
+    "pair": "XYZ:AVGO",
+    "pnl_zar": "-6.5175",
+    "reason": "stop",
+    "signal_id": "e9f12f9b283bbea5",
+    "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h24",
+    "stopped_at": "2026-08-26T14:00:29+00:00"
   }
 ]
