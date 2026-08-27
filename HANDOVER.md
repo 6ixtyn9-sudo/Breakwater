@@ -1,5 +1,5 @@
 BREAKWATER HANDOVER / RUNBOOK
-Date: 2026-08-20 (Africa/Johannesburg); updated 2026-08-25.
+Date: 2026-08-20 (Africa/Johannesburg); updated 2026-08-27.
 
 This is the canonical handover. Plain text. Copy this whole file.
 Sections are dated. Where sections conflict, the newest one wins.
@@ -811,5 +811,58 @@ Variables (25 Aug): HIP3_USDC_TOKEN_ID=0,235; MIN_NET_EDGE=0.004;
   MODE=readonly; PAPER_EQUITY_SEED=2000; PERP_CANDLE_COUNT=1000;
   RESEARCH_HORIZONS=1..24; RUNNER=ubuntu-22.04; SPOT_CANDLE_COUNT=1000.
 Secrets: BREAKWATER_MANDATE_JSON, VALR_API_KEY, VALR_API_SECRET.
+
+
+28) PRE-MARKET FILL FIX + THE WEEK (2026-08-26/27, ACTIONED/DECIDED)
+
+26 Aug bug (caught by the operator from trade timestamps): the session
+gate checked the bar's NOMINAL close, but the paper engine fills at the
+latest known price. The 13:00Z cycle filled at 13:00:24Z = 09:00:24 ET -
+30 minutes PRE-OPEN - and four equity horizon exits got through (MSTR
+AMD AAPL AMZN; net +2.90 ZAR that day, so the damage was small, but the
+rule was doing something other than what it claimed).
+Fix (dafc6f2): the gate checks min(server_time, bar close) = the actual
+fill time, on BOTH entry (monitor) and planned-exit (horizon/time-stop
+deferral; _mark_position_bar now receives the cycle's server_time).
+Regression tests pin the exact 13:00:24Z scenario. Book-management
+rotations are deliberately left OUTSIDE the session gate (a rotated
+position sitting 10h in a dead market is worse than a thin-tape exit);
+operator can gate those too - one line.
+Since the fix: 1,000+ session blocks, all in dead windows, zero in-session.
+
+OPERATOR DECISION (27 Aug, 05:30 SAST): run the system ONE FULL WEEK
+(27 Aug -> 3 Sep) without intervention, EVEN IF paper equity goes below
+2,000 ZAR. Then an autopsy on the evidence.
+
+Rules of the week (pre-committed):
+- No knob changes (R%, floors, caps, sessions, fees, books). The daily
+  research votes may rotate the book - that is the system, not
+  intervention.
+- Mechanical bug fixes remain allowed (a broken mechanism is not a data
+  point; the 26 Aug pre-market fill bug is the example).
+- Balance below 2,000 is DATA, not a stop.
+
+Reference line (27 Aug 03:30Z state, in git):
+- Equity 2,046.53 ZAR | 105 closed, 57W/48L | 6-day net +46.53 (+2.3%)
+- 8 open, ALL crypto (AAVE BTC KPEPE ADA DOGE LINK SUI XMR); 0 equities
+- HIP-3 book: realized_vol_20:h23 (72.3 bps), atr_norm_ext:h23 (43.8,
+  rotated in from h24 by the 27 Aug vote), trend_strength_20:h23 (41.2)
+- HEADLINE FACT: the ENTIRE +46.53 profit is ONE slice -
+  feat_ext_vs_ma_50:2:LONG:h21, +114.00 (13 closes, 12W/1L). All other
+  37 slices net -67.47 COMBINED. The book is one hit plus a field of
+  small losers. The autopsy is really about h21.
+
+Autopsy questions (answer from logs, not memory):
+  1) Week P&L by book (native vs hip3) and by entry session.
+  2) Is h21 real? n, R-distribution and MFE pattern after +7 days.
+  3) Worst 5 losses: mechanism (clean <=1.26R stops) or bug
+     (>1.25R, off-schedule, off-session)?
+  4) Gates: any fill outside market hours? any cap/leash breach?
+  5) Ghosts with 30+ closes: does any exit policy beat the 2R control
+     beyond noise?
+  6) HIP-3: any slice with n>=25 and positive net (the live-gate
+     evidence)?
+Post-week decision (by data, not mood): scale up, hold, shrink, or
+retire lanes.
 
 END
