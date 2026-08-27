@@ -253,7 +253,7 @@
     "missing_bars": 0,
     "notional_zar": "415.390500",
     "pair": "KPEPEUSDC",
-    "peak_price": "0.003873",
+    "peak_price": "0.00386",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -301,7 +301,7 @@
     "missing_bars": 0,
     "notional_zar": "415.390500",
     "pair": "LINKUSDC",
-    "peak_price": "11.629",
+    "peak_price": "11.638",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -349,7 +349,7 @@
     "missing_bars": 0,
     "notional_zar": "414.738740",
     "pair": "BTCUSDC",
-    "peak_price": "79173.0",
+    "peak_price": "79034.0",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -397,7 +397,7 @@
     "missing_bars": 0,
     "notional_zar": "415.318320",
     "pair": "SUIUSDC",
-    "peak_price": "0.76891",
+    "peak_price": "0.76769",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -489,7 +489,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "141.952500000000005655",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-26T23:00:00+00:00",
+    "last_processed_bar_start": "2026-08-27T00:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "414.014820",
     "pair": "XYZ:BX",
@@ -497,27 +497,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 10,
+        "bars_held": 11,
         "stop_price": "141.952500000000005655"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 10,
+        "bars_held": 11,
         "stop_price": "141.952500000000005655"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 10,
+        "bars_held": 11,
         "stop_price": "141.952500000000005655"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 10,
+        "bars_held": 11,
         "stop_price": "141.952500000000005655"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 10,
+        "bars_held": 11,
         "stop_price": "141.952500000000005655"
       }
     },
@@ -589,7 +589,7 @@
     "missing_bars": 0,
     "notional_zar": "391.6093975987553935322453015",
     "pair": "AAVEUSDC",
-    "peak_price": "127.2",
+    "peak_price": "126.89",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -637,7 +637,7 @@
     "missing_bars": 0,
     "notional_zar": "409.592360",
     "pair": "ADAUSDC",
-    "peak_price": "0.21281",
+    "peak_price": "0.21217",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -685,7 +685,7 @@
     "missing_bars": 0,
     "notional_zar": "409.592360",
     "pair": "DOGEUSDC",
-    "peak_price": "0.087813",
+    "peak_price": "0.087612",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
