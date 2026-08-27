@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-26T01:45:21.601236+00:00",
+ "as_of": "2026-08-27T01:45:28.932696+00:00",
  "dexs": [
   {
    "assetToFundingInterestRate": [
@@ -378,6 +378,10 @@
      "0.5"
     ],
     [
+     "xyz:SHEIN",
+     "0.5"
+    ],
+    [
      "xyz:SILVER",
      "0.5"
     ],
@@ -463,6 +467,10 @@
     ],
     [
      "xyz:WHEAT",
+     "0.5"
+    ],
+    [
+     "xyz:XBI",
      "0.5"
     ],
     [
@@ -840,6 +848,10 @@
      "25000000.0"
     ],
     [
+     "xyz:SHEIN",
+     "25000000.0"
+    ],
+    [
      "xyz:SILVER",
      "500000000.0"
     ],
@@ -925,6 +937,10 @@
     ],
     [
      "xyz:WHEAT",
+     "25000000.0"
+    ],
+    [
+     "xyz:XBI",
      "25000000.0"
     ],
     [
@@ -2194,7 +2210,15 @@
   {
    "assetToFundingInterestRate": [
     [
+     "mkts:SMALL2000",
+     "0.0000456621"
+    ],
+    [
      "mkts:US500",
+     "0.0000456621"
+    ],
+    [
+     "mkts:USBOND",
      "0.0000456621"
     ],
     [
@@ -2205,8 +2229,16 @@
    "assetToFundingMultiplier": [],
    "assetToStreamingOiCap": [
     [
+     "mkts:SMALL2000",
+     "10000000.0"
+    ],
+    [
      "mkts:US500",
      "25000000.0"
+    ],
+    [
+     "mkts:USBOND",
+     "10000000.0"
     ],
     [
      "mkts:USTECH",
@@ -2263,6 +2295,12 @@
      ]
     ],
     [
+     "setDeployerFees",
+     [
+      "0xecc1e0731ca1cbd237c0564935637c4c9e899e41"
+     ]
+    ],
+    [
      "setFundingInterestRates",
      [
       "0xecc1e0731ca1cbd237c0564935637c4c9e899e41"
@@ -2295,7 +2333,7 @@
     ],
     [
      "io:SNDK",
-     "5000000.0"
+     "10000000.0"
     ]
    ],
    "deployer": "0x320c8988e3d1b5198f335802d7bfd2728a8fcac6",
