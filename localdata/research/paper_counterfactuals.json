@@ -153,7 +153,7 @@
     "horizon_bars": 23,
     "initial_stop_price": "114.78000000000000035",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-27T11:00:00+00:00",
+    "last_processed_bar_start": "2026-08-27T12:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "200.00",
     "pair": "XYZ:BABA",
@@ -166,7 +166,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 50,
+        "bars_held": 51,
         "stop_price": "115.71000000000000070"
       },
       "target_2r_trail_1r": {
