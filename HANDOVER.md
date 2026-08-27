@@ -683,8 +683,9 @@ BREAKWATER_HIP3_PAPER=1 (paper.yml default) arms the HIP-3 paper sub-pool.
   - 25 Aug state: 6 open (4 xyz_equity realized_vol_20:2:LONG,
     2 vol_regime:1:LONG; COIN MSTR PURRDAT RIVN AMAT AMD), 2 closes:
     CRCL stop -6.59 ZAR (-1.09R) cut clean, BABA trail +0.71.
-  - HIP-3 LIVE gate unchanged (sections 18-19): 25 closed paper trades
-    AND 25 positive ghost rows AND positive PnL, plus the production gates.
+  - HIP-3 LIVE gate (sections 18-19): 50 closed paper trades AND 50
+    positive ghost rows AND positive PnL, plus the production gates.
+    (Raised 25 -> 50 on 27 Aug - operator decision, see section 28.)
     Paper is the measurement instrument; do not shortcut it.
 
 
@@ -796,14 +797,14 @@ commit. (25 Aug: fee_audit ruff errors fixed in d1ce23a, CI #241 green.)
 FIRST GHOST READING (16 mirrors, 76 rows): max MFE 2.25R, ZERO 3R+ trades.
 3R ghost +2.72 ZAR is ONE trade (BTCUSDC, +3.74 on it) - a whisper.
 Wide 2R-trail ghost is the one clearly-bad policy (keeps losers alive).
-2R control stays. Ghosts are EVIDENCE for the HIP-3 live gate (25/25),
+2R control stays. Ghosts are EVIDENCE for the HIP-3 live gate (50/50),
 not a tuning menu. Revisit the target only when MFEs print 3R+.
 
 CURRENT DAILY HAWK ROUTINE (replaces section 10):
   1) status.csv: pair_errors, aggregate_risk_status, replayed_bars.
   2) research run: net_edge_floor_enter_bps / keep_bps, validated count.
   3) book: any slice frozen/carried and why (status counters).
-  4) HIP-3: closed-trade count toward 25; MFEs.
+  4) HIP-3: closed-trade count toward 50; MFEs.
   5) In a red tape: the long-only book's leash utilization.
   No knob change without a number. No YAML fondling.
 
@@ -841,6 +842,10 @@ Rules of the week (pre-committed):
 - Mechanical bug fixes remain allowed (a broken mechanism is not a data
   point; the 26 Aug pre-market fill bug is the example).
 - Balance below 2,000 is DATA, not a stop.
+- AMENDMENT (27 Aug, operator): the HIP-3 live-gate evidence bar is
+  raised 25 -> 50 closed trades (+ 50 ghost rows). Rationale: give the
+  lane a longer evidence window to prove/disprove itself before a live
+  verdict. Trading behavior unchanged; only the verdict timeline moves.
 
 Reference line (27 Aug 03:30Z state, in git):
 - Equity 2,046.53 ZAR | 105 closed, 57W/48L | 6-day net +46.53 (+2.3%)
@@ -860,8 +865,9 @@ Autopsy questions (answer from logs, not memory):
   4) Gates: any fill outside market hours? any cap/leash breach?
   5) Ghosts with 30+ closes: does any exit policy beat the 2R control
      beyond noise?
-  6) HIP-3: any slice with n>=25 and positive net (the live-gate
-     evidence)?
+  6) HIP-3: trajectory at ~half-way (n~35-40) toward the 50-trade
+     live-gate bar - positive or negative trend? (the full 50-trade
+     verdict lands after the week)
 Post-week decision (by data, not mood): scale up, hold, shrink, or
 retire lanes.
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from breakwater.hip3 import Hip3UniverseRow
 from breakwater.hip3_research import (
+    HIP3_LIVE_MIN_PAPER_TRADES,
     MIN_SPREAD_SAMPLES,
     _candidate_rows,
     _hip3_paper_evidence,
@@ -167,7 +168,7 @@ _EMPTY_EVIDENCE = {
     "closed_trades": 0,
     "pnl_zar": 0.0,
     "ghost_rows": 0,
-    "minimum_trades": 25,
+    "minimum_trades": HIP3_LIVE_MIN_PAPER_TRADES,
 }
 
 
@@ -233,14 +234,19 @@ def test_paper_stage_never_requires_paper_evidence():
 
 
 def test_paper_evidence_blocker_resolves_only_at_threshold_with_profit():
-    full = dict(_EMPTY_EVIDENCE, closed_trades=25, ghost_rows=25, pnl_zar=1.0)
+    full = dict(
+        _EMPTY_EVIDENCE,
+        closed_trades=HIP3_LIVE_MIN_PAPER_TRADES,
+        ghost_rows=HIP3_LIVE_MIN_PAPER_TRADES,
+        pnl_zar=1.0,
+    )
     gate = _promotion_gate(
         **_gate_kwargs(confirmed_collateral_tokens={0}, paper_evidence=full)
     )
     assert "no_hip3_paper_evidence" not in gate["live_unresolved"]
     for change in (
-        dict(closed_trades=24),
-        dict(ghost_rows=24),
+        dict(closed_trades=HIP3_LIVE_MIN_PAPER_TRADES - 1),
+        dict(ghost_rows=HIP3_LIVE_MIN_PAPER_TRADES - 1),
         dict(pnl_zar=0.0),
         dict(pnl_zar=-1.0),
     ):
@@ -286,7 +292,7 @@ def test_hip3_paper_evidence_counts_only_hip3_rows():
         "closed_trades": 2,
         "pnl_zar": 1.0,
         "ghost_rows": 1,
-        "minimum_trades": 25,
+        "minimum_trades": HIP3_LIVE_MIN_PAPER_TRADES,
     }
 
 

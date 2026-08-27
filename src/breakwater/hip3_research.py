@@ -344,8 +344,10 @@ def _stratified_select(
 
 # A live decision needs this many completed HIP-3 paper round trips (and the
 # same number of ghost comparisons) with positive net PnL before the live gate
-# can report ready.
-HIP3_LIVE_MIN_PAPER_TRADES = 25
+# can report ready. Raised 25 -> 50 on 27 Aug (operator decision): the lane
+# gets a longer evidence window before a live verdict - 15/25 at -33.52 ZAR
+# when decided, which is data accumulating, not a stop.
+HIP3_LIVE_MIN_PAPER_TRADES = 50
 HIP3_SLICE_PREFIX = "hip3_"
 
 
