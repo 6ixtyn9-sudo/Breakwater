@@ -166,5 +166,13 @@
     "signal_id": "eeaa447c3a52d85d",
     "slice_id": "feat_ext_vs_ma_10:0:LONG:h24",
     "stopped_at": "2026-08-26T17:00:31+00:00"
+  },
+  {
+    "pair": "XYZ:DKNG",
+    "pnl_zar": "-5.9462",
+    "reason": "stop",
+    "signal_id": "270142d6634f2e69",
+    "slice_id": "hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h23",
+    "stopped_at": "2026-08-27T18:00:25+00:00"
   }
 ]
