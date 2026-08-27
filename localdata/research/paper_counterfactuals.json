@@ -153,7 +153,7 @@
     "horizon_bars": 23,
     "initial_stop_price": "114.78000000000000035",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-27T12:00:00+00:00",
+    "last_processed_bar_start": "2026-08-27T13:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "200.00",
     "pair": "XYZ:BABA",
@@ -166,7 +166,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 51,
+        "bars_held": 52,
         "stop_price": "115.71000000000000070"
       },
       "target_2r_trail_1r": {
@@ -766,5 +766,53 @@
     "slice_id": "feat_ret_5:0:LONG:h24",
     "tracked_at": "2026-08-27T13:00:24+00:00",
     "trough_price": "104.5"
+  },
+  {
+    "actual_exit_bar_start": "",
+    "actual_exit_price": "",
+    "actual_exit_reason": "",
+    "actual_pnl_zar": "",
+    "entry_price": "35.632",
+    "fee_bps": "9",
+    "horizon_bars": 23,
+    "initial_stop_price": "35.354249999999993620",
+    "kind": "PERP",
+    "last_processed_bar_start": "2026-08-27T13:00:00+00:00",
+    "missing_bars": 0,
+    "notional_zar": "418.453540",
+    "pair": "XYZ:EWZ",
+    "peak_price": "35.632",
+    "policies": {
+      "no_target_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "35.354249999999993620"
+      },
+      "no_target_trail_2r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "35.354249999999993620"
+      },
+      "target_2r_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "35.354249999999993620"
+      },
+      "target_3r_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "35.354249999999993620"
+      },
+      "target_4r_trail_1r": {
+        "active": true,
+        "bars_held": 0,
+        "stop_price": "35.354249999999993620"
+      }
+    },
+    "side": "BUY",
+    "signal_id": "ff0054611b90f530",
+    "slice_id": "hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h23",
+    "tracked_at": "2026-08-27T13:30:25+00:00",
+    "trough_price": "35.632"
   }
 ]
