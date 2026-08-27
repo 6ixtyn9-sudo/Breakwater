@@ -831,11 +831,17 @@ position sitting 10h in a dead market is worse than a thin-tape exit);
 operator can gate those too - one line.
 Since the fix: 1,000+ session blocks, all in dead windows, zero in-session.
 
-OPERATOR DECISION (27 Aug, 05:30 SAST): run the system ONE FULL WEEK
-(27 Aug -> 3 Sep) without intervention, EVEN IF paper equity goes below
-2,000 ZAR. Then an autopsy on the evidence.
+OPERATOR DECISION (27 Aug, 05:30 SAST): run the system without
+intervention, EVEN IF paper equity goes below 2,000 ZAR. Then an
+autopsy on the evidence.
+AMENDMENT (27 Aug, operator): 7 days is not enough for a clean
+autopsy - the window is TWO WEEKS (27 Aug -> 10 Sep): two full
+weekly cycles of tape, landing just after the HIP-3 50-trade
+evidence completes (~4-6 Sep) so the autopsy takes the full HIP-3
+verdict as an input. Extensible to 21 days (17 Sep) on the
+operator's word.
 
-Rules of the week (pre-committed):
+Rules of the period (pre-committed):
 - No knob changes (R%, floors, caps, sessions, fees, books). The daily
   research votes may rotate the book - that is the system, not
   intervention.
@@ -859,16 +865,16 @@ Reference line (27 Aug 03:30Z state, in git):
 
 Autopsy questions (answer from logs, not memory):
   1) Week P&L by book (native vs hip3) and by entry session.
-  2) Is h21 real? n, R-distribution and MFE pattern after +7 days.
+  2) Is h21 real? n, R-distribution and MFE pattern after +14 days.
   3) Worst 5 losses: mechanism (clean <=1.26R stops) or bug
      (>1.25R, off-schedule, off-session)?
   4) Gates: any fill outside market hours? any cap/leash breach?
   5) Ghosts with 30+ closes: does any exit policy beat the 2R control
      beyond noise?
-  6) HIP-3: trajectory at ~half-way (n~35-40) toward the 50-trade
-     live-gate bar - positive or negative trend? (the full 50-trade
-     verdict lands after the week)
-Post-week decision (by data, not mood): scale up, hold, shrink, or
-retire lanes.
+  6) HIP-3: the full 50-trade verdict (evidence completes ~4-6 Sep,
+     before the autopsy) - live-ready or not, by the gate's own
+     terms?
+Post-period decision (10 Sep, by data, not mood): scale up, hold,
+shrink, or retire lanes.
 
 END
