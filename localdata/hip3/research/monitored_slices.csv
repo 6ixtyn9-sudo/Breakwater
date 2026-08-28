@@ -1,4 +1,8 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net
-hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h23,PERP,feat_realized_vol_20,2,LONG,monitored,2026-08-27T01:51:12.202832+00:00,,0,0,0,0,,0.007229,7648,0.000001,23,3.500,validated_walk_forward,False,True
-hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h23,PERP,feat_atr_norm_ext,1,LONG,monitored,2026-08-27T01:51:12.202832+00:00,,0,0,0,0,,0.004376,9615,0.000041,23,3.500,validated_walk_forward,False,True
-hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h23,PERP,feat_trend_strength_20,0,LONG,monitored,2026-08-27T01:51:12.202832+00:00,,0,0,0,0,,0.004120,9821,0.000281,23,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h19,PERP,feat_vol_regime,1,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.007090,8545,0.000000,19,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17,PERP,feat_realized_vol_20,2,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.004356,7914,0.000225,17,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h21,PERP,feat_atr_norm_ext,1,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.004029,9747,0.000064,21,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24,PERP,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.005026,8033,0.000236,24,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h23,PERP,feat_trend_strength_20,0,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.004297,9623,0.000456,23,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24,PERP,feat_ret_20,0,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.004426,8672,0.000833,24,3.500,validated_walk_forward,False,True
+hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24,PERP,feat_trend_slope_20,0,LONG,monitored,2026-08-28T01:49:35.129902+00:00,,0,0,0,0,,0.004291,8565,0.001214,24,3.500,validated_walk_forward,False,True
