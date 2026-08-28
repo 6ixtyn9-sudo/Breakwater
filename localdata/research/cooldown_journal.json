@@ -174,5 +174,21 @@
     "signal_id": "270142d6634f2e69",
     "slice_id": "hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h23",
     "stopped_at": "2026-08-27T18:00:25+00:00"
+  },
+  {
+    "pair": "XYZ:LYTE",
+    "pnl_zar": "-11.0036",
+    "reason": "stop",
+    "signal_id": "4ca85338e881979d",
+    "slice_id": "hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h23",
+    "stopped_at": "2026-08-28T16:00:27+00:00"
+  },
+  {
+    "pair": "XYZ:AMAT",
+    "pnl_zar": "-6.5463",
+    "reason": "stop",
+    "signal_id": "99e97e89410b3f67",
+    "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
+    "stopped_at": "2026-08-28T16:00:27+00:00"
   }
 ]
