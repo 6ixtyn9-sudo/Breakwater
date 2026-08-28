@@ -222,5 +222,13 @@
     "signal_id": "49ea7e208475c4ff",
     "slice_id": "feat_ret_10:0:LONG:h24",
     "stopped_at": "2026-08-28T19:00:22+00:00"
+  },
+  {
+    "pair": "CRVUSDC",
+    "pnl_zar": "-18.2543",
+    "reason": "stop",
+    "signal_id": "8c697481c7af5c5b",
+    "slice_id": "feat_ret_10:0:LONG:h24",
+    "stopped_at": "2026-08-28T22:00:24+00:00"
   }
 ]
