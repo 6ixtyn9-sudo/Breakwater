@@ -206,5 +206,21 @@
     "signal_id": "3d8c3b4c697d97ba",
     "slice_id": "feat_ret_10:0:LONG:h24",
     "stopped_at": "2026-08-28T17:00:26+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-0.2765",
+    "reason": "trail_stop",
+    "signal_id": "06cad8c5b96fe814",
+    "slice_id": "feat_ret_5:0:LONG:h24",
+    "stopped_at": "2026-08-28T19:00:22+00:00"
+  },
+  {
+    "pair": "ADAUSDC",
+    "pnl_zar": "-15.6019",
+    "reason": "stop",
+    "signal_id": "49ea7e208475c4ff",
+    "slice_id": "feat_ret_10:0:LONG:h24",
+    "stopped_at": "2026-08-28T19:00:22+00:00"
   }
 ]
