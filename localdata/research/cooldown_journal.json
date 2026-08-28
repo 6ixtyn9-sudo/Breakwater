@@ -190,5 +190,21 @@
     "signal_id": "99e97e89410b3f67",
     "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
     "stopped_at": "2026-08-28T16:00:27+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-19.2632",
+    "reason": "stop",
+    "signal_id": "e193a8732f3fb469",
+    "slice_id": "feat_ret_5:0:LONG:h24",
+    "stopped_at": "2026-08-28T17:00:26+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-8.5005",
+    "reason": "stop",
+    "signal_id": "3d8c3b4c697d97ba",
+    "slice_id": "feat_ret_10:0:LONG:h24",
+    "stopped_at": "2026-08-28T17:00:26+00:00"
   }
 ]
