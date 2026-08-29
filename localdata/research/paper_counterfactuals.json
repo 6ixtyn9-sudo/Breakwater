@@ -489,7 +489,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "455.4425000000000040",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-29T03:00:00+00:00",
+    "last_processed_bar_start": "2026-08-29T04:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "421.132180",
     "pair": "XYZ:AMD",
@@ -497,27 +497,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 11,
+        "bars_held": 12,
         "stop_price": "455.4425000000000040"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 11,
+        "bars_held": 12,
         "stop_price": "455.4425000000000040"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 11,
+        "bars_held": 12,
         "stop_price": "455.4425000000000040"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 11,
+        "bars_held": 12,
         "stop_price": "455.4425000000000040"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 11,
+        "bars_held": 12,
         "stop_price": "455.4425000000000040"
       }
     },
