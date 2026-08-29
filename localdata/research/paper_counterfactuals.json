@@ -589,7 +589,7 @@
     "missing_bars": 0,
     "notional_zar": "403.835920",
     "pair": "AAVEUSDC",
-    "peak_price": "125.87",
+    "peak_price": "126.36",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -765,7 +765,7 @@
     "signal_id": "aa038af35efa0726",
     "slice_id": "feat_ret_3:0:LONG:h12",
     "tracked_at": "2026-08-29T22:00:22+00:00",
-    "trough_price": "0.085022"
+    "trough_price": "0.085007"
   },
   {
     "actual_exit_bar_start": "",
@@ -781,7 +781,7 @@
     "missing_bars": 0,
     "notional_zar": "404.158380",
     "pair": "XRPUSDC",
-    "peak_price": "1.3959",
+    "peak_price": "1.3964",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -860,7 +860,7 @@
     "side": "BUY",
     "signal_id": "2b5e890afe15dd39",
     "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
-    "tracked_at": "2026-08-29T23:25:14+00:00",
+    "tracked_at": "2026-08-29T23:33:52+00:00",
     "trough_price": "462.63"
   },
   {
@@ -908,7 +908,7 @@
     "side": "BUY",
     "signal_id": "7a0f3c45e9ad9f9b",
     "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
-    "tracked_at": "2026-08-29T23:25:14+00:00",
+    "tracked_at": "2026-08-29T23:33:52+00:00",
     "trough_price": "466.51"
   },
   {
@@ -956,7 +956,7 @@
     "side": "BUY",
     "signal_id": "f3a76e506ba2bc20",
     "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
-    "tracked_at": "2026-08-29T23:25:14+00:00",
+    "tracked_at": "2026-08-29T23:33:52+00:00",
     "trough_price": "95.719"
   },
   {
@@ -1004,7 +1004,7 @@
     "side": "BUY",
     "signal_id": "e384df8958ff82a9",
     "slice_id": "hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24",
-    "tracked_at": "2026-08-29T23:25:14+00:00",
+    "tracked_at": "2026-08-29T23:33:52+00:00",
     "trough_price": "240.36"
   }
 ]
