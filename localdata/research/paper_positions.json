@@ -1,13 +1,13 @@
 [
   {
     "atr": "2.891428571428577",
-    "bars_held": "27",
+    "bars_held": "28",
     "entry_guard": "passed",
     "entry_price": "462.63",
     "horizon_bars": "24",
     "initial_stop_price": "452.5099999999999805",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-29T19:00:00+00:00",
+    "last_processed_bar_start": "2026-08-29T20:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "421.132180",
     "opened_at": "2026-08-28T16:00:27+00:00",
