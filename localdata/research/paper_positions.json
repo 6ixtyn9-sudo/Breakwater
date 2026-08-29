@@ -128,7 +128,7 @@
     "initial_stop_price": "94.676249999999991245",
     "kind": "PERP",
     "last_processed_bar_start": "2026-08-29T00:00:00+00:00",
-    "missing_bars": "0",
+    "missing_bars": "1",
     "notional_zar": "420.691660",
     "opened_at": "2026-08-28T16:30:22+00:00",
     "pair": "XYZ:EWJ",
