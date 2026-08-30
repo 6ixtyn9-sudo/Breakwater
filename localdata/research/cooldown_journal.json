@@ -230,5 +230,13 @@
     "signal_id": "8c697481c7af5c5b",
     "slice_id": "feat_ret_10:0:LONG:h24",
     "stopped_at": "2026-08-28T22:00:24+00:00"
+  },
+  {
+    "pair": "FARTCOINUSDC",
+    "pnl_zar": "-15.6360",
+    "reason": "stop",
+    "signal_id": "d2b230c1a41298bf",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
+    "stopped_at": "2026-08-30T20:00:23+00:00"
   }
 ]
