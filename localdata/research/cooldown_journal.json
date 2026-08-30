@@ -238,5 +238,13 @@
     "signal_id": "d2b230c1a41298bf",
     "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
     "stopped_at": "2026-08-30T20:00:23+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-9.0272",
+    "reason": "stop",
+    "signal_id": "c13fea755b8e7798",
+    "slice_id": "feat_ext_vs_ma_50:2:LONG:h21",
+    "stopped_at": "2026-08-30T21:00:27+00:00"
   }
 ]

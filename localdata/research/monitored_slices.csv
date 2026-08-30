@@ -1,5 +1,5 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net
-feat_ext_vs_ma_50:0:LONG:h20,PERP,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-30T00:28:47+00:00,1788120000,3,2,1,20.0788,,0.004848,11138,0.000309,20,3.500,validated_walk_forward,False,True
+feat_ext_vs_ma_50:0:LONG:h20,PERP,feat_ext_vs_ma_50,0,LONG,monitored,2026-08-30T00:28:47+00:00,1788123600,4,3,1,26.1191,,0.004848,11138,0.000309,20,3.500,validated_walk_forward,False,True
 feat_ext_vs_ma_10:0:LONG:h24,PERP,feat_ext_vs_ma_10,0,LONG,monitored,2026-08-28T00:12:52+00:00,1787932800,7,4,3,1.1468,,0.006828,14716,0.000070,24,3.500,validated_walk_forward,False,True
 feat_ext_vs_ma_20:0:LONG:h24,PERP,feat_ext_vs_ma_20,0,LONG,monitored,2026-08-28T00:12:52+00:00,1788040800,3,3,0,18.8404,,0.006276,13986,0.000481,24,3.500,validated_walk_forward,False,True
 feat_ret_5:0:LONG:h24,PERP,feat_ret_5,0,LONG,monitored,2026-08-27T00:10:20+00:00,1788105600,6,4,2,26.6836,,0.005871,14642,0.000095,24,3.500,validated_walk_forward,False,True
@@ -8,4 +8,4 @@ feat_ret_20:2:LONG:h24,PERP,feat_ret_20,2,LONG,monitored,2026-08-23T00:25:23+00:
 feat_ext_vs_ma_50:2:LONG:h12,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-08-22T00:25:20+00:00,1787688000,7,4,3,2.8578,,0.011732,4806,0.000000,12,3.500,validated_walk_forward,True,True
 feat_ret_20:2:LONG:h12,PERP,feat_ret_20,2,LONG,monitored,2026-08-22T00:25:20+00:00,1788109200,4,3,1,21.4548,,0.008570,5490,0.000001,12,3.500,validated_walk_forward,False,True
 feat_atr_norm_ext:2:LONG:h21,PERP,feat_atr_norm_ext,2,LONG,monitored,2026-08-21T00:25:20+00:00,1787378400,5,4,1,8.1913,,0.008155,2807,0.134734,21,3.500,validated_walk_forward,False,True
-feat_ext_vs_ma_50:2:LONG:h21,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-08-19T10:30:31+00:00,1788109200,18,15,3,130.4817,,0.005465,2282,0.651513,21,3.500,validated_concentrated,True,True
+feat_ext_vs_ma_50:2:LONG:h21,PERP,feat_ext_vs_ma_50,2,LONG,cooldown,2026-08-19T10:30:31+00:00,1788123600,19,15,4,121.4545,1788210000,0.005465,2282,0.651513,21,3.500,validated_concentrated,True,True
