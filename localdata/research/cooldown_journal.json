@@ -262,5 +262,13 @@
     "signal_id": "09cb5695c6de43fe",
     "slice_id": "feat_ret_20:2:LONG:h12",
     "stopped_at": "2026-08-30T22:00:24+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-7.9789",
+    "reason": "stop",
+    "signal_id": "fc0a22e4221a26ca",
+    "slice_id": "feat_ret_20:2:LONG:h12",
+    "stopped_at": "2026-08-30T23:19:13+00:00"
   }
 ]
