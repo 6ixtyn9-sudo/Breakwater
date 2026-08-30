@@ -264,11 +264,67 @@
     "stopped_at": "2026-08-30T22:00:24+00:00"
   },
   {
+    "pair": "AAVEUSDC",
+    "pnl_zar": "-12.5094",
+    "reason": "stop",
+    "signal_id": "5ab1e88a65f9022b",
+    "slice_id": "feat_ret_20:2:LONG:h12",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
     "pair": "XRPUSDC",
     "pnl_zar": "-7.9789",
     "reason": "stop",
     "signal_id": "fc0a22e4221a26ca",
     "slice_id": "feat_ret_20:2:LONG:h12",
-    "stopped_at": "2026-08-30T23:19:13+00:00"
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
+    "pair": "ASTERUSDC",
+    "pnl_zar": "-8.9469",
+    "reason": "stop",
+    "signal_id": "6a4cfd6d22ff6a88",
+    "slice_id": "feat_ret_5:0:LONG:h24",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-6.5276",
+    "reason": "stop",
+    "signal_id": "38915eeaf0de649d",
+    "slice_id": "feat_ret_20:2:LONG:h12",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-12.7079",
+    "reason": "stop",
+    "signal_id": "b9e9145930042b4f",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-13.3767",
+    "reason": "stop",
+    "signal_id": "8213dd111bbbedae",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
+    "pair": "ADAUSDC",
+    "pnl_zar": "-15.8256",
+    "reason": "stop",
+    "signal_id": "cc3b2cc7eaba1b01",
+    "slice_id": "feat_ret_5:0:LONG:h24",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
+  },
+  {
+    "pair": "AVAXUSDC",
+    "pnl_zar": "-10.6795",
+    "reason": "stop",
+    "signal_id": "38580b7e5a3bb521",
+    "slice_id": "feat_ret_5:0:LONG:h24",
+    "stopped_at": "2026-08-30T23:38:38+00:00"
   }
 ]
