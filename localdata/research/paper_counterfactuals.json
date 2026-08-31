@@ -154,7 +154,7 @@
     "initial_stop_price": "34.68550000000000245",
     "kind": "PERP",
     "last_processed_bar_start": "2026-08-31T12:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "415.442900",
     "pair": "XYZ:EWZ",
     "peak_price": "35.87",
