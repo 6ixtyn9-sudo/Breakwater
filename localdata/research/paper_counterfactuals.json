@@ -681,7 +681,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "450.9299999999999810",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-31T15:00:00+00:00",
+    "last_processed_bar_start": "2026-08-31T16:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "406.319240",
     "pair": "XYZ:AMAT",
@@ -689,27 +689,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "450.9299999999999810"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "450.9299999999999810"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "450.9299999999999810"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "450.9299999999999810"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "450.9299999999999810"
       }
     },
@@ -717,7 +717,7 @@
     "signal_id": "495360177168841e",
     "slice_id": "hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24",
     "tracked_at": "2026-08-31T14:00:25+00:00",
-    "trough_price": "456.14"
+    "trough_price": "454.62"
   },
   {
     "actual_exit_bar_start": "",
@@ -729,35 +729,35 @@
     "horizon_bars": 24,
     "initial_stop_price": "940.99499999999995655",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-31T15:00:00+00:00",
+    "last_processed_bar_start": "2026-08-31T16:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "406.319240",
     "pair": "XYZ:COST",
-    "peak_price": "947.01",
+    "peak_price": "948.17",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "940.99499999999995655"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "940.99499999999995655"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "940.99499999999995655"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "940.99499999999995655"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "940.99499999999995655"
       }
     },
@@ -765,7 +765,7 @@
     "signal_id": "304a9214e5a9f486",
     "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24",
     "tracked_at": "2026-08-31T14:00:25+00:00",
-    "trough_price": "946.26"
+    "trough_price": "945.26"
   },
   {
     "actual_exit_bar_start": "",
@@ -777,7 +777,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "96.820500000000006625",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-08-31T15:00:00+00:00",
+    "last_processed_bar_start": "2026-08-31T16:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "406.319240",
     "pair": "XYZ:STRC",
@@ -785,27 +785,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.820500000000006625"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.820500000000006625"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.820500000000006625"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.820500000000006625"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.820500000000006625"
       }
     },
