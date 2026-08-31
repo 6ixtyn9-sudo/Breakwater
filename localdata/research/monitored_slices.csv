@@ -2,11 +2,11 @@ slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trade
 feat_trend_slope_20:2:LONG:h10,PERP,feat_trend_slope_20,2,LONG,monitored,2026-08-31T00:33:33+00:00,,0,0,0,0,,0.005564,17888,0.000017,10,3.500,validated_walk_forward,False,True
 feat_realized_vol_20:2:LONG:h10,PERP,feat_realized_vol_20,2,LONG,monitored,2026-08-31T00:33:33+00:00,,0,0,0,0,,0.005294,20097,0.000005,10,3.500,validated_walk_forward,False,True
 feat_ret_3:0:LONG:h11,PERP,feat_ret_3,0,LONG,monitored,2026-08-31T00:33:33+00:00,,0,0,0,0,,0.004613,15588,0.000001,11,3.500,validated_walk_forward,False,True
-feat_ret_20:2:LONG:h12,PERP,feat_ret_20,2,LONG,cooldown,2026-08-31T00:33:33+00:00,1788130800,8,3,5,-6.5543,1788217200,0.005688,18059,0.000107,12,3.500,validated_walk_forward,False,True
+feat_ret_20:2:LONG:h12,PERP,feat_ret_20,2,LONG,monitored,2026-08-31T00:33:33+00:00,1788130800,8,3,5,-6.5543,,0.005688,18059,0.000107,12,3.500,validated_walk_forward,False,True
 feat_ret_10:2:LONG:h14,PERP,feat_ret_10,2,LONG,monitored,2026-08-31T00:33:33+00:00,,2,0,2,-17.5188,,0.006078,17449,0.000001,14,3.500,validated_walk_forward,False,True
 feat_ret_1:0:LONG:h12,PERP,feat_ret_1,0,LONG,monitored,2026-08-31T00:33:33+00:00,,1,0,1,-1.2870,,0.004726,15922,0.000012,12,3.500,validated_walk_forward,False,True
 feat_ext_vs_ma_20:2:LONG:h14,PERP,feat_ext_vs_ma_20,2,LONG,monitored,2026-08-31T00:33:33+00:00,,5,1,4,-11.9149,,0.006351,17767,0.000021,14,3.500,validated_walk_forward,False,True
-feat_ext_vs_ma_10:2:LONG:h15,PERP,feat_ext_vs_ma_10,2,LONG,monitored,2026-08-31T00:33:33+00:00,,0,0,0,0,,0.005455,17380,0.000006,15,3.500,validated_walk_forward,False,True
+feat_ext_vs_ma_10:2:LONG:h15,PERP,feat_ext_vs_ma_10,2,LONG,monitored,2026-08-31T00:33:33+00:00,1788217200,2,2,0,0.9058,,0.005455,17380,0.000006,15,3.500,validated_walk_forward,False,True
 feat_ret_3:2:LONG:h18,PERP,feat_ret_3,2,LONG,monitored,2026-08-31T00:33:33+00:00,,0,0,0,0,,0.005524,17045,0.000029,18,3.500,validated_walk_forward,False,True
 feat_atr_norm_ext:2:LONG:h17,PERP,feat_atr_norm_ext,2,LONG,monitored,2026-08-31T00:33:33+00:00,,0,0,0,0,,0.007148,17029,0.000023,17,3.500,validated_walk_forward,False,True
 feat_ret_5:2:LONG:h18,PERP,feat_ret_5,2,LONG,monitored,2026-08-31T00:33:33+00:00,,1,1,0,5.2842,,0.005820,17142,0.000003,18,3.500,validated_walk_forward,False,True
