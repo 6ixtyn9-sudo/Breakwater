@@ -302,5 +302,13 @@
     "signal_id": "38580b7e5a3bb521",
     "slice_id": "feat_ret_5:0:LONG:h24",
     "stopped_at": "2026-08-31T00:01:56+00:00"
+  },
+  {
+    "pair": "XYZ:AAPL",
+    "pnl_zar": "-3.5645",
+    "reason": "stop",
+    "signal_id": "0d02412a88957afc",
+    "slice_id": "hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24",
+    "stopped_at": "2026-08-31T14:00:25+00:00"
   }
 ]
