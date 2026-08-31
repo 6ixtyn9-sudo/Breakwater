@@ -326,5 +326,13 @@
     "signal_id": "dd770e9b85a72fde",
     "slice_id": "hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24",
     "stopped_at": "2026-08-31T18:00:25+00:00"
+  },
+  {
+    "pair": "XYZ:STRC",
+    "pnl_zar": "-1.3349",
+    "reason": "stop",
+    "signal_id": "779464a39efe9a9d",
+    "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24",
+    "stopped_at": "2026-08-31T19:30:27+00:00"
   }
 ]
