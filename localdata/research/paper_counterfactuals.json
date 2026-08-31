@@ -202,7 +202,7 @@
     "initial_stop_price": "0.008764500000000000490",
     "kind": "PERP",
     "last_processed_bar_start": "2026-08-30T21:00:00+00:00",
-    "missing_bars": 20,
+    "missing_bars": 21,
     "notional_zar": "406.091880",
     "pair": "PENGUUSDC",
     "peak_price": "0.009307",
