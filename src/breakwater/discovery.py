@@ -355,52 +355,56 @@ def _slice_stats(
             long_net = subset.loc[mask, "fwd_trade_net_long"].to_numpy()
             short_net = subset.loc[mask, "fwd_trade_net_short"].to_numpy()
 
-            n = int(np.isfinite(long_net).sum())
-            if n < MIN_SLICE_ROWS:
+            n_long = int(np.isfinite(long_net).sum())
+            n_short = int(np.isfinite(short_net).sum())
+            if n_long < MIN_SLICE_ROWS or n_short < MIN_SLICE_ROWS:
                 continue
 
             long_mean, long_median, long_hit, long_t, long_p = _stat_block(long_net)
             short_mean, short_median, short_hit, short_t, short_p = _stat_block(short_net)
 
-            if long_mean >= short_mean:
-                side = "LONG"
-                mean, median, hit_rate, t_stat, p_value = long_mean, long_median, long_hit, long_t, long_p
-                ret_col = "fwd_trade_net_long"
-            else:
-                side = "SHORT"
-                mean, median, hit_rate, t_stat, p_value = short_mean, short_median, short_hit, short_t, short_p
-                ret_col = "fwd_trade_net_short"
+            # Emit BOTH directions for every feature:state.
+            for side, n, mean, median, hit_rate, t_stat, p_value, ret_col in (
+                ("LONG", n_long, long_mean, long_median, long_hit, long_t, long_p, "fwd_trade_net_long"),
+                ("SHORT", n_short, short_mean, short_median, short_hit, short_t, short_p, "fwd_trade_net_short"),
+            ):
 
-            asia_n, asia_mean, asia_hit = _session_stats_from_col(subset, mask, SESSION_ASIA, ret_col)
-            eu_n, eu_mean, eu_hit = _session_stats_from_col(subset, mask, SESSION_EU, ret_col)
-            us_n, us_mean, us_hit = _session_stats_from_col(subset, mask, SESSION_US, ret_col)
-
-            candidates.append(
-                SliceStat(
-                    slice_id=f"{feature}:{state}:{side}",
-                    kind=kind,
-                    feature=feature,
-                    state=state,
-                    side=side,
-                    n=n,
-                    mean_ret_costadj=mean,
-                    median_ret_costadj=median,
-                    hit_rate=hit_rate,
-                    t_stat=t_stat,
-                    p_value=p_value,
-                    bonferroni_pass=False,
-                    horizon_bars=horizon_bars,
-                    session_asia_n=asia_n,
-                    session_asia_mean_ret_costadj=asia_mean,
-                    session_asia_hit_rate=asia_hit,
-                    session_eu_n=eu_n,
-                    session_eu_mean_ret_costadj=eu_mean,
-                    session_eu_hit_rate=eu_hit,
-                    session_us_n=us_n,
-                    session_us_mean_ret_costadj=us_mean,
-                    session_us_hit_rate=us_hit,
+                asia_n, asia_mean, asia_hit = _session_stats_from_col(
+                    subset, mask, SESSION_ASIA, ret_col
                 )
-            )
+                eu_n, eu_mean, eu_hit = _session_stats_from_col(
+                    subset, mask, SESSION_EU, ret_col
+                )
+                us_n, us_mean, us_hit = _session_stats_from_col(
+                    subset, mask, SESSION_US, ret_col
+                )
+
+                candidates.append(
+                    SliceStat(
+                        slice_id=f"{feature}:{state}:{side}",
+                        kind=kind,
+                        feature=feature,
+                        state=state,
+                        side=side,
+                        n=n,
+                        mean_ret_costadj=mean,
+                        median_ret_costadj=median,
+                        hit_rate=hit_rate,
+                        t_stat=t_stat,
+                        p_value=p_value,
+                        bonferroni_pass=False,
+                        horizon_bars=horizon_bars,
+                        session_asia_n=asia_n,
+                        session_asia_mean_ret_costadj=asia_mean,
+                        session_asia_hit_rate=asia_hit,
+                        session_eu_n=eu_n,
+                        session_eu_mean_ret_costadj=eu_mean,
+                        session_eu_hit_rate=eu_hit,
+                        session_us_n=us_n,
+                        session_us_mean_ret_costadj=us_mean,
+                        session_us_hit_rate=us_hit,
+                    )
+                )
             effective_tests += 2
 
     if candidates:

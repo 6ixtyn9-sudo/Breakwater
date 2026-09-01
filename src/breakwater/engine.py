@@ -248,15 +248,15 @@ def _short_research_audit(validated, discovered) -> dict:
 
     floor = _coerce_float(os.getenv("BREAKWATER_MIN_NET_EDGE", "0.004"), 0.004)
     eligible = [row for row in shorts_validated if row.mean_ret_costadj >= floor]
-    best = max(eligible, key=lambda row: row.mean_ret_costadj, default=None)
+    best = max(shorts_validated, key=lambda row: row.mean_ret_costadj, default=None)
     best_failing = max(
-        [row for row in eligible if not row.validated],
+        [row for row in shorts_validated if not row.validated],
         key=lambda row: row.mean_ret_costadj,
         default=None,
     )
 
     reasons = Counter()
-    for row in eligible:
+    for row in shorts_validated:
         for token in str(row.fail_reasons or "").split(","):
             token = token.strip()
             if token:
@@ -270,6 +270,9 @@ def _short_research_audit(validated, discovered) -> dict:
         "shorts_eligible": len(eligible),
         "best_short_edge_bps": round(best.mean_ret_costadj * 10_000, 1) if best else 0.0,
         "best_short_fail_reasons": str(best.fail_reasons or "") if best else "",
+        "best_short_n": int(getattr(best, "n", 0)) if best else 0,
+        "best_short_breadth": int(getattr(best, "breadth_symbols_used", 0)) if best else 0,
+        "best_short_regime_confounded": bool(getattr(best, "regime_confounded", False)) if best else False,
         "best_failing_short_edge_bps": round(best_failing.mean_ret_costadj * 10_000, 1) if best_failing else 0.0,
         "best_failing_short_fail_reasons": str(best_failing.fail_reasons or "") if best_failing else "",
         "short_fail_reasons": reasons.most_common(6),

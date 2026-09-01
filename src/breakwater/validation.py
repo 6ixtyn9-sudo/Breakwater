@@ -637,6 +637,12 @@ def validate_slices(
         mean_long_train = float(np.mean(long_train)) if len(long_train) else -1e9
         mean_short_train = float(np.mean(short_train)) if len(short_train) else -1e9
         side_train = "LONG" if mean_long_train >= mean_short_train else "SHORT"
+        # Reject a candidate whose side disagrees with the training-window
+        # preference rather than silently converting it here. This is safe
+        # because discovery now emits BOTH LONG and SHORT candidates for every
+        # feature:state, so the training-preferred side is validated as its own
+        # candidate. Converting here would double-emit the same slice_id and
+        # reintroduce the very side-selection leakage this gate guards against.
         direction_ok = (str(candidate.side).upper() == side_train)
 
         # Candidate-side net series
