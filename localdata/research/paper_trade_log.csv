@@ -1,1 +1,4 @@
 closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,notional_zar,pnl_zar,outcome,bars_held,exit_reason,entry_guard,regime,pnl_outcome,atr,stop_atr_mult,risk_fraction,initial_stop_price,peak_price,trough_price,mfe_r,mae_r,gross_r,fee_zar,net_r,excursion_ordering,exit_bar_start
+2026-09-01T04:29:36+00:00,a647bac44300797f,CASHCATUSDC,PERP,big-wave,BUY,0.23754,,0.208134285714285712,0,0,skipped,0,not_book,not_book,unknown,,0.014702857142857144,2.0,,,,,,,,,,,
+2026-09-01T04:29:36+00:00,7dab59bfdf003cb9,CRVUSDC,PERP,big-wave,BUY,0.35807,,0.341782857142857142,0,0,skipped,0,not_book,not_book,unknown,,0.008143571428571429,2.0,,,,,,,,,,,
+2026-09-01T04:29:36+00:00,0fe82928dfbca9b1,NEARUSDC,PERP,big-wave,BUY,1.9793,,1.914214285714285712,0,0,skipped,0,not_book,not_book,unknown,,0.032542857142857144,2.0,,,,,,,,,,,
