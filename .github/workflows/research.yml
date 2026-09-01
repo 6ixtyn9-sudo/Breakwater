@@ -101,6 +101,12 @@ jobs:
           BREAKWATER_BREADTH_MIN_SYMBOLS: ${{ vars.BREAKWATER_BREADTH_MIN_SYMBOLS || '6' }}
           BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: ${{ vars.BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL || '10' }}
           BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: ${{ vars.BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION || '0.40' }}
+          # Per-asset research: pooled edge -> which assets carry it.
+          # Untested (insufficient rows) assets are allowed so the gate never
+          # zeros action; only assets with proof they are not-green are blocked.
+          BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '20' }}
+          BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.60' }}
+          BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_FOLD_MIN_ROWS || '3' }}
 
           # Hunt: promote fat fail-only-breadth families (does not lower 0.40)
           BREAKWATER_CONCENTRATED_PROMOTE: ${{ vars.BREAKWATER_CONCENTRATED_PROMOTE || '1' }}

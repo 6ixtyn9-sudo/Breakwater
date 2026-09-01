@@ -265,6 +265,9 @@ PYTHONPATH=src python scripts/breakwater.py hip3-research
 BREAKWATER_MODE=shadow PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 12
 BREAKWATER_MODE=readonly PYTHONPATH=src python scripts/breakwater.py operate --max-pairs 12
 PYTHONPATH=src python scripts/breakwater.py health
+PYTHONPATH=src python scripts/breakwater.py short-inventory --max-pairs 30
+PYTHONPATH=src python scripts/breakwater.py hip3-short-audit --max-pairs 60
+PYTHONPATH=src python scripts/breakwater.py hip3-short-audit --max-pairs 60 --apply-book
 ```
 
 No credentials are needed for public market checks, the spot slice research
@@ -366,6 +369,60 @@ HIP-3 retains a conservative venue-specific cost. It writes candle coverage,
 discovered slices and validated slices, but deliberately creates no monitored
 book: promotion and paper remain off until classification/calendar metadata is
 trustworthy.
+
+Single-name equity/index HIP-3 groups (one symbol per DEX/class) could never
+satisfy the 10-symbol breadth rule even when the edge is green across the whole
+market class. HIP-3 research therefore allows a **market-class breadth**
+fallback (`BREAKWATER_HIP3_CLASS_BREADTH=1`, default on): a row is upgraded only
+when the full class-pooled walk-forward validation passes (all folds, direction,
+mean net, no hostile confounding), and it is recorded with
+`breadth_scope=class` + `breadth_class_symbols`. Native PERP validation always
+stays `breadth_scope=symbol` — the class path is HIP-3/paper-observation only.
+
+#### Per-asset research (which assets carry the edge)
+
+A pooled slice proves a *market* edge exists, but not that every asset carries
+it. `validate_slices()` therefore also emits a per-asset verdict
+(`asset_edges.csv`, native + HIP-3) for every candidate, using the **same
+stop-aware returns and walk-forward folds**. An asset is judged on its own
+per-fold means:
+
+- `green` — net-positive across ≥ `BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION`
+  (default 0.60) of the folds and ≥ `BREAKWATER_PER_ASSET_MIN_ROWS` (default 20) rows.
+- `blocked` — research has enough rows to prove it is NOT green.
+- `untested` — too few rows to judge; **deliberately allowed** so the gate never
+  zeros action.
+
+The monitor consumes `asset_edges.csv` and blocks only `(slice, asset)` pairs
+research proved not-green (guard `asset_not_green`); green and untested assets
+still fire. This is LONG + SHORT and native + HIP-3, because both lanes run the
+same validation and the same monitor path.
+
+#### Green-account gate
+
+`BREAKWATER_GREEN_GATE` (default `1`) is the runtime stop-the-bleed counterpart.
+A lane that has not printed positive closed-paper P&L is frozen (HIP-3 is red
+on current evidence, so it is frozen except proven green islands); inside a
+green lane, a slice is blocked at ≥3 closed trades when its net P&L is ≤ 0. It
+runs in the same paper cycle for native and HIP-3 and writes its verdict
+(`green_gate`, `lane_gate_blocked`) into `status.csv` and the paper log.
+
+Calibration (env-overridable, defaults in `lane_gate.py`):
+- `BREAKWATER_GREEN_LANE_MIN_CLOSED` (10) — a lane needs this many real closed
+  trades before it can be called green.
+- `BREAKWATER_GREEN_SLICE_MIN_CLOSED` (3) — a slice in a green lane is only
+  judged non-green after this many closes; 0–2 closes is treated as untested.
+- `BREAKWATER_GREEN_ISLAND_MIN_CLOSED` (3) — a slice needs this many positive
+  closes to keep trading as a green island inside a red lane.
+
+Lane freezing is per-lane and evidence-gated. A lane with fewer than 10 real
+closes is always frozen regardless of P&L. Because HIP-3 paper volume is
+structurally much lower than native, HIP-3 will typically stay frozen (and its
+non-green slices blocked) until it accumulates the same minimum. That is
+intentional: a low-evidence lane should not keep taking entries on a short
+positive sample. `green_gate` in the shadow-scan result and `status.csv` shows
+`frozen_lanes`, `green_islands`, and `blocked_slices` so frozen behaviour is
+observable rather than implicit.
 
 ### Manual deep-history research audit
 

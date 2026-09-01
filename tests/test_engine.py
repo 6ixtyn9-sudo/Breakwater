@@ -158,6 +158,127 @@ def test_health_reports_committed_state(tmp_path):
     assert report["paper_open_positions"] == 0
 
 
+def _write_book_row(path, slice_id="feat:0:LONG"):
+    import csv
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "slice_id", "kind", "feature", "state", "side", "status",
+                "mean_ret_costadj",
+            ],
+        )
+        writer.writeheader()
+        writer.writerow({
+            "slice_id": slice_id,
+            "kind": "PERP",
+            "feature": "feat",
+            "state": "0",
+            "side": "LONG",
+            "status": "monitored",
+            "mean_ret_costadj": "0.001",
+        })
+
+
+def _write_green_native_log(path, slice_id="feat:0:LONG", n=10):
+    import csv
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["slice_id", "outcome", "exit_reason", "pnl_zar"],
+        )
+        writer.writeheader()
+        for _ in range(n):
+            writer.writerow({
+                "slice_id": slice_id,
+                "outcome": "win",
+                "exit_reason": "target",
+                "pnl_zar": "1.0",
+            })
+
+
+def test_shadow_scan_native_only_does_not_require_hip3_asset_edges(tmp_path, monkeypatch):
+    """A native-only paper run must not crash just because HIP-3 research has
+    not produced its asset_edges.csv yet. Fail-closed applies per active lane.
+
+    Regression guard for the fail-closed change: reading the HIP-3 asset-edge
+    file unconditionally would break every native-only run before the HIP-3
+    research workflow has generated that file.
+    """
+    from breakwater.engine import BreakwaterEngine as _Engine
+    from breakwater.validation import AssetEdge, write_asset_edges
+
+    engine = _Engine(settings(tmp_path, mode="readonly"), client=PublicClient())
+
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(engine, "_server_state", lambda: (now, {}))
+    monkeypatch.setattr(engine, "_universe", lambda: _FakeUniverse())
+    monkeypatch.setattr(engine, "_frames", lambda targets, server_time: ({}, {}))
+    monkeypatch.setattr(engine, "_hip3_paper_ready", lambda: False)
+
+    # Give the NATIVE lane enough positive closes that the green gate lets it
+    # trade, so the native per-asset lookup is actually read. Leave the HIP-3
+    # asset-edge file absent.
+    _write_green_native_log(engine.settings.paper_log_path, slice_id="feat:0:LONG")
+    _write_book_row(engine.settings.book_path, slice_id="feat:0:LONG")
+
+    write_asset_edges(engine.settings.asset_edges_path, [
+        AssetEdge(
+            slice_id="feat:0:LONG",
+            asset="BTCUSDC",
+            kind="PERP",
+            feature="feat",
+            state=0,
+            side="LONG",
+            horizon_bars=1,
+            n=40,
+            mean_ret_costadj=0.001,
+            folds_positive=4,
+            folds_with_rows=5,
+            fold_positive_fraction=0.8,
+            asset_status="green",
+        )
+    ])
+
+    result = engine.shadow_scan(max_pairs=1)
+    assert result["hip3_paper"]["active"] is False
+    assert result["per_asset_gate"]["native_rows"] >= 1
+    assert result["per_asset_gate"]["hip3_rows"] == 0
+
+
+def test_shadow_scan_active_native_lane_requires_native_asset_edges(tmp_path, monkeypatch):
+    """Fail-closed still applies to a lane that IS active: if the native book
+    has monitored rows but native asset_edges.csv is missing, shadow_scan raises
+    rather than silently trading without the per-asset gate."""
+    from breakwater.engine import BreakwaterEngine as _Engine
+
+    engine = _Engine(settings(tmp_path, mode="readonly"), client=PublicClient())
+
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(engine, "_server_state", lambda: (now, {}))
+    monkeypatch.setattr(engine, "_universe", lambda: _FakeUniverse())
+    monkeypatch.setattr(engine, "_frames", lambda targets, server_time: ({}, {}))
+    monkeypatch.setattr(engine, "_hip3_paper_ready", lambda: False)
+
+    _write_green_native_log(engine.settings.paper_log_path, slice_id="feat:0:LONG")
+    _write_book_row(engine.settings.book_path, slice_id="feat:0:LONG")
+
+    with pytest.raises(RuntimeError, match="asset edges file missing"):
+        engine.shadow_scan(max_pairs=1)
+
+
+class _FakeUniverse:
+    def ranked(self, kind, max_pairs):
+        return []
+
+    def symbols(self, kind):
+        return []
+
+
 
 def test_universe_reingests_legacy_file_without_perp_volumes(tmp_path):
     from breakwater.universe import UniverseRow, UniverseSnapshot, write_universe

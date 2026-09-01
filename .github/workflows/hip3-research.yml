@@ -63,6 +63,11 @@ jobs:
           BREAKWATER_BREADTH_MIN_SYMBOLS: "6"
           BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: "10"
           BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: "0.40"
+          # Per-asset research (parity with native): pooled edge -> which assets
+          # carry it. Untested assets are allowed; proven not-green are blocked.
+          BREAKWATER_PER_ASSET_MIN_ROWS: "20"
+          BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: "0.60"
+          BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: "3"
         run: PYTHONPATH=src python scripts/breakwater.py hip3-research
       - name: Persist isolated HIP-3 state
         if: always()
