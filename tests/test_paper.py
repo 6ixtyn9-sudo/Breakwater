@@ -175,6 +175,7 @@ def test_green_gate_denial_is_counted_without_book_stats_keyerror(tmp_path):
         native_green=False,
         hip3_green=False,
         frozen_lanes={"native", "hip3"},
+        warmup_lanes=set(),
         blocked_slices={"feat:0:LONG": "lane_not_green"},
         enabled=True,
     )

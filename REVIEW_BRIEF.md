@@ -5,8 +5,8 @@ conversation can review the work from the repo alone. Read this, then the code
 it points to, then answer the **Open questions** at the bottom. The repo is on
 branch `arena/01a052f8-breakwater`.
 
-- Review commit: `3770647` ("feat: green gate + per-asset research for native/hip-3 long/short")
-- Test + lint state at commit time: 271 passed, `ruff check .` clean.
+- Current local branch: `arena/01a052f8-breakwater`
+- Current test + lint state (workspace): `284 passed`, `ruff check .` clean.
 - Warning: the commit also carries earlier, entangled work (short-inventory,
   regime-tracker, HIP-3 class-breadth, daily print/report). That extra scope was
   an explicit user decision; it is not the focus of this review. Judge the two
@@ -116,6 +116,42 @@ Files: `src/breakwater/validation.py` (AssetEdge), `src/breakwater/monitor.py`,
   public `validate_slices` LONG+SHORT emission, monitor blocks only proven
   not-green, untested allowed, green allowed, HIP-3 upper lookup, CSV roundtrip,
   canonical env-name guard.
+- `tests/test_regime_tracker.py` + `tests/test_paper.py`: per-asset/untested
+  long survives a confirmed macro bear for cold-start action; hostile per-symbol
+  asset is still blocked; per-asset blocked is denied; confirmed macro is
+  portfolio context, not a per-asset hard block.
+- `tests/test_short_inventory.py`: short arming is evidence-gated (validated +
+  edge + breadth + confirmed bear), not operator-env-gated.
+
+## Root-cause follow-up (post-review)
+
+The user rejected an env-var cold-start knob and asked the two "why" questions.
+The answers and code fixes:
+
+1. **Why short promotion produced nothing.** Validated shorts are zero. Live
+   `main` `discovered_slices.csv` contains SHORT candidates but all have
+   negative cost-adjusted net edge (~-0.0067 to -0.007), so they fail
+   `mean_net > 0`, temporal, and regime checks. `validated_slices.csv` has zero
+   `validated=True` SHORT rows. Separately, `short_inventory._armable` used to
+   require `BREAKWATER_SHORT_OBSERVATION_PROMOTE` default 0. That blocker is
+   removed: `SHORT_PROMOTE_ENABLED` is now true and arming is gated by evidence
+   (validated + edge floor + n + breadth + confirmed bear), not an operator flag.
+   The remaining blocker is data: there is no positive-edge SHORT to arm.
+2. **Why macro gates blocked individual assets.** `monitor.monitor_book()` ran
+   `regime_gate(..., regime_shift)` per symbol/pair using the global confirmed
+   macro shift before the per-asset asset-edge check. Fixed: the per-asset edge
+   gate runs first (`blocked` denied, `green`/`untested` allowed); the confirmed
+   macro shift is now portfolio context and no longer hard-blocks an individual
+   asset. It still drives `defensive_exit` and SHORT-inventory arming. The
+   per-symbol `hostile_unproven` rule remains, so an asset whose own bar is
+   hostile is still denied.
+3. **Secondary side-flip rejection.** `validation.validate_slices()` re-chooses
+   direction on the training-only window; live data shows several LONG rows fail
+   `direction_ok` with `side_train=SHORT`. This is the leakage fix, not the
+   no-short root cause, but it is visible in validated_slices.csv.
+
+No cold-start env var was added. The env var, workflow entry, test, and stale
+patch artifacts are removed.
 
 ## Open questions — please answer these directly
 
