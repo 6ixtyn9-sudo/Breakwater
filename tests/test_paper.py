@@ -134,7 +134,7 @@ def spot_frame(close, high=None, low=None):
     )
 
 
-def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None, server_time=None):
+def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None, server_time=None, green_gate=None):
     import os
     os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
     os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
@@ -154,7 +154,38 @@ def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None
         book_path=tmp_path / "book.csv",
         book_slice_ids=book,
         server_time=server_time or datetime.now(timezone.utc),
+        green_gate=green_gate,
     )
+
+
+def test_green_gate_denial_is_counted_without_book_stats_keyerror(tmp_path):
+    """A green-gate denial must be attributed per book without crashing.
+
+    The green gate can reject a signal that reached the paper entry loop
+    (e.g. a fallback/replay signal with no book row to pre-filter). The
+    per-book guard counters must include lane_gate_blocked or `_deny` raises
+    KeyError and kills the whole shadow-scan/paper cycle.
+    """
+    from breakwater.lane_gate import GreenGate, LaneStats, SliceStats
+
+    gate = GreenGate(
+        native=LaneStats(closed=0, pnl=0.0, wins=0, losses=0),
+        hip3=LaneStats(closed=0, pnl=0.0, wins=0, losses=0),
+        slices={"feat:0:LONG": SliceStats(closed=0, pnl=0.0, wins=0, losses=0)},
+        native_green=False,
+        hip3_green=False,
+        frozen_lanes={"native", "hip3"},
+        blocked_slices={"feat:0:LONG": "lane_not_green"},
+        enabled=True,
+    )
+    result = cycle(
+        tmp_path,
+        signals=[signal(pair="BTCUSDC", slice_id="feat:0:LONG", kind="PERP")],
+        frames={"BTCUSDC": frame_with_bar(close=100)},
+        green_gate=gate,
+    )
+    assert result["open"] == 0
+    assert result["book_stats"]["native"]["lane_gate_blocked"] == 1
 
 
 def test_open_position_stops_out_and_journals(tmp_path):

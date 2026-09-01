@@ -1424,8 +1424,8 @@ def run_paper_cycle(
     # "how many HIP-3 trades couldn't get a seat?" a number instead of an
     # inference. Shared counters above stay the source of truth.
     book_stats = {
-        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0},
-        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0},
+        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
+        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
     }
     for sig in signals:
         book_stats[_bkey_book(sig)]["signals"] += 1
