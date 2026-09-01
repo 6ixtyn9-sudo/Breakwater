@@ -161,6 +161,7 @@ class SliceSignal:
     stop_atr_mult: float = 2.0
     regime: str = "unknown"
     hostile_unproven: bool = True
+    asset_status: str = ""
 
 
 def _latest_state(
@@ -275,10 +276,38 @@ def monitor_book(
                     if sess not in allowed_sessions:
                         continue
 
+            # Per-asset edge gate FIRST: the pooled slice says the market edge
+            # exists, but research also decides whether THIS asset carries it.
+            # An asset with proven-negative per-asset research is skipped; green
+            # is allowed; untested is allowed too (no evidence to freeze it).
+            # This per-asset verdict is what decides the individual asset; the
+            # confirmed macro shift is portfolio context and never overrides it.
+            asset_status = ""
+            if asset_edge_lookup is not None:
+                asset_status = asset_edge_lookup.get((slice_id, pair.upper())) or ""
+                if asset_status == "blocked":
+                    blocked.append(
+                        {
+                            "pair": pair.upper(),
+                            "kind": kind,
+                            "slice_id": slice_id,
+                            "side": side.value,
+                            "regime": regime,
+                            "hostile_unproven": hostile_unproven,
+                            "reason": "asset_not_green",
+                            "guard": "asset_not_green",
+                        }
+                    )
+                    continue
+
             from breakwater.regime_tracker import regime_gate
 
             blocked_here, _reason = regime_gate(
-                side.value, regime, hostile_unproven, regime_shift
+                side.value,
+                regime,
+                hostile_unproven,
+                regime_shift,
+                asset_status=asset_status,
             )
             if blocked_here:
                 blocked.append(
@@ -294,27 +323,6 @@ def monitor_book(
                     }
                 )
                 continue
-
-            # Per-asset edge gate: the pooled slice says the market edge exists,
-            # but research also decides whether THIS asset carries it. An asset
-            # with proven-negative per-asset research is skipped (guard asset_not_green).
-            # Untested assets are allowed so action is never zeroed.
-            if asset_edge_lookup is not None:
-                status = asset_edge_lookup.get((slice_id, pair.upper()))
-                if status == "blocked":
-                    blocked.append(
-                        {
-                            "pair": pair.upper(),
-                            "kind": kind,
-                            "slice_id": slice_id,
-                            "side": side.value,
-                            "regime": regime,
-                            "hostile_unproven": hostile_unproven,
-                            "reason": "asset_not_green",
-                            "guard": "asset_not_green",
-                        }
-                    )
-                    continue
             close = Decimal(str(latest_row["close"]))
             atr_raw = _atr(featured)
             if close <= 0 or atr_raw <= 0:
@@ -349,6 +357,7 @@ def monitor_book(
                     stop_atr_mult=stop_atr_mult,
                     regime=regime,
                     hostile_unproven=hostile_unproven,
+                    asset_status=asset_status,
                 )
             )
     return signals, blocked

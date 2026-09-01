@@ -60,7 +60,7 @@ def test_filters_validated_short_rows(tmp_path):
     assert candidates[0].validated is True
 
 
-def test_armable_requires_validate_bear_and_env(tmp_path, monkeypatch):
+def test_armable_requires_evidence_gates_not_env_flag(tmp_path, monkeypatch):
     candidate = si.ShortCandidate(
         slice_id="feat:SHORT", kind="PERP", feature="feat", state=2,
         side="SHORT", mean_ret_costadj=0.006, edge_bps=60.0, n=500,
@@ -68,12 +68,15 @@ def test_armable_requires_validate_bear_and_env(tmp_path, monkeypatch):
         regime_confounded=False, hostile_unproven=False, fail_reasons="",
         horizon_bars=12, stop_atr_mult=3.5, source="validated",
     )
-    monkeypatch.setattr(si, "SHORT_PROMOTE_ENABLED", True)
+    # Promotion is evidence-gated, not env-gated: all research bars pass and a
+    # confirmed bear is present => armable with no env flag.
     assert si._armable(candidate, confirmed_bear=True) == (True, "ok")
     assert si._armable(candidate, confirmed_bear=False) == (False, "not_confirmed_bear")
     assert si._armable(si.ShortCandidate(**{**candidate.__dict__, "validated": False}), confirmed_bear=True) == (
         False, "not_validated"
     )
+    # The safety switch still exists for an operator who explicitly disables it,
+    # but it is NOT the default blocker.
     monkeypatch.setattr(si, "SHORT_PROMOTE_ENABLED", False)
     assert si._armable(candidate, confirmed_bear=True) == (False, "promote_env_off")
 

@@ -223,22 +223,32 @@ def regime_shift_dict(shift: RegimeShift) -> dict:
     return asdict(shift)
 
 
-def regime_gate(side: str, regime: str, hostile_unproven: bool, shift: RegimeShift | None) -> tuple[bool, str]:
+def regime_gate(
+    side: str,
+    regime: str,
+    hostile_unproven: bool,
+    shift: RegimeShift | None,
+    *,
+    asset_status: str = "",
+) -> tuple[bool, str]:
     """Defensive entry gate.
 
     Returns ``(blocked, reason)``. It preserves the existing per-symbol
-    ``hostile_unproven`` rule, then adds a *confirmed macro* rule that always
-    blocks the wrong direction even if the slice is marked ``hostile_unproven=False``.
+    ``hostile_unproven`` rule. The *confirmed macro* rule does NOT override
+    per-asset evidence: the aggregate regime reading is portfolio-level, and an
+    individual asset is decided by its own asset-edge status (green allowed,
+    untested allowed so cold-start action is never zeroed, blocked denied at
+    the asset layer). A confirmed macro shift is still used for defensive exits
+    and for arming validated SHORT inventory observations.
     """
     side = str(side).upper()
-    # A confirmed macro shift takes precedence: it is the intraday signal that
-    # the game has changed, and it must block the wrong direction even when a
-    # single symbol's bar still reads neutral.
-    if shift is not None:
-        if shift.confirmed_bear and side == "BUY":
-            return True, "regime_shift_blocked"
-        if shift.confirmed_bull and side == "SELL":
-            return True, "regime_shift_blocked"
+    # The macro aggregate is no longer a per-asset hard block. It is portfolio
+    # context, not a replacement for an asset's own evidence. A per-asset
+    # blocked asset is denied here even if it bypassed the monitor; untested
+    # assets are explicitly allowed so a fresh/evidence-less book can build the
+    # closes needed for a verdict.
+    if asset_status == "blocked":
+        return True, "asset_not_green"
     strict = str(os.getenv("BREAKWATER_REGIME_GATE_STRICT", "0")).strip().lower() in {
         "1", "true", "yes", "y", "on",
     }

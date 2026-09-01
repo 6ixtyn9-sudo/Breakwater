@@ -12,8 +12,9 @@ no booked short to act on. This module closes that gap read-only:
 - It decides whether the observation is **armable**. Arming is deliberate and
   conservative: it requires a *validated* (not merely discovered) SHORT slice,
   mean_ret_costadj above the net-edge floor, no hostile-regime confounding,
-  enough breadth, an active state on a current bar, a confirmed bear macro
-  shift, and an explicit operator env flag.
+  enough breadth, an active state on a current bar, and a confirmed bear macro
+  shift. The evidence gates are the safety: a sub-validated / below-floor /
+  thin-breadth short is never armed. No operator env flag is required.
 
 With the 2026-08-30 evidence, native research has ZERO validated shorts, so
 the inventory is empty and nothing is armed. The value of the hook is that the
@@ -35,18 +36,21 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-SHORT_INVENTORY_ENABLED = str(os.getenv("BREAKWATER_SHORT_INVENTORY", "1")).strip().lower() in {
-    "1", "true", "yes", "on",
-}
-SHORT_PROMOTE_ENABLED = str(os.getenv("BREAKWATER_SHORT_OBSERVATION_PROMOTE", "0")).strip().lower() in {
-    "1", "true", "yes", "on",
-}
+# Inventory is part of the paper observation loop. There is no operator env
+# switch to disable it; the evidence gates (validated, edge, breadth, bear) are
+# the safety.
+SHORT_INVENTORY_ENABLED = True
+# Promotion is gated by research evidence (validated + edge + breadth +
+# confirmed bear), not by an operator env flag. Leaving this constant on means
+# a validated short can arm as soon as it exists; a default-off flag was one of
+# the reasons the system never promoted a short even when one qualified.
+SHORT_PROMOTE_ENABLED = True
 SHORT_MIN_EDGE_BPS = int(os.getenv("BREAKWATER_SHORT_MIN_EDGE_BPS", "40"))
 SHORT_MIN_N = int(os.getenv("BREAKWATER_SHORT_MIN_N", "300"))
 SHORT_MIN_BREADTH = int(os.getenv("BREAKWATER_SHORT_MIN_BREADTH", "6"))
-SHORT_USE_PROVISIONAL = str(os.getenv("BREAKWATER_SHORT_USE_PROVISIONAL", "0")).strip().lower() in {
-    "1", "true", "yes", "on",
-}
+# Provisional/discovered-only shorts are never armed. Only validated shorts
+# that pass the edge/breadth/bear floors may arm.
+SHORT_USE_PROVISIONAL = False
 
 SCHEMA = "breakwater.short_inventory.v1"
 

@@ -6,13 +6,19 @@ into a runtime entry/exit gate the engine consults on every paper cycle:
 - A **lane** is green when its closed paper P&L is positive and it has enough
   closed trades to mean anything.
 - A **slice** is green when its own closed paper P&L is positive. A slice with
-  no closed trades is only allowed while its containing lane is green, so an
-  untested slice cannot be traded inside a losing lane.
+  no closed trades is only allowed while its containing lane is not proven red,
+  so an untested slice cannot be traded inside a losing lane.
 - A lane that is not green is **frozen**: no new entries from it, and any open
   positions inside it are defensively exited at the latest close so the lane
   stops bleeding.
 - A slice that is individually not green is blocked (and open positions in it
   are exited) even if the lane is otherwise green.
+- **Cold-start aware:** a lane with fewer than LANE_MIN_CLOSED real closes is
+  *warm-up*, not frozen. It has no evidence to be called red, so it is allowed
+  to keep trading and accumulate the closes needed for a real verdict. Only a
+  lane that has reached LANE_MIN_CLOSED and still prints negative P&L is frozen
+  (proven red). This is what makes a fresh-slate / new-lane start possible
+  without hand-disabling the gate.
 
 Calibration (env-overridable):
   BREAKWATER_GREEN_LANE_MIN_CLOSED (default 10)   - closes a lane needs before it
@@ -22,13 +28,15 @@ Calibration (env-overridable):
   BREAKWATER_GREEN_ISLAND_MIN_CLOSED (default 3)  - closes a slice needs to be a
                                                     green island inside a red lane.
 
-Lane freeze is per-lane. A lane with fewer than LANE_MIN_CLOSED real closes is
-always frozen regardless of P&L because it has no evidence. HIP-3 paper volume is
-structurally much lower than native, so HIP-3 typically remains frozen (and its
-non-green slices blocked) until it accumulates the same minimum. That is
-intentional: a low-evidence lane should not keep taking entries on a short
-positive sample. Inspect green_gate in the shadow_scan result or status.csv to
-see which lanes/slices are frozen.
+Lane freeze is per-lane. A lane that has **no evidence** (fewer than
+LANE_MIN_CLOSED real closes) is in **warm-up**: it is allowed to trade so it can
+earn the closes needed for a real verdict, and it is reported in
+`green_gate.warmup_lanes`. A lane that has **reached** LANE_MIN_CLOSED and still
+prints negative P&L is frozen (proven red). HIP-3 paper volume is structurally
+much lower than native, so HIP-3 typically stays in warm-up (allowed but low
+evidence) longer than native; it only freezes once it has gathered the same
+minimum and still failed. Inspect green_gate in the shadow_scan result or
+status.csv to see which lanes are frozen vs warm-up and which slices are blocked.
 
 This is paper observation logic: it never promotes anything, never writes to a
 venue, and never loosens any research bar. It only stops *more* money from
@@ -123,6 +131,7 @@ class GreenGate:
     native_green: bool
     hip3_green: bool
     frozen_lanes: set[str]
+    warmup_lanes: set[str]
     blocked_slices: dict[str, str]
     enabled: bool
 
@@ -159,6 +168,10 @@ class GreenGate:
             "native_green": self.native_green,
             "hip3_green": self.hip3_green,
             "frozen_lanes": sorted(self.frozen_lanes),
+            "warmup_lanes": sorted(self.warmup_lanes),
+            "lane_min_closed": LANE_MIN_CLOSED,
+            "slice_min_closed": SLICE_MIN_CLOSED,
+            "green_island_min_closed": GREEN_ISLAND_MIN_CLOSED,
             "green_islands": self.green_islands,
             "blocked_slices": dict(sorted(self.blocked_slices.items())),
             "native": {
@@ -166,12 +179,14 @@ class GreenGate:
                 "pnl": round(self.native.pnl, 4),
                 "wins": self.native.wins,
                 "losses": self.native.losses,
+                "warmup": "native" in self.warmup_lanes,
             },
             "hip3": {
                 "closed": self.hip3.closed,
                 "pnl": round(self.hip3.pnl, 4),
                 "wins": self.hip3.wins,
                 "losses": self.hip3.losses,
+                "warmup": "hip3" in self.warmup_lanes,
             },
         }
 
@@ -215,14 +230,27 @@ def compute_green_gate(log_path: Path) -> GreenGate:
     enabled = GREEN_GATE_ENABLED
     native, hip3, slices = _aggregate(_csv_rows(log_path))
 
-    native_green = native.closed >= LANE_MIN_CLOSED and native.pnl > 0
-    hip3_green = hip3.closed >= LANE_MIN_CLOSED and hip3.pnl > 0
+    native_warmup = native.closed < LANE_MIN_CLOSED
+    hip3_warmup = hip3.closed < LANE_MIN_CLOSED
+    native_green = not native_warmup and native.pnl > 0
+    hip3_green = not hip3_warmup and hip3.pnl > 0
 
+    # Warm-up lanes have not gathered enough closes to be called red; they are
+    # allowed to trade so a cold start can build the evidence the gate needs.
+    # Only lanes that have reached the minimum and still print negative P&L
+    # are frozen (proven red).
     frozen_lanes: set[str] = set()
+    warmup_lanes: set[str] = set()
     if not native_green:
-        frozen_lanes.add("native")
+        if native_warmup:
+            warmup_lanes.add("native")
+        else:
+            frozen_lanes.add("native")
     if not hip3_green:
-        frozen_lanes.add("hip3")
+        if hip3_warmup:
+            warmup_lanes.add("hip3")
+        else:
+            frozen_lanes.add("hip3")
 
     blocked_slices: dict[str, str] = {}
     for slice_id, stats in slices.items():
@@ -242,9 +270,11 @@ def compute_green_gate(log_path: Path) -> GreenGate:
             if not is_green_island:
                 blocked_slices[slice_id] = "lane_not_green"
             continue
-        # Green lane: an untested slice (0-2 closes) is free to earn its
-        # noise. Only judge non-green after SLICE_MIN_CLOSED closed trades,
-        # so one stop does not freeze the book into inaction.
+        # Warm-up or green lane: an untested slice (0-2 closes) is free to earn
+        # its noise. Only judge non-green after SLICE_MIN_CLOSED closed trades,
+        # so one stop does not freeze the book into inaction. A proven-negative
+        # slice is blocked even in a warm-up lane so a cold start cannot keep
+        # feeding a slice that has already printed red.
         if stats.closed >= SLICE_MIN_CLOSED and stats.pnl <= 0:
             blocked_slices[slice_id] = f"slice_pnl={stats.pnl:+.2f}"
             continue
@@ -256,6 +286,7 @@ def compute_green_gate(log_path: Path) -> GreenGate:
         native_green=native_green,
         hip3_green=hip3_green,
         frozen_lanes=frozen_lanes,
+        warmup_lanes=warmup_lanes,
         blocked_slices=blocked_slices,
         enabled=enabled,
     )

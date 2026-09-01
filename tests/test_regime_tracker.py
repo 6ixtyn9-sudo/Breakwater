@@ -49,17 +49,36 @@ def _shift(confirmed_bear=False, confirmed_bull=False):
     )
 
 
-def test_gate_blocks_long_only_when_confirmed_bear():
-    # existing per-symbol bear rule (hostile_unproven=True) still blocks
+def test_gate_blocks_hostile_symbol_but_not_asset_on_macro_aggregate():
+    # per-symbol hostile/unproven rule still blocks
     assert regime_gate("BUY", "bear", True, None) == (True, "regime_blocked")
-    # hostile_unproven=False would previously be allowed in bear; confirmed shift now blocks it
-    assert regime_gate("BUY", "bear", False, _shift(confirmed_bear=True))[0] is True
-    shipped = regime_gate("BUY", "bear", False, _shift(confirmed_bear=True))
-    assert shipped[1] == "regime_shift_blocked"
-    # no confirmed shift, hostile_unproven=False => allowed
-    assert regime_gate("BUY", "bear", False, _shift(confirmed_bear=False)) == (False, "")
-    # short in a confirmed bull is blocked
-    assert regime_gate("SELL", "bull", False, _shift(confirmed_bull=True))[0] is True
+    assert regime_gate("BUY", "bear", True, _shift(confirmed_bear=True)) == (True, "regime_blocked")
+    assert regime_gate("SELL", "bull", True, _shift(confirmed_bull=True)) == (True, "regime_blocked")
+    # the aggregate confirmed shift does NOT block an individual asset; the
+    # per-symbol rule already handled the asset's own regime.
+    assert regime_gate("BUY", "bear", False, _shift(confirmed_bear=True)) == (False, "")
+    assert regime_gate("SELL", "bull", False, _shift(confirmed_bull=True)) == (False, "")
+    assert regime_gate("BUY", "neutral", False, _shift(confirmed_bear=True)) == (False, "")
+
+
+def test_per_asset_status_does_not_override_hostile_symbol_rule():
+    """The per-asset verdict is about asset-level research; it never bypasses
+    the per-symbol hostile/unproven rule. Green/untested assets still obey the
+    symbol's own regime; a per-asset blocked asset is denied outright."""
+    for status in ("green", "untested", ""):
+        assert regime_gate("BUY", "bear", True, None, asset_status=status) == (True, "regime_blocked")
+        assert regime_gate("SELL", "bull", True, None, asset_status=status) == (True, "regime_blocked")
+    # a per-asset blocked asset is denied even if it bypassed the monitor
+    assert regime_gate("BUY", "neutral", False, None, asset_status="blocked") == (True, "asset_not_green")
+    assert regime_gate("SELL", "neutral", False, None, asset_status="blocked") == (True, "asset_not_green")
+    # hostile/unproven=False and a non-blocking symbol regime is allowed even
+    # when a confirmed macro shift exists: macro is portfolio context only.
+    assert regime_gate(
+        "BUY", "neutral", False, _shift(confirmed_bear=True), asset_status="untested"
+    ) == (False, "")
+    assert regime_gate(
+        "BUY", "neutral", False, _shift(confirmed_bear=True), asset_status="green"
+    ) == (False, "")
 
 
 def test_defensive_exit_vs_r_gate():
