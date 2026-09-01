@@ -96,6 +96,7 @@ def signal(
     kind="SPOT",
     edge=0.001,
     horizon=0,
+    asset_status="",
 ):
     now = datetime.now(timezone.utc)
     return SliceSignal(
@@ -115,6 +116,7 @@ def signal(
         stop_atr_mult=2.0,
         regime="neutral",
         horizon_bars=int(horizon),
+        asset_status=asset_status,
     )
 
 
@@ -1416,3 +1418,16 @@ def test_hip3_entry_gated_to_derived_market_session(tmp_path, monkeypatch):
     )
     assert len(signals) == 1
     assert blocked == []
+
+
+def test_asset_not_green_reaching_paper_is_denied(tmp_path):
+    """A per-asset blocked signal that bypasses the monitor must still be
+    denied by the paper loop with an explicit asset_not_green reason."""
+    sig = signal(pair="BTCUSDC", kind="PERP", slice_id="feat:0:LONG",
+                 entry="1500", stop="1485", atr="3", asset_status="blocked")
+    result = cycle(tmp_path, signals=[sig], frames={"BTCUSDC": frame_with_bar(close=1500)})
+    assert result["open"] == 0
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "asset_not_green"
+    assert log.iloc[0]["entry_guard"] == "asset_not_green"
+

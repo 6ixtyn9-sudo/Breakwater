@@ -1588,8 +1588,8 @@ def run_paper_cycle(
                     "bars_held": "0",
                     "exit_reason": gate_reason or "regime",
                     "entry_guard": (
-                        f"regime_shift_blocked({gate_reason})"
-                        if gate_reason == "regime_shift_blocked"
+                        "asset_not_green"
+                        if gate_reason == "asset_not_green"
                         else f"regime_blocked(hostile_unproven={hostile_unproven})"
                     ),
                     "regime": str(getattr(signal, "regime", "") or ""),

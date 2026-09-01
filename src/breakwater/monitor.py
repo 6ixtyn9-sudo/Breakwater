@@ -319,7 +319,7 @@ def monitor_book(
                         "regime": regime,
                         "hostile_unproven": hostile_unproven,
                         "reason": _reason,
-                        "guard": "regime_shift_blocked" if _reason == "regime_shift_blocked" else "regime_blocked",
+                        "guard": "regime_blocked",
                     }
                 )
                 continue
