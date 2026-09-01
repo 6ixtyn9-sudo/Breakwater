@@ -1,3 +1,4 @@
+dex,dex_full_name,deployer,oracle_updater,coin,annotation_category,annotation_keywords,collateral_token,active,liquidity_rank,day_notional_volume,mark_price,oracle_price,previous_day_price,oracle_mark_deviation_fraction,funding_rate,open_interest,max_leverage,size_decimals,margin_mode,growth_mode,as_of
 abcd,ABCDEx,0x372c7f69d0ecc14f73f89bd8a7dfb41bdf29857c,0x372c7f69d0ecc14f73f89bd8a7dfb41bdf29857c,abcd:USA500,,,0,False,1,0.0,6980.0,6980.0,6980.0,0,0.0,0.0,25,3,strictIsolated,disabled,2026-08-31T01:45:25.620534+00:00
 cash,dreamcash,0xffa8198c62adb1e811629bd54c9b646d726deef7,0xffa8198c62adb1e811629bd54c9b646d726deef7,cash:AMZN,,,268,False,1,0.0,241.75,244.563,241.8,0.01150214873059293515372317153,0.0,0.0,20,3,cross,enabled,2026-08-31T01:45:25.620534+00:00
 cash,dreamcash,0xffa8198c62adb1e811629bd54c9b646d726deef7,0xffa8198c62adb1e811629bd54c9b646d726deef7,cash:BTC,,,268,False,2,0.0,70000.0,70000.0,70000.0,0,0.0,0.0,40,5,cross,disabled,2026-08-31T01:45:25.620534+00:00

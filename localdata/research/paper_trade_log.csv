@@ -1,0 +1,1 @@
+closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,notional_zar,pnl_zar,outcome,bars_held,exit_reason,entry_guard,regime,pnl_outcome,atr,stop_atr_mult,risk_fraction,initial_stop_price,peak_price,trough_price,mfe_r,mae_r,gross_r,fee_zar,net_r,excursion_ordering,exit_bar_start
