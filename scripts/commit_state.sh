@@ -8,12 +8,21 @@ git config user.email "github-actions[bot]@users.noreply.github.com"
 
 ROLE="${1:-all}"
 
-status_files=(localdata/status.csv)
+# Daily print: read-only digest of the committed state. Safe to run from every
+# state-committing workflow; writes once per UTC date and is idempotent.
+if [ -f scripts/daily_print.py ]; then
+  PYTHONPATH=src python3 scripts/daily_print.py >/dev/null 2>&1 || echo "daily_print.py skipped (non-fatal)"
+fi
+
+status_files=(localdata/status.csv localdata/daily/)
+
+daily_files=(localdata/daily/)
 
 research_files=(
   localdata/universe.csv
   localdata/research/discovered_slices.csv
   localdata/research/validated_slices.csv
+  localdata/research/asset_edges.csv
   localdata/research/monitored_slices.csv
   localdata/deep_audit/summary.json
   localdata/deep_audit/candidates.csv
@@ -27,6 +36,8 @@ paper_files=(
   localdata/research/paper_counterfactual_log.csv
   localdata/research/cooldown_journal.json
   localdata/research/monitored_slices.csv
+  localdata/research/regime_state.json
+  localdata/research/short_inventory.json
 )
 
 guardian_files=(
@@ -42,10 +53,14 @@ hip3_files=(
   localdata/hip3/research/candle_coverage.csv
   localdata/hip3/research/discovered_slices.csv
   localdata/hip3/research/validated_slices.csv
+  localdata/hip3/research/asset_edges.csv
   localdata/hip3/research/monitored_slices.csv
 )
 
 files=("${status_files[@]}")
+
+# The daily print is a shared artifact; every role ships it so it cannot be
+# left behind when a role did not otherwise change state.
 case "$ROLE" in
   research|research-refresh|"research refresh")
     files+=("${research_files[@]}")
@@ -65,6 +80,7 @@ case "$ROLE" in
     )
     ;;
 esac
+files+=("${daily_files[@]}")
 
 owned=()
 for file in "${files[@]}"; do

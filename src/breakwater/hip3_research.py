@@ -15,7 +15,7 @@ import statistics
 import tempfile
 import time
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -29,7 +29,12 @@ from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.perpdata import fetch_perp_candles
 from breakwater.research_lifecycle import read_book, sync_book
 from breakwater.status import append_status
-from breakwater.validation import validate_slices, write_validated
+from breakwater.validation import (
+    AssetEdge,
+    validate_slices,
+    write_asset_edges,
+    write_validated,
+)
 
 COVERAGE_HEADERS = [
     "as_of",
@@ -496,6 +501,134 @@ def _promotion_gate(
     }
 
 
+def _hip3_env_class_breadth() -> bool:
+    """Whether HIP-3 validation may use market-class breadth as a fallback.
+
+    HIP-3 lanes are paper/observation only (live is hard-blocked by other
+    production gates), so broad class-level correlation is an acceptable
+    research breadth for a single-name equity/index candidate — provided the
+    class-wide walk-forward validation still passes every other gate. Native
+    PERP never uses this path (it is confined to `symbol` scope).
+    """
+    return str(os.getenv("BREAKWATER_HIP3_CLASS_BREADTH", "1")).strip().lower() in {
+        "1", "true", "yes", "y", "on",
+    }
+
+
+def _hip3_parse_fingerprint(slice_id: str) -> tuple[str, str, int, str, int] | None:
+    """Parse `hip3_<group>:<feature>:<state>:<side>:h<horizon>`.
+
+    Returns (group, feature, state, side, horizon) or None if malformed.
+    """
+    text = str(slice_id)
+    if not text.startswith("hip3_"):
+        return None
+    body = text[len("hip3_"):]
+    if ":" not in body:
+        return None
+    group, rest = body.split(":", 1)
+    if ":h" not in rest:
+        return None
+    core, horizon_part = rest.rsplit(":h", 1)
+    if not horizon_part.isdigit():
+        return None
+    if core.count(":") < 2:
+        return None
+    feature, state_part, side = core.rsplit(":", 2)
+    try:
+        state = int(state_part)
+    except (TypeError, ValueError):
+        return None
+    return group, feature, state, str(side).upper(), int(horizon_part)
+
+
+def _apply_hip3_class_breadth(
+    validated: list,
+    *,
+    frames_by_class: dict[str, dict[str, pd.DataFrame]],
+    group_to_class: dict[str, str],
+    effective_cost: float,
+    horizons: list[int],
+    precomputed_rows: dict[tuple[str, int, str, int], object] | None = None,
+) -> list:
+    """Recompute HIP-3 breadth at market-class level (all DEXs, same class).
+
+    A single-name equity group may have one coin; its per-DEX breadth can never
+    satisfy the 10-symbol requirement even when the same feature state is green
+    across the whole market class. This fallback:
+
+    - validates the feature state on a class-pooled frame (same stop-aware
+      walk-forward math, same cost, same side),
+    - upgrades a group row only when the class-wide row passes every gate
+      (walk-forward, direction, mean net, not hostile-confounded),
+    - records ``breadth_scope=class`` and ``breadth_class_symbols``,
+    - never touches native validation (which stays ``symbol`` scope).
+    """
+    if not _hip3_env_class_breadth():
+        return validated
+
+    class_rows_by_fp: dict[tuple[str, int, str, int], object] = dict(precomputed_rows or {})
+    if precomputed_rows is None:
+        for market_class, frames in sorted(frames_by_class.items()):
+            if not frames:
+                continue
+            pooled = _pool(frames)
+            if pooled.empty:
+                continue
+            for horizon in horizons:
+                prepared = prepare_pooled(
+                    pooled, FEATURE_COLUMNS, effective_cost, horizon_bars=horizon
+                )
+                found = _slice_stats(prepared, "PERP", FEATURE_COLUMNS, horizon_bars=horizon)
+                checked = validate_slices(prepared, found)
+                for row in checked:
+                    key = (row.feature, row.state, str(row.side).upper(), row.horizon_bars)
+                    # Keep the strongest class row per fingerprint (best edge per bar).
+                    current = class_rows_by_fp.get(key)
+                    if current is None or row.mean_ret_costadj > current.mean_ret_costadj:
+                        class_rows_by_fp[key] = row
+
+    out: list = []
+    for row in validated:
+        parsed = _hip3_parse_fingerprint(row.slice_id)
+        if parsed is None:
+            out.append(row)
+            continue
+        group, feature, state, side, horizon = parsed
+        market_class = group_to_class.get(group)
+        if not market_class:
+            out.append(row)
+            continue
+        class_row = class_rows_by_fp.get((feature, state, side, horizon))
+        # Upgrade only a row that is failing (only) because its own group is a
+        # single symbol, while the full class-walk-forward evidence passes.
+        if class_row is None or not class_row.breadth_ok or not class_row.validated:
+            out.append(row)
+            continue
+        reasons = [
+            token.strip() for token in str(row.fail_reasons or "").split(",") if token.strip()
+        ]
+        # Only replace breadth_ok; every other failure still blocks.
+        if "breadth_ok" not in reasons:
+            out.append(row)
+            continue
+        other_failures = [token for token in reasons if token != "breadth_ok"]
+        if other_failures:
+            out.append(row)
+            continue
+        updated = replace(
+            row,
+            breadth_ok=True,
+            breadth_scope="class",
+            breadth_class_symbols=int(class_row.breadth_symbols_used),
+            breadth_positive_fraction=float(class_row.breadth_positive_fraction),
+            validated=True,
+            fail_reasons="",
+        )
+        out.append(updated)
+    return out
+
+
 def write_paper_gate(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
@@ -561,6 +694,8 @@ def run_hip3_research(
     observed = datetime.now(timezone.utc).isoformat()
     coverage_rows = []
     frames_by_group: dict[str, dict[str, pd.DataFrame]] = {}
+    frames_by_class: dict[str, dict[str, pd.DataFrame]] = {}
+    group_to_class: dict[str, str] = {}
     for row, market_class in selected:
         # Measured crossing-cost sample. Read-only and best-effort: a missing
         # or failing book records an unmeasured spread and never blocks the
@@ -601,6 +736,8 @@ def run_hip3_research(
                 frame["symbol"] = row.coin
                 research_group = f"{row.dex}_{market_class}_c{row.collateral_token}"
                 frames_by_group.setdefault(research_group, {})[row.coin] = frame
+                frames_by_class.setdefault(market_class, {})[row.coin] = frame
+                group_to_class[research_group] = market_class
         except Exception as exc:
             coverage_rows.append(
                 {
@@ -646,6 +783,7 @@ def run_hip3_research(
     horizons = _horizons()
     discovered = []
     validated = []
+    asset_edges: list[AssetEdge] = []
     researched_by_group = {}
     for research_group, frames in sorted(frames_by_group.items()):
         pooled = _pool(frames)
@@ -660,14 +798,24 @@ def run_hip3_research(
             )
             found = _slice_stats(prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon)
             found = _tag_candidates(found, research_group, horizon)
-            checked = validate_slices(prepared, found)
+            checked = validate_slices(prepared, found, asset_edges=asset_edges)
             discovered.extend(found)
             validated.extend(checked)
+
+    validated = _apply_hip3_class_breadth(
+        validated,
+        frames_by_class=frames_by_class,
+        group_to_class=group_to_class,
+        effective_cost=effective_cost,
+        horizons=horizons,
+    )
 
     if not frames_by_group:
         raise RuntimeError("no HIP-3 instruments passed candle coverage audit")
     write_discovered(discovered_path, discovered)
     write_validated(validated_path, validated)
+    asset_edges_path = validated_path.parent / "asset_edges.csv"
+    write_asset_edges(asset_edges_path, asset_edges)
     fail_tokens = Counter()
     for row in validated:
         for token in str(row.fail_reasons or "").split(","):
@@ -736,11 +884,26 @@ def run_hip3_research(
         "coverage_ok": sum(bool(row["coverage_ok"]) for row in coverage_rows),
         "coverage_failed": sum(not bool(row["coverage_ok"]) for row in coverage_rows),
         "researched_by_group": researched_by_group,
+        "class_breadth": {
+            "enabled": _hip3_env_class_breadth(),
+            "classes": len(frames_by_class),
+            "symbols_by_class": {
+                market_class: len(frames)
+                for market_class, frames in sorted(frames_by_class.items())
+            },
+            "group_to_class": group_to_class,
+        },
         "horizons": horizons,
         "cost_bps": cost_bps,
         "l2_spread_bps": spread_summary,
         "discovered_slices": len(discovered),
         "walk_forward_validated": sum(row.validated for row in validated),
+        "per_asset_edges": {
+            "rows": len(asset_edges),
+            "green": sum(1 for row in asset_edges if row.asset_status == "green"),
+            "blocked": sum(1 for row in asset_edges if row.asset_status == "blocked"),
+            "untested": sum(1 for row in asset_edges if row.asset_status == "untested"),
+        },
         "fail_top": fail_tokens.most_common(8),
         "promotion_enabled": False,
         "paper_enabled": False,

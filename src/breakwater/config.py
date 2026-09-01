@@ -196,6 +196,10 @@ class Settings:
         return self.data_dir / "research" / "validated_slices.csv"
 
     @property
+    def asset_edges_path(self) -> Path:
+        return self.data_dir / "research" / "asset_edges.csv"
+
+    @property
     def book_path(self) -> Path:
         return self.data_dir / "research" / "monitored_slices.csv"
 
@@ -246,6 +250,10 @@ class Settings:
     @property
     def hip3_validated_path(self) -> Path:
         return self.hip3_research_dir / "validated_slices.csv"
+
+    @property
+    def hip3_asset_edges_path(self) -> Path:
+        return self.hip3_research_dir / "asset_edges.csv"
 
 
 def get_settings() -> Settings:

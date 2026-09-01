@@ -68,6 +68,8 @@ VALIDATED_HEADERS = [
     "breadth_ok",
     "breadth_symbols_used",
     "breadth_positive_fraction",
+    "breadth_scope",
+    "breadth_class_symbols",
     "recency_ok",
     "mean_positive",
     "side_train",
@@ -89,6 +91,29 @@ VALIDATED_HEADERS = [
     "session_us_n",
     "session_us_mean_ret_costadj",
     "session_us_hit_rate",
+]
+
+# Per-asset edge research. The pooled slice proves a *market* edge exists; the
+# per-asset pass proves which assets actually carry it. An asset is only
+# BLOCKED when research has evidence it does NOT carry the slice edge (enough
+# rows AND not positive across the walk-forward folds). Untested assets are
+# deliberately allowed so this gate never zeros action the way a one-loss
+# per-slice gate would.
+ASSET_EDGE_HEADERS = [
+    "slice_id",
+    "asset",
+    "kind",
+    "feature",
+    "state",
+    "side",
+    "horizon_bars",
+    "n",
+    "mean_ret_costadj",
+    "folds_positive",
+    "folds_with_rows",
+    "fold_positive_fraction",
+    "asset_status",
+    "reason",
 ]
 
 MIN_ROWS_PER_FOLD = 20
@@ -143,6 +168,27 @@ BREADTH_MIN_POSITIVE_FRACTION = max(
     min(1.0, _coerce_float(os.getenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.55"), 0.55)),
 )
 
+# --- Per-asset gate thresholds ---
+# Minimum rows an asset needs within a slice before research may declare it
+# "not green" (and therefore block it). Below this an asset is untested and is
+# allowed so the research gate never starves action.
+PER_ASSET_MIN_ROWS = max(10, _coerce_int(os.getenv("BREAKWATER_PER_ASSET_MIN_ROWS", "20"), 20))
+# Asset must be net-positive across this fraction of the walk-forward folds to
+# be gated GREEN. An asset positive in only one fold is not evidence of a
+# durable per-asset edge.
+PER_ASSET_MIN_FOLD_POSITIVE_FRACTION = max(
+    0.0,
+    min(
+        1.0,
+        _coerce_float(
+            os.getenv("BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION", "0.60"), 0.60
+        ),
+    ),
+)
+# Minimum rows within a single fold before that fold counts for an asset's
+# fold-positive voting (prevents a two-row fold deciding an asset is green).
+PER_ASSET_FOLD_MIN_ROWS = max(3, _coerce_int(os.getenv("BREAKWATER_PER_ASSET_FOLD_MIN_ROWS", "3"), 3))
+
 
 @dataclass(frozen=True)
 class ValidatedSlice:
@@ -169,6 +215,8 @@ class ValidatedSlice:
     breadth_ok: bool = False
     breadth_symbols_used: int = 0
     breadth_positive_fraction: float = 0.0
+    breadth_scope: str = "symbol"
+    breadth_class_symbols: int = 0
     recency_ok: bool = False
     mean_positive: bool = False
     side_train: str = ""
@@ -191,6 +239,37 @@ class ValidatedSlice:
     session_us_n: int = 0
     session_us_mean_ret_costadj: float = 0.0
     session_us_hit_rate: float = 0.0
+
+
+@dataclass(frozen=True)
+class AssetEdge:
+    """Per-asset version of a validated slice.
+
+    ``slice_id`` names the pooled market edge; ``asset`` is the individual
+    instrument (native pair e.g. BTCUSDC, HIP-3 coin e.g. XYZ:AMD). The verdict
+    answers the question the pooled slice cannot: does THIS asset carry the
+    edge, or should the monitor skip it?
+
+    status is one of:
+      - green:    asset is net-positive across the walk-forward folds.
+      - blocked:  research has enough rows to show the asset is NOT green.
+      - untested: not enough rows to judge; allowed so action is never zeroed.
+    """
+
+    slice_id: str
+    asset: str
+    kind: str
+    feature: str
+    state: int
+    side: str
+    horizon_bars: int
+    n: int
+    mean_ret_costadj: float
+    folds_positive: int
+    folds_with_rows: int
+    fold_positive_fraction: float
+    asset_status: str
+    reason: str = ""
 
 
 def _normal_p(t_stat: float) -> float:
@@ -401,7 +480,116 @@ def _recency_ok(subset: pd.DataFrame, slice_mask: np.ndarray, net_values: np.nda
     return float(np.mean(values)) > 0.0
 
 
-def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
+def _compute_asset_edges_for_slice(
+    *,
+    subset: pd.DataFrame,
+    slice_mask: np.ndarray,
+    net_values: np.ndarray,
+    fold_ids: np.ndarray,
+    horizon_bars: int,
+    candidate,
+    kind: str,
+    cost: float,
+) -> list[AssetEdge]:
+    """Per-asset verdict for one pooled slice.
+
+    Reuses the same stop-aware net returns and the same walk-forward folds the
+    pooled validation used, so the per-asset pass costs almost nothing extra.
+    An asset is judged on its OWN net means per fold, not on the pooled mean:
+    - n < PER_ASSET_MIN_ROWS            -> untested (allowed, action never zeroed)
+    - mean > 0 AND fold_positive_fraction >= threshold -> green
+    - otherwise                         -> blocked (research proves it lacks the edge)
+    """
+    if "symbol" not in subset.columns:
+        return []
+    df = subset.loc[slice_mask, ["symbol"]].copy()
+    if df.empty:
+        return []
+    df["net"] = net_values[slice_mask]
+    df = df[np.isfinite(df["net"].to_numpy())]
+    if df.empty:
+        return []
+
+    n_folds = len(fold_ids) - 1
+    mask_index = df.index.to_numpy()
+    symbol_values = df["net"].to_numpy()
+    symbols = df["symbol"].to_numpy()
+
+    out: list[AssetEdge] = []
+    for asset in sorted(set(str(value) for value in symbols)):
+        asset_positions = np.where(symbols == asset)[0]
+        rows_index = mask_index[asset_positions]
+        values = symbol_values[asset_positions]
+        n = len(values)
+        mean_net = float(np.mean(values)) if n else 0.0
+
+        # Which folds does this asset appear in, and is it positive per fold?
+        folds_positive = 0
+        folds_with_rows = 0
+        for fold in range(n_folds):
+            start = int(fold_ids[fold])
+            end = int(fold_ids[fold + 1])
+            fold_positions = [
+                pos for pos in range(len(rows_index))
+                if start <= int(rows_index[pos]) < end
+            ]
+            if len(fold_positions) < PER_ASSET_FOLD_MIN_ROWS:
+                continue
+            fold_values = values[fold_positions]
+            folds_with_rows += 1
+            if float(np.mean(fold_values)) > 0.0:
+                folds_positive += 1
+
+        if n < PER_ASSET_MIN_ROWS:
+            status, reason = "untested", "insufficient_rows"
+        # Intentional allow-bias: an untested asset (folds_with_rows == 0) with a
+        # positive mean is allowed so the gate never zeros action. If this is
+        # unintended, require folds_with_rows > 0 so green requires fold evidence.
+        elif mean_net > 0.0 and (
+            folds_with_rows == 0
+            or (folds_positive / folds_with_rows) >= PER_ASSET_MIN_FOLD_POSITIVE_FRACTION
+        ):
+            status, reason = "green", ""
+        else:
+            status = "blocked"
+            reason = "not_green_per_asset"
+
+        out.append(
+            AssetEdge(
+                slice_id=str(candidate.slice_id),
+                asset=str(asset),
+                kind=str(kind),
+                feature=str(candidate.feature),
+                state=int(candidate.state),
+                side=str(candidate.side).upper(),
+                horizon_bars=int(horizon_bars),
+                n=int(n),
+                mean_ret_costadj=round(mean_net, 10),
+                folds_positive=int(folds_positive),
+                folds_with_rows=int(folds_with_rows),
+                fold_positive_fraction=round(
+                    (folds_positive / folds_with_rows) if folds_with_rows else 0.0, 6
+                ),
+                asset_status=status,
+                reason=reason,
+            )
+        )
+    return out
+
+
+def validate_slices(
+    prepared: pd.DataFrame,
+    candidates,
+    *,
+    asset_edges: list[AssetEdge] | None = None,
+) -> list[ValidatedSlice]:
+    """Walk-forward validate pooled slices.
+
+    When ``asset_edges`` is supplied it is populated with per-asset verdicts for
+    every candidate (market edge -> which assets carry it). The optional list
+    keeps this a drop-in extension: existing callers pass nothing and get the
+    same result.
+    """
     if prepared.empty or not candidates:
         return []
     labelled = _attach_regime_labels(prepared)
@@ -564,6 +752,20 @@ def validate_slices(prepared: pd.DataFrame, candidates) -> list[ValidatedSlice]:
             reasons.append("mean_net<=0")
         fail_reasons = ",".join(reasons)
 
+        if asset_edges is not None:
+            asset_edges.extend(
+                _compute_asset_edges_for_slice(
+                    subset=subset,
+                    slice_mask=slice_mask,
+                    net_values=net_values,
+                    fold_ids=fold_ids,
+                    horizon_bars=horizon_bars,
+                    candidate=candidate,
+                    kind=str(candidate.kind),
+                    cost=cost,
+                )
+            )
+
         validated.append(
             ValidatedSlice(
                 slice_id=candidate.slice_id,
@@ -642,6 +844,8 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
             "breadth_ok",
             "breadth_symbols_used",
             "breadth_positive_fraction",
+            "breadth_scope",
+            "breadth_class_symbols",
             "recency_ok",
             "mean_positive",
             "side_train",
@@ -661,6 +865,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
         has_breadth_stats = (
             "breadth_symbols_used" in fieldnames or "breadth_positive_fraction" in fieldnames
         )
+        has_breadth_scope = "breadth_scope" in fieldnames and "breadth_class_symbols" in fieldnames
 
         out = []
         for row in reader:
@@ -691,6 +896,12 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     breadth_positive_fraction=float(row.get("breadth_positive_fraction") or 0.0)
                     if (has_diag and has_breadth_stats)
                     else 0.0,
+                    breadth_scope=str(row.get("breadth_scope") or "symbol")
+                    if (has_diag and has_breadth_scope)
+                    else "symbol",
+                    breadth_class_symbols=int(row.get("breadth_class_symbols") or 0)
+                    if (has_diag and has_breadth_scope)
+                    else 0,
                     recency_ok=(row.get("recency_ok") == "True") if has_diag else False,
                     mean_positive=(row.get("mean_positive") == "True") if has_diag else False,
                     side_train=str(row.get("side_train") or "") if has_diag else "",
@@ -757,4 +968,68 @@ def write_validated(path, rows: list[ValidatedSlice]) -> None:
         except OSError:
             pass
         raise
+
+
+def write_asset_edges(path: Path, rows: list[AssetEdge]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = [asdict(row) for row in rows]
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(file_descriptor, "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=ASSET_EDGE_HEADERS)
+            writer.writeheader()
+            writer.writerows(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+
+
+def read_asset_edges(path: Path) -> list[AssetEdge]:
+    # Fail-closed: a per-asset gate that cannot find its evidence must NOT
+    # silently degrade to allow-all. Missing file and bad schema both raise so
+    # the operator sees the gate is not active instead of trading unguarded.
+    if not path.exists():
+        raise RuntimeError("asset edges file missing: " + str(path))
+    required = set(ASSET_EDGE_HEADERS) - {"reason", "folds_with_rows", "folds_positive", "fold_positive_fraction"}
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
+            raise RuntimeError("asset edges file has an unsupported schema")
+        out = []
+        for row in reader:
+            out.append(
+                AssetEdge(
+                    slice_id=str(row["slice_id"]),
+                    asset=str(row["asset"]),
+                    kind=str(row.get("kind", "")),
+                    feature=str(row.get("feature", "")),
+                    state=int(row.get("state") or 0),
+                    side=str(row.get("side", "")),
+                    horizon_bars=int(row.get("horizon_bars") or 0),
+                    n=int(row.get("n") or 0),
+                    mean_ret_costadj=float(row.get("mean_ret_costadj") or 0.0),
+                    folds_positive=int(row.get("folds_positive") or 0),
+                    folds_with_rows=int(row.get("folds_with_rows") or 0),
+                    fold_positive_fraction=float(row.get("fold_positive_fraction") or 0.0),
+                    asset_status=str(row.get("asset_status", "untested")),
+                    reason=str(row.get("reason") or ""),
+                )
+            )
+        return out
+
+
+def build_asset_edge_lookup(rows: list[AssetEdge]) -> dict[tuple[str, str], str]:
+    """Map ``(slice_id, asset)`` -> asset_status for O(1) monitor lookup."""
+    out: dict[tuple[str, str], str] = {}
+    for row in rows:
+        out[(str(row.slice_id), str(row.asset).upper())] = row.asset_status
+    return out
 

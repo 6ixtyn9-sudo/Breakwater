@@ -63,7 +63,7 @@ from functools import wraps
 from pathlib import Path
 
 from breakwater.hip3 import hip3_in_market_session, hip3_slice_market_class
-from breakwater.monitor import SliceSignal, regime_blocks, regime_of
+from breakwater.monitor import SliceSignal, regime_of
 from breakwater.paper_counterfactual import (
     advance_counterfactuals,
     append_counterfactual_rows,
@@ -900,7 +900,16 @@ def _unseen_bars(position: dict, frame):
     return ordered[starts > last_processed]
 
 
-def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_ids: set[str], now: datetime):
+def _mark_position_bar(
+    position: dict,
+    last,
+    *,
+    horizon_bars: int,
+    book_slice_ids: set[str],
+    now: datetime,
+    regime_shift: object | None = None,
+    green_gate: object | None = None,
+):
     side = str(position["side"])
     entry = Decimal(str(position["entry_price"]))
     stop = Decimal(str(position["stop_price"]))
@@ -946,6 +955,27 @@ def _mark_position_bar(position: dict, last, *, horizon_bars: int, book_slice_id
     ):
         exit_price, exit_reason = close, "rotated"
         outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    # Defensive macro exit: a confirmed regime shift is a same-cycle signal.
+    # The overnight research path is too slow to react to a flip, so the paper
+    # engine closes opposite-direction positions here, before the stop/horizon.
+    # Winners that have already triggered the R-gate are left alone.
+    if exit_price is None:
+        from breakwater.regime_tracker import defensive_exit
+
+        if defensive_exit(position, regime_shift, r_gate_on=r_gate_on):
+            exit_price, exit_reason = close, "regime_shift"
+            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    # Green-account exit: a lane that has not printed green, or a slice whose
+    # own paper history is negative, must stop bleeding now. This is the "same
+    # cycle, not overnight" counterpart to the green entry freeze.
+    if exit_price is None:
+        from breakwater.lane_gate import GreenGate
+
+        if isinstance(green_gate, GreenGate) and green_gate.should_exit(
+            str(position.get("slice_id") or "")
+        ):
+            exit_price, exit_reason = close, "lane_gate"
+            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
     # HIP-3 calendar assets: PLANNED exits (horizon, time stop) must land on
     # the underlying's live tape. The paper fills at the latest known price:
     # a bar still forming fills at `now`, a completed (replayed) bar fills
@@ -1032,6 +1062,8 @@ def run_paper_cycle(
     server_time: datetime,
     missing_bars_exit: int = MISSING_BARS_EXIT,
     hip3_book_path: Path | None = None,
+    regime_shift: object | None = None,
+    green_gate: object | None = None,
 ) -> dict:
     closed_rows: list[dict] = []
     reconcile_paper_stats_from_log(book_path, log_path)
@@ -1203,6 +1235,8 @@ def run_paper_cycle(
                 horizon_bars=horizon_bars,
                 book_slice_ids=book_slice_ids,
                 now=server_time,
+                regime_shift=regime_shift,
+                green_gate=green_gate,
             )
             if exit_state is not None:
                 break
@@ -1451,6 +1485,41 @@ def run_paper_cycle(
             _deny(signal, "skipped")
             continue
 
+        # Green-account entry freeze: a frozen lane or a slice whose own paper
+        # history is negative must not open new exposure even if it reaches the
+        # paper entry loop (e.g. from a fallback or a replay of stale signals).
+        from breakwater.lane_gate import GreenGate
+
+        if isinstance(green_gate, GreenGate) and not green_gate.green(signal.slice_id):
+            skipped += 1
+            _deny(signal, "lane_gate_blocked")
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "lane_gate_blocked",
+                    "entry_guard": "lane_gate_blocked",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
+            continue
+
         if signal.pair.upper() in open_pairs:
             pair_held += 1
             _deny(signal, "pair_held")
@@ -1491,7 +1560,12 @@ def run_paper_cycle(
             continue
 
         hostile_unproven = bool(getattr(signal, "hostile_unproven", True))
-        if regime_blocks(signal.side, signal.regime, hostile_unproven):
+        from breakwater.regime_tracker import regime_gate
+
+        gate_blocked, gate_reason = regime_gate(
+            signal.side.value, signal.regime, hostile_unproven, regime_shift
+        )
+        if gate_blocked:
             append_log(
                 log_path,
                 {
@@ -1508,8 +1582,12 @@ def run_paper_cycle(
                     "pnl_zar": "0",
                     "outcome": "skipped",
                     "bars_held": "0",
-                    "exit_reason": "regime",
-                    "entry_guard": f"regime_blocked(hostile_unproven={hostile_unproven})",
+                    "exit_reason": gate_reason or "regime",
+                    "entry_guard": (
+                        f"regime_shift_blocked({gate_reason})"
+                        if gate_reason == "regime_shift_blocked"
+                        else f"regime_blocked(hostile_unproven={hostile_unproven})"
+                    ),
                     "regime": str(getattr(signal, "regime", "") or ""),
                     "pnl_outcome": "",
                     "atr": str(getattr(signal, "atr", "") or ""),

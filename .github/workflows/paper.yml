@@ -40,6 +40,9 @@ jobs:
 
           # Keep consistent env across workflows (even if paper doesn't promote slices)
           BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
+          # Green-account gate: block proven not-green slices / freeze red lanes.
+          # Default on; exposed here so the gate's action is explicit & auditable.
+          BREAKWATER_GREEN_GATE: ${{ vars.BREAKWATER_GREEN_GATE || '1' }}
 
           # Keep monitoring aligned with research binning + history depth
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}

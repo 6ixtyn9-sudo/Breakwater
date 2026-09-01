@@ -29,15 +29,21 @@ def main() -> int:
         choices=[
             "guardian", "shadow-scan", "operate", "research",
             "hip3-discover", "hip3-research", "deep-research-audit", "health",
+            "short-inventory", "hip3-short-audit",
         ],
     )
     parser.add_argument("--max-pairs", type=int)
     parser.add_argument("--lane", choices=["native", "hip3", "all"], default="native")
     parser.add_argument("--candle-count", type=int, default=5000)
     parser.add_argument("--output-dir", default="localdata/deep_audit")
+    parser.add_argument(
+        "--apply-book",
+        action="store_true",
+        help="hip3-short-audit: upgrade validated rows and sync the HIP-3 paper book.",
+    )
     args = parser.parse_args()
     max_pairs = args.max_pairs if args.max_pairs is not None else (
-        60 if args.command == "deep-research-audit" else 12
+        60 if args.command in {"deep-research-audit", "hip3-short-audit"} else 12
     )
     settings = None
     try:
@@ -102,6 +108,12 @@ def main() -> int:
                 result = engine.operational_pass(max_pairs=max_pairs)
             elif args.command == "research":
                 result = engine.research_pass()
+            elif args.command == "short-inventory":
+                result = engine.short_inventory_audit(max_pairs=max_pairs)
+            elif args.command == "hip3-short-audit":
+                result = engine.hip3_short_audit(
+                    max_pairs=max_pairs, apply_book=args.apply_book
+                )
             else:
                 result = engine.shadow_scan(max_pairs=max_pairs)
     except Exception as exc:

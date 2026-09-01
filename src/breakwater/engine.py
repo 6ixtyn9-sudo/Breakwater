@@ -17,6 +17,9 @@ import os
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from pathlib import Path
+
+import pandas as pd
 
 from breakwater.account import (
     EquityValuator,
@@ -30,6 +33,10 @@ from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_fea
 from breakwater.hip3 import read_hip3_universe
 from breakwater.hip3_research import classify_market
 from breakwater.hyperliquid import HyperliquidReadOnlyVenue
+from breakwater.lane_gate import (
+    compute_green_gate,
+    filter_green_book_rows,
+)
 from breakwater.ledger import Ledger
 from breakwater.market import (
     MarketCatalog,
@@ -37,13 +44,22 @@ from breakwater.market import (
     fetch_recent_candles,
 )
 from breakwater.models import Candle, Lifecycle, PairType
-from breakwater.monitor import SliceSignal, monitor_book, signal_pair_type
+from breakwater.monitor import SliceSignal, monitor_book, regime_of, signal_pair_type
 from breakwater.paper_trade import append_log, read_positions, run_paper_cycle
 from breakwater.perpdata import fetch_perp_candles, fetch_perp_candles_for_pair, pair_to_coin
 from breakwater.promotion import PromotionRegistry
+from breakwater.regime_tracker import (
+    compute_regime_snapshot,
+    regime_shift_dict,
+    update_regime_state,
+)
 from breakwater.research_lifecycle import read_book
 from breakwater.risk import RiskManager
 from breakwater.risk_state import RiskStateStore
+from breakwater.short_inventory import (
+    compute_short_inventory,
+    write_short_inventory,
+)
 from breakwater.status import append_status
 from breakwater.strategy import detect_big_wave
 from breakwater.universe import (
@@ -53,6 +69,12 @@ from breakwater.universe import (
     is_legacy_universe,
     read_universe,
     write_universe,
+)
+from breakwater.validation import (
+    AssetEdge,
+    build_asset_edge_lookup,
+    read_asset_edges,
+    write_asset_edges,
 )
 from breakwater.valr import ValrClient
 
@@ -144,6 +166,114 @@ def _parse_horizons_env() -> list[int]:
     if horizon < 1:
         horizon = 1
     return [horizon]
+
+
+def _hip3_decimal_env(name: str, default: str) -> Decimal:
+    from decimal import InvalidOperation
+
+    try:
+        value = Decimal(os.getenv(name, default))
+    except (InvalidOperation, TypeError, ValueError):
+        value = Decimal(default)
+    return value if value.is_finite() else Decimal(default)
+
+
+def _read_json_quiet(path) -> dict:
+    try:
+        payload = json.loads(Path(path).read_text())
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _read_discovered_objects(path) -> list:
+    """Minimal duck-typed SHORT/LONG rows for the research audit helper."""
+    import csv
+
+    out = []
+    if not Path(path).exists():
+        return out
+    try:
+        with Path(path).open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                class _Row:
+                    pass
+                obj = _Row()
+                obj.slice_id = str(row.get("slice_id") or "")
+                obj.side = str(row.get("side") or "")
+                obj.mean_ret_costadj = _coerce_float(row.get("mean_ret_costadj"), 0.0)
+                obj.validated = False
+                obj.fail_reasons = ""
+                out.append(obj)
+    except OSError:
+        return []
+    return out
+
+
+def _coerce_float(value, default: float) -> float:
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _asset_edge_status_counts(
+    lookup: dict[tuple[str, str], str],
+) -> dict[str, int]:
+    """Count per-asset verdicts in a lookup so operators can see the gate's effect.
+
+    The lookup maps (slice_id, asset) -> asset_status. Counting the statuses
+    makes it obvious whether the per-asset gate is actually discriminating
+    (blocked > 0) or is largely decorative (most assets untested/allowed).
+    """
+    counts = {"green": 0, "blocked": 0, "untested": 0}
+    for status in lookup.values():
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _short_research_audit(validated, discovered) -> dict:
+    """Compact research-side SHORT audit.
+
+    Returns how many shorts the discovery produced, how many validated, the
+    best validated/eligible short edge, and the dominant reasons the rest
+    failed. This makes "the system has no short inventory" a researched fact
+    rather than an inference.
+    """
+    from collections import Counter
+
+    shorts_validated = [row for row in validated if str(row.side).upper() == "SHORT"]
+    shorts_discovered = [row for row in discovered if str(getattr(row, "side", "") or "").upper() == "SHORT"]
+    shorts_ok = [row for row in shorts_validated if row.validated]
+
+    floor = _coerce_float(os.getenv("BREAKWATER_MIN_NET_EDGE", "0.004"), 0.004)
+    eligible = [row for row in shorts_validated if row.mean_ret_costadj >= floor]
+    best = max(eligible, key=lambda row: row.mean_ret_costadj, default=None)
+    best_failing = max(
+        [row for row in eligible if not row.validated],
+        key=lambda row: row.mean_ret_costadj,
+        default=None,
+    )
+
+    reasons = Counter()
+    for row in eligible:
+        for token in str(row.fail_reasons or "").split(","):
+            token = token.strip()
+            if token:
+                reasons[token] += 1
+
+    return {
+        "shorts_discovered": len(shorts_discovered),
+        "shorts_validated": len(shorts_validated),
+        "shorts_passing": len(shorts_ok),
+        "shorts_eligible_floor_bps": int(floor * 10_000),
+        "shorts_eligible": len(eligible),
+        "best_short_edge_bps": round(best.mean_ret_costadj * 10_000, 1) if best else 0.0,
+        "best_short_fail_reasons": str(best.fail_reasons or "") if best else "",
+        "best_failing_short_edge_bps": round(best_failing.mean_ret_costadj * 10_000, 1) if best_failing else 0.0,
+        "best_failing_short_fail_reasons": str(best_failing.fail_reasons or "") if best_failing else "",
+        "short_fail_reasons": reasons.most_common(6),
+    }
 
 
 def _tag_slice_id(slice_id: str, horizon_bars: int, *, multi: bool) -> str:
@@ -403,6 +533,182 @@ class BreakwaterEngine:
         head = str(slice_id).split(":", 1)[0]
         return head[len("hip3_"):] if head.startswith("hip3_") else head
 
+    def short_inventory_audit(self, *, max_pairs: int = 12) -> dict:
+        """On-demand same-cycle short observation.
+
+        Unlike shadow_scan it does not touch paper, monitor, or the book. It
+        fetches current frames, computes the native regime shift, and records
+        validated SHORT slices whose feature state is active right now. The
+        output is read-only and is persisted under research/short_inventory.json.
+        """
+        server_time, _ = self._server_state()
+        self.catalog.refresh()
+        universe = self._universe()
+        targets = [
+            (pair, kind)
+            for kind in ("SPOT", "PERP")
+            for pair in universe.ranked(kind, max_pairs)
+        ]
+        frames, frame_errors = self._frames(targets, server_time)
+        frames_by_kind: dict[str, dict] = {"SPOT": {}, "PERP": {}}
+        for pair, kind in targets:
+            frame = frames.get(pair.upper())
+            if frame is None:
+                continue
+            frames_by_kind[kind][pair.upper()] = frame
+
+        regimes = {}
+        for kind, bucket in frames_by_kind.items():
+            for pair, frame in bucket.items():
+                if frame is None or getattr(frame, "empty", True) or len(frame) < 200:
+                    continue
+                regimes[f"{kind}:{pair.upper()}"] = regime_of(frame)
+        bear = sum(1 for value in regimes.values() if value == "bear")
+        bull = sum(1 for value in regimes.values() if value == "bull")
+        neutral = sum(1 for value in regimes.values() if value == "neutral")
+        confirmed_bear = bool(bear / max(1, len(regimes)) >= 0.5 and bear > bull)
+
+        short_inventory = compute_short_inventory(
+            validated_path=self.settings.validated_path,
+            discovered_path=self.settings.discovered_path,
+            frames_by_kind=frames_by_kind,
+            server_time=server_time,
+            confirmed_bear=confirmed_bear,
+        )
+        if short_inventory.get("enabled"):
+            write_short_inventory(
+                self.settings.data_dir / "research" / "short_inventory.json",
+                short_inventory,
+            )
+        return {
+            "server_time": server_time.isoformat(),
+            "regime_breadth": {"bear": bear, "bull": bull, "neutral": neutral},
+            "confirmed_bear": confirmed_bear,
+            "short_inventory": short_inventory,
+            "frame_errors": frame_errors,
+        }
+
+    def hip3_short_audit(self, *, max_pairs: int = 60, apply_book: bool = False) -> dict:
+        """On-demand HIP-3 short class-breadth audit (network required).
+
+        Unlike the daily hip3-research run, this revalidates only SHORT rows on
+        current HIP-3 class-pooled frames, so a single-name equity/index short
+        that failed only ``breadth_ok`` can be upgraded without waiting for the
+        03:40 cron. It is audit-only by default; ``apply_book`` (plus an
+        existing paper-ready gate) is required to mutate validated/book state.
+        """
+        from breakwater.hip3 import read_hip3_universe
+        from breakwater.hip3_research import (
+            _apply_hip3_class_breadth,
+            _candidate_rows,
+            _stratified_select,
+        )
+        from breakwater.research_lifecycle import sync_book
+        from breakwater.validation import read_validated, write_validated
+
+        server_time, _ = self._server_state()
+        self.catalog.refresh()
+        universe = read_hip3_universe(self.settings.hip3_universe_path)
+        if universe is None or not universe.rows:
+            raise GuardianHalt("HIP-3 universe is missing; run hip3-discover first")
+
+        native_venue = self.perp_venue or HyperliquidReadOnlyVenue()
+        native_crypto = {instrument.coin.upper() for instrument in native_venue.instruments()}
+        max_deviation = _hip3_decimal_env("BREAKWATER_HIP3_MAX_ORACLE_DEVIATION", "0.02")
+        # Reuse the same selection/filtering as the HIP-3 research workflow.
+        candidates = _candidate_rows(
+            universe.rows,
+            native_crypto=native_crypto,
+            max_oracle_deviation=max_deviation,
+        )
+        selected = _stratified_select(
+            candidates,
+            max_pairs=max(8, min(150, max(8, max_pairs))),
+        )
+        if not selected:
+            return {
+                "server_time": server_time.isoformat(),
+                "selected": 0,
+                "error": "no active HIP-3 instruments passed pre-research safety gates",
+            }
+
+        targets = [(str(row.coin).upper(), "PERP") for row, _ in selected]
+        frames, frame_errors = self._frames(targets, server_time)
+        frames_by_class: dict[str, dict[str, pd.DataFrame]] = {}
+        group_to_class: dict[str, str] = {}
+        for row, market_class in selected:
+            frame = frames.get(str(row.coin).upper())
+            if frame is None or getattr(frame, "empty", True):
+                continue
+            group = f"{row.dex}_{market_class}_c{row.collateral_token}"
+            frames_by_class.setdefault(market_class, {})[str(row.coin).upper()] = frame
+            group_to_class[group] = market_class
+        if not frames_by_class:
+            return {
+                "server_time": server_time.isoformat(),
+                "selected": len(selected),
+                "classes": 0,
+                "error": "no HIP-3 frames could be fetched for the audit",
+                "frame_errors": frame_errors,
+            }
+
+        validated = read_validated(self.settings.hip3_validated_path)
+        discovered = _read_discovered_objects(self.settings.hip3_discovered_path)
+        short_horizons = sorted({int(row.horizon_bars) for row in validated if str(row.side).upper() == "SHORT"})
+        effective_cost = float(_hip3_decimal_env("BREAKWATER_HIP3_COST_BPS", "30"))
+        merged = _apply_hip3_class_breadth(
+            validated,
+            frames_by_class=frames_by_class,
+            group_to_class=group_to_class,
+            effective_cost=effective_cost,
+            horizons=short_horizons,
+        )
+        audit = _short_research_audit(merged, discovered)
+        upgraded = [
+            row
+            for row in merged
+            if str(row.side).upper() == "SHORT"
+            and row.validated
+            and str(getattr(row, "breadth_scope", "") or "") == "class"
+        ]
+
+        book_summary: dict = {"applied": False, "reason": "apply_book_flag_off"}
+        if apply_book:
+            gate = _read_json_quiet(self.settings.hip3_gate_path)
+            paper_ready = bool((gate or {}).get("paper_ready"))
+            if not paper_ready:
+                book_summary = {"applied": False, "reason": "paper_gate_not_ready"}
+            else:
+                write_validated(self.settings.hip3_validated_path, merged)
+                book_summary = sync_book(
+                    validated_path=self.settings.hip3_validated_path,
+                    book_path=self.settings.hip3_book_path,
+                )
+                book_summary = {"applied": True, **book_summary}
+
+        result = {
+            "server_time": server_time.isoformat(),
+            "selected": len(selected),
+            "classes": len(frames_by_class),
+            "symbols_by_class": {
+                market_class: len(frames)
+                for market_class, frames in sorted(frames_by_class.items())
+            },
+            "short_horizons": short_horizons,
+            "short_audit": audit,
+            "class_upgraded_shorts": len(upgraded),
+            "class_upgraded_ids": [str(row.slice_id) for row in upgraded[:20]],
+            "book": book_summary,
+            "frame_errors": frame_errors,
+        }
+        append_status(
+            self.settings.hip3_status_path,
+            "hip3_short_audit_done",
+            self.settings.mode,
+            json.dumps(result, sort_keys=True, default=str),
+        )
+        return result
+
     def shadow_scan(self, *, max_pairs: int = 12) -> dict:
         server_time, _ = self._server_state()
         self.catalog.refresh()
@@ -412,6 +718,22 @@ class BreakwaterEngine:
             for row in read_book(self.settings.book_path)
             if row.get("status") == "monitored"
         ]
+        # Green-account gate: a lane that has not printed positive paper P&L is
+        # frozen (no new entries, no open continuation), and an individually
+        # negative slice is blocked even inside a green lane.
+        green_gate = compute_green_gate(self.settings.paper_log_path)
+        book_rows, native_gate_blocked = filter_green_book_rows(book_rows, green_gate)
+        lane_gate_blocked: list[dict] = list(native_gate_blocked)
+        # Per-asset research map: which assets research proved carry (or do not
+        # carry) each slice edge. Lookups are built lazily per lane so the gate
+        # is only required when that lane is actually going to monitor/trade:
+        # - native file is read only if the native book has monitored rows;
+        # - HIP-3 file is read only if HIP-3 paper is active.
+        # A missing file for a lane that IS active raises (fail-closed), so the
+        # paper cycle never silently trades without the per-asset gate. A lane
+        # that is not active does not need its file and must not crash the run.
+        asset_edge_lookup: dict[tuple[str, str], str] = {}
+        hip3_asset_edge_lookup: dict[tuple[str, str], str] = {}
         targets = [
             (pair, kind)
             for kind in ("SPOT", "PERP")
@@ -435,6 +757,10 @@ class BreakwaterEngine:
                 for row in read_book(self.settings.hip3_book_path)
                 if row.get("status") == "monitored"
             ]
+            hip3_book_rows, hip3_gate_blocked = filter_green_book_rows(
+                hip3_book_rows, green_gate
+            )
+            lane_gate_blocked.extend(hip3_gate_blocked)
             if hip3_book_rows:
                 hip3_universe = read_hip3_universe(self.settings.hip3_universe_path)
                 native_crypto = {
@@ -484,15 +810,63 @@ class BreakwaterEngine:
                 hip3_frames[pair.upper()] = frame
             else:
                 frames_by_kind[kind][pair.upper()] = frame
+
+        # Intraday regime-shift awareness. Detective only: it never promotes, it
+        # only carries the current regime snapshot into this same paper cycle so
+        # the system can (a) stop taking the wrong-direction entries and (b) exit
+        # opposite-direction open positions when the macro game has flipped.
+        # Hip-3 frames are excluded: calendar assets should not drive a crypto
+        # regime call, and their own session gates already govern them.
+        regime_shift = None
+        native_regime_frames = {}
+        if frames_by_kind.get("PERP"):
+            native_regime_frames = {"PERP": frames_by_kind["PERP"]}
+        elif frames_by_kind.get("SPOT"):
+            native_regime_frames = frames_by_kind
+        if native_regime_frames:
+            regime_snapshot = compute_regime_snapshot(native_regime_frames)
+            regime_shift = update_regime_state(
+                self.settings.data_dir / "research" / "regime_state.json",
+                regime_snapshot,
+                now=server_time,
+            )
+        # Intraday short inventory: read-only observation of validated SHORT
+        # slices (and clearly marked provisional fallback if opted in). It is
+        # NEVER written to the book/paper; it only tells the system whether
+        # there is a valid short it could arm when a bear macro shift confirms.
+        short_inventory = None
+        short_inventory_path = self.settings.data_dir / "research" / "short_inventory.json"
+        if regime_shift is not None:
+            short_inventory = compute_short_inventory(
+                validated_path=self.settings.validated_path,
+                discovered_path=self.settings.discovered_path,
+                frames_by_kind=frames_by_kind,
+                server_time=server_time,
+                confirmed_bear=regime_shift.confirmed_bear,
+            )
+            if short_inventory.get("enabled"):
+                write_short_inventory(short_inventory_path, short_inventory)
         signals: list[SliceSignal] = []
         blocked: list[dict] = []
         if book_rows:
+            # Fail-closed for the active native lane.
+            asset_edge_lookup = build_asset_edge_lookup(
+                read_asset_edges(self.settings.asset_edges_path)
+            )
             signals, blocked = monitor_book(
-                book_rows, frames_by_kind, server_time=server_time
+                book_rows,
+                frames_by_kind,
+                server_time=server_time,
+                regime_shift=regime_shift,
+                asset_edge_lookup=asset_edge_lookup,
             )
         elif not hip3_active:
             signals = self._big_wave_fallback(targets, frames, server_time)
         if hip3_active:
+            # Fail-closed for the active HIP-3 lane.
+            hip3_asset_edge_lookup = build_asset_edge_lookup(
+                read_asset_edges(self.settings.hip3_asset_edges_path)
+            )
             # Group-scoped matching: a HIP-3 slice validated on one
             # dex/class/collateral group must only fire on frames from that
             # group, never on native frames or other HIP-3 groups.
@@ -522,7 +896,11 @@ class BreakwaterEngine:
                 if not group_frames:
                     continue
                 group_signals, group_blocked = monitor_book(
-                    rows, {"PERP": group_frames}, server_time=server_time
+                    rows,
+                    {"PERP": group_frames},
+                    server_time=server_time,
+                    regime_shift=regime_shift,
+                    asset_edge_lookup=hip3_asset_edge_lookup,
                 )
                 signals.extend(group_signals)
                 blocked.extend(group_blocked)
@@ -550,17 +928,19 @@ class BreakwaterEngine:
                 book_slice_ids=book_slice_ids,
                 server_time=server_time,
                 hip3_book_path=self.settings.hip3_book_path if hip3_active else None,
+                regime_shift=regime_shift,
+                green_gate=green_gate,
             )
-            for entry in blocked:
+            def _append_blocked(entry: dict, guard: str) -> None:
                 append_log(
                     self.settings.paper_log_path,
                     {
                         "closed_at": server_time.isoformat(),
                         "signal_id": "",
-                        "pair": entry["pair"],
-                        "kind": entry["kind"],
-                        "slice_id": entry["slice_id"],
-                        "side": entry["side"],
+                        "pair": str(entry.get("pair") or ""),
+                        "kind": str(entry.get("kind") or ""),
+                        "slice_id": str(entry.get("slice_id") or ""),
+                        "side": str(entry.get("side") or ""),
                         "entry_price": "",
                         "exit_price": "",
                         "stop_price": "",
@@ -568,14 +948,30 @@ class BreakwaterEngine:
                         "pnl_zar": "0",
                         "outcome": "skipped",
                         "bars_held": "0",
-                        "exit_reason": str(entry.get("reason", "regime")),
-                        "entry_guard": str(entry.get("guard", "regime_blocked")),
-                        "regime": entry["regime"],
+                        "exit_reason": str(entry.get("reason") or guard),
+                        "entry_guard": guard,
+                        "regime": str(entry.get("regime") or ""),
                     },
                 )
+
+            for entry in blocked:
+                _append_blocked(entry, str(entry.get("guard", "regime_blocked")))
+            for entry in lane_gate_blocked:
+                _append_blocked(
+                    entry,
+                    (
+                        "lane_frozen"
+                        if entry.get("reason") == "lane_not_green"
+                        else "slice_not_green"
+                    ),
+                )
             paper_result["regime_blocked"] = len(blocked)
+            paper_result["lane_gate_blocked"] = len(lane_gate_blocked)
             paper_result["session_blocked"] = sum(
                 1 for entry in blocked if entry.get("guard") == "session_blocked"
+            )
+            paper_result["asset_not_green_blocked"] = sum(
+                1 for entry in blocked if entry.get("guard") == "asset_not_green"
             )
         payloads = []
         for signal in signals:
@@ -597,6 +993,29 @@ class BreakwaterEngine:
             "universe_symbols": {
                 kind: len(universe.symbols(kind)) for kind in ("SPOT", "PERP")
             },
+            "regime_shift": regime_shift_dict(regime_shift) if regime_shift is not None else None,
+            "green_gate": green_gate.summary,
+            "per_asset_gate": {
+                "native_rows": len(asset_edge_lookup),
+                "native": _asset_edge_status_counts(asset_edge_lookup),
+                "hip3_rows": len(hip3_asset_edge_lookup),
+                "hip3": _asset_edge_status_counts(hip3_asset_edge_lookup),
+                "asset_not_green_blocked": sum(
+                    1 for entry in blocked if entry.get("guard") == "asset_not_green"
+                ),
+            },
+            "short_inventory": (
+                {
+                    "candidates": short_inventory.get("candidates"),
+                    "eligible": short_inventory.get("eligible"),
+                    "observations": short_inventory.get("observations"),
+                    "armable": short_inventory.get("armable"),
+                    "armable_slices": short_inventory.get("armable_slices", []),
+                    "armable_pairs": short_inventory.get("armable_pairs", []),
+                }
+                if short_inventory is not None
+                else None
+            ),
             "book_slices": len(book_rows),
             "hip3_paper": {
                 "active": hip3_active,
@@ -615,9 +1034,51 @@ class BreakwaterEngine:
             "errors": len(errors),
             "pair_errors": errors[:8],
             "regime_blocked": len(blocked),
+            "lane_gate_blocked": len(lane_gate_blocked),
+            "asset_not_green_blocked": sum(
+                1 for entry in blocked if entry.get("guard") == "asset_not_green"
+            ),
         }
+        if regime_shift is not None:
+            status_detail["regime_shift"] = regime_shift_dict(regime_shift)
+        status_detail["green_gate"] = green_gate.summary
+        status_detail["per_asset_gate"] = {
+            "native_rows": len(asset_edge_lookup),
+            "native": _asset_edge_status_counts(asset_edge_lookup),
+            "hip3_rows": len(hip3_asset_edge_lookup),
+            "hip3": _asset_edge_status_counts(hip3_asset_edge_lookup),
+        }
+        if short_inventory is not None:
+            status_detail["short_inventory"] = {
+                "candidates": short_inventory.get("candidates"),
+                "eligible": short_inventory.get("eligible"),
+                "observations": short_inventory.get("observations"),
+                "armable": short_inventory.get("armable"),
+                "armable_slices": short_inventory.get("armable_slices", []),
+                "armable_pairs": short_inventory.get("armable_pairs", []),
+                "confirmed_bear": short_inventory.get("confirmed_bear"),
+                "promote_enabled": short_inventory.get("promote_enabled"),
+            }
         if paper_result is not None:
             status_detail["paper"] = _compact_paper_status(paper_result)
+            # Hard no-action telemetry: when the book produced signals but the
+            # paper cycle opened none, name the dominant blocker. This turns
+            # "the system is doing nothing" into a diagnosable event rather
+            # than an inference from several CSV files.
+            if signals and int(paper_result.get("opened") or 0) == 0:
+                funnel = {
+                    "regime_blocked": int(paper_result.get("regime_blocked", len(blocked)) or 0),
+                    "aggregate_risk_cap_skips": int(paper_result.get("aggregate_risk_cap_skips") or 0),
+                    "aggregate_risk_unknown_skips": int(paper_result.get("aggregate_risk_unknown_skips") or 0),
+                    "slice_full": int(paper_result.get("slice_full") or 0),
+                    "pair_held": int(paper_result.get("pair_held") or 0),
+                    "slot_full": int(paper_result.get("slot_full") or 0),
+                    "skipped": int(paper_result.get("skipped") or 0),
+                    "lane_gate_blocked": int(paper_result.get("lane_gate_blocked", len(lane_gate_blocked)) or 0),
+                }
+                dominant = max(funnel, key=funnel.get)
+                status_detail["no_action_reason"] = dominant
+                status_detail["no_action_funnel"] = funnel
         append_status(
             self.settings.status_path,
             "shadow_scan_done",
@@ -779,6 +1240,7 @@ class BreakwaterEngine:
 
         discovered = []
         validated = []
+        asset_edges: list[AssetEdge] = []
 
         # Round-trip execution cost in bps, shared with the paper engine
         # (BREAKWATER_SPOT_FEE_BPS / BREAKWATER_PERP_FEE_BPS). Spot is VALR
@@ -812,13 +1274,20 @@ class BreakwaterEngine:
                     found, horizon_bars=horizon_bars, multi=multi
                 )
 
-                checked = validate_slices(prepared, found)
+                checked = validate_slices(prepared, found, asset_edges=asset_edges)
 
                 discovered.extend(found)
                 validated.extend(checked)
 
         write_discovered(self.settings.discovered_path, discovered)
         write_validated(self.settings.validated_path, validated)
+        write_asset_edges(self.settings.asset_edges_path, asset_edges)
+
+        # Research-side short audit: the daily pass must say plainly whether it
+        # produced any short that qualifies. Shorts that cleared the floor but
+        # failed on breadth/regime are reported so the operator knows *why* the
+        # system has no short inventory, rather than only seeing zero.
+        short_audit = _short_research_audit(validated, discovered)
 
         book_summary = sync_book(
             validated_path=self.settings.validated_path,
@@ -876,6 +1345,13 @@ class BreakwaterEngine:
             "hostile_unproven_slices": len(
                 [row for row in validated if row.hostile_unproven]
             ),
+            "per_asset_edges": {
+                "rows": len(asset_edges),
+                "green": sum(1 for row in asset_edges if row.asset_status == "green"),
+                "blocked": sum(1 for row in asset_edges if row.asset_status == "blocked"),
+                "untested": sum(1 for row in asset_edges if row.asset_status == "untested"),
+            },
+            "short_audit": short_audit,
             "validation_require_bonferroni": validation_require_bonferroni,
             "validation_relaxed_min_passes": validation_relaxed_min_passes,
             "book": book_summary,
@@ -895,6 +1371,13 @@ class BreakwaterEngine:
             "validated_slices": len([row for row in validated if row.validated]),
             "regime_confounded_slices": len([row for row in validated if row.regime_confounded]),
             "hostile_unproven_slices": len([row for row in validated if row.hostile_unproven]),
+            "per_asset_edges": {
+                "rows": len(asset_edges),
+                "green": sum(1 for row in asset_edges if row.asset_status == "green"),
+                "blocked": sum(1 for row in asset_edges if row.asset_status == "blocked"),
+                "untested": sum(1 for row in asset_edges if row.asset_status == "untested"),
+            },
+            "short_audit": short_audit,
             "fail_top": fail_tokens.most_common(6),
             "knobs": {
                 "BREAKWATER_MIN_NET_EDGE": min_net_edge,

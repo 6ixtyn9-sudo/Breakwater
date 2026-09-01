@@ -189,6 +189,8 @@ def monitor_book(
     frames_by_kind: dict[str, dict],
     *,
     server_time: datetime,
+    regime_shift: object | None = None,
+    asset_edge_lookup: dict[tuple[str, str], str] | None = None,
 ) -> tuple[list[SliceSignal], list[dict]]:
     signals: list[SliceSignal] = []
     blocked: list[dict] = []
@@ -273,7 +275,12 @@ def monitor_book(
                     if sess not in allowed_sessions:
                         continue
 
-            if regime_blocks(side, regime, hostile_unproven):
+            from breakwater.regime_tracker import regime_gate
+
+            blocked_here, _reason = regime_gate(
+                side.value, regime, hostile_unproven, regime_shift
+            )
+            if blocked_here:
                 blocked.append(
                     {
                         "pair": pair.upper(),
@@ -282,9 +289,32 @@ def monitor_book(
                         "side": side.value,
                         "regime": regime,
                         "hostile_unproven": hostile_unproven,
+                        "reason": _reason,
+                        "guard": "regime_shift_blocked" if _reason == "regime_shift_blocked" else "regime_blocked",
                     }
                 )
                 continue
+
+            # Per-asset edge gate: the pooled slice says the market edge exists,
+            # but research also decides whether THIS asset carries it. An asset
+            # with proven-negative per-asset research is skipped (guard asset_not_green).
+            # Untested assets are allowed so action is never zeroed.
+            if asset_edge_lookup is not None:
+                status = asset_edge_lookup.get((slice_id, pair.upper()))
+                if status == "blocked":
+                    blocked.append(
+                        {
+                            "pair": pair.upper(),
+                            "kind": kind,
+                            "slice_id": slice_id,
+                            "side": side.value,
+                            "regime": regime,
+                            "hostile_unproven": hostile_unproven,
+                            "reason": "asset_not_green",
+                            "guard": "asset_not_green",
+                        }
+                    )
+                    continue
             close = Decimal(str(latest_row["close"]))
             atr_raw = _atr(featured)
             if close <= 0 or atr_raw <= 0:
