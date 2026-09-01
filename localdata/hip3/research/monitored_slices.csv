@@ -1,1 +1,2 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net
+hip3_hyna_index_c235:feat_vol_regime:2:LONG:h7,PERP,feat_vol_regime,2,LONG,monitored,2026-09-01T05:04:04.001363+00:00,,0,0,0,0,,0.004940,257,0.000003,7,3.500,validated_walk_forward,False,True
