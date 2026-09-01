@@ -1563,7 +1563,11 @@ def run_paper_cycle(
         from breakwater.regime_tracker import regime_gate
 
         gate_blocked, gate_reason = regime_gate(
-            signal.side.value, signal.regime, hostile_unproven, regime_shift
+            signal.side.value,
+            signal.regime,
+            hostile_unproven,
+            regime_shift,
+            asset_status=str(getattr(signal, "asset_status", "") or ""),
         )
         if gate_blocked:
             append_log(
