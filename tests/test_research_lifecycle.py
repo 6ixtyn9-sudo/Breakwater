@@ -590,3 +590,54 @@ def test_hip3_promotion_requires_session_matched_edge(tmp_path, monkeypatch):
     assert "hip3_xyz_equity_c0:feat_a:2:LONG:h12" not in ids
     assert "hip3_xyz_equity_c0:feat_b:1:LONG:h19" in ids
     assert "hip3_hyna_builder_crypto_c0:feat_c:2:LONG:h6" in ids
+
+
+def _asset_edge_row(slice_id="feat:0:LONG", asset="A", mean=0.01, status="green", n=80):
+    from breakwater.validation import AssetEdge
+    return AssetEdge(slice_id=slice_id, asset=asset, kind="SPOT", feature="feat", state=0,
+        side="LONG", horizon_bars=1, n=n, mean_ret_costadj=mean, folds_positive=5,
+        folds_with_rows=5, fold_positive_fraction=1.0, asset_status=status, reason="")
+
+
+def test_sync_book_per_asset_green_breadth_blocks_thin_slice(tmp_path):
+    """< MIN_GREEN green assets -> not promoted even though pooled mean passes."""
+    from breakwater.research_lifecycle import MIN_GREEN_ASSETS_FOR_PROMOTION
+    from breakwater.validation import write_asset_edges
+    vp = tmp_path / "validated.csv"; bp = tmp_path / "book.csv"; ap = tmp_path / "asset_edges.csv"
+    write_validated(vp, [validated_row(mean=0.01)])
+    edges = [_asset_edge_row(asset=f"A{i}", mean=0.01, status="green") for i in range(2)]
+    edges += [_asset_edge_row(asset=f"B{i}", mean=-0.01, status="blocked") for i in range(8)]
+    write_asset_edges(ap, edges)
+    s = sync_book(validated_path=vp, book_path=bp)
+    assert s["per_asset_aware"] is True and s["monitored"] == 0 and s["blocked_for_green_breadth"] == 1
+    assert MIN_GREEN_ASSETS_FOR_PROMOTION > 2 and read_book(bp) == []
+
+
+def test_sync_book_per_asset_promo_edge_not_pooled(tmp_path, monkeypatch):
+    """Green-only mean used, not pooled: slice not promoted when green edge low."""
+    from breakwater.validation import write_asset_edges
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.004")
+    vp = tmp_path / "validated.csv"; bp = tmp_path / "book.csv"; ap = tmp_path / "asset_edges.csv"
+    write_validated(vp, [validated_row(mean=0.01)])
+    edges = [_asset_edge_row(asset=f"A{i}", mean=0.001, status="green") for i in range(5)]
+    edges += [_asset_edge_row(asset=f"B{i}", mean=-0.01, status="blocked") for i in range(5)]
+    write_asset_edges(ap, edges)
+    s = sync_book(validated_path=vp, book_path=bp)
+    assert s["monitored"] == 0 and read_book(bp) == []
+    pd = tmp_path / "no_asset"; pd.mkdir(); vp2 = pd / "validated.csv"; bp2 = pd / "book.csv"
+    write_validated(vp2, [validated_row(mean=0.01)])
+    s2 = sync_book(validated_path=vp2, book_path=bp2)
+    assert s2["monitored"] == 1
+
+
+def test_sync_book_per_asset_promotes_and_records_green(tmp_path):
+    """Enough green assets + passing green-only edge -> promotes, records n_green."""
+    from breakwater.validation import write_asset_edges
+    vp = tmp_path / "validated.csv"; bp = tmp_path / "book.csv"; ap = tmp_path / "asset_edges.csv"
+    write_validated(vp, [validated_row(mean=0.01)])
+    edges = [_asset_edge_row(asset=f"A{i}", mean=0.01, status="green") for i in range(6)]
+    edges += [_asset_edge_row(asset=f"B{i}", mean=-0.01, status="blocked") for i in range(4)]
+    write_asset_edges(ap, edges)
+    s = sync_book(validated_path=vp, book_path=bp)
+    assert s["monitored"] == 1 and s["green_assets_total"] == 6 and s["promoted_green_fraction_mean"] == 0.6
+    rows = read_book(bp); assert rows[0]["n_green"] == "6" and rows[0]["green_frac"] == "0.600"

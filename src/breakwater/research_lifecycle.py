@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from breakwater.hip3 import hip3_session_restricted, hip3_slice_market_class
-from breakwater.validation import ValidatedSlice, read_validated
+from breakwater.validation import AssetEdge, ValidatedSlice, read_asset_edges, read_validated
 
 BOOK_HEADERS = [
     "slice_id",
@@ -60,6 +60,9 @@ BOOK_HEADERS = [
     "hostile_unproven",
     # New, human marker: can we trust mean_ret_costadj as directional net edge?
     "edge_is_directional_net",
+    # Per-asset composition of the promoted slice (blank when per-asset mode off).
+    "n_green",
+    "green_frac",
 ]
 MONITORED = "monitored"
 COOLDOWN = "cooldown"
@@ -68,6 +71,12 @@ PROVENANCE_VALIDATED = "validated_walk_forward"
 
 MIN_BOOK_ROWS = 60
 PNL_DECAY_MIN_TRADES = 3
+
+# Per-asset-aware promotion: a validated slice must have at least this many
+# `green` per-asset rows to be promotable, and its promo edge is computed over
+# the green rows only (not the pooled all-symbol average). Deliberately a
+# module constant, NOT an env knob.
+MIN_GREEN_ASSETS_FOR_PROMOTION = 3
 STOPOUT_COOLDOWN_BARS = 24
 BAR_SECONDS = 3600
 
@@ -200,9 +209,15 @@ def _effective_floor(kind: str, pool_floors: dict[str, float] | None) -> float:
     return max(base, float(pool_floors.get(str(kind), 0.0)))
 
 
-def _directional_edge(row: ValidatedSlice, pool_floors: dict[str, float] | None = None) -> bool:
+def _directional_edge(
+    row: ValidatedSlice,
+    pool_floors: dict[str, float] | None = None,
+    *,
+    edge: float | None = None,
+) -> bool:
     # mean_ret_costadj is NET return for the chosen side (already cost-aware).
-    return row.mean_ret_costadj > 0 and row.mean_ret_costadj >= _effective_floor(row.kind, pool_floors)
+    eff = row.mean_ret_costadj if edge is None else edge
+    return eff > 0 and eff >= _effective_floor(row.kind, pool_floors)
 
 
 def _hip3_session_edge_ok(row: ValidatedSlice) -> bool:
@@ -336,6 +351,42 @@ def _convert_legacy_semantics_inplace(row: dict) -> None:
         row["edge_is_directional_net"] = _truthy_bool_str(flag)
 
 
+_GREEN = "green"
+_UNTESTED = "untested"
+_GREEN_OR_UNTESTED = (_GREEN, _UNTESTED)
+
+
+def _slice_asset_composition(
+    asset_edges: list[AssetEdge],
+) -> dict[str, dict]:
+    """Per-slice composition stats over per-asset rows."""
+    by_slice: dict[str, list[AssetEdge]] = defaultdict(list)
+    for ae in asset_edges:
+        by_slice[ae.slice_id].append(ae)
+    comp: dict[str, dict] = {}
+    for sid, rows in by_slice.items():
+        green = [e for e in rows if e.asset_status == _GREEN]
+        tradable = [e for e in rows if e.asset_status in _GREEN_OR_UNTESTED]
+        comp[sid] = {
+            "n_assets": len(rows),
+            "n_green": len(green),
+            "n_untested": sum(1 for e in rows if e.asset_status == _UNTESTED),
+            "n_tradable": len(tradable),
+            "green_edge_mean": (sum(e.mean_ret_costadj for e in green) / len(green) if green else None),
+            "tradable_edge_mean": (sum(e.mean_ret_costadj for e in tradable) / len(tradable) if tradable else None),
+        }
+    return comp
+
+
+def _promo_edge(row: ValidatedSlice, comp: dict[str, dict] | None) -> float:
+    """Effective promo edge for a slice (green-only mean, else pooled)."""
+    if comp is not None:
+        c = comp.get(row.slice_id)
+        if c and c["green_edge_mean"] is not None:
+            return c["green_edge_mean"]
+    return row.mean_ret_costadj
+
+
 def sync_book(
     *,
     validated_path: Path,
@@ -350,6 +401,15 @@ def sync_book(
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
 
+    # Per-asset-aware promotion is ALWAYS on: read the conventional per-asset
+    # edges file next to the validated file. If missing/empty (e.g. bare local
+    # tests), fall back to the legacy pooled-edge promotion. read_asset_edges is
+    # fail-closed on a bad schema, so a present-but-malformed file aborts.
+    asset_edges_path = validated_path.parent / "asset_edges.csv"
+    comp: dict[str, dict] | None = None
+    if asset_edges_path.exists() and asset_edges_path.stat().st_size > 0:
+        comp = _slice_asset_composition(read_asset_edges(asset_edges_path))
+
     # Autotuned quality bar: a NEW slice must sit inside the top
     # BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE of this run's candidate pool for
     # its kind; an EXISTING slice only has to stay inside the looser KEEP
@@ -362,19 +422,29 @@ def sync_book(
     pools: dict[str, list[float]] = {}
     for row in validated_rows:
         try:
-            edge = float(row.mean_ret_costadj)
+            edge = float(_promo_edge(row, comp))
         except (TypeError, ValueError):
             continue
         pools.setdefault(str(row.kind), []).append(edge)
     enter_pool_floors = {k: _pool_edge_floor(v, enter_q) for k, v in pools.items()}
     keep_pool_floors = {k: _pool_edge_floor(v, keep_q) for k, v in pools.items()}
 
-    # Base promotability filter (legacy rules)
+    def _green_breadth_ok(row: ValidatedSlice) -> bool:
+        if comp is None:
+            return True
+        c = comp.get(row.slice_id)
+        return bool(c and c["n_green"] >= MIN_GREEN_ASSETS_FOR_PROMOTION)
+
+    def _row_promo_edge(row: ValidatedSlice) -> float:
+        return float(_promo_edge(row, comp))
+
+    # Base promotability filter (legacy rules) + per-asset green-breadth floor.
     promotable = [
         row
         for row in validated_all
         if row.n >= MIN_BOOK_ROWS
-        and _directional_edge(row, enter_pool_floors)
+        and _green_breadth_ok(row)
+        and _directional_edge(row, enter_pool_floors, edge=_row_promo_edge(row))
         and _hip3_session_edge_ok(row)
     ]
     concentrated = [
@@ -423,10 +493,25 @@ def sync_book(
         and _directional_edge(row, enter_pool_floors)
         and not _hip3_session_edge_ok(row)
     )
+    # Slices that passed the quality bar and session rule but failed only the
+    # per-asset green-breadth floor (fewer than MIN_GREEN_ASSETS green assets).
+    blocked_for_green_breadth = (sum(
+        1
+        for row in validated_all
+        if row.n >= MIN_BOOK_ROWS
+        and not _green_breadth_ok(row)
+        and _directional_edge(row, enter_pool_floors, edge=_row_promo_edge(row))
+        and _hip3_session_edge_ok(row)
+    ) if comp is not None else 0)
+    _promoted_gap = [r for r in to_promote if comp is not None and r.slice_id in comp]
     summary: dict = {
         "validated": len(validated_all),
         "concentrated": len(concentrated),
         "promotable": len(promotable),
+        "per_asset_aware": comp is not None,
+        "green_assets_total": (sum(int(comp[r.slice_id]["n_green"]) for r in _promoted_gap) if comp else 0),
+        "promoted_green_fraction_mean": (round(sum(comp[r.slice_id]["n_green"] / comp[r.slice_id]["n_assets"] for r in _promoted_gap) / len(_promoted_gap), 4) if comp and _promoted_gap else None),
+        "blocked_for_green_breadth": blocked_for_green_breadth,
         # HIP-3 slices that passed the quality bar but failed the
         # session-match rule (edge not present in the tradable session).
         "session_gate_blocked": session_gate_blocked,
@@ -507,6 +592,9 @@ def sync_book(
                 ),
                 "hostile_unproven": "True" if row.hostile_unproven else "False",
                 "edge_is_directional_net": "True",
+                # Per-asset composition (blank when per-asset-aware mode off).
+                "n_green": str(comp[row.slice_id]["n_green"]) if comp and row.slice_id in comp else "",
+                "green_frac": (f"{comp[row.slice_id]['n_green'] / comp[row.slice_id]['n_assets']:.3f}" if comp and row.slice_id in comp and comp[row.slice_id]["n_assets"] else ""),
             }
         )
 
