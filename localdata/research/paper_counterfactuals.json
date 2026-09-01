@@ -778,7 +778,7 @@
     "initial_stop_price": "111.279999999999995",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 2,
+    "missing_bars": 3,
     "notional_zar": "388.607340",
     "pair": "XYZ:BABA",
     "peak_price": "113.22",
@@ -826,7 +826,7 @@
     "initial_stop_price": "285.28249999999998060",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "388.607340",
     "pair": "XYZ:HYUNDAI",
     "peak_price": "289.23",
@@ -874,7 +874,7 @@
     "initial_stop_price": "228.56750000000001630",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T17:00:00+00:00",
-    "missing_bars": 2,
+    "missing_bars": 3,
     "notional_zar": "388.607340",
     "pair": "XYZ:IBM",
     "peak_price": "231.64",
@@ -922,7 +922,7 @@
     "initial_stop_price": "94.966750000000001175",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 1,
+    "missing_bars": 2,
     "notional_zar": "388.607340",
     "pair": "XYZ:EWJ",
     "peak_price": "96.093",
@@ -970,7 +970,7 @@
     "initial_stop_price": "1145.5500000000001480",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 2,
+    "missing_bars": 3,
     "notional_zar": "388.607340",
     "pair": "XYZ:LLY",
     "peak_price": "1165.9",
@@ -1018,7 +1018,7 @@
     "initial_stop_price": "67.806500000000005910",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "388.607340",
     "pair": "XYZ:MAGS",
     "peak_price": "68.699",
@@ -1066,7 +1066,7 @@
     "initial_stop_price": "936.2474999999999215",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "387.881760",
     "pair": "XYZ:COST",
     "peak_price": "945.29",
@@ -1114,7 +1114,7 @@
     "initial_stop_price": "108.45750000000000870",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 2,
+    "missing_bars": 3,
     "notional_zar": "387.881760",
     "pair": "XYZ:EWT",
     "peak_price": "110.26",
@@ -1162,7 +1162,7 @@
     "initial_stop_price": "111.28499999999999775",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 2,
+    "missing_bars": 3,
     "notional_zar": "387.224660",
     "pair": "XYZ:BABA",
     "peak_price": "113.22",
@@ -1210,7 +1210,7 @@
     "initial_stop_price": "94.321500000000001510",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 1,
+    "missing_bars": 2,
     "notional_zar": "387.224660",
     "pair": "XYZ:EWJ",
     "peak_price": "95.531",
@@ -1258,7 +1258,7 @@
     "initial_stop_price": "227.10750000000002030",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T17:00:00+00:00",
-    "missing_bars": 2,
+    "missing_bars": 3,
     "notional_zar": "387.224660",
     "pair": "XYZ:IBM",
     "peak_price": "231.03",
@@ -1306,7 +1306,7 @@
     "initial_stop_price": "67.717750000000002540",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "387.224660",
     "pair": "XYZ:MAGS",
     "peak_price": "68.599",
@@ -1354,7 +1354,7 @@
     "initial_stop_price": "282.86499999999997305",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "386.618180",
     "pair": "XYZ:HYUNDAI",
     "peak_price": "286.96",
@@ -1401,7 +1401,7 @@
     "horizon_bars": 21,
     "initial_stop_price": "96.219249999999998810",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
+    "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "386.618180",
     "pair": "XYZ:STRC",
@@ -1409,27 +1409,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.219249999999998810"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.219249999999998810"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.219249999999998810"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.219249999999998810"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "96.219249999999998810"
       }
     },
@@ -1437,7 +1437,7 @@
     "signal_id": "1806c04780c3c970",
     "slice_id": "hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h21",
     "tracked_at": "2026-09-01T17:30:29+00:00",
-    "trough_price": "96.907"
+    "trough_price": "96.832"
   },
   {
     "actual_exit_bar_start": "2026-09-01T18:00:00+00:00",
@@ -1450,7 +1450,7 @@
     "initial_stop_price": "936.382499999999940",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "386.618180",
     "pair": "XYZ:COST",
     "peak_price": "944.88",
@@ -1498,7 +1498,7 @@
     "initial_stop_price": "933.19249999999993345",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "385.768840",
     "pair": "XYZ:COST",
     "peak_price": "942.15",
@@ -1536,16 +1536,16 @@
     "trough_price": "938.14"
   },
   {
-    "actual_exit_bar_start": "",
-    "actual_exit_price": "",
-    "actual_exit_reason": "",
-    "actual_pnl_zar": "",
+    "actual_exit_bar_start": "2026-09-01T19:00:00+00:00",
+    "actual_exit_price": "96.832",
+    "actual_exit_reason": "regime_shift",
+    "actual_pnl_zar": "-1.0312",
     "entry_price": "97.004",
     "fee_bps": "9",
     "horizon_bars": 21,
     "initial_stop_price": "96.326749999999999195",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
+    "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "385.768840",
     "pair": "XYZ:STRC",
@@ -1553,27 +1553,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "96.326749999999999195"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "96.326749999999999195"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "96.326749999999999195"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "96.326749999999999195"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "96.326749999999999195"
       }
     },
@@ -1581,7 +1581,7 @@
     "signal_id": "60445215125641c2",
     "slice_id": "hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h21",
     "tracked_at": "2026-09-01T18:05:29+00:00",
-    "trough_price": "97.004"
+    "trough_price": "96.832"
   },
   {
     "actual_exit_bar_start": "2026-09-01T19:00:00+00:00",
@@ -1594,7 +1594,7 @@
     "initial_stop_price": "282.02749999999998880",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T19:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "385.768840",
     "pair": "XYZ:HYUNDAI",
     "peak_price": "286.14",
@@ -1642,7 +1642,7 @@
     "initial_stop_price": "67.61100000000000340",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-01T18:00:00+00:00",
-    "missing_bars": 0,
+    "missing_bars": 1,
     "notional_zar": "385.768840",
     "pair": "XYZ:MAGS",
     "peak_price": "68.46",
