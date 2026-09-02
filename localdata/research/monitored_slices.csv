@@ -2,7 +2,7 @@ slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trade
 feat_trend_slope_20:2:LONG:h10,PERP,feat_trend_slope_20,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.005371,18264,0.000041,10,3.500,validated_walk_forward,False,True,28,0.233
 feat_ext_vs_ma_50:2:LONG:h12,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.005966,18027,0.000048,12,3.500,validated_walk_forward,False,True,29,0.242
 feat_vol_regime:2:LONG:h24,PERP,feat_vol_regime,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.009829,14910,0.000000,24,3.500,validated_walk_forward,False,True,47,0.392
-feat_realized_vol_20:2:LONG:h13,PERP,feat_realized_vol_20,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.006398,20139,0.000017,13,3.500,validated_walk_forward,False,True,46,0.383
+feat_realized_vol_20:2:LONG:h13,PERP,feat_realized_vol_20,2,LONG,monitored,2026-09-02T00:10:24+00:00,1788382800,1,0,1,-9.3205,,0.006398,20139,0.000017,13,3.500,validated_walk_forward,False,True,46,0.383
 feat_ret_10:2:LONG:h15,PERP,feat_ret_10,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.006307,17957,0.000008,15,3.500,validated_walk_forward,False,True,35,0.292
 feat_ext_vs_ma_10:2:LONG:h15,PERP,feat_ext_vs_ma_10,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.005187,17891,0.000078,15,3.500,validated_walk_forward,False,True,33,0.275
 feat_ret_5:2:LONG:h18,PERP,feat_ret_5,2,LONG,monitored,2026-09-02T00:10:24+00:00,,0,0,0,0,,0.005911,17694,0.000015,18,3.500,validated_walk_forward,False,True,33,0.275
