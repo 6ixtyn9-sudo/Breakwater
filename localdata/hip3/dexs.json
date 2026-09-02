@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-01T15:49:26.123597+00:00",
+ "as_of": "2026-09-02T01:45:29.922841+00:00",
  "dexs": [
   {
    "assetToFundingInterestRate": [
@@ -2102,6 +2102,10 @@
      "0.6"
     ],
     [
+     "para:TTWO",
+     "0.6"
+    ],
+    [
      "para:UNITREE",
      "0.6"
     ],
@@ -2198,6 +2202,10 @@
     [
      "para:TOTAL2",
      "5000000.0"
+    ],
+    [
+     "para:TTWO",
+     "25000000.0"
     ],
     [
      "para:UNITREE",
@@ -2336,7 +2344,7 @@
    "assetToFundingMultiplier": [
     [
      "io:ANTH",
-     "0.00125"
+     "0.0125"
     ],
     [
      "io:GPRO",
