@@ -82,12 +82,26 @@ def test_per_asset_status_does_not_override_hostile_symbol_rule():
 
 
 def test_defensive_exit_vs_r_gate():
-    long_pos = {"side": "BUY"}
-    short_pos = {"side": "SELL"}
-    assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=False) is True
-    assert defensive_exit(short_pos, _shift(confirmed_bear=True), r_gate_on=False) is False
-    # winner that banked R is not force-closed
-    assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=True) is False
+    # Macro shift only closes a per-asset BLOCKED position; the R-gate still wins
+    # for winners regardless of per-asset status.
+    long_pos = {"side": "BUY", "asset_status": "blocked"}
+    short_pos = {"side": "SELL", "asset_status": "blocked"}
+    assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=False, asset_status="blocked") is True
+    assert defensive_exit(short_pos, _shift(confirmed_bear=True), r_gate_on=False, asset_status="blocked") is False
+    assert defensive_exit(short_pos, _shift(confirmed_bull=True), r_gate_on=False, asset_status="blocked") is True
+    assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=True, asset_status="blocked") is False
+
+
+def test_defensive_exit_only_closes_per_asset_blocked():
+    """A confirmed global macro shift must NOT blanket-close individual assets.
+    Only a per-asset blocked position is defensively exited; green and untested
+    assets ride their own stop/horizon and the green-lane freeze."""
+    shift = _shift(confirmed_bear=True)
+    for status in ("green", "untested", "", "unknown"):
+        assert defensive_exit({"side": "BUY", "asset_status": status}, shift, r_gate_on=False, asset_status=status) is False
+    assert defensive_exit({"side": "BUY", "asset_status": "blocked"}, shift, r_gate_on=False, asset_status="blocked") is True
+    # Legacy/unknown positions have no per-asset evidence, so they are not blanket-closed.
+    assert defensive_exit({"side": "BUY"}, shift, r_gate_on=False) is False
 
 
 def test_update_regime_state_confirms_after_two_cycles(tmp_path):

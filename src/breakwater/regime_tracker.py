@@ -259,11 +259,28 @@ def regime_gate(
     return False, ""
 
 
-def defensive_exit(position: dict, shift: RegimeShift | None, *, r_gate_on: bool) -> bool:
-    """Should this position be closed early on a confirmed macro shift?"""
+def defensive_exit(
+    position: dict,
+    shift: RegimeShift | None,
+    *,
+    r_gate_on: bool,
+    asset_status: str = "",
+) -> bool:
+    """Should this position be closed early on a confirmed macro shift?
+
+    The global macro shift is portfolio context, not a license to blanket-close
+    every individual asset. A position is defensively exited only when its own
+    per-asset verdict is ``blocked``. Green and untested assets ride their own
+    stop/horizon and the green-lane freeze, so a sustained global bear reading
+    cannot churn every open BUY into a realized loss.
+    """
     if shift is None or not (shift.confirmed_bear or shift.confirmed_bull):
         return False
     side = str(position.get("side") or "").upper()
+    # Per-asset evidence decides individual assets. No per-asset block means no
+    # blanket defensive exit, including legacy positions that predate this field.
+    if str(asset_status or "").strip().lower() != "blocked":
+        return False
     # Never exit a winner that has already banked its move; R-gate keeps winners.
     if r_gate_on:
         return False

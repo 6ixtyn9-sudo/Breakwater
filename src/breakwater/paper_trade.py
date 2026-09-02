@@ -958,11 +958,18 @@ def _mark_position_bar(
     # Defensive macro exit: a confirmed regime shift is a same-cycle signal.
     # The overnight research path is too slow to react to a flip, so the paper
     # engine closes opposite-direction positions here, before the stop/horizon.
-    # Winners that have already triggered the R-gate are left alone.
+    # Per-asset evidence decides the individual asset: only a per-asset BLOCKED
+    # position is closed, so a sustained global macro reading cannot churn every
+    # open BUY/SELL. Winners that already triggered the R-gate are left alone.
     if exit_price is None:
         from breakwater.regime_tracker import defensive_exit
 
-        if defensive_exit(position, regime_shift, r_gate_on=r_gate_on):
+        if defensive_exit(
+            position,
+            regime_shift,
+            r_gate_on=r_gate_on,
+            asset_status=str(position.get("asset_status", "") or ""),
+        ):
             exit_price, exit_reason = close, "regime_shift"
             outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
     # Green-account exit: a lane that has not printed green, or a slice whose
@@ -1819,6 +1826,7 @@ def run_paper_cycle(
                 "atr": str(signal.atr),
                 "stop_atr_mult": (f"{stop_atr_mult:.6f}" if signal.atr > 0 else ""),
                 "risk_fraction": (f"{risk_fraction:.8f}" if reference > 0 else ""),
+                "asset_status": str(getattr(signal, "asset_status", "") or ""),
                 "last_processed_bar_start": _bar_start_iso(frame.iloc[-1]["start"]),
             }
         )
