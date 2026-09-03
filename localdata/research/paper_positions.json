@@ -59,7 +59,7 @@
     "initial_stop_price": "913.94499999999992065",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-03T20:00:00+00:00",
-    "missing_bars": "0",
+    "missing_bars": "1",
     "notional_zar": "394.801100",
     "opened_at": "2026-09-03T14:30:34+00:00",
     "pair": "XYZ:COST",
