@@ -1,6 +1,2 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
-hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24,PERP,feat_ext_vs_ma_50,0,LONG,monitored,2026-09-02T02:05:49.601138+00:00,,0,0,0,0,,0.001908,7879,0.139431,24,3.500,validated_walk_forward,False,True,19,0.475
-hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24,PERP,feat_ret_20,0,LONG,monitored,2026-09-02T02:05:49.601138+00:00,,0,0,0,0,,0.001730,8311,0.207689,24,3.500,validated_walk_forward,False,True,22,0.550
-hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24,PERP,feat_trend_slope_20,0,LONG,monitored,2026-09-02T02:05:49.601138+00:00,,0,0,0,0,,0.001927,8433,0.103498,24,3.500,validated_walk_forward,False,True,21,0.525
-hip3_xyz_equity_c0:feat_atr_norm_ext:0:LONG:h24,PERP,feat_atr_norm_ext,0,LONG,monitored,2026-09-02T02:05:49.601138+00:00,,0,0,0,0,,0.001217,9425,0.192804,24,3.500,validated_walk_forward,False,True,22,0.550
-hip3_xyz_equity_c0:feat_ext_vs_ma_20:0:LONG:h24,PERP,feat_ext_vs_ma_20,0,LONG,monitored,2026-09-02T02:05:49.601138+00:00,,0,0,0,0,,0.000741,8450,0.551010,24,3.500,validated_walk_forward,False,True,18,0.450
+hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24,PERP,feat_ext_vs_ma_50,0,LONG,monitored,2026-09-03T01:57:00.179474+00:00,,0,0,0,0,,0.002063,8071,0.117071,24,3.500,validated_walk_forward,False,True,19,0.528
