@@ -14,5 +14,13 @@
     "signal_id": "025f8def67ba39cc",
     "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
     "stopped_at": "2026-09-03T14:30:34+00:00"
+  },
+  {
+    "pair": "XYZ:GOLD",
+    "pnl_zar": "-4.5758",
+    "reason": "stop",
+    "signal_id": "04f64f15b75b3ba0",
+    "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
+    "stopped_at": "2026-09-04T13:00:31+00:00"
   }
 ]
