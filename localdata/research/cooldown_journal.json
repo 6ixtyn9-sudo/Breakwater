@@ -22,5 +22,21 @@
     "signal_id": "04f64f15b75b3ba0",
     "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
     "stopped_at": "2026-09-04T13:00:31+00:00"
+  },
+  {
+    "pair": "XYZ:BRENTOIL",
+    "pnl_zar": "-7.7696",
+    "reason": "stop",
+    "signal_id": "06b35e054d201c36",
+    "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
+    "stopped_at": "2026-09-04T14:00:33+00:00"
+  },
+  {
+    "pair": "XYZ:CL",
+    "pnl_zar": "-8.9345",
+    "reason": "stop",
+    "signal_id": "43e2b6729614b117",
+    "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
+    "stopped_at": "2026-09-04T14:00:33+00:00"
   }
 ]
