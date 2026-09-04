@@ -38,5 +38,13 @@
     "signal_id": "43e2b6729614b117",
     "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
     "stopped_at": "2026-09-04T14:00:33+00:00"
+  },
+  {
+    "pair": "XYZ:AAPL",
+    "pnl_zar": "-5.4842",
+    "reason": "stop",
+    "signal_id": "22fc3e5c55fb0229",
+    "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24",
+    "stopped_at": "2026-09-04T15:00:26+00:00"
   }
 ]
