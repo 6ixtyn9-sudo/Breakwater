@@ -46,5 +46,13 @@
     "signal_id": "22fc3e5c55fb0229",
     "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24",
     "stopped_at": "2026-09-04T15:00:26+00:00"
+  },
+  {
+    "pair": "PUMPUSDC",
+    "pnl_zar": "-17.8387",
+    "reason": "stop",
+    "signal_id": "a9263768d8c21ead",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stopped_at": "2026-09-05T19:00:26+00:00"
   }
 ]
