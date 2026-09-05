@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-04T01:45:30.074663+00:00",
+ "as_of": "2026-09-05T01:45:31.098029+00:00",
  "dexs": [
   {
    "assetToFundingInterestRate": [
@@ -2382,7 +2382,7 @@
    "assetToStreamingOiCap": [
     [
      "io:ANTH",
-     "15000000.0"
+     "18000000.0"
     ],
     [
      "io:GPRO",
