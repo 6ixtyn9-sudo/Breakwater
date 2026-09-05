@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "asset_status": "green",
+    "atr": "12.884285714285706",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "1006.5",
+    "horizon_bars": "24",
+    "initial_stop_price": "961.4050000000000290",
+    "kind": "PERP",
+    "last_processed_bar_start": "2026-09-05T20:00:00+00:00",
+    "missing_bars": "0",
+    "notional_zar": "392.211500",
+    "opened_at": "2026-09-05T20:30:24+00:00",
+    "pair": "ZECUSDC",
+    "peak_price": "1006.5",
+    "regime": "bull",
+    "risk_fraction": "0.04480378",
+    "side": "BUY",
+    "signal_id": "663c8605c0588534",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "961.4050000000000290",
+    "trail_active": "0",
+    "trough_price": "1006.5"
+  }
+]
