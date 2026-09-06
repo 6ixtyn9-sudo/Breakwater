@@ -123,5 +123,30 @@
     "stop_price": "2440.2500000000003655",
     "trail_active": "0",
     "trough_price": "2483.9"
+  },
+  {
+    "asset_status": "green",
+    "atr": "0.9527142857142863",
+    "bars_held": "0",
+    "entry_guard": "passed",
+    "entry_price": "87.573",
+    "horizon_bars": "13",
+    "initial_stop_price": "84.23849999999999795",
+    "kind": "PERP",
+    "last_processed_bar_start": "2026-09-06T17:00:00+00:00",
+    "missing_bars": "0",
+    "notional_zar": "395.284220",
+    "opened_at": "2026-09-06T17:30:28+00:00",
+    "pair": "HYPEUSDC",
+    "peak_price": "87.573",
+    "regime": "bull",
+    "risk_fraction": "0.03807680",
+    "side": "BUY",
+    "signal_id": "d02c0b15c156e059",
+    "slice_id": "feat_ret_10:2:LONG:h13",
+    "stop_atr_mult": "3.500000",
+    "stop_price": "84.23849999999999795",
+    "trail_active": "0",
+    "trough_price": "87.573"
   }
 ]
