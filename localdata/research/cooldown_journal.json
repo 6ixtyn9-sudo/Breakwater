@@ -54,5 +54,13 @@
     "signal_id": "a9263768d8c21ead",
     "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
     "stopped_at": "2026-09-05T19:00:26+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-8.0062",
+    "reason": "stop",
+    "signal_id": "98f158215e26bb57",
+    "slice_id": "feat_trend_slope_20:0:LONG:h24",
+    "stopped_at": "2026-09-06T15:00:24+00:00"
   }
 ]
