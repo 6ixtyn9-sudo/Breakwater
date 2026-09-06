@@ -61,7 +61,7 @@
     "missing_bars": 0,
     "notional_zar": "394.669900",
     "pair": "LINKUSDC",
-    "peak_price": "13.275",
+    "peak_price": "13.192",
     "policies": {
       "no_target_trail_1r": {
         "active": false,
@@ -71,7 +71,7 @@
       "no_target_trail_2r": {
         "active": true,
         "bars_held": 87,
-        "stop_price": "12.644000000000001490"
+        "stop_price": "12.561000000000001490"
       },
       "target_2r_trail_1r": {
         "active": false,
@@ -445,7 +445,7 @@
     "missing_bars": 0,
     "notional_zar": "362.0753415757570515407512539",
     "pair": "AAVEUSDC",
-    "peak_price": "136.37",
+    "peak_price": "135.54",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -637,17 +637,17 @@
     "missing_bars": 0,
     "notional_zar": "399.169920",
     "pair": "LINKUSDC",
-    "peak_price": "13.275",
+    "peak_price": "13.192",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
         "bars_held": 15,
-        "stop_price": "12.84499999999999985"
+        "stop_price": "12.76199999999999985"
       },
       "no_target_trail_2r": {
         "active": true,
         "bars_held": 15,
-        "stop_price": "12.41499999999999970"
+        "stop_price": "12.33199999999999970"
       },
       "target_2r_trail_1r": {
         "active": false,
@@ -657,12 +657,12 @@
       "target_3r_trail_1r": {
         "active": true,
         "bars_held": 15,
-        "stop_price": "12.84499999999999985"
+        "stop_price": "12.76199999999999985"
       },
       "target_4r_trail_1r": {
         "active": true,
         "bars_held": 15,
-        "stop_price": "12.84499999999999985"
+        "stop_price": "12.76199999999999985"
       }
     },
     "side": "BUY",
@@ -877,7 +877,7 @@
     "missing_bars": 0,
     "notional_zar": "395.284220",
     "pair": "AAVEUSDC",
-    "peak_price": "136.37",
+    "peak_price": "135.07",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -1021,7 +1021,7 @@
     "missing_bars": 0,
     "notional_zar": "395.284220",
     "pair": "ETHUSDC",
-    "peak_price": "2520.9",
+    "peak_price": "2516.4",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -1104,10 +1104,10 @@
     "trough_price": "87.25"
   },
   {
-    "actual_exit_bar_start": "2026-09-06T23:00:00+00:00",
-    "actual_exit_price": "13.25300000000000010",
-    "actual_exit_reason": "target",
-    "actual_pnl_zar": "29.3379",
+    "actual_exit_bar_start": "",
+    "actual_exit_price": "",
+    "actual_exit_reason": "",
+    "actual_pnl_zar": "",
     "entry_price": "12.327",
     "fee_bps": "9",
     "horizon_bars": 13,
@@ -1117,32 +1117,32 @@
     "missing_bars": 0,
     "notional_zar": "395.284220",
     "pair": "LINKUSDC",
-    "peak_price": "13.275",
+    "peak_price": "13.192",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
         "bars_held": 5,
-        "stop_price": "12.81199999999999995"
+        "stop_price": "12.72899999999999995"
       },
       "no_target_trail_2r": {
         "active": true,
         "bars_held": 5,
-        "stop_price": "12.34899999999999990"
+        "stop_price": "12.26599999999999990"
       },
       "target_2r_trail_1r": {
-        "active": false,
+        "active": true,
         "bars_held": 5,
-        "stop_price": "12.68099999999999995"
+        "stop_price": "12.72899999999999995"
       },
       "target_3r_trail_1r": {
         "active": true,
         "bars_held": 5,
-        "stop_price": "12.81199999999999995"
+        "stop_price": "12.72899999999999995"
       },
       "target_4r_trail_1r": {
         "active": true,
         "bars_held": 5,
-        "stop_price": "12.81199999999999995"
+        "stop_price": "12.72899999999999995"
       }
     },
     "side": "BUY",
@@ -1165,7 +1165,7 @@
     "missing_bars": 0,
     "notional_zar": "395.284220",
     "pair": "SOLUSDC",
-    "peak_price": "106.67",
+    "peak_price": "106.26",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
@@ -1213,7 +1213,7 @@
     "missing_bars": 0,
     "notional_zar": "395.284220",
     "pair": "DOGEUSDC",
-    "peak_price": "0.090989",
+    "peak_price": "0.0907",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
