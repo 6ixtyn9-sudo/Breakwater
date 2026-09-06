@@ -1,19 +1,19 @@
 {
-  "as_of": "2026-09-06T22:00:26Z",
-  "bear": 2,
+  "as_of": "2026-09-06T23:10:05Z",
+  "bear": 3,
   "breadth": {
-    "bear": 0.0667,
+    "bear": 0.1,
     "bull": 0.7333,
-    "neutral": 0.2
+    "neutral": 0.1667
   },
   "bull": 22,
   "confirmed_bear": false,
   "confirmed_bull": true,
   "consecutive_bear": 0,
-  "consecutive_bull": 82,
+  "consecutive_bull": 83,
   "flip": true,
   "flipped_from": "bull",
   "label": "bull",
-  "neutral": 6,
+  "neutral": 5,
   "schema": "breakwater.regime_shift.v1"
 }
