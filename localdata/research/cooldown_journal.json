@@ -62,5 +62,13 @@
     "signal_id": "98f158215e26bb57",
     "slice_id": "feat_trend_slope_20:0:LONG:h24",
     "stopped_at": "2026-09-06T15:00:24+00:00"
+  },
+  {
+    "pair": "XMRUSDC",
+    "pnl_zar": "-15.7187",
+    "reason": "stop",
+    "signal_id": "4c83e251c7df639b",
+    "slice_id": "feat_ret_10:0:LONG:h24",
+    "stopped_at": "2026-09-06T16:00:22+00:00"
   }
 ]
