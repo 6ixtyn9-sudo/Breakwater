@@ -1,16 +1,16 @@
 {
-  "as_of": "2026-09-07T02:00:28Z",
+  "as_of": "2026-09-07T02:30:26Z",
   "bear": 1,
   "breadth": {
-    "bear": 0.0323,
-    "bull": 0.6774,
-    "neutral": 0.2581
+    "bear": 0.0333,
+    "bull": 0.6667,
+    "neutral": 0.2667
   },
-  "bull": 21,
+  "bull": 20,
   "confirmed_bear": false,
   "confirmed_bull": true,
   "consecutive_bear": 0,
-  "consecutive_bull": 89,
+  "consecutive_bull": 90,
   "flip": true,
   "flipped_from": "bull",
   "label": "bull",
