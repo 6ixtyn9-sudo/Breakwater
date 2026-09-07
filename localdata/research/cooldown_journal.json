@@ -70,5 +70,13 @@
     "signal_id": "4c83e251c7df639b",
     "slice_id": "feat_ret_10:0:LONG:h24",
     "stopped_at": "2026-09-06T16:00:22+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-4.2083",
+    "reason": "stop",
+    "signal_id": "caaffa5055651da8",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stopped_at": "2026-09-07T16:00:27+00:00"
   }
 ]
