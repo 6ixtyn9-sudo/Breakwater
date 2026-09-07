@@ -442,7 +442,7 @@
     "initial_stop_price": "2.252824999999999870",
     "kind": "PERP",
     "last_processed_bar_start": "2026-09-07T00:00:00+00:00",
-    "missing_bars": 19,
+    "missing_bars": 20,
     "notional_zar": "399.169920",
     "pair": "TRUMPUSDC",
     "peak_price": "2.3725",
