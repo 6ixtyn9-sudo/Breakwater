@@ -10,8 +10,22 @@ ROLE="${1:-all}"
 
 # Daily print: read-only digest of the committed state. Safe to run from every
 # state-committing workflow; writes once per UTC date and is idempotent.
+#
+# This must NEVER fail silently again. The digest is the operator's only
+# regular view of system health. Between 02 and 08 Sep 2026 it crashed on a
+# truncated status.csv detail, and the old `>/dev/null 2>&1 || echo
+# "skipped (non-fatal)"` swallowed the traceback on every single run. Both
+# lanes froze, 32 of 72 closes became forced liquidations, and the digest
+# stayed frozen at the 02 Sep copy for five days while the runner reported
+# "operational" throughout.
+#
+# A digest failure does not block the state commit - losing a state commit is
+# worse than losing a digest - but it is now loud, annotated and in the log.
 if [ -f scripts/daily_print.py ]; then
-  PYTHONPATH=src python3 scripts/daily_print.py >/dev/null 2>&1 || echo "daily_print.py skipped (non-fatal)"
+  if ! PYTHONPATH=src python3 scripts/daily_print.py > /tmp/breakwater_daily_print.out 2>&1; then
+    echo "::warning::daily_print.py FAILED - the daily digest was NOT regenerated. Observability is degraded."
+    tail -n 25 /tmp/breakwater_daily_print.out || true
+  fi
 fi
 
 status_files=(localdata/status.csv localdata/daily/)
