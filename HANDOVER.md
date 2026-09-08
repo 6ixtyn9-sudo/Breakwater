@@ -229,7 +229,7 @@ hostile_n 0->2 is a note, not a kill switch.
 If a better family passes floors, it promotes. Green hunt also stays (paper veto).
 Empty promote -> carry.
 
-Do not click research to soothe. Cron 02:25 UTC is the sample.
+Do not click research to soothe. Cron 02:10 SAST (00:10 UTC); the run stamps ~02:25 SAST (00:25 UTC).
 
 
 8) LIVE / VALR
