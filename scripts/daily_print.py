@@ -315,7 +315,7 @@ def _report_text() -> str:
     gate = None
     tradability = None
     try:
-        from breakwater.lane_gate import compute_green_gate, lane_tradability
+        from breakwater.lane_gate import LANE_WINDOW, compute_green_gate, lane_tradability
 
         gate = compute_green_gate(DATA / "research" / "paper_trade_log.csv")
         tradability = lane_tradability(
@@ -662,6 +662,8 @@ def _report_text() -> str:
                 f"frozen={'YES' if 'hip3' in gate.frozen_lanes else 'NO'}"
             )
             add(f"- Frozen lanes: {', '.join(sorted(gate.frozen_lanes)) or 'none'}")
+            add(f"- Lane verdict judged on the last {LANE_WINDOW} closes per lane; section 3 is the "
+                f"lifetime ledger. They differ by design, not by staleness.")
             add(f"- Green islands kept alive inside red lanes: {len(gate.green_islands)}")
             for sid, pnl in gate.green_islands.items():
                 add(f"  - `{sid}` pnl={pnl:+.2f}")
