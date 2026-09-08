@@ -8,9 +8,8 @@ into a runtime entry/exit gate the engine consults on every paper cycle:
 - A **slice** is green when its own closed paper P&L is positive. A slice with
   no closed trades is only allowed while its containing lane is not proven red,
   so an untested slice cannot be traded inside a losing lane.
-- A lane that is not green is **frozen**: no new entries from it, and any open
-  positions inside it are defensively exited at the latest close so the lane
-  stops bleeding.
+- A lane that is not green is **frozen**: no new entries from it. Open positions
+  are **not** force-closed; they exit on their own stop, target or horizon.
 - A slice that is individually not green is blocked (and open positions in it
   are exited) even if the lane is otherwise green.
 - **Cold-start aware:** a lane with fewer than LANE_MIN_CLOSED real closes is
@@ -19,6 +18,30 @@ into a runtime entry/exit gate the engine consults on every paper cycle:
   lane that has reached LANE_MIN_CLOSED and still prints negative P&L is frozen
   (proven red). This is what makes a fresh-slate / new-lane start possible
   without hand-disabling the gate.
+
+Forced liquidation is retired (2026-09-08)
+------------------------------------------
+Until 2026-09-08 a red lane also force-closed every open position inside it at
+the latest bar close (`exit_reason="lane_gate"`). That behaviour was removed on
+purpose, in code, not flag-guarded.
+
+Measured cost, on committed state: of 72 real closes between 02 and 08 Sep,
+**32 (44%) were forced `lane_gate` exits** rather than stop/target/horizon. The
+prospective exit counterfactual control (`target_2r_trail_1r`) reproduces real
+exits to the cent on every natural exit (mean delta **+0.00 ZAR** on stop,
+target, horizon, trail_stop and rotated) but scores **+4.56 ZAR/trade better on
+the 31 trades the gate liquidated — +141.4 ZAR in total**. That is the single
+largest P&L line in the log, and it was entirely self-inflicted.
+
+It also fed back into the verdict: forced exits realise losers immediately,
+which pushes cumulative lane P&L down, which keeps the lane red, which forces
+the next liquidation. The reflex was manufacturing the evidence that justified
+it. A position's stop is already the risk control; closing it early at an
+arbitrary bar is not protection, it is a P&L event.
+
+`lane_gate` stays in ``ACTUAL_EXITS`` so those 32 historical rows remain
+countable. Dropping it would silently rewrite the very lane statistics the gate
+reads to make its next decision.
 
 Calibration (env-overridable):
   BREAKWATER_GREEN_LANE_MIN_CLOSED (default 10)   - closes a lane needs before it
@@ -146,11 +169,12 @@ class GreenGate:
             return True
         return str(slice_id) in self.green_islands
 
-    def should_exit(self, slice_id: str) -> bool:
-        """True when an open position must be defensively closed."""
-        if not self.enabled:
-            return False
-        return not self.green(slice_id)
+    # FORCED LIQUIDATION IS RETIRED (2026-09-08). ``should_exit()`` used to live
+    # here and the paper engine called it to dump any open position whose lane
+    # had flipped red. It is deliberately gone, not flag-guarded: see
+    # "Forced liquidation is retired" in the module docstring for the
+    # measurement that killed it. Do not reinstate it behind a switch - the
+    # switch is what made it look safe the first time.
 
     @property
     def green_islands(self) -> dict[str, float]:
@@ -290,6 +314,37 @@ def compute_green_gate(log_path: Path) -> GreenGate:
         blocked_slices=blocked_slices,
         enabled=enabled,
     )
+
+
+def lane_tradability(
+    gate: GreenGate,
+    native_book_ids: Iterable[str],
+    hip3_book_ids: Iterable[str],
+) -> dict:
+    """Report how many slices per lane may still open an entry, and any coma.
+
+    A frozen lane can reach **zero** tradable slices: every member is blocked and
+    no green island survives. At that point the lane cannot open an entry, so it
+    can never print the closes that would turn it green again. That is an
+    absorbing state, not a slow day. It must be reported loudly instead of
+    sitting in silence while the runner cheerfully reports "operational", which
+    is exactly how the 02-08 Sep freeze ran for five days unseen.
+    """
+    native = sorted({str(s) for s in native_book_ids if gate.green(s)})
+    hip3 = sorted({str(s) for s in hip3_book_ids if gate.green(s)})
+    coma = sorted(
+        lane
+        for lane, tradable in (("native", native), ("hip3", hip3))
+        if lane in gate.frozen_lanes and not tradable
+    )
+    return {
+        "native_tradable": len(native),
+        "hip3_tradable": len(hip3),
+        "native_tradable_slices": native,
+        "hip3_tradable_slices": hip3,
+        "coma_lanes": coma,
+        "coma": bool(coma),
+    }
 
 
 def filter_green_book_rows(rows: Iterable[dict], gate: GreenGate) -> tuple[list[dict], list[dict]]:

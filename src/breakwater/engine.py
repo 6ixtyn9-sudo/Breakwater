@@ -36,6 +36,7 @@ from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.lane_gate import (
     compute_green_gate,
     filter_green_book_rows,
+    lane_tradability,
 )
 from breakwater.ledger import Ledger
 from breakwater.market import (
@@ -998,6 +999,14 @@ class BreakwaterEngine:
             },
             "regime_shift": regime_shift_dict(regime_shift) if regime_shift is not None else None,
             "green_gate": green_gate.summary,
+            # Coma alarm: a frozen lane with zero tradable slices can never
+            # print the closes that would unfreeze it. That is an absorbing
+            # state and must be visible, not silent.
+            "lane_tradability": lane_tradability(
+                green_gate,
+                (row.get("slice_id") for row in book_rows),
+                (row.get("slice_id") for row in hip3_book_rows),
+            ),
             "per_asset_gate": {
                 "native_rows": len(asset_edge_lookup),
                 "native": _asset_edge_status_counts(asset_edge_lookup),
