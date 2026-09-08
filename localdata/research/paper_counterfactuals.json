@@ -781,32 +781,32 @@
     "missing_bars": 0,
     "notional_zar": "397.271560",
     "pair": "XYZ:EWJ",
-    "peak_price": "99.608",
+    "peak_price": "99.547",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
         "bars_held": 9,
-        "stop_price": "98.726250000000006925"
+        "stop_price": "98.665250000000006925"
       },
       "no_target_trail_2r": {
         "active": true,
         "bars_held": 9,
-        "stop_price": "97.844500000000013850"
+        "stop_price": "97.783500000000013850"
       },
       "target_2r_trail_1r": {
         "active": true,
         "bars_held": 9,
-        "stop_price": "98.726250000000006925"
+        "stop_price": "98.665250000000006925"
       },
       "target_3r_trail_1r": {
         "active": true,
         "bars_held": 9,
-        "stop_price": "98.726250000000006925"
+        "stop_price": "98.665250000000006925"
       },
       "target_4r_trail_1r": {
         "active": true,
         "bars_held": 9,
-        "stop_price": "98.726250000000006925"
+        "stop_price": "98.665250000000006925"
       }
     },
     "side": "BUY",
