@@ -651,3 +651,85 @@ def test_sync_book_per_asset_promotes_and_records_green(tmp_path):
     assert s["monitored"] == 1 and s["green_assets_total"] == 6 and s["promoted_green_fraction_mean"] == 0.6
     rows = read_book(bp)
     assert rows[0]["n_green"] == "6" and rows[0]["green_frac"] == "0.600"
+
+
+def test_stopout_does_not_cool_a_net_profitable_slice(tmp_path):
+    """A slice in profit must not be benched for taking an ordinary stop.
+
+    Regression: feat_ext_vs_ma_20:0:LONG:h24 was the only profitable slice in
+    the native book (+42.62 ZAR over 13 closes) and was cooled twice for
+    -1.020R and -1.092R stops. A cooled slice is not monitored, cannot be
+    selected, and the frozen native lane was left with zero tradable slices
+    (coma) on 2026-09-08.
+    """
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, [validated_row()])
+    sync_book(validated_path=validated_path, book_path=book_path)
+    now = datetime.now(timezone.utc)
+    epoch = int(now.timestamp())
+
+    for _ in range(4):
+        apply_signal_feedback(
+            book_path, "feat:0:LONG", bar_epoch=epoch,
+            outcome="win", pnl_zar=12.0, now=now,
+        )
+    assert float(read_book(book_path)[0]["paper_pnl_zar"]) == 48.0
+
+    apply_signal_feedback(
+        book_path, "feat:0:LONG", bar_epoch=epoch,
+        outcome="loss", pnl_zar=-5.0, stopout=True, now=now,
+    )
+    rows = read_book(book_path)
+    assert rows[0]["status"] == "monitored", "net-profitable slice must not be cooled"
+    assert rows[0]["cooldown_until"] == ""
+    # The loss is still recorded: decay, the green gate and the P&L eviction
+    # judge all still see it. Only the cooldown is withheld.
+    assert rows[0]["paper_losses"] == "1"
+    assert float(rows[0]["paper_pnl_zar"]) == 43.0
+
+
+def test_stopout_still_cools_once_the_slice_is_net_negative(tmp_path):
+    """The exemption is not a free pass: a slice that bled below zero cools."""
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, [validated_row()])
+    sync_book(validated_path=validated_path, book_path=book_path)
+    now = datetime.now(timezone.utc)
+    epoch = int(now.timestamp())
+
+    apply_signal_feedback(
+        book_path, "feat:0:LONG", bar_epoch=epoch,
+        outcome="win", pnl_zar=4.0, now=now,
+    )
+    # A loss bigger than the profit takes the slice net-negative.
+    apply_signal_feedback(
+        book_path, "feat:0:LONG", bar_epoch=epoch,
+        outcome="loss", pnl_zar=-10.0, stopout=True, now=now,
+    )
+    rows = read_book(book_path)
+    assert float(rows[0]["paper_pnl_zar"]) == -6.0
+    assert rows[0]["status"] == "cooldown"
+    assert int(rows[0]["cooldown_until"]) > epoch
+
+
+def test_stopout_cools_a_slice_that_is_exactly_flat(tmp_path):
+    """Boundary: exactly zero cumulative P&L is not 'profitable', so it cools."""
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    write_validated(validated_path, [validated_row()])
+    sync_book(validated_path=validated_path, book_path=book_path)
+    now = datetime.now(timezone.utc)
+    epoch = int(now.timestamp())
+
+    apply_signal_feedback(
+        book_path, "feat:0:LONG", bar_epoch=epoch,
+        outcome="win", pnl_zar=5.0, now=now,
+    )
+    apply_signal_feedback(
+        book_path, "feat:0:LONG", bar_epoch=epoch,
+        outcome="loss", pnl_zar=-5.0, stopout=True, now=now,
+    )
+    rows = read_book(book_path)
+    assert float(rows[0]["paper_pnl_zar"]) == 0.0
+    assert rows[0]["status"] == "cooldown"

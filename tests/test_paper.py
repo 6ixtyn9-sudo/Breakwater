@@ -1431,3 +1431,73 @@ def test_asset_not_green_reaching_paper_is_denied(tmp_path):
     assert log.iloc[0]["exit_reason"] == "asset_not_green"
     assert log.iloc[0]["entry_guard"] == "asset_not_green"
 
+
+
+def test_frozen_lane_does_not_force_close_open_position(tmp_path):
+    """A frozen lane blocks entries. It must NOT dump open positions.
+
+    Regression for the 02-08 Sep bleed: 32 of 72 closes (44%) were forced
+    `lane_gate` exits rather than stop/target/horizon, and the ghost control
+    scored +4.56 ZAR/trade better on the 31 liquidated trades (+141.4 ZAR) while
+    matching real exits to the cent on every natural exit. Closing a position
+    early at an arbitrary bar is not risk control - the stop is.
+    """
+    from breakwater.lane_gate import GreenGate, LaneStats, SliceStats
+
+    dead_slice = "feat:0:LONG"
+    gate = GreenGate(
+        native=LaneStats(closed=20, pnl=-50.0, wins=5, losses=15),
+        hip3=LaneStats(closed=0, pnl=0.0, wins=0, losses=0),
+        slices={dead_slice: SliceStats(closed=5, pnl=-20.0, wins=1, losses=4)},
+        native_green=False,
+        hip3_green=False,
+        frozen_lanes={"native"},
+        warmup_lanes=set(),
+        blocked_slices={dead_slice: "lane_not_green"},
+        enabled=True,
+    )
+    # Price is flat and well inside the stop: nothing about the position itself
+    # justifies an exit. Before 2026-09-08 the gate would have dumped it anyway.
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=101, high=102, low=100)},
+        positions=open_position(entry="100", stop="95", bars="1"),
+        green_gate=gate,
+    )
+    assert result["closed"] == 0
+    assert result["open"] == 1
+    log_path = tmp_path / "log.csv"
+    assert not log_path.exists() or "lane_gate" not in log_path.read_text()
+
+
+def test_frozen_lane_still_protects_via_stop(tmp_path):
+    """Removing forced liquidation must not remove protection.
+
+    The same frozen-lane position still dies on its own stop when price gets
+    there. The gate no longer trades for the position; the stop still does.
+    """
+    from breakwater.lane_gate import GreenGate, LaneStats, SliceStats
+
+    dead_slice = "feat:0:LONG"
+    gate = GreenGate(
+        native=LaneStats(closed=20, pnl=-50.0, wins=5, losses=15),
+        hip3=LaneStats(closed=0, pnl=0.0, wins=0, losses=0),
+        slices={dead_slice: SliceStats(closed=5, pnl=-20.0, wins=1, losses=4)},
+        native_green=False,
+        hip3_green=False,
+        frozen_lanes={"native"},
+        warmup_lanes=set(),
+        blocked_slices={dead_slice: "lane_not_green"},
+        enabled=True,
+    )
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=94, low=93)},
+        positions=open_position(entry="100", stop="95", bars="1"),
+        green_gate=gate,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "stop"

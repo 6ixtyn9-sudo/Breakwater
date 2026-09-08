@@ -908,8 +908,14 @@ def _mark_position_bar(
     book_slice_ids: set[str],
     now: datetime,
     regime_shift: object | None = None,
-    green_gate: object | None = None,
 ):
+    """Mark one position against one completed bar.
+
+    No ``green_gate`` argument any more: the gate used to force-close positions
+    here when its lane flipped red, and that is retired (see the comment at the
+    removed call site and ``breakwater.lane_gate``). Entry gating still uses the
+    gate; position management does not.
+    """
     side = str(position["side"])
     entry = Decimal(str(position["entry_price"]))
     stop = Decimal(str(position["stop_price"]))
@@ -972,17 +978,22 @@ def _mark_position_bar(
         ):
             exit_price, exit_reason = close, "regime_shift"
             outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
-    # Green-account exit: a lane that has not printed green, or a slice whose
-    # own paper history is negative, must stop bleeding now. This is the "same
-    # cycle, not overnight" counterpart to the green entry freeze.
-    if exit_price is None:
-        from breakwater.lane_gate import GreenGate
-
-        if isinstance(green_gate, GreenGate) and green_gate.should_exit(
-            str(position.get("slice_id") or "")
-        ):
-            exit_price, exit_reason = close, "lane_gate"
-            outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    # FORCED GREEN-GATE LIQUIDATION IS RETIRED (2026-09-08).
+    #
+    # This used to force-close any open position whose lane had flipped red, at
+    # the latest bar close, with exit_reason="lane_gate". Measured on committed
+    # state it was the single largest P&L line in the book and it was entirely
+    # self-inflicted: 32 of 72 closes (44%) were these forced exits, and the
+    # ghost control scores +4.56 ZAR/trade better on the 31 liquidated trades
+    # (+141.4 ZAR total) while matching real exits to the cent on every natural
+    # exit. It also fed back into its own verdict - forced exits realise losers,
+    # which keeps the lane red, which forces the next liquidation.
+    #
+    # A frozen lane now blocks NEW ENTRIES only. Open positions are left to
+    # their own stop, target or horizon, which is what those mechanisms are
+    # for. See breakwater.lane_gate "Forced liquidation is retired".
+    # `exit_reason="lane_gate"` is no longer produced, but remains recognised in
+    # lane_gate.ACTUAL_EXITS so historical rows stay countable.
     # HIP-3 calendar assets: PLANNED exits (horizon, time stop) must land on
     # the underlying's live tape. The paper fills at the latest known price:
     # a bar still forming fills at `now`, a completed (replayed) bar fills
@@ -1243,7 +1254,6 @@ def run_paper_cycle(
                 book_slice_ids=book_slice_ids,
                 now=server_time,
                 regime_shift=regime_shift,
-                green_gate=green_gate,
             )
             if exit_state is not None:
                 break

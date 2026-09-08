@@ -6,9 +6,11 @@ import csv
 from pathlib import Path
 
 from breakwater.lane_gate import (
+    ACTUAL_EXITS,
     GreenGate,
     compute_green_gate,
     filter_green_book_rows,
+    lane_tradability,
 )
 
 
@@ -52,8 +54,9 @@ def test_native_green_hip3_frozen(tmp_path):
     assert gate.warmup_lanes == set()
     assert gate.green("native_x") is True
     assert gate.green("hip3_xyz:feat_a") is False
-    assert gate.should_exit("hip3_xyz:feat_a") is True
-    assert gate.should_exit("native_x") is False
+    # Forced liquidation is retired: a red lane blocks ENTRIES. It does not
+    # dump open positions at the latest close any more.
+    assert not hasattr(gate, "should_exit")
 
 
 def test_green_island_survives_red_lane(tmp_path):
@@ -98,7 +101,6 @@ def test_cold_start_lane_is_warmup_not_frozen(tmp_path):
     assert gate.warmup_lanes == {"native", "hip3"}
     assert gate.green("native:any") is True
     assert gate.green("hip3_any:any") is True
-    assert gate.should_exit("native:any") is False
     summary = gate.summary
     assert summary["warmup_lanes"] == ["hip3", "native"]
     assert summary["native"]["warmup"] is True
@@ -122,7 +124,6 @@ def test_cold_start_lane_allows_untested_slices(tmp_path):
     # The slice has only 2 closes (< SLICE_MIN_CLOSED), so it is untested and
     # allowed to keep earning noise.
     assert gate.green("native:a") is True
-    assert gate.should_exit("native:a") is False
 
 
 def test_cold_start_proven_negative_slice_is_blocked(tmp_path):
@@ -140,7 +141,6 @@ def test_cold_start_proven_negative_slice_is_blocked(tmp_path):
     assert "native" in gate.warmup_lanes
     assert "native:bad" in gate.blocked_slices
     assert gate.green("native:bad") is False
-    assert gate.should_exit("native:bad") is True
 
 
 def test_single_loss_does_not_freeze_green_lane_slice(tmp_path):
@@ -153,7 +153,6 @@ def test_single_loss_does_not_freeze_green_lane_slice(tmp_path):
     _write_log(log, rows)
     gate = compute_green_gate(log)
     assert gate.green("native:one_loss") is True
-    assert gate.should_exit("native:one_loss") is False
     assert "native:one_loss" not in gate.blocked_slices
 
 
@@ -188,3 +187,90 @@ def test_filter_green_book_rows(tmp_path):
     assert [r["slice_id"] for r in allowed] == ["native:good"]
     assert [r["slice_id"] for r in blocked] == ["native:blocked"]
     assert isinstance(gate, GreenGate)
+
+
+def test_forced_liquidation_is_retired(tmp_path):
+    """A red lane must NOT force-close open positions.
+
+    Regression for the 02-08 Sep bleed: 32 of 72 closes (44%) were forced
+    `lane_gate` exits, and the ghost control scored +4.56 ZAR/trade better on
+    the 31 liquidated trades (+141.4 ZAR) while matching real exits to the cent
+    on every natural exit. The gate blocks new money; it does not dump
+    positions, which is what the stop, target and horizon are for.
+    """
+    log = tmp_path / "paper_trade_log.csv"
+    rows = [_row(f"native:{i}", 1.0) for i in range(15)] + [
+        _row("hip3_xyz:feat_a", -2.0, outcome="loss", reason="stop")
+        for _ in range(12)
+    ]
+    _write_log(log, rows)
+    gate = compute_green_gate(log)
+    assert "hip3" in gate.frozen_lanes
+    # Entry gating still bites hard...
+    assert gate.green("hip3_xyz:feat_a") is False
+    # ...but there is no exit mechanism left to call.
+    assert not hasattr(gate, "should_exit")
+    assert "lane_gate" in ACTUAL_EXITS  # historical rows stay countable
+
+
+def test_lane_gate_historical_rows_stay_countable():
+    """`lane_gate` must remain an actual exit.
+
+    Dropping it would retroactively recount every lane's closes and silently
+    rewrite the statistics the gate reads to make its next verdict.
+    """
+    assert "lane_gate" in ACTUAL_EXITS
+
+
+def test_coma_lane_is_reported(tmp_path):
+    """A frozen lane with zero tradable slices is an absorbing state.
+
+    No entry can open -> no close can print -> cumulative P&L can never rise
+    -> the lane can never unfreeze. That is death, not quiet, and it must be
+    reported loudly rather than sitting behind a green "operational" runner.
+    """
+    log = tmp_path / "paper_trade_log.csv"
+    rows = [_row("native:a", -2.0, outcome="loss", reason="stop") for _ in range(12)]
+    _write_log(log, rows)
+    gate = compute_green_gate(log)
+    assert "native" in gate.frozen_lanes
+
+    # Book full of slices, none of which is a green island -> coma.
+    book = [f"native:s{i}" for i in range(20)]
+    report = lane_tradability(gate, book, [])
+    assert report["native_tradable"] == 0
+    assert report["coma_lanes"] == ["native"]
+    assert report["coma"] is True
+
+
+def test_tradable_island_prevents_coma_but_is_counted(tmp_path):
+    """One surviving green island is the difference between frozen and dead."""
+    log = tmp_path / "paper_trade_log.csv"
+    island = "native:island"
+    rows = (
+        [_row("native:a", -2.0, outcome="loss", reason="stop") for _ in range(12)]
+        + [_row(island, 3.0, reason="target") for _ in range(4)]
+    )
+    _write_log(log, rows)
+    gate = compute_green_gate(log)
+    assert "native" in gate.frozen_lanes
+
+    book = ["native:a", "native:b", island]
+    report = lane_tradability(gate, book, [])
+    # Only the island may trade; the other two are blocked.
+    assert report["native_tradable"] == 1
+    assert report["native_tradable_slices"] == [island]
+    # Not coma yet - but this is the one-bad-trade-from-death state.
+    assert report["coma_lanes"] == []
+    assert report["coma"] is False
+
+
+def test_no_coma_when_lane_is_not_frozen(tmp_path):
+    """Warm-up and green lanes are never reported as coma, even if tiny."""
+    log = tmp_path / "paper_trade_log.csv"
+    _write_log(log, [_row("native:a", 1.0)])
+    gate = compute_green_gate(log)
+    assert "native" not in gate.frozen_lanes
+    report = lane_tradability(gate, ["native:a"], ["hip3_:x"])
+    assert report["native_tradable"] == 1
+    assert report["coma"] is False

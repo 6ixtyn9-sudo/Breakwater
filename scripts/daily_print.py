@@ -62,6 +62,44 @@ def _read_json(path: Path, default=None):
         return default
 
 
+def _load_detail(text):
+    """Parse a status.csv ``detail`` blob without ever raising.
+
+    status.py caps every detail at 4000 characters, so a long shadow-scan
+    payload (the green-gate blocked-slice map is thousands of characters on its
+    own) is stored truncated and is not valid JSON. A bare ``json.loads`` here
+    is what killed the daily digest: the runner kept reporting "operational"
+    while the one artifact that would have shown a frozen, liquidating book
+    crashed on every run. Parse what survives, never raise.
+    """
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else {}
+    except (TypeError, ValueError):
+        pass
+    # Salvage: re-close whatever containers were left open by the truncation.
+    for tail in ("", '"', "]", "}", '"]', '"}', "]}", '"]}', '"}]', '"}]}'):
+        try:
+            parsed = json.loads(text + tail)
+            if isinstance(parsed, dict):
+                return parsed
+        except (TypeError, ValueError):
+            continue
+    # Last resort: cut back to the last complete top-level pair and close it.
+    cut = text.rfind(",")
+    while cut > 0:
+        for tail in ("}", "]}", '"]}'):
+            try:
+                parsed = json.loads(text[:cut] + tail)
+                if isinstance(parsed, dict):
+                    return parsed
+            except (TypeError, ValueError):
+                pass
+        cut = text.rfind(",", 0, cut)
+    return {}
+
 def _lane(slice_id: str) -> str:
     return "hip3" if str(slice_id).startswith("hip3_") else "native"
 
@@ -231,11 +269,38 @@ def _report_text() -> str:
     add(f"# Breakwater daily print — {stamp}\n")
     add("> Observation mode. Read-only digest of committed state. Nothing here trades or promotes.\n")
 
+    # ---- gate / coma state, computed once and reused below ----
+    gate = None
+    tradability = None
+    try:
+        from breakwater.lane_gate import compute_green_gate, lane_tradability
+
+        gate = compute_green_gate(DATA / "research" / "paper_trade_log.csv")
+        tradability = lane_tradability(
+            gate,
+            (r.get("slice_id") for r in _book_rows(DATA / "research" / "monitored_slices.csv")),
+            (r.get("slice_id") for r in _book_rows(DATA / "hip3" / "research" / "monitored_slices.csv")),
+        )
+    except Exception:  # pragma: no cover - defensive
+        gate = None
+        tradability = None
+    if tradability and tradability.get("coma"):
+        add(f"> ## COMA ALARM — {', '.join(tradability['coma_lanes']).upper()}\n")
+        add("> Frozen with **ZERO tradable slices**. No entry can open, so no close can\n"
+            "> print, so the lane can never unfreeze itself. This is a **dead lane, not a\n"
+            "> quiet one** — the runner will still report \"operational\". Operator action\n"
+            "> required.\n")
+    elif tradability and (tradability["native_tradable"] + tradability["hip3_tradable"]) <= 3:
+        add(f"> ## WARNING — only "
+            f"{tradability['native_tradable'] + tradability['hip3_tradable']} tradable slice(s) "
+            f"left across both lanes (native {tradability['native_tradable']}, "
+            f"hip3 {tradability['hip3_tradable']}). One bad trade from coma.\n")
+
     # ---- account / mode ----
     add("## 1. Posture\n")
     mode_rows = [r for r in _read_csv(DATA / "status.csv") if r.get("stage") == "guardian_ok"]
     if mode_rows:
-        last = json.loads(mode_rows[-1]["detail"])
+        last = _load_detail(mode_rows[-1]["detail"])
         add(f"- Mode: **{last.get('mode')}** | VALR equity: **{last.get('equity_zar')} ZAR** | "
             f"high-water: **{last.get('high_water_zar')} ZAR**")
         add(f"- Key perms: {', '.join(last.get('key_permissions') or [])} | perps API: "
@@ -308,7 +373,7 @@ def _report_text() -> str:
                    if r.get("stage") == "shadow_scan_done" and r.get("mode") == "shadow"]
     last_scan_ts = ""
     if shadow_rows:
-        last = json.loads(shadow_rows[-1]["detail"])
+        last = _load_detail(shadow_rows[-1]["detail"])
         last_scan_ts = shadow_rows[-1].get("timestamp_utc", "")[:19]
         paper = last.get("paper") or {}
         cap = _num(paper.get("aggregate_risk_cap_zar"))
@@ -352,18 +417,18 @@ def _report_text() -> str:
     add(f"- Closed paper trades: **{len(hip3_actual)}/50** | ghost rows: **{len(cf_rows)}/50** | "
         f"PnL: **{hip3_pnl:+.2f} ZAR**")
     add(f"- Gate verdict: {'**READY**' if len(hip3_actual) >= 50 and len(cf_rows) >= 50 and hip3_pnl > 0 else '**NOT READY**'}")
-    gate = _read_json(DATA / "hip3" / "gate.json", {})
-    if gate:
-        add(f"- gate.json: paper_ready={gate.get('paper_ready')} live_ready={gate.get('live_ready')} "
-            f"book_frozen={gate.get('book_frozen')} book_rows={gate.get('book_rows')}")
-        add(f"- live unresolved: {', '.join(gate.get('live_unresolved') or [])}")
+    hip3_gate = _read_json(DATA / "hip3" / "hip3_gate.json", {})
+    if hip3_gate:
+        add(f"- hip3_gate.json: paper_ready={hip3_gate.get('paper_ready')} live_ready={hip3_gate.get('live_ready')} "
+            f"book_frozen={hip3_gate.get('book_frozen')} book_rows={hip3_gate.get('book_rows')}")
+        add(f"- live unresolved: {', '.join(hip3_gate.get('live_unresolved') or [])}")
     add("")
 
     # ---- research health ----
     add("## 8. Research / honesty checks\n")
     research_rows = [r for r in _read_csv(DATA / "status.csv") if r.get("stage") == "research_done"]
     if research_rows:
-        last = json.loads(research_rows[-1]["detail"])
+        last = _load_detail(research_rows[-1]["detail"])
         add(f"- Latest research: {last.get('server_time')} | discovered {last.get('discovered_slices')} | "
             f"validated {last.get('validated_slices')} | reg-confounded {last.get('regime_confounded_slices')} | "
             f"hostile-unproven {last.get('hostile_unproven_slices')}")
@@ -454,9 +519,8 @@ def _report_text() -> str:
 
     add("## 12. Green gate\n")
     try:
-        from breakwater.lane_gate import compute_green_gate
-
-        gate = compute_green_gate(DATA / "research" / "paper_trade_log.csv")
+        if gate is None:
+            raise RuntimeError("gate unavailable")
         if gate.enabled:
             native = gate.native
             hip3 = gate.hip3
@@ -470,6 +534,16 @@ def _report_text() -> str:
             add(f"- Green islands kept alive inside red lanes: {len(gate.green_islands)}")
             for sid, pnl in gate.green_islands.items():
                 add(f"  - `{sid}` pnl={pnl:+.2f}")
+            if tradability:
+                native_book_n = len(_book_rows(DATA / "research" / "monitored_slices.csv"))
+                hip3_book_n = len(_book_rows(DATA / "hip3" / "research" / "monitored_slices.csv"))
+                add(f"- Tradable slices: native **{tradability['native_tradable']}/{native_book_n}** | "
+                    f"hip3 **{tradability['hip3_tradable']}/{hip3_book_n}**")
+                if tradability["coma"]:
+                    add(f"- **COMA LANES: {', '.join(tradability['coma_lanes'])}** — frozen with zero "
+                        f"tradable slices; cannot earn its way out.")
+            add("- Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new "
+                "entries only; open positions run to their own stop/target/horizon.")
             add(f"- Slice blocks: {len(gate.blocked_slices)}")
             top = sorted(gate.blocked_slices.items(), key=lambda kv: kv[0])[:8]
             for sid, reason in top:
@@ -483,7 +557,7 @@ def _report_text() -> str:
     add("## 13. Signal activity\n")
     last_scan = shadow_rows[-1] if shadow_rows else None
     if last_scan:
-        d = json.loads(last_scan["detail"])
+        d = _load_detail(last_scan["detail"])
         add(f"- Latest scan {last_scan_ts or '?'}: errors={d.get('errors')} signals={d.get('signals')} "
             f"regime_blocked={d.get('regime_blocked')}")
         paper = d.get("paper") or {}
