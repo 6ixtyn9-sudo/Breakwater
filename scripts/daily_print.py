@@ -26,10 +26,30 @@ DATA = ROOT / "localdata"
 # Ensure the breakwater package under src/ is imported, not scripts/breakwater.py.
 sys.path.insert(0, str(ROOT / "src"))
 
-ACTUAL_EXITS = {"target", "stop", "trail_stop", "horizon", "rotated", "stale_data", "time_stop", "regime_shift", "lane_gate"}
-SKIP_REASONS = {"regime", "not_book", "no_price", "adverse", "risk_cap", "edge_cap",
-                "below_perp_min_notional", "aggregate_risk_cap", "aggregate_risk_unknown",
-                "session", "session_blocked"}
+ACTUAL_EXITS = {
+    "target",
+    "stop",
+    "trail_stop",
+    "horizon",
+    "rotated",
+    "stale_data",
+    "time_stop",
+    "regime_shift",
+    "lane_gate",
+}
+SKIP_REASONS = {
+    "regime",
+    "not_book",
+    "no_price",
+    "adverse",
+    "risk_cap",
+    "edge_cap",
+    "below_perp_min_notional",
+    "aggregate_risk_cap",
+    "aggregate_risk_unknown",
+    "session",
+    "session_blocked",
+}
 
 
 def _num(value, default=0.0):
@@ -100,6 +120,7 @@ def _load_detail(text):
         cut = text.rfind(",", 0, cut)
     return {}
 
+
 def _lane(slice_id: str) -> str:
     return "hip3" if str(slice_id).startswith("hip3_") else "native"
 
@@ -120,15 +141,25 @@ def _now() -> datetime:
 
 
 def _paper_performance(trade_rows):
-    per_lane = defaultdict(lambda: {"closed": 0, "wins": 0, "pnl": 0.0, "by_exit": defaultdict(float),
-                                    "by_regime": defaultdict(lambda: [0, 0.0]), "by_slice": defaultdict(lambda: [0, 0.0, 0]),
-                                    "by_pair": defaultdict(lambda: [0, 0.0, 0])})
+    per_lane = defaultdict(
+        lambda: {
+            "closed": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "by_exit": defaultdict(float),
+            "by_regime": defaultdict(lambda: [0, 0.0]),
+            "by_slice": defaultdict(lambda: [0, 0.0, 0]),
+            "by_pair": defaultdict(lambda: [0, 0.0, 0]),
+        }
+    )
     today = _now()
     last7 = today - timedelta(days=7)
     last30 = today - timedelta(days=30)
-    recent = {"today": defaultdict(lambda: [0, 0.0, 0]),
-              "7d": defaultdict(lambda: [0, 0.0, 0]),
-              "30d": defaultdict(lambda: [0, 0.0, 0])}
+    recent = {
+        "today": defaultdict(lambda: [0, 0.0, 0]),
+        "7d": defaultdict(lambda: [0, 0.0, 0]),
+        "30d": defaultdict(lambda: [0, 0.0, 0]),
+    }
     for r in trade_rows:
         if str(r.get("outcome") or "") not in {"win", "loss"}:
             continue
@@ -160,8 +191,11 @@ def _paper_performance(trade_rows):
         if closed_at is None:
             continue
         # today uses date, else relative windows
-        for window, start in (("today", today.replace(hour=0, minute=0, second=0, microsecond=0)),
-                              ("7d", last7), ("30d", last30)):
+        for window, start in (
+            ("today", today.replace(hour=0, minute=0, second=0, microsecond=0)),
+            ("7d", last7),
+            ("30d", last30),
+        ):
             if closed_at >= start:
                 recent[window][lane][0] += 1
                 recent[window][lane][1] += pnl
@@ -196,16 +230,18 @@ def _book_rows(path: Path):
 def _gate_top(book_rows):
     out = []
     for r in book_rows:
-        out.append({
-            "slice_id": r.get("slice_id"),
-            "mean_ret_costadj": _num(r.get("mean_ret_costadj")),
-            "n": _int(r.get("n")),
-            "p_value": _num(r.get("p_value")),
-            "source": r.get("source"),
-            "hostile_unproven": r.get("hostile_unproven"),
-            "paper_trades": _int(r.get("paper_trades")),
-            "paper_pnl_zar": _num(r.get("paper_pnl_zar")),
-        })
+        out.append(
+            {
+                "slice_id": r.get("slice_id"),
+                "mean_ret_costadj": _num(r.get("mean_ret_costadj")),
+                "n": _int(r.get("n")),
+                "p_value": _num(r.get("p_value")),
+                "source": r.get("source"),
+                "hostile_unproven": r.get("hostile_unproven"),
+                "paper_trades": _int(r.get("paper_trades")),
+                "paper_pnl_zar": _num(r.get("paper_pnl_zar")),
+            }
+        )
     out.sort(key=lambda x: x["paper_pnl_zar"], reverse=True)
     return out
 
@@ -223,8 +259,10 @@ def _short_audit_from_files() -> dict:
         validated = read_validated(DATA / "research" / "validated_slices.csv")
         discovered = []
         for r in _read_csv(DATA / "research" / "discovered_slices.csv"):
+
             class _R:
                 pass
+
             row = _R()
             row.slice_id = r.get("slice_id")
             row.side = r.get("side")
@@ -246,8 +284,10 @@ def _hip3_short_audit() -> dict:
         validated = read_validated(DATA / "hip3" / "research" / "validated_slices.csv")
         discovered = []
         for r in _read_csv(DATA / "hip3" / "research" / "discovered_slices.csv"):
+
             class _R:
                 pass
+
             row = _R()
             row.slice_id = r.get("slice_id")
             row.side = r.get("side")
@@ -267,7 +307,9 @@ def _report_text() -> str:
     add = lines.append
 
     add(f"# Breakwater daily print — {stamp}\n")
-    add("> Observation mode. Read-only digest of committed state. Nothing here trades or promotes.\n")
+    add(
+        "> Observation mode. Read-only digest of committed state. Nothing here trades or promotes.\n"
+    )
 
     # ---- gate / coma state, computed once and reused below ----
     gate = None
@@ -279,32 +321,45 @@ def _report_text() -> str:
         tradability = lane_tradability(
             gate,
             (r.get("slice_id") for r in _book_rows(DATA / "research" / "monitored_slices.csv")),
-            (r.get("slice_id") for r in _book_rows(DATA / "hip3" / "research" / "monitored_slices.csv")),
+            (
+                r.get("slice_id")
+                for r in _book_rows(DATA / "hip3" / "research" / "monitored_slices.csv")
+            ),
         )
     except Exception:  # pragma: no cover - defensive
         gate = None
         tradability = None
     if tradability and tradability.get("coma"):
         add(f"> ## COMA ALARM — {', '.join(tradability['coma_lanes']).upper()}\n")
-        add("> Frozen with **ZERO tradable slices**. No entry can open, so no close can\n"
+        add(
+            "> Frozen with **ZERO tradable slices**. No entry can open, so no close can\n"
             "> print, so the lane can never unfreeze itself. This is a **dead lane, not a\n"
-            "> quiet one** — the runner will still report \"operational\". Operator action\n"
-            "> required.\n")
-    elif tradability and (tradability["native_tradable"] + tradability["hip3_tradable"]) <= 3:
-        add(f"> ## WARNING — only "
-            f"{tradability['native_tradable'] + tradability['hip3_tradable']} tradable slice(s) "
-            f"left across both lanes (native {tradability['native_tradable']}, "
-            f"hip3 {tradability['hip3_tradable']}). One bad trade from coma.\n")
+            '> quiet one** — the runner will still report "operational". Operator action\n'
+            "> required.\n"
+        )
+    elif tradability and (tradability["native_proven"] + tradability["hip3_proven"]) <= 3:
+        add(
+            f"> ## WARNING — only "
+            f"{tradability['native_proven'] + tradability['hip3_proven']} proven slice(s) "
+            f"trading (native {tradability['native_proven']}, "
+            f"hip3 {tradability['hip3_proven']}); "
+            f"{tradability['native_tradable'] + tradability['hip3_tradable']} slices are "
+            f"auditioning in frozen lanes. One bad proven trade from coma.\n"
+        )
 
     # ---- account / mode ----
     add("## 1. Posture\n")
     mode_rows = [r for r in _read_csv(DATA / "status.csv") if r.get("stage") == "guardian_ok"]
     if mode_rows:
         last = _load_detail(mode_rows[-1]["detail"])
-        add(f"- Mode: **{last.get('mode')}** | VALR equity: **{last.get('equity_zar')} ZAR** | "
-            f"high-water: **{last.get('high_water_zar')} ZAR**")
-        add(f"- Key perms: {', '.join(last.get('key_permissions') or [])} | perps API: "
-            f"{last.get('perps_api')} {('('+str(last.get('perp_state_error'))+')') if last.get('perp_state_error') else ''}")
+        add(
+            f"- Mode: **{last.get('mode')}** | VALR equity: **{last.get('equity_zar')} ZAR** | "
+            f"high-water: **{last.get('high_water_zar')} ZAR**"
+        )
+        add(
+            f"- Key perms: {', '.join(last.get('key_permissions') or [])} | perps API: "
+            f"{last.get('perps_api')} {('(' + str(last.get('perp_state_error')) + ')') if last.get('perp_state_error') else ''}"
+        )
         add(f"- risk_allowed: **{last.get('risk_allowed')}** reasons={last.get('risk_reasons')}\n")
     else:
         add("- No guardian_ok row found.\n")
@@ -318,12 +373,18 @@ def _report_text() -> str:
     paper_equity = equity_seed + lifetime
 
     add("## 2. Paper account\n")
-    add(f"- Equity: **{paper_equity:.2f} ZAR** (seed {equity_seed:.0f}) | lifetime: "
-        f"**{lifetime:+.2f} ZAR** | closed: {sum(p['closed'] for p in per_lane.values())}")
-    add(f"- Today: {recent['today']['native'][0] + recent['today']['hip3'][0]} closed, "
-        f"**{recent['today']['native'][1] + recent['today']['hip3'][1]:+.2f} ZAR**")
-    add(f"- 7d: **{recent['7d']['native'][1] + recent['7d']['hip3'][1]:+.2f} ZAR** | "
-        f"30d: **{recent['30d']['native'][1] + recent['30d']['hip3'][1]:+.2f} ZAR**\n")
+    add(
+        f"- Equity: **{paper_equity:.2f} ZAR** (seed {equity_seed:.0f}) | lifetime: "
+        f"**{lifetime:+.2f} ZAR** | closed: {sum(p['closed'] for p in per_lane.values())}"
+    )
+    add(
+        f"- Today: {recent['today']['native'][0] + recent['today']['hip3'][0]} closed, "
+        f"**{recent['today']['native'][1] + recent['today']['hip3'][1]:+.2f} ZAR**"
+    )
+    add(
+        f"- 7d: **{recent['7d']['native'][1] + recent['7d']['hip3'][1]:+.2f} ZAR** | "
+        f"30d: **{recent['30d']['native'][1] + recent['30d']['hip3'][1]:+.2f} ZAR**\n"
+    )
 
     # ---- per lane ----
     add("## 3. Lanes\n")
@@ -331,20 +392,34 @@ def _report_text() -> str:
         p = per_lane[lane]
         wr = (100 * p["wins"] / p["closed"]) if p["closed"] else 0.0
         add(f"### {lane.upper()}\n")
-        add(f"- Closed: {p['closed']} | wins: {p['wins']} | win%: {wr:.1f} | P&L: "
+        add(
+            f"- Closed: {p['closed']} | wins: {p['wins']} | win%: {wr:.1f} | P&L: "
             f"**{p['pnl']:+.2f} ZAR** | today: {recent['today'][lane][1]:+.2f} | "
-            f"7d: {recent['7d'][lane][1]:+.2f} | 30d: {recent['30d'][lane][1]:+.2f}")
+            f"7d: {recent['7d'][lane][1]:+.2f} | 30d: {recent['30d'][lane][1]:+.2f}"
+        )
         if p["by_exit"]:
-            by_exit = ", ".join(f"{k} {v:+.1f}" for k, v in sorted(p["by_exit"].items(), key=lambda kv: kv[1], reverse=True))
+            by_exit = ", ".join(
+                f"{k} {v:+.1f}"
+                for k, v in sorted(p["by_exit"].items(), key=lambda kv: kv[1], reverse=True)
+            )
             add(f"- By exit: {by_exit}")
         if p["by_regime"]:
-            by_reg = ", ".join(f"{k} {v[0]:.0f}/{v[1]:+.1f}" for k, v in sorted(p["by_regime"].items(), key=lambda kv: kv[1][1], reverse=True))
+            by_reg = ", ".join(
+                f"{k} {v[0]:.0f}/{v[1]:+.1f}"
+                for k, v in sorted(p["by_regime"].items(), key=lambda kv: kv[1][1], reverse=True)
+            )
             add(f"- By entry regime (n/pnl): {by_reg}")
         if p["by_slice"]:
             top = sorted(p["by_slice"].items(), key=lambda kv: kv[1][1], reverse=True)[:5]
             bot = sorted(p["by_slice"].items(), key=lambda kv: kv[1][1])[:5]
-            add("- Top slices: " + "; ".join(f"{k[:45]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in top))
-            add("- Worst slices: " + "; ".join(f"{k[:45]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in bot))
+            add(
+                "- Top slices: "
+                + "; ".join(f"{k[:45]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in top)
+            )
+            add(
+                "- Worst slices: "
+                + "; ".join(f"{k[:45]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in bot)
+            )
         if p["by_pair"]:
             top = sorted(p["by_pair"].items(), key=lambda kv: kv[1][1], reverse=True)[:5]
             bot = sorted(p["by_pair"].items(), key=lambda kv: kv[1][1])[:5]
@@ -362,15 +437,20 @@ def _report_text() -> str:
         total_open_risk += risk
         add(f"- **{lane.upper()}**: {len(rows)} open, stop-risk **{risk:.2f} ZAR**")
         for x in sorted(rows, key=lambda v: v["risk_zar"], reverse=True)[:6]:
-            add(f"  - {x.get('pair')} {x.get('side')} ntl={_num(x.get('notional_zar')):.0f} "
+            add(
+                f"  - {x.get('pair')} {x.get('side')} ntl={_num(x.get('notional_zar')):.0f} "
                 f"risk={x['risk_zar']:.2f} bars={x.get('bars_held')} "
-                f"stop={x.get('stop_price')} peak={x.get('peak_price')}")
+                f"stop={x.get('stop_price')} peak={x.get('peak_price')}"
+            )
         add("")
 
     # ---- aggregate risk ----
     add("## 5. Aggregate risk leash\n")
-    shadow_rows = [r for r in _read_csv(DATA / "status.csv")
-                   if r.get("stage") == "shadow_scan_done" and r.get("mode") == "shadow"]
+    shadow_rows = [
+        r
+        for r in _read_csv(DATA / "status.csv")
+        if r.get("stage") == "shadow_scan_done" and r.get("mode") == "shadow"
+    ]
     last_scan_ts = ""
     if shadow_rows:
         last = _load_detail(shadow_rows[-1]["detail"])
@@ -380,15 +460,19 @@ def _report_text() -> str:
         oc = _num(paper.get("aggregate_open_risk_zar"))
         util = _num(paper.get("aggregate_risk_utilization"))
         status = paper.get("aggregate_risk_status")
-        add(f"- Aggregate: **{oc:.2f} / {cap:.2f} ZAR | {100*util:.1f}% | {status}**")
-        add(f"- Remaining: {paper.get('aggregate_risk_remaining_zar')} | "
-            f"cap skips: {paper.get('aggregate_risk_cap_skips')} | unknown skips: {paper.get('aggregate_risk_unknown_skips')}")
+        add(f"- Aggregate: **{oc:.2f} / {cap:.2f} ZAR | {100 * util:.1f}% | {status}**")
+        add(
+            f"- Remaining: {paper.get('aggregate_risk_remaining_zar')} | "
+            f"cap skips: {paper.get('aggregate_risk_cap_skips')} | unknown skips: {paper.get('aggregate_risk_unknown_skips')}"
+        )
         add(f"- booked stats: {json.dumps(paper.get('book_stats'))}")
         hs = paper.get("highest_risk_position")
         if hs:
             add(f"- Highest-risk: **{hs.get('pair')}** {hs.get('risk_zar')} ZAR")
-        add(f"- positions without bars: {paper.get('positions_without_new_bars')} | "
-            f"replayed: {paper.get('replayed_bars')} | invalid: {paper.get('invalid_positions_quarantined')}")
+        add(
+            f"- positions without bars: {paper.get('positions_without_new_bars')} | "
+            f"replayed: {paper.get('replayed_bars')} | invalid: {paper.get('invalid_positions_quarantined')}"
+        )
         add("")
 
     # ---- books ----
@@ -398,29 +482,46 @@ def _report_text() -> str:
     add(f"- Native: {len(native_book)} | HIP-3: {len(hip3_book)}")
     add("- Native top (by paper P&L):")
     for r in _gate_top(native_book)[:8]:
-        add(f"  - `{r['slice_id']}` edge={r['mean_ret_costadj']:.4f} n={r['n']} p={r['p_value']:.4f} "
-            f"src={r['source']} unproven={r['hostile_unproven']} paper={r['paper_trades']}n/{r['paper_pnl_zar']:+.2f}")
+        add(
+            f"  - `{r['slice_id']}` edge={r['mean_ret_costadj']:.4f} n={r['n']} p={r['p_value']:.4f} "
+            f"src={r['source']} unproven={r['hostile_unproven']} paper={r['paper_trades']}n/{r['paper_pnl_zar']:+.2f}"
+        )
     add("- HIP-3 top (by paper P&L):")
     for r in _gate_top(hip3_book)[:8]:
-        add(f"  - `{r['slice_id']}` edge={r['mean_ret_costadj']:.4f} n={r['n']} p={r['p_value']:.4f} "
-            f"src={r['source']} unproven={r['hostile_unproven']} paper={r['paper_trades']}n/{r['paper_pnl_zar']:+.2f}")
+        add(
+            f"  - `{r['slice_id']}` edge={r['mean_ret_costadj']:.4f} n={r['n']} p={r['p_value']:.4f} "
+            f"src={r['source']} unproven={r['hostile_unproven']} paper={r['paper_trades']}n/{r['paper_pnl_zar']:+.2f}"
+        )
     add("")
 
     # ---- HIP-3 gate ----
     add("## 7. HIP-3 live gate\n")
-    hip3_actual = [r for r in trade_rows
-                   if _lane(r.get("slice_id")) == "hip3" and str(r.get("outcome") or "") in {"win", "loss"}
-                   and str(r.get("exit_reason") or "") in ACTUAL_EXITS]
+    hip3_actual = [
+        r
+        for r in trade_rows
+        if _lane(r.get("slice_id")) == "hip3"
+        and str(r.get("outcome") or "") in {"win", "loss"}
+        and str(r.get("exit_reason") or "") in ACTUAL_EXITS
+    ]
     hip3_pnl = sum(_num(r.get("pnl_zar")) for r in hip3_actual)
-    cf_rows = [r for r in _read_csv(DATA / "research" / "paper_counterfactual_log.csv")
-               if _lane(r.get("slice_id")) == "hip3"]
-    add(f"- Closed paper trades: **{len(hip3_actual)}/50** | ghost rows: **{len(cf_rows)}/50** | "
-        f"PnL: **{hip3_pnl:+.2f} ZAR**")
-    add(f"- Gate verdict: {'**READY**' if len(hip3_actual) >= 50 and len(cf_rows) >= 50 and hip3_pnl > 0 else '**NOT READY**'}")
+    cf_rows = [
+        r
+        for r in _read_csv(DATA / "research" / "paper_counterfactual_log.csv")
+        if _lane(r.get("slice_id")) == "hip3"
+    ]
+    add(
+        f"- Closed paper trades: **{len(hip3_actual)}/50** | ghost rows: **{len(cf_rows)}/50** | "
+        f"PnL: **{hip3_pnl:+.2f} ZAR**"
+    )
+    add(
+        f"- Gate verdict: {'**READY**' if len(hip3_actual) >= 50 and len(cf_rows) >= 50 and hip3_pnl > 0 else '**NOT READY**'}"
+    )
     hip3_gate = _read_json(DATA / "hip3" / "hip3_gate.json", {})
     if hip3_gate:
-        add(f"- hip3_gate.json: paper_ready={hip3_gate.get('paper_ready')} live_ready={hip3_gate.get('live_ready')} "
-            f"book_frozen={hip3_gate.get('book_frozen')} book_rows={hip3_gate.get('book_rows')}")
+        add(
+            f"- hip3_gate.json: paper_ready={hip3_gate.get('paper_ready')} live_ready={hip3_gate.get('live_ready')} "
+            f"book_frozen={hip3_gate.get('book_frozen')} book_rows={hip3_gate.get('book_rows')}"
+        )
         add(f"- live unresolved: {', '.join(hip3_gate.get('live_unresolved') or [])}")
     add("")
 
@@ -429,34 +530,46 @@ def _report_text() -> str:
     research_rows = [r for r in _read_csv(DATA / "status.csv") if r.get("stage") == "research_done"]
     if research_rows:
         last = _load_detail(research_rows[-1]["detail"])
-        add(f"- Latest research: {last.get('server_time')} | discovered {last.get('discovered_slices')} | "
+        add(
+            f"- Latest research: {last.get('server_time')} | discovered {last.get('discovered_slices')} | "
             f"validated {last.get('validated_slices')} | reg-confounded {last.get('regime_confounded_slices')} | "
-            f"hostile-unproven {last.get('hostile_unproven_slices')}")
-        add(f"- floors: {json.dumps(last.get('book', {}).get('net_edge_floor_enter_bps'))} | "
-            f"book: {json.dumps(last.get('book'))}")
+            f"hostile-unproven {last.get('hostile_unproven_slices')}"
+        )
+        add(
+            f"- floors: {json.dumps(last.get('book', {}).get('net_edge_floor_enter_bps'))} | "
+            f"book: {json.dumps(last.get('book'))}"
+        )
         short_audit = last.get("short_audit") or _short_audit_from_files()
         if short_audit:
-            add(f"- Short audit: discovered={short_audit.get('shorts_discovered')} "
+            add(
+                f"- Short audit: discovered={short_audit.get('shorts_discovered')} "
                 f"validated={short_audit.get('shorts_validated')} passing={short_audit.get('shorts_passing')} "
                 f"eligible={short_audit.get('shorts_eligible')} best={short_audit.get('best_short_edge_bps')}b "
-                f"best_fail={short_audit.get('best_failing_short_fail_reasons')}")
+                f"best_fail={short_audit.get('best_failing_short_fail_reasons')}"
+            )
         add(f"- pair_errors: {json.dumps(last.get('pair_errors'))}")
     deep = _read_json(DATA / "deep_audit" / "summary.json", {})
     if deep:
         audit_rows = _read_csv(DATA / "deep_audit" / "candidates.csv")
         audit_pass = sum(1 for r in audit_rows if str(r.get("audit_pass") or "").strip() == "True")
-        prelim_pass = sum(1 for r in audit_rows if str(r.get("preliminary_pass") or "").strip() == "True")
-        add(f"- Deep audit: candidates={deep.get('candidates')} preliminary_passes={prelim_pass} "
+        prelim_pass = sum(
+            1 for r in audit_rows if str(r.get("preliminary_pass") or "").strip() == "True"
+        )
+        add(
+            f"- Deep audit: candidates={deep.get('candidates')} preliminary_passes={prelim_pass} "
             f"audit_passes={audit_pass} plateaus={deep.get('families_with_plateaus')} "
-            f"fetch_errors={deep.get('fetch_error_count')}")
+            f"fetch_errors={deep.get('fetch_error_count')}"
+        )
     add("")
 
     # ---- promotion / live readiness ----
     add("## 9. Live readiness checks\n")
     registry = _read_json(DATA / "promotion_registry.json", {})
     strategies = (registry or {}).get("strategies") or {}
-    add(f"- Promotion registry strategies: **{len(strategies)}** | "
-        f"live_capped: {sum(1 for v in strategies.values() if v.get('lifecycle') == 'live_capped')}")
+    add(
+        f"- Promotion registry strategies: **{len(strategies)}** | "
+        f"live_capped: {sum(1 for v in strategies.values() if v.get('lifecycle') == 'live_capped')}"
+    )
     live = {
         "1 live HL executor": "NOT PRESENT - hyperliquid.py is read-only; no mainnet signer",
         "2 mechanism canary": "NOT RUN - no testnet agent key / no signed action",
@@ -475,15 +588,21 @@ def _report_text() -> str:
     regime_state = _read_json(DATA / "research" / "regime_state.json", {})
     if regime_state:
         breadth = regime_state.get("breadth") or {}
-        add(f"- Label: **{regime_state.get('label')}** | breadth bear={breadth.get('bear')} "
+        add(
+            f"- Label: **{regime_state.get('label')}** | breadth bear={breadth.get('bear')} "
             f"bull={breadth.get('bull')} neutral={breadth.get('neutral')} | "
-            f"symbols={regime_state.get('bear', 0) + regime_state.get('bull', 0) + regime_state.get('neutral', 0)}")
-        add(f"- confirmed_bear: **{regime_state.get('confirmed_bear')}** | "
+            f"symbols={regime_state.get('bear', 0) + regime_state.get('bull', 0) + regime_state.get('neutral', 0)}"
+        )
+        add(
+            f"- confirmed_bear: **{regime_state.get('confirmed_bear')}** | "
             f"confirmed_bull: **{regime_state.get('confirmed_bull')}** | "
             f"flip: **{regime_state.get('flip')}** | flipped_from: {regime_state.get('flipped_from')} | "
-            f"consecutive_bear: {regime_state.get('consecutive_bear')} / bull {regime_state.get('consecutive_bull')}")
+            f"consecutive_bear: {regime_state.get('consecutive_bear')} / bull {regime_state.get('consecutive_bull')}"
+        )
         add(f"- as_of: {regime_state.get('as_of')}")
-        add(f"- Defensive gate: {'ON (wrong-direction entries blocked & opposite exits armed)' if regime_state.get('confirmed_bear') or regime_state.get('confirmed_bull') else 'off (no confirmed flip)'}")
+        add(
+            f"- Defensive gate: {'ON (wrong-direction entries blocked & opposite exits armed)' if regime_state.get('confirmed_bear') or regime_state.get('confirmed_bull') else 'off (no confirmed flip)'}"
+        )
     else:
         add("- No regime_state.json yet (first paper cycle since the tracker was added).")
     add("")
@@ -491,10 +610,14 @@ def _report_text() -> str:
     add("## 11. Short inventory\n")
     short_inv = _read_json(DATA / "research" / "short_inventory.json", {})
     if short_inv:
-        add(f"- confirmed_bear: **{short_inv.get('confirmed_bear')}** | "
-            f"promote_env: {'ON' if short_inv.get('promote_enabled') else 'OFF'}")
-        add(f"- candidates: {short_inv.get('candidates')} | eligible: {short_inv.get('eligible')} | "
-            f"observations: {short_inv.get('observations')} | armable: **{short_inv.get('armable')}**")
+        add(
+            f"- confirmed_bear: **{short_inv.get('confirmed_bear')}** | "
+            f"promote_env: {'ON' if short_inv.get('promote_enabled') else 'OFF'}"
+        )
+        add(
+            f"- candidates: {short_inv.get('candidates')} | eligible: {short_inv.get('eligible')} | "
+            f"observations: {short_inv.get('observations')} | armable: **{short_inv.get('armable')}**"
+        )
         if short_inv.get("armable_slices"):
             add(f"- Armable slices: {', '.join(short_inv.get('armable_slices') or [])}")
             add(f"- Armable pairs: {', '.join(short_inv.get('armable_pairs') or [])}")
@@ -502,15 +625,19 @@ def _report_text() -> str:
             add("- No armable short today (no validated SHORT slice clears the floor).")
         for cand in (short_inv.get("candidates_sample") or [])[:6]:
             armable, reason = cand.get("armable") or [False, ""]
-            add(f"  - `{cand.get('slice_id')}` edge={cand.get('edge_bps')}b n={cand.get('n')} "
+            add(
+                f"  - `{cand.get('slice_id')}` edge={cand.get('edge_bps')}b n={cand.get('n')} "
                 f"breadth={cand.get('breadth')} validated={cand.get('validated')} "
-                f"prov={cand.get('provisional')} armable={armable} ({reason})")
+                f"prov={cand.get('provisional')} armable={armable} ({reason})"
+            )
     hip3_short_audit = _hip3_short_audit()
     if hip3_short_audit:
-        add(f"- HIP-3 short evidence: discovered={hip3_short_audit.get('shorts_discovered')} "
+        add(
+            f"- HIP-3 short evidence: discovered={hip3_short_audit.get('shorts_discovered')} "
             f"validated={hip3_short_audit.get('shorts_validated')} passing={hip3_short_audit.get('shorts_passing')} "
             f"eligible={hip3_short_audit.get('shorts_eligible')} best={hip3_short_audit.get('best_short_edge_bps')}b "
-            f"best_fail={hip3_short_audit.get('best_failing_short_fail_reasons')}")
+            f"best_fail={hip3_short_audit.get('best_failing_short_fail_reasons')}"
+        )
     else:
         add("- No HIP-3 short evidence file.")
     if not short_inv:
@@ -524,12 +651,16 @@ def _report_text() -> str:
         if gate.enabled:
             native = gate.native
             hip3 = gate.hip3
-            add(f"- Native lane: **{'GREEN' if gate.native_green else 'RED'}** | "
+            add(
+                f"- Native lane: **{'GREEN' if gate.native_green else 'RED'}** | "
                 f"closed={native.closed} pnl={native.pnl:+.2f} | "
-                f"frozen={'YES' if 'native' in gate.frozen_lanes else 'NO'}")
-            add(f"- HIP-3 lane: **{'GREEN' if gate.hip3_green else 'RED'}** | "
+                f"frozen={'YES' if 'native' in gate.frozen_lanes else 'NO'}"
+            )
+            add(
+                f"- HIP-3 lane: **{'GREEN' if gate.hip3_green else 'RED'}** | "
                 f"closed={hip3.closed} pnl={hip3.pnl:+.2f} | "
-                f"frozen={'YES' if 'hip3' in gate.frozen_lanes else 'NO'}")
+                f"frozen={'YES' if 'hip3' in gate.frozen_lanes else 'NO'}"
+            )
             add(f"- Frozen lanes: {', '.join(sorted(gate.frozen_lanes)) or 'none'}")
             add(f"- Green islands kept alive inside red lanes: {len(gate.green_islands)}")
             for sid, pnl in gate.green_islands.items():
@@ -537,13 +668,19 @@ def _report_text() -> str:
             if tradability:
                 native_book_n = len(_book_rows(DATA / "research" / "monitored_slices.csv"))
                 hip3_book_n = len(_book_rows(DATA / "hip3" / "research" / "monitored_slices.csv"))
-                add(f"- Tradable slices: native **{tradability['native_tradable']}/{native_book_n}** | "
-                    f"hip3 **{tradability['hip3_tradable']}/{hip3_book_n}**")
+                add(
+                    f"- Tradable slices: native **{tradability['native_tradable']}/{native_book_n}** | "
+                    f"hip3 **{tradability['hip3_tradable']}/{hip3_book_n}**"
+                )
                 if tradability["coma"]:
-                    add(f"- **COMA LANES: {', '.join(tradability['coma_lanes'])}** — frozen with zero "
-                        f"tradable slices; cannot earn its way out.")
-            add("- Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new "
-                "entries only; open positions run to their own stop/target/horizon.")
+                    add(
+                        f"- **COMA LANES: {', '.join(tradability['coma_lanes'])}** — frozen with zero "
+                        f"tradable slices; cannot earn its way out."
+                    )
+            add(
+                "- Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new "
+                "entries only; open positions run to their own stop/target/horizon."
+            )
             add(f"- Slice blocks: {len(gate.blocked_slices)}")
             top = sorted(gate.blocked_slices.items(), key=lambda kv: kv[0])[:8]
             for sid, reason in top:
@@ -558,12 +695,16 @@ def _report_text() -> str:
     last_scan = shadow_rows[-1] if shadow_rows else None
     if last_scan:
         d = _load_detail(last_scan["detail"])
-        add(f"- Latest scan {last_scan_ts or '?'}: errors={d.get('errors')} signals={d.get('signals')} "
-            f"regime_blocked={d.get('regime_blocked')}")
+        add(
+            f"- Latest scan {last_scan_ts or '?'}: errors={d.get('errors')} signals={d.get('signals')} "
+            f"regime_blocked={d.get('regime_blocked')}"
+        )
         paper = d.get("paper") or {}
-        add(f"- this cycle: closed={paper.get('closed')} new_signals={paper.get('new_signals')} "
+        add(
+            f"- this cycle: closed={paper.get('closed')} new_signals={paper.get('new_signals')} "
             f"skipped={paper.get('skipped')} slot_full={paper.get('slot_full')} "
-            f"slice_full={paper.get('slice_full')} pair_held={paper.get('pair_held')}")
+            f"slice_full={paper.get('slice_full')} pair_held={paper.get('pair_held')}"
+        )
         add_funnel = [
             ("regime_blocked", d.get("regime_blocked")),
             ("lane_gate_blocked", d.get("lane_gate_blocked") or paper.get("lane_gate_blocked")),
@@ -578,23 +719,31 @@ def _report_text() -> str:
         if active:
             add("- Action funnel: " + " | ".join(f"{k}={v}" for k, v in active))
         if d.get("no_action_reason"):
-            add(f"- **NO ACTION:** dominant blocker = `{d.get('no_action_reason')}` "
-                f"(funnel={json.dumps(d.get('no_action_funnel'))})")
+            add(
+                f"- **NO ACTION:** dominant blocker = `{d.get('no_action_reason')}` "
+                f"(funnel={json.dumps(d.get('no_action_funnel'))})"
+            )
         if d.get("green_gate"):
             gg = d["green_gate"]
-            add(f"- green_gate: native_green={gg.get('native_green')} hip3_green={gg.get('hip3_green')} "
+            add(
+                f"- green_gate: native_green={gg.get('native_green')} hip3_green={gg.get('hip3_green')} "
                 f"frozen={','.join(gg.get('frozen_lanes') or []) or 'none'} "
-                f"islands={len(gg.get('green_islands') or {})} blocks={len(gg.get('blocked_slices') or {})}")
+                f"islands={len(gg.get('green_islands') or {})} blocks={len(gg.get('blocked_slices') or {})}"
+            )
         agg = paper.get("aggregate_risk_status")
         if agg:
-            add(f"- aggregate_risk: {agg} open={paper.get('aggregate_risk_start_zar')} "
+            add(
+                f"- aggregate_risk: {agg} open={paper.get('aggregate_risk_start_zar')} "
                 f"cap={paper.get('aggregate_risk_cap_zar')} used={paper.get('aggregate_risk_utilization')} "
                 f"remaining={paper.get('aggregate_risk_remaining_zar')} "
-                f"replayed={paper.get('replayed_bars')} no_new_bars={paper.get('positions_without_new_bars')}")
+                f"replayed={paper.get('replayed_bars')} no_new_bars={paper.get('positions_without_new_bars')}"
+            )
         add(f"- pair_errors: {json.dumps(d.get('pair_errors'))}")
     add("")
 
-    add("---\n_Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._\n")
+    add(
+        "---\n_Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._\n"
+    )
     return "\n".join(lines)
 
 

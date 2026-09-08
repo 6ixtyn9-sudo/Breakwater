@@ -75,7 +75,10 @@ from pathlib import Path
 from typing import Iterable
 
 GREEN_GATE_ENABLED = str(os.getenv("BREAKWATER_GREEN_GATE", "1")).strip().lower() in {
-    "1", "true", "yes", "on",
+    "1",
+    "true",
+    "yes",
+    "on",
 }
 LANE_MIN_CLOSED = int(os.getenv("BREAKWATER_GREEN_LANE_MIN_CLOSED", "10"))
 # A slice is judged non-green only after enough closed trades to mean something.
@@ -83,14 +86,29 @@ LANE_MIN_CLOSED = int(os.getenv("BREAKWATER_GREEN_LANE_MIN_CLOSED", "10"))
 # a slice that was merely unlucky. The paper engine already uses 3 as its
 # losing-slice threshold; the green gate must not be tighter or it zeroes action.
 SLICE_MIN_CLOSED = int(os.getenv("BREAKWATER_GREEN_SLICE_MIN_CLOSED", "3"))
+
+# 20 closes is ~4 days at current throughput: long enough to be a verdict,
+# short enough that a lane which stops losing is allowed to trade again.
+LANE_WINDOW = 20
 # A slice inside a non-green lane can keep trading only when it is an
 # individually proven green island (enough closed trades at positive P&L).
 GREEN_ISLAND_MIN_CLOSED = int(os.getenv("BREAKWATER_GREEN_ISLAND_MIN_CLOSED", "3"))
 
+PROBE_UNTESTED = True
+
 # Exits that count as real closed trades when judging whether a lane/slice has
 # printed money. Guard rows (regime/risk/session aggregates with no pnl) and
 # generic "skipped" rows must not pollute the money signal.
-ACTUAL_EXITS = {"stop", "trail_stop", "target", "horizon", "rotated", "time_stop", "regime_shift", "lane_gate"}
+ACTUAL_EXITS = {
+    "stop",
+    "trail_stop",
+    "target",
+    "horizon",
+    "rotated",
+    "time_stop",
+    "regime_shift",
+    "lane_gate",
+}
 _MISSING = object()
 
 
@@ -167,6 +185,10 @@ class GreenGate:
         lane = _lane(slice_id)
         if lane not in self.frozen_lanes:
             return True
+        if PROBE_UNTESTED:
+            stats = self.slices.get(str(slice_id))
+            if stats is None or stats.closed < SLICE_MIN_CLOSED:
+                return True
         return str(slice_id) in self.green_islands
 
     # FORCED LIQUIDATION IS RETIRED (2026-09-08). ``should_exit()`` used to live
@@ -181,7 +203,11 @@ class GreenGate:
         """Slices kept alive inside a non-green lane (provable gainers)."""
         out: dict[str, float] = {}
         for slice_id, stats in self.slices.items():
-            if _lane(slice_id) in self.frozen_lanes and stats.closed >= GREEN_ISLAND_MIN_CLOSED and stats.pnl > 0:
+            if (
+                _lane(slice_id) in self.frozen_lanes
+                and stats.closed >= GREEN_ISLAND_MIN_CLOSED
+                and stats.pnl > 0
+            ):
                 out[slice_id] = round(stats.pnl, 4)
         return dict(sorted(out.items()))
 
@@ -216,11 +242,9 @@ class GreenGate:
 
 
 def _aggregate(rows: Iterable[dict]) -> tuple[LaneStats, LaneStats, dict[str, SliceStats]]:
-    lane_counts = {
-        "native": {"closed": 0, "pnl": 0.0, "wins": 0, "losses": 0},
-        "hip3": {"closed": 0, "pnl": 0.0, "wins": 0, "losses": 0},
-    }
+    """Lifetime stats per slice; lane stats over the last LANE_WINDOW closes."""
     slice_counts: dict[str, dict] = {}
+    lane_rows: dict[str, list] = {"native": [], "hip3": []}
 
     # First pass per row keeps the association between a real exit and its slice.
     for row in rows:
@@ -230,22 +254,32 @@ def _aggregate(rows: Iterable[dict]) -> tuple[LaneStats, LaneStats, dict[str, Sl
         lane = _lane(slice_id)
         pnl = _as_float(row.get("pnl_zar"))
         outcome = str(row.get("outcome") or "").strip()
-        entry = slice_counts.setdefault(
-            slice_id, {"closed": 0, "pnl": 0.0, "wins": 0, "losses": 0}
-        )
-        for bucket in (lane_counts[lane], entry):
-            bucket["closed"] += 1
-            bucket["pnl"] += pnl
-            if outcome == "win":
-                bucket["wins"] += 1
-            elif outcome == "loss":
-                bucket["losses"] += 1
+        entry = slice_counts.setdefault(slice_id, {"closed": 0, "pnl": 0.0, "wins": 0, "losses": 0})
+        entry["closed"] += 1
+        entry["pnl"] += pnl
+        if outcome == "win":
+            entry["wins"] += 1
+        elif outcome == "loss":
+            entry["losses"] += 1
+        if lane in lane_rows:
+            lane_rows[lane].append((pnl, outcome))
 
-    native = lane_counts["native"]
-    hip3 = lane_counts["hip3"]
+    def lane_stats(lane: str) -> dict:
+        # The log is append-only and ordered by close time, so the tail is the
+        # recent record. Slicing the tail is the whole fix.
+        closes = lane_rows[lane]
+        if LANE_WINDOW > 0:
+            closes = closes[-LANE_WINDOW:]
+        return {
+            "closed": len(closes),
+            "pnl": sum(value for value, _ in closes),
+            "wins": sum(1 for _, outcome in closes if outcome == "win"),
+            "losses": sum(1 for _, outcome in closes if outcome == "loss"),
+        }
+
     return (
-        LaneStats(**native),
-        LaneStats(**hip3),
+        LaneStats(**lane_stats("native")),
+        LaneStats(**lane_stats("hip3")),
         {key: SliceStats(**value) for key, value in slice_counts.items()},
     )
 
@@ -283,15 +317,13 @@ def compute_green_gate(log_path: Path) -> GreenGate:
         # red lane so the lane can keep printing green from its one working
         # slice while every non-green member is frozen.
         is_green_island = (
-            lane in frozen_lanes
-            and stats.closed >= GREEN_ISLAND_MIN_CLOSED
-            and stats.pnl > 0
+            lane in frozen_lanes and stats.closed >= GREEN_ISLAND_MIN_CLOSED and stats.pnl > 0
         )
         if lane in frozen_lanes:
             # Red lane: nothing trades unless it is a proven green island.
             # An untested or negative slice is frozen; stopping this is the
             # whole point of a red lane.
-            if not is_green_island:
+            if not is_green_island and not (PROBE_UNTESTED and stats.closed < SLICE_MIN_CLOSED):
                 blocked_slices[slice_id] = "lane_not_green"
             continue
         # Warm-up or green lane: an untested slice (0-2 closes) is free to earn
@@ -332,14 +364,29 @@ def lane_tradability(
     """
     native = sorted({str(s) for s in native_book_ids if gate.green(s)})
     hip3 = sorted({str(s) for s in hip3_book_ids if gate.green(s)})
+
+    def proven(lane: str, allowed: list[str]) -> int:
+        """Slices trading on a record they have already earned.
+
+        Inside a frozen lane the only proven slices are green islands; elsewhere
+        admitted == proven. Audition slots from PROBE_UNTESTED are excluded on
+        purpose: they are evidence-gathering, not evidence. If alarms counted
+        them, a lane kept alive only by new ideas would read as healthy.
+        """
+        if lane in gate.frozen_lanes:
+            return sum(1 for slice_id in allowed if slice_id in gate.green_islands)
+        return len(allowed)
+
     coma = sorted(
         lane
-        for lane, tradable in (("native", native), ("hip3", hip3))
-        if lane in gate.frozen_lanes and not tradable
+        for lane, allowed in (("native", native), ("hip3", hip3))
+        if lane in gate.frozen_lanes and proven(lane, allowed) == 0
     )
     return {
         "native_tradable": len(native),
         "hip3_tradable": len(hip3),
+        "native_proven": proven("native", native),
+        "hip3_proven": proven("hip3", hip3),
         "native_tradable_slices": native,
         "hip3_tradable_slices": hip3,
         "coma_lanes": coma,

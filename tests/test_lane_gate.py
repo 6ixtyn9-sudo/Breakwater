@@ -17,7 +17,12 @@ from breakwater.lane_gate import (
 def _write_log(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = [
-        "slice_id", "pair", "outcome", "exit_reason", "pnl_zar", "closed_at",
+        "slice_id",
+        "pair",
+        "outcome",
+        "exit_reason",
+        "pnl_zar",
+        "closed_at",
     ]
     with open(path, "w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
@@ -40,8 +45,7 @@ def _row(slice_id, pnl, *, outcome="win", reason="target"):
 def test_native_green_hip3_frozen(tmp_path):
     log = tmp_path / "paper_trade_log.csv"
     rows = [_row(f"native:{i}", 1.0) for i in range(15)] + [
-        _row("hip3_xyz:feat_a", -2.0, outcome="loss", reason="stop")
-        for _ in range(12)
+        _row("hip3_xyz:feat_a", -2.0, outcome="loss", reason="stop") for _ in range(12)
     ]
     _write_log(log, rows)
     gate = compute_green_gate(log)
@@ -63,16 +67,15 @@ def test_green_island_survives_red_lane(tmp_path):
     log = tmp_path / "paper_trade_log.csv"
     green_slice = "hip3_xyz:good"
     red_slice = "hip3_xyz:red"
-    rows = [
-        _row(f"native:{i}", 1.0) for i in range(15)
-    ] + [
-        _row(green_slice, 2.0, reason="target"),
-        _row(green_slice, 1.5, reason="trail_stop"),
-        _row(green_slice, 1.0, reason="target"),
-    ] + [
-        _row(red_slice, -5.0, outcome="loss", reason="stop")
-        for _ in range(7)
-    ]
+    rows = (
+        [_row(f"native:{i}", 1.0) for i in range(15)]
+        + [
+            _row(green_slice, 2.0, reason="target"),
+            _row(green_slice, 1.5, reason="trail_stop"),
+            _row(green_slice, 1.0, reason="target"),
+        ]
+        + [_row(red_slice, -5.0, outcome="loss", reason="stop") for _ in range(7)]
+    )
     _write_log(log, rows)
     gate = compute_green_gate(log)
     # Native is green; HIP-3 has 10 closes total but is red overall.
@@ -84,7 +87,10 @@ def test_green_island_survives_red_lane(tmp_path):
     assert green_slice in gate.green_islands
     # Negative and untested HIP-3 slices are frozen.
     assert gate.green(red_slice) is False
-    assert gate.green("hip3_xyz:untested") is False
+    # An untested slice is admitted on purpose: a frozen lane that admits only
+    # islands can never test a new idea, so it can never rebuild its record.
+    # It is an audition, not a verdict - see native_proven below.
+    assert gate.green("hip3_xyz:untested") is True
 
 
 def test_cold_start_lane_is_warmup_not_frozen(tmp_path):
@@ -177,11 +183,15 @@ def test_filter_green_book_rows(tmp_path):
         {"slice_id": "native:good", "status": "monitored"},
         {"slice_id": "native:blocked", "status": "monitored"},
     ]
-    _write_log(log, [_row(f"native:{i}", 1.0) for i in range(25)] + [
-        _row("native:blocked", -1.0, outcome="loss", reason="stop"),
-        _row("native:blocked", -1.0, outcome="loss", reason="stop"),
-        _row("native:blocked", -1.0, outcome="loss", reason="stop"),
-    ])
+    _write_log(
+        log,
+        [_row(f"native:{i}", 1.0) for i in range(25)]
+        + [
+            _row("native:blocked", -1.0, outcome="loss", reason="stop"),
+            _row("native:blocked", -1.0, outcome="loss", reason="stop"),
+            _row("native:blocked", -1.0, outcome="loss", reason="stop"),
+        ],
+    )
     gate = compute_green_gate(log)
     allowed, blocked = filter_green_book_rows(rows, gate)
     assert [r["slice_id"] for r in allowed] == ["native:good"]
@@ -200,8 +210,7 @@ def test_forced_liquidation_is_retired(tmp_path):
     """
     log = tmp_path / "paper_trade_log.csv"
     rows = [_row(f"native:{i}", 1.0) for i in range(15)] + [
-        _row("hip3_xyz:feat_a", -2.0, outcome="loss", reason="stop")
-        for _ in range(12)
+        _row("hip3_xyz:feat_a", -2.0, outcome="loss", reason="stop") for _ in range(12)
     ]
     _write_log(log, rows)
     gate = compute_green_gate(log)
@@ -223,11 +232,13 @@ def test_lane_gate_historical_rows_stay_countable():
 
 
 def test_coma_lane_is_reported(tmp_path):
-    """A frozen lane with zero tradable slices is an absorbing state.
+    """A frozen lane with no proven slice is the state to shout about.
 
-    No entry can open -> no close can print -> cumulative P&L can never rise
-    -> the lane can never unfreeze. That is death, not quiet, and it must be
-    reported loudly rather than sitting behind a green "operational" runner.
+    Audition slots mean a frozen lane is rarely unable to trade, so "zero
+    tradable" is no longer the alarm. A lane trading only on slices that have
+    never earned anything is the modern form of the same trap: activity without
+    accumulated evidence. It must be reported loudly rather than sitting behind
+    a green "operational" runner.
     """
     log = tmp_path / "paper_trade_log.csv"
     rows = [_row("native:a", -2.0, outcome="loss", reason="stop") for _ in range(12)]
@@ -238,7 +249,8 @@ def test_coma_lane_is_reported(tmp_path):
     # Book full of slices, none of which is a green island -> coma.
     book = [f"native:s{i}" for i in range(20)]
     report = lane_tradability(gate, book, [])
-    assert report["native_tradable"] == 0
+    assert report["native_proven"] == 0  # nothing earned a record
+    assert report["native_tradable"] == 20  # all 20 are auditions
     assert report["coma_lanes"] == ["native"]
     assert report["coma"] is True
 
@@ -247,19 +259,19 @@ def test_tradable_island_prevents_coma_but_is_counted(tmp_path):
     """One surviving green island is the difference between frozen and dead."""
     log = tmp_path / "paper_trade_log.csv"
     island = "native:island"
-    rows = (
-        [_row("native:a", -2.0, outcome="loss", reason="stop") for _ in range(12)]
-        + [_row(island, 3.0, reason="target") for _ in range(4)]
-    )
+    rows = [_row("native:a", -2.0, outcome="loss", reason="stop") for _ in range(12)] + [
+        _row(island, 3.0, reason="target") for _ in range(4)
+    ]
     _write_log(log, rows)
     gate = compute_green_gate(log)
     assert "native" in gate.frozen_lanes
 
     book = ["native:a", "native:b", island]
     report = lane_tradability(gate, book, [])
-    # Only the island may trade; the other two are blocked.
-    assert report["native_tradable"] == 1
-    assert report["native_tradable_slices"] == [island]
+    # Only the island is proven; native:a is blocked on its record and native:b
+    # is admitted as an audition, so tradable and proven now differ.
+    assert report["native_proven"] == 1
+    assert report["native_tradable_slices"] == ["native:b", island]
     # Not coma yet - but this is the one-bad-trade-from-death state.
     assert report["coma_lanes"] == []
     assert report["coma"] is False
@@ -274,3 +286,49 @@ def test_no_coma_when_lane_is_not_frozen(tmp_path):
     report = lane_tradability(gate, ["native:a"], ["hip3_:x"])
     assert report["native_tradable"] == 1
     assert report["coma"] is False
+
+
+def test_lane_window_lets_a_recovered_lane_resume(tmp_path, monkeypatch):
+    """A deep old hole must not freeze a lane forever (absorbing state)."""
+    from breakwater import lane_gate
+
+    rows = [_row("feat_a:0:LONG:h24", -20.0, outcome="loss", reason="stop")] * 6
+    rows += [_row("feat_a:0:LONG:h24", 5.0) for _ in range(12)]
+    log = tmp_path / "paper_trade_log.csv"
+    _write_log(log, rows)
+
+    monkeypatch.setattr(lane_gate, "LANE_WINDOW", 0)
+    assert "native" in compute_green_gate(log).frozen_lanes
+
+    monkeypatch.setattr(lane_gate, "LANE_WINDOW", 10)
+    gate = compute_green_gate(log)
+    assert "native" not in gate.frozen_lanes
+    assert gate.native.pnl == 50.0
+    assert gate.native.closed == 10
+
+
+def test_coma_still_fires_when_only_probes_are_tradable(tmp_path):
+    """The probe allowance must not silence the absorbing-state alarm."""
+    rows = []
+    for index in range(6):
+        rows += [_row(f"feat_p{index}:0:LONG:h24", -5.0, outcome="loss", reason="stop")] * 2
+    log = tmp_path / "paper_trade_log.csv"
+    _write_log(log, rows)
+
+    gate = compute_green_gate(log)
+    assert "native" in gate.frozen_lanes
+    ids = [f"feat_p{index}:0:LONG:h24" for index in range(6)]
+    report = lane_tradability(gate, ids, [])
+    assert report["native_tradable"] == 6
+    assert report["coma_lanes"] == ["native"]
+
+
+def test_gate_semantics_are_hardcoded_not_configurable():
+    """The lane fix is behaviour, not a knob - nothing may make it optional again."""
+    from breakwater import lane_gate
+
+    assert lane_gate.LANE_WINDOW >= 10, "a frozen lane must be able to recover"
+    assert lane_gate.PROBE_UNTESTED is True, "untested slices must be able to audition"
+    source = Path(lane_gate.__file__).read_text()
+    for forbidden in ("BREAKWATER_GREEN_LANE_WINDOW", "BREAKWATER_GREEN_PROBE_UNTESTED"):
+        assert forbidden not in source, f"{forbidden} came back as a knob"
