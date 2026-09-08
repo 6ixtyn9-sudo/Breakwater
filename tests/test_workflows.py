@@ -43,6 +43,9 @@ def test_only_private_values_use_actions_secrets():
         "VALR_API_KEY",
         "VALR_API_SECRET",
         "BREAKWATER_MANDATE_JSON",
+        # A ping URL is a capability: whoever holds it can fake "alive" and mask
+        # an outage, so it is a Secret rather than a Variable.
+        "BREAKWATER_HEARTBEAT_URL",
     }
 
 

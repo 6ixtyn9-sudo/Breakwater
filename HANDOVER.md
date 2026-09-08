@@ -788,6 +788,12 @@ Cron (cron-job.org, SAST): paper :00/:30; guardian :25/:55; research
 daily 02:10 (stamps ~02:25); hip3-research daily 03:45. Filenames are the API - never
 rename (section 9).
 
+Heartbeat (dead-man): every successful state push pings BREAKWATER_HEARTBEAT_URL.
+The monitor alarms on SILENCE, not failure - cron-job.org reports "Successful (2s)"
+for the POST alone, so it can never tell you a cycle did not run. Period 1h + grace
+15min ~ 2 missed cycles of either job. Secrets are the right home for the URL: it is
+a capability, and tests/test_workflows.py allow-lists it on that basis.
+
 CI (every push to main): ruff + pytest (240) + compileall + bash -n, ~27s.
 The Arena agent app CANNOT push .github/workflows/* - workflow edits go
 through the operator's terminal block (python heredoc); the agent pushes
