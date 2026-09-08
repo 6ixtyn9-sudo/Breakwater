@@ -32,8 +32,8 @@ Ghosts (section 27): 2R control stays. Max MFE 2.25R, zero 3R trades; the
   3R ghost's +2.72 ZAR is ONE trade - a whisper, not a voice.
 Live: locked. Perps = Hyperliquid (testnet funding paused, section 15).
   Spot is walled by the 140 bps cost floor - arithmetic, not policy.
-Cron (SAST): paper every 30 min; guardian :05/:35; research daily 02:25;
-  hip3-research daily 03:40. Section 27.
+Cron (SAST): paper every 30 min; guardian :25/:55; research daily 02:10 (stamps ~02:25);
+  hip3-research daily 03:45. Section 27.
 
 One rule (current): no knob changes without a number in status.csv.
 The 40 bps bar (BREAKWATER_MIN_NET_EDGE=0.004) is a guarantee under the
@@ -46,10 +46,10 @@ BREAKWATER_MODE: paper workflow = shadow; guardian often readonly; research = re
 No live orders.
 
 Cron (cron-job.org) hits FILENAMES. Do not rename workflows. Times SAST.
-  guardian.yml     about :05 and :35
+  guardian.yml     about :25 and :55
   paper.yml        every 30 min (:00 and :30), since 25 Aug
-  research.yml     daily 02:25  (00:25 UTC)
-  hip3-research.yml daily 03:40 (01:40 UTC; discovery runs first inside it)
+  research.yml     daily 02:10 (stamps ~02:25)  (00:25 UTC)
+  hip3-research.yml daily 03:45 (01:40 UTC; discovery runs first inside it)
 
 Concurrency groups (internal; cron URLs unchanged):
   breakwater-guardian
@@ -505,7 +505,7 @@ Command:
 GitHub workflow filename:
   .github/workflows/hip3-research.yml
 External cron (ONE new recurring job, discovery is included first):
-  daily 03:40 UTC
+  daily 03:45 UTC
 
 Safety posture:
   - refreshes HIP-3 inventory before every research pass
@@ -784,8 +784,8 @@ VERIFIED MECHANICS (do not re-derive from vibes):
   - If 429s become chronic (pair_errors on MOST runs), the fix is candle
     caching, not a slower cadence.
 
-Cron (cron-job.org, SAST): paper :00/:30; guardian :05/:35; research
-daily 02:25; hip3-research daily 03:40. Filenames are the API - never
+Cron (cron-job.org, SAST): paper :00/:30; guardian :25/:55; research
+daily 02:10 (stamps ~02:25); hip3-research daily 03:45. Filenames are the API - never
 rename (section 9).
 
 CI (every push to main): ruff + pytest (240) + compileall + bash -n, ~27s.

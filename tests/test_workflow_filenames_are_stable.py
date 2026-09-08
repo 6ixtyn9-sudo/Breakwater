@@ -15,17 +15,18 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 # Files the external cron POSTs. Times are SAST: paper :00/:30, guardian
-# :05/:35, research daily 02:25. See HANDOVER.md section 9.
+# :25/:55, research daily 02:10. See HANDOVER.md section 9.
 CRON_TARGETS = {
     "paper.yml",
     "guardian.yml",
     "research.yml",
     "hip3-research.yml",
-    "hip3-discovery.yml",
 }
 
-# Workflows that are expected to exist but must NOT be dispatched by cron.
-CI_ONLY = {"ci.yml"}
+# Present but not cron-dispatched. ci.yml runs on push; hip3-discovery.yml is run
+# in-process by hip3-research.yml (`breakwater.py hip3-discover`) and needs no cron
+# of its own (README). Both are rename-protected only in the sense that nothing POSTs them.
+CI_ONLY = {"ci.yml", "hip3-discovery.yml"}
 
 
 def _present() -> set[str]:
