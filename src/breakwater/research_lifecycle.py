@@ -720,6 +720,28 @@ def reconcile_paper_stats_from_log(book_path: Path, log_path: Path) -> None:
         _write_book(book_path, rows)
 
 
+def _should_cooldown_after_stopout(row: dict) -> bool:
+    """A stopout only cools a slice that is actually bleeding.
+
+    The stopout cooldown exists to stop feeding a slice that is losing money.
+    It was previously applied on *any* stopout, which meant a slice sitting on
+    a healthy cumulative profit was benched for taking an ordinary -1R stop
+    inside a positive expectancy.
+
+    That is exactly what put the native lane into coma on 2026-09-08:
+    `feat_ext_vs_ma_20:0:LONG:h24` was the only profitable slice in the book
+    (+42.62 ZAR over 13 closes) and was cooled twice, for a -1.020R stop
+    (PUMPUSDC) and a -1.092R stop (BTCUSDC). A cooled slice is not monitored,
+    so it cannot be selected, so the frozen native lane was left with zero
+    tradable slices: no entry can open, no close can print, and the lane can
+    never earn its way back out.
+
+    The loss is still recorded in every case, so decay, the green gate and the
+    paper P&L eviction judge all still see it. Only the cooldown is withheld.
+    """
+    return float(row.get("paper_pnl_zar") or 0.0) <= 0.0
+
+
 def apply_signal_feedback(
     book_path: Path,
     slice_id: str,
@@ -752,7 +774,7 @@ def apply_signal_feedback(
                 row["status"] = MONITORED
         else:
             row["paper_losses"] = str(_coerce_int(row.get("paper_losses"), 0) + 1)
-            if stopout:
+            if stopout and _should_cooldown_after_stopout(row):
                 row["cooldown_until"] = str(bar_epoch + STOPOUT_COOLDOWN_BARS * BAR_SECONDS)
                 row["status"] = COOLDOWN
         # Ensure marker exists for safety if book was older
