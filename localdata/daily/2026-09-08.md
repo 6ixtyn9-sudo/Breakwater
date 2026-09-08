@@ -1,25 +1,20 @@
-# Breakwater daily print — 2026-09-08 15:05 UTC
+# Breakwater daily print — 2026-09-08 17:55 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
-> ## COMA ALARM — NATIVE
-
-> Frozen with **ZERO tradable slices**. No entry can open, so no close can
-> print, so the lane can never unfreeze itself. This is a **dead lane, not a
-> quiet one** — the runner will still report "operational". Operator action
-> required.
+> ## WARNING — only 2 tradable slice(s) left across both lanes (native 1, hip3 1). One bad trade from coma.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **409.58 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **401.72 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
 ## 2. Paper account
 
-- Equity: **1963.07 ZAR** (seed 2000) | lifetime: **-36.93 ZAR** | closed: 72
-- Today: 4 closed, **-3.71 ZAR**
-- 7d: **-36.93 ZAR** | 30d: **-36.93 ZAR**
+- Equity: **1956.97 ZAR** (seed 2000) | lifetime: **-43.03 ZAR** | closed: 73
+- Today: 5 closed, **-9.81 ZAR**
+- 7d: **-43.03 ZAR** | 30d: **-43.03 ZAR**
 
 ## 3. Lanes
 
@@ -35,22 +30,27 @@
 
 ### HIP3
 
-- Closed: 20 | wins: 8 | win%: 40.0 | P&L: **-14.73 ZAR** | today: +0.43 | 7d: -14.73 | 30d: -14.73
-- By exit: lane_gate +11.5, target +9.2, trail_stop +3.7, horizon -1.5, rotated -5.8, stop -31.8
-- By entry regime (n/pnl): neutral 10/-0.6, bear 6/-3.8, bull 4/-10.3
-- Top slices: hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h 7n/4w +6.35; hip3_xyz_commodity_c0:feat_ext_vs_ma_50:2:LON 1n/1w +1.52; hip3_xyz_equity_c0:feat_realized_vol_20:2:LON 3n/1w +0.76; hip3_xyz_commodity_c0:feat_trend_slope_20:0:L 2n/0w -0.56; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG 3n/1w -6.37
-- Worst slices: hip3_xyz_commodity_c0:feat_vol_regime:1:LONG: 4n/1w -16.43; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG 3n/1w -6.37; hip3_xyz_commodity_c0:feat_trend_slope_20:0:L 2n/0w -0.56; hip3_xyz_equity_c0:feat_realized_vol_20:2:LON 3n/1w +0.76; hip3_xyz_commodity_c0:feat_ext_vs_ma_50:2:LON 1n/1w +1.52
+- Closed: 21 | wins: 8 | win%: 38.1 | P&L: **-20.83 ZAR** | today: -5.68 | 7d: -20.83 | 30d: -20.83
+- By exit: lane_gate +11.5, target +9.2, trail_stop +3.7, horizon -1.5, rotated -5.8, stop -37.9
+- By entry regime (n/pnl): neutral 10/-0.6, bear 7/-9.9, bull 4/-10.3
+- Top slices: hip3_xyz_commodity_c0:feat_ext_vs_ma_50:2:LON 1n/1w +1.52; hip3_xyz_equity_c0:feat_realized_vol_20:2:LON 3n/1w +0.76; hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h 8n/4w +0.24; hip3_xyz_commodity_c0:feat_trend_slope_20:0:L 2n/0w -0.56; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG 3n/1w -6.37
+- Worst slices: hip3_xyz_commodity_c0:feat_vol_regime:1:LONG: 4n/1w -16.43; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG 3n/1w -6.37; hip3_xyz_commodity_c0:feat_trend_slope_20:0:L 2n/0w -0.56; hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h 8n/4w +0.24; hip3_xyz_equity_c0:feat_realized_vol_20:2:LON 3n/1w +0.76
 - Top pairs: XYZ:EWT 1n +8.48; XYZ:DRAM 1n +6.59; XYZ:EWJ 1n +2.87; XYZ:PLATINUM 1n +1.52; XYZ:STRC 1n +0.72
-- Worst pairs: XYZ:CL 1n -8.93; XYZ:BRENTOIL 1n -7.77; XYZ:AMAT 1n -3.98; XYZ:AAPL 2n -3.46; XYZ:BABA 1n -3.16
+- Worst pairs: XYZ:CL 1n -8.93; XYZ:BRENTOIL 1n -7.77; XYZ:EBAY 1n -6.10; XYZ:AMAT 1n -3.98; XYZ:AAPL 2n -3.46
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 0 open, stop-risk **0.00 ZAR**
+- **NATIVE**: 5 open, stop-risk **82.49 ZAR**
+  - UNIUSDC BUY ntl=334 risk=19.57 bars=1 stop=6.516825000000000045 peak=6.9228
+  - JUPUSDC BUY ntl=373 risk=19.57 bars=1 stop=0.22997250000000001170 peak=0.24272
+  - ASTERUSDC BUY ntl=391 risk=17.46 bars=1 stop=0.7296099999999999945 peak=0.76367
+  - LTCUSDC BUY ntl=391 risk=13.31 bars=1 stop=53.12149999999999945 peak=54.991
+  - HYPEUSDC BUY ntl=391 risk=12.58 bars=1 stop=81.10949999999999880 peak=83.804
 
-- **HIP3**: 3 open, stop-risk **18.83 ZAR**
-  - XYZ:CRWD BUY ntl=393 risk=7.22 bars=1 stop=201.90000000000000595 peak=205.68
-  - XYZ:DKNG BUY ntl=393 risk=5.87 bars=0 stop=23.333999999999998155 peak=23.688
-  - XYZ:EBAY BUY ntl=393 risk=5.75 bars=1 stop=100.75249999999999775 peak=102.25
+- **HIP3**: 3 open, stop-risk **9.53 ZAR**
+  - XYZ:DKNG BUY ntl=393 risk=5.87 bars=4 stop=23.333999999999998155 peak=23.688
+  - XYZ:COST BUY ntl=391 risk=3.66 bars=2 stop=899.17999999999999060 peak=907.67
+  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=4 stop=206.580000000000005950 peak=210.36
 
 ## 5. Aggregate risk leash
 
@@ -61,8 +61,9 @@
 
 ## 6. Monitored books
 
-- Native: 35 | HIP-3: 35
+- Native: 36 | HIP-3: 35
 - Native top (by paper P&L):
+  - `feat_ext_vs_ma_20:0:LONG:h24` edge=0.0091 n=14899 p=0.0000 src=validated_walk_forward unproven=False paper=13n/+42.62
   - `feat_ret_20:0:LONG:h24` edge=0.0087 n=14947 p=0.0000 src=validated_walk_forward unproven=False paper=1n/+11.91
   - `feat_atr_norm_ext:2:LONG:h13` edge=0.0077 n=15915 p=0.0000 src=validated_walk_forward unproven=False paper=2n/+8.82
   - `feat_trend_slope_20:2:LONG:h8` edge=0.0051 n=17602 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -70,7 +71,6 @@
   - `feat_ret_20:2:LONG:h8` edge=0.0044 n=17713 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_trend_strength_20:2:LONG:h12` edge=0.0061 n=15749 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_realized_vol_20:0:LONG:h17` edge=0.0025 n=9420 p=0.0096 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_realized_vol_20:2:LONG:h12` edge=0.0065 n=22521 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0031 n=10020 p=0.0225 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0020 n=11409 p=0.0190 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -83,7 +83,7 @@
 
 ## 7. HIP-3 live gate
 
-- Closed paper trades: **20/50** | ghost rows: **99/50** | PnL: **-14.73 ZAR**
+- Closed paper trades: **21/50** | ghost rows: **104/50** | PnL: **-20.83 ZAR**
 - Gate verdict: **NOT READY**
 
 ## 8. Research / honesty checks
@@ -107,9 +107,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.0333 bull=0.2 neutral=0.7667 | symbols=30
-- confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: neutral | consecutive_bear: 0 / bull 105
-- as_of: 2026-09-08T14:00:31Z
+- Label: **neutral** | breadth bear=0.0 bull=0.4 neutral=0.6 | symbols=15
+- confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: neutral | consecutive_bear: 0 / bull 107
+- as_of: 2026-09-08T17:55:26Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -122,14 +122,13 @@
 ## 12. Green gate
 
 - Native lane: **RED** | closed=52 pnl=-22.20 | frozen=YES
-- HIP-3 lane: **RED** | closed=20 pnl=-14.73 | frozen=YES
+- HIP-3 lane: **RED** | closed=21 pnl=-20.83 | frozen=YES
 - Frozen lanes: hip3, native
 - Green islands kept alive inside red lanes: 3
   - `feat_ext_vs_ma_20:0:LONG:h24` pnl=+42.62
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` pnl=+6.35
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` pnl=+0.24
   - `hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17` pnl=+0.76
-- Tradable slices: native **0/35** | hip3 **1/35**
-- **COMA LANES: native** — frozen with zero tradable slices; cannot earn its way out.
+- Tradable slices: native **1/36** | hip3 **1/35**
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 20
   - `feat_atr_norm_ext:0:LONG:h24` lane_not_green
@@ -143,10 +142,10 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-08T14:02:23: errors=0 signals=None regime_blocked=None
+- Latest scan 2026-09-08T17:32:06: errors=0 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=69
-- **NO ACTION:** dominant blocker = `lane_gate_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 69, "pair_held": 0, "regime_blocked": 7, "skipped": 0, "slice_full": 31, "slot_full": 0})
+- **NO ACTION:** dominant blocker = `lane_gate_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 69, "pair_held": 0, "regime_blocked": 5, "skipped": 0, "slice_full": 33, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=3 blocks=20
 - pair_errors: []
 
