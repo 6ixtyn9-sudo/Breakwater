@@ -794,7 +794,17 @@ for the POST alone, so it can never tell you a cycle did not run. Period 1h + gr
 15min ~ 2 missed cycles of either job. Secrets are the right home for the URL: it is
 a capability, and tests/test_workflows.py allow-lists it on that basis.
 
-CI (every push to main): ruff + pytest (240) + compileall + bash -n, ~27s.
+CI (every push to main): ruff + pytest + compileall + bash -n, ~30s. The test count is
+deliberately not quoted: it was stale in this file within a week of being written. Read it
+from the run: gh run view <id> --log | grep -E '[0-9]+ passed'.
+Local env: the venv must live outside /tmp AND outside the repo. /tmp/pv vanished on a
+codespace restart and cost a push (2026-09-08); inside the repo it would be swept up by
+git add -A. Build it once with:
+  python3 -m venv ~/.venvs/bw
+  ~/.venvs/bw/bin/pip install -q --require-hashes -r requirements.lock
+Pre-push gates, as one chain so a failure cannot be pushed past:
+  $HOME/.venvs/bw/bin/python -m ruff check . \
+    && PYTHONPATH=src $HOME/.venvs/bw/bin/python -m pytest -q
 The Arena agent app CANNOT push .github/workflows/* - workflow edits go
 through the operator's terminal block (python heredoc); the agent pushes
 code and tests only. CI "red" = real; clean the commit, don't delete the
