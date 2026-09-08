@@ -1,10 +1,9 @@
 {
- "as_of": "2026-09-07T01:45:33.400972+00:00",
+ "as_of": "2026-09-08T01:45:36.228565+00:00",
  "book_frozen": false,
- "book_rows": 31,
+ "book_rows": 35,
  "live_ready": false,
  "live_unresolved": [
-  "market_classification_not_fully_authoritative",
   "market_calendars_not_enforced",
   "historical_oracle_quality_not_available",
   "no_hip3_paper_evidence"
