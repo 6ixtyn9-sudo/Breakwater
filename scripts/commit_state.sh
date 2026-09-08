@@ -8,6 +8,27 @@ git config user.email "github-actions[bot]@users.noreply.github.com"
 
 ROLE="${1:-all}"
 
+# Dead-man switch. The external dispatcher (cron-job.org) only proves GitHub
+# accepted the dispatch POST; its "Successful (2s)" line says nothing about
+# whether a workflow actually ran, and no in-repo test can observe a dispatch
+# that never arrives. So a state push that SUCCEEDED pings a monitor URL and
+# silence -- not failure -- is the alarm. Success-gated on purpose: a run that
+# goes red and stops committing state ages the check exactly like a dead
+# dispatcher does, which is the outcome we care about.
+#
+# Inert when the secret is absent, so this is safe to land before the monitor
+# exists. The URL is a capability: keep it in Secrets, never in the repo.
+HEARTBEAT_URL="${BREAKWATER_HEARTBEAT_URL:-}"
+heartbeat() {
+  [ -n "$HEARTBEAT_URL" ] || return 0
+  if curl -fsS --max-time 10 "${HEARTBEAT_URL}?complete=1" >/dev/null 2>&1; then
+    echo "Heartbeat pinged."
+  else
+    echo "::warning::heartbeat ping FAILED - the monitor will age out despite a good cycle"
+  fi
+}
+trap 'if [ $? -eq 0 ]; then heartbeat; fi' EXIT
+
 # Daily print: read-only digest of the committed state. Safe to run from every
 # state-committing workflow; writes once per UTC date and is idempotent.
 #

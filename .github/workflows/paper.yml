@@ -96,4 +96,6 @@ jobs:
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 30
       - name: Persist bounded state
         if: always()
+        env:
+          BREAKWATER_HEARTBEAT_URL: ${{ secrets.BREAKWATER_HEARTBEAT_URL }}
         run: bash scripts/commit_state.sh paper
