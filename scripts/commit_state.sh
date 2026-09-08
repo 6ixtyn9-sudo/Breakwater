@@ -28,9 +28,9 @@ if [ -f scripts/daily_print.py ]; then
   fi
 fi
 
-status_files=(localdata/status.csv localdata/daily/)
+status_files=(localdata/status.csv)
 
-daily_files=(localdata/daily/)
+daily_files=(localdata/daily/*.md)
 
 research_files=(
   localdata/universe.csv
