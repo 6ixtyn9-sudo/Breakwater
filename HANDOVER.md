@@ -877,4 +877,67 @@ Autopsy questions (answer from logs, not memory):
 Post-period decision (10 Sep, by data, not mood): scale up, hold,
 shrink, or retire lanes.
 
+
+29) ER TRIAGE (2026-09-08, DIAGNOSIS ONLY - NO CHANGES MADE)  [NEWEST - WINS]
+
+Full triage note: docs/TRIAGE-2026-09-08.md. Read it before the autopsy.
+No knob was turned; the 27 Aug -> 10 Sep pre-commitment holds.
+
+Findings, hardest first:
+  a) BOTH LANES ARE FROZEN (green gate). native 52 closes -22.20;
+     hip3 20 closes -14.73. 3 of 73 book slices may trade (green islands).
+     0 native open positions.
+  b) The gate OSCILLATES. Cumulative-PnL threshold at exactly 0 on a random
+     walk: FROZEN->GREEN->FROZEN->GREEN->FROZEN, four flips in six days.
+     Each flip to FROZEN force-liquidates the book. 32 of 72 closes (44%)
+     were forced lane_gate exits, not stop/target/horizon.
+  c) Those forced exits are the LARGEST P&L LINE IN THE LOG: the ghost
+     control matches actual to the cent on natural exits (+0.00) but scores
+     +4.56/trade better on the 31 gate-liquidated trades = +141.4 ZAR.
+     Self-inflicted. See (g) for the trap this sets.
+  d) The ghost "no_target_trail_2r beats 2R by +258" table is an ARTIFACT of
+     (c). Ghosts are never lane-gated. On clean exits only (n=36) all five
+     policies are negative and the spread is 0.17R = noise. DO NOT TOUCH 2R.
+  e) THE ESTIMATOR IS THE DISEASE. Production: 1000 bars, naive t-test,
+     Bonferroni OFF -> 779/3744 validated, p=0.0000. The deep-history audit
+     already run and committed (localdata/deep_audit/candidates.csv, 18720
+     rows): 5000 bars, 48h block bootstrap -> 0 of 3744 pass, best p=0.3854.
+     A 1000h window holds ~20 independent 48h blocks, not 14,711.
+     94% of audit candidates have a negative weighted mean; the best is
+     positive in only 49% of symbols.
+  f) 100% BOOK TURNOVER. feat_ext_vs_ma_50:2:LONG:h21 (the +114.00 hunt),
+     :h11, atr_norm_ext:h21 and trend_slope_20:h10 are ALL GONE from the
+     book. Last run: families_considered 38 / families_promoted 38.
+     Book: 6 (21 Aug) -> 15 (25 Aug) -> 38 native + 35 hip3.
+  g) ABSORBING STATE - the emergency. While frozen only green islands trade.
+     Native has exactly ONE: feat_ext_vs_ma_20:0:LONG:h24 (+42.62, n=13).
+     If it prints a cumulative loss, native has ZERO tradable slices: no
+     entries -> no closes -> PnL can never recover -> FROZEN FOREVER. There
+     is no recovery path in the code. One bad trade from permanent coma.
+  h) BLIND SPOT: no workflow invokes scripts/daily_print.py. latest.md is a
+     byte-identical copy of the 02 Sep digest. The daily hawk routine (sec 27)
+     has had no input for five days - which is why (a)-(c) went unseen.
+  i) AMNESIA: both paper logs restart 2026-09-02. The 27 Aug reference
+     (105 closes, +46.53, equity 2046.53) is gone from state. append_log is
+     mode "a" and nothing truncates it -> external event, cause unknown.
+     => the HIP-3 50-close gate counts from ZERO: ~23 Sep, not 4-6 Sep.
+
+AUTOPSY (10 Sep): 4 of 6 questions are NOT ANSWERABLE as specified - (2)
+is h21 real, (5) exit policies, (6) HIP-3 50-trade verdict are all
+compromised by (i) and (c); (1) only covers 02-08 Sep. (3) PASSES: worst-5
+stops are -1.018/-1.233/-1.084/-1.047/-1.041R, clean mechanism. (4) PASSES:
+17,615 session blocks, no recurrence of the 26 Aug pre-market bug; the 19
+out-of-hours closes are all rotated/lane_gate, which sec 28 exempts.
+Recommend extending the window two weeks, or run treatments 1-2 first.
+A 10 Sep capital decision on this evidence decides on the gate, not the tape.
+
+PROPOSED (not applied), in order: (1) re-score the book with the block
+bootstrap, SHADOW-ONLY, publish the count - prediction stated in advance:
+most of the book fails; (2) wire daily_print.py into research.yml; (3) make
+the gate non-absorbing (rolling window, stop force-liquidating on freeze);
+(4) require K consecutive re-scores before promotion; (5) freeze the HIP-3
+book for the evidence window; (6) only then extend horizons past h24 - the
+audit's strongest raw signal sits at h44-48, outside the production band.
+Do NOT change 2R. Do NOT lift the net-edge floor. Do NOT widen the book.
+
 END
