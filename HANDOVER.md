@@ -989,10 +989,3 @@ END
   1 slice to 9 pairs. If that counts as widening, revert 72adbb2 cleanly rather than
   letting the two rules cancel each other out by accident; the prohibition and the
   audition allowance are not the same knob and should not be tuned against each other.
-
-- Reconciliation with "Do NOT widen the book" in the previous section: 72adbb2 did
-  NOT add rows to monitored_slices.csv (still 34 native / 20 hip3). It changed which
-  EXISTING rows may trade inside an already-frozen lane, which spread open seats from
-  1 slice to 9 pairs. If that counts as widening, revert 72adbb2 cleanly rather than
-  letting the two rules cancel each other out by accident; the prohibition and the
-  audition allowance are not the same knob and should not be tuned against each other.
