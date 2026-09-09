@@ -957,3 +957,28 @@ audit's strongest raw signal sits at h44-48, outside the production band.
 Do NOT change 2R. Do NOT lift the net-edge floor. Do NOT widen the book.
 
 END
+
+## 2026-09-09 (late): digest honesty, day 1 of the audition allowance
+
+- Any lane number is meaningless until you know whether it came from the LOG or
+  the BOOK. On 09 Sep one document printed "Green islands kept alive: 2" and
+  "COMA LANES: hip3" (an island was off-book), and "Slice blocks: 9" while
+  listing 8 rows. Fix commits: 20d6375, 9950fdc, ca65227.
+- proven() = green islands INTERSECTED WITH THE BOOK, so a slice that earns green
+  and is then evicted by the research lifecycle stops counting. The coma alarm can
+  fire against a healthy lane. Expect it to flap at roughly the book churn rate
+  (about 4 rows/day), so read it as state, not severity. Do not re-key it to be
+  log-derived: that would suppress a true alarm.
+- Display caps over a printed total are a defect class, three found in one file.
+  If a section states a count, enumerate it fully.
+- lane_tradability's docstring still describes the pre-72adbb2 absorbing state
+  ("zero tradable slices, cannot earn its way out"). That state is no longer
+  reachable. The prose is stale, the behaviour is intended.
+- Section 5 "Aggregate: 0.00 / 0.00 ZAR" is NOT a low-risk reading: open stop
+  risk on 09 Sep was about 119 ZAR across both lanes (~6% of paper equity) and the
+  cap was unwired the whole time. Wiring it is a decision for after section 28.
+- Day 1 result of PROBE_UNTESTED: 4 slices went untested -> judged -> blocked,
+  native window moved -9.65 -> -69.39 over 20 closes, paper equity 1956.97 ->
+  1910.30. Breadth is expensive so far and it is producing verdicts. The first
+  data worth acting on is the 3rd close on feat_ret_20:0:LONG:h24 (1n/+11.91) and
+  feat_atr_norm_ext:2:LONG:h13 (2n/+8.82).
