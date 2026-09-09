@@ -414,11 +414,11 @@ def _report_text() -> str:
             bot = sorted(p["by_slice"].items(), key=lambda kv: kv[1][1])[:5]
             add(
                 "- Top slices: "
-                + "; ".join(f"{k[:45]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in top)
+                + "; ".join(f"{k[:56]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in top)
             )
             add(
                 "- Worst slices: "
-                + "; ".join(f"{k[:45]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in bot)
+                + "; ".join(f"{k[:56]} {v[0]}n/{v[2]}w {v[1]:+.2f}" for k, v in bot)
             )
         if p["by_pair"]:
             top = sorted(p["by_pair"].items(), key=lambda kv: kv[1][1], reverse=True)[:5]
