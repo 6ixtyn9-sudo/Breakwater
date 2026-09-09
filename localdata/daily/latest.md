@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-09 22:43 UTC
+# Breakwater daily print — 2026-09-09 22:54 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **390.45 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **395.70 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
@@ -55,12 +55,12 @@
   - BNBUSDC BUY ntl=382 risk=8.72 bars=6 stop=722.3749999999999735 peak=739.25
 
 - **HIP3**: 6 open, stop-risk **17.62 ZAR**
-  - XYZ:ASML BUY ntl=391 risk=6.90 bars=8 stop=1711.2750000000000930 peak=1742.0
-  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=6 stop=96.215500000000005610 peak=97.224
-  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=6 stop=75.858250000000015135 peak=76.489
-  - XYZ:COST BUY ntl=391 risk=2.63 bars=6 stop=895.06499999999997360 peak=901.13
-  - XYZ:STRC BUY ntl=383 risk=0.97 bars=5 stop=97.718250000000000090 peak=97.966
-  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=32 stop=206.840000000000005950 peak=210.62
+  - XYZ:ASML BUY ntl=391 risk=6.90 bars=9 stop=1711.2750000000000930 peak=1742.0
+  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=7 stop=96.215500000000005610 peak=97.224
+  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=7 stop=75.858250000000015135 peak=76.489
+  - XYZ:COST BUY ntl=391 risk=2.63 bars=7 stop=895.06499999999997360 peak=901.13
+  - XYZ:STRC BUY ntl=383 risk=0.97 bars=6 stop=97.718250000000000090 peak=97.966
+  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=33 stop=206.840000000000005950 peak=210.62
 
 ## 5. Aggregate risk leash
 
@@ -83,13 +83,13 @@
   - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0062 n=9082 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0019 n=10716 p=0.0440 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:1:LONG:h15` edge=0.0014 n=12601 p=0.0067 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0015 n=10490 p=0.0320 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0019 n=10177 p=0.0075 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0012 n=13937 p=0.0550 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0019 n=10488 p=0.0513 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24` edge=0.0021 n=10544 p=0.0310 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0019 n=11167 p=0.0512 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_20:0:LONG:h24` edge=0.0020 n=10341 p=0.0360 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -117,9 +117,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1111 bull=0.0556 neutral=0.8333 | symbols=18
+- Label: **neutral** | breadth bear=0.1667 bull=0.0667 neutral=0.7667 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-09T22:42:41Z
+- as_of: 2026-09-09T22:44:04Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -154,10 +154,10 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-09T22:06:27: errors=0 signals=None regime_blocked=None
+- Latest scan 2026-09-09T22:54:18: errors=0 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=6
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 21, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 35, "regime_blocked": 675, "skipped": 99, "slice_full": 0, "slot_full": 0})
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 23, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 39, "regime_blocked": 687, "skipped": 119, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=9
 - pair_errors: []
 
