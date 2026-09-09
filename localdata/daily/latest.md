@@ -1,12 +1,12 @@
-# Breakwater daily print — 2026-09-09 02:08 UTC
+# Breakwater daily print — 2026-09-09 02:27 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
-> ## WARNING — only 2 proven slice(s) trading (native 1, hip3 1); 64 slices are auditioning in frozen lanes. One bad proven trade from coma.
+> ## WARNING — only 2 proven slice(s) trading (native 1, hip3 1); 49 slices are auditioning in frozen lanes. One bad proven trade from coma.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **402.87 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **399.76 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
@@ -62,7 +62,7 @@
 
 ## 6. Monitored books
 
-- Native: 34 | HIP-3: 35
+- Native: 34 | HIP-3: 20
 - Native top (by paper P&L):
   - `feat_ext_vs_ma_20:0:LONG:h24` edge=0.0086 n=15222 p=0.0000 src=validated_walk_forward unproven=False paper=13n/+42.62
   - `feat_ret_20:0:LONG:h24` edge=0.0083 n=15176 p=0.0000 src=validated_walk_forward unproven=False paper=1n/+11.91
@@ -73,14 +73,14 @@
   - `feat_ext_vs_ma_20:2:LONG:h13` edge=0.0075 n=17066 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0031 n=10995 p=0.0040 src=validated_walk_forward unproven=False paper=8n/+0.24
-  - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0031 n=10020 p=0.0225 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0020 n=11409 p=0.0190 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_commodity_c0:feat_ext_vs_ma_20:2:LONG:h24` edge=0.0012 n=1286 p=0.4874 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0074 n=8772 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0022 n=10516 p=0.0009 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0019 n=14225 p=0.0004 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0029 n=9916 p=0.0002 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0062 n=9082 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0019 n=10716 p=0.0440 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ret_20:1:LONG:h15` edge=0.0014 n=12601 p=0.0067 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0015 n=10490 p=0.0320 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0019 n=10177 p=0.0075 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0012 n=13937 p=0.0550 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0019 n=10488 p=0.0513 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24` edge=0.0021 n=10544 p=0.0310 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -108,9 +108,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1 bull=0.4333 neutral=0.4667 | symbols=30
+- Label: **neutral** | breadth bear=0.0625 bull=0.375 neutral=0.5625 | symbols=16
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: neutral | consecutive_bear: 0 / bull 107
-- as_of: 2026-09-09T02:00:28Z
+- as_of: 2026-09-09T02:25:34Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -118,7 +118,7 @@
 - confirmed_bear: **False** | promote_env: ON
 - candidates: 0 | eligible: 0 | observations: 0 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
-- HIP-3 short evidence: discovered=5616 validated=5616 passing=0 eligible=90 best=128.6b best_fail=temporal_pass,breadth_ok
+- HIP-3 short evidence: discovered=5592 validated=5592 passing=0 eligible=86 best=74.1b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
 
@@ -130,7 +130,7 @@
   - `feat_ext_vs_ma_20:0:LONG:h24` pnl=+42.62
   - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` pnl=+0.24
   - `hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17` pnl=+0.76
-- Tradable slices: native **30/34** | hip3 **34/35**
+- Tradable slices: native **30/34** | hip3 **19/20**
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 8
   - `feat_ext_vs_ma_50:0:LONG:h24` lane_not_green
