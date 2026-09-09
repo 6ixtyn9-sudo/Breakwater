@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-09 17:39 UTC
+# Breakwater daily print — 2026-09-09 17:57 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -38,8 +38,8 @@
 - Closed: 23 | wins: 9 | win%: 39.1 | P&L: **-23.67 ZAR** | today: -2.85 | 7d: -23.67 | 30d: -23.67
 - By exit: lane_gate +11.5, target +9.2, trail_stop +3.7, horizon -4.3, rotated -5.8, stop -37.9
 - By entry regime (n/pnl): neutral 10/-0.6, bull 4/-10.3, bear 9/-12.7
-- Top slices: hip3_xyz_commodity_c0:feat_ext_vs_ma_50:2:LON 1n/1w +1.52; hip3_xyz_equity_c0:feat_realized_vol_20:2:LON 3n/1w +0.76; hip3_xyz_commodity_c0:feat_trend_slope_20:0:L 2n/0w -0.56; hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h 10n/5w -2.60; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG 3n/1w -6.37
-- Worst slices: hip3_xyz_commodity_c0:feat_vol_regime:1:LONG: 4n/1w -16.43; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG 3n/1w -6.37; hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h 10n/5w -2.60; hip3_xyz_commodity_c0:feat_trend_slope_20:0:L 2n/0w -0.56; hip3_xyz_equity_c0:feat_realized_vol_20:2:LON 3n/1w +0.76
+- Top slices: hip3_xyz_commodity_c0:feat_ext_vs_ma_50:2:LONG:h20 1n/1w +1.52; hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17 3n/1w +0.76; hip3_xyz_commodity_c0:feat_trend_slope_20:0:LONG:h20 2n/0w -0.56; hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24 10n/5w -2.60; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24 3n/1w -6.37
+- Worst slices: hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23 4n/1w -16.43; hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24 3n/1w -6.37; hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24 10n/5w -2.60; hip3_xyz_commodity_c0:feat_trend_slope_20:0:LONG:h20 2n/0w -0.56; hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17 3n/1w +0.76
 - Top pairs: XYZ:EWT 1n +8.48; XYZ:DRAM 1n +6.59; XYZ:EWJ 1n +2.87; XYZ:PLATINUM 1n +1.52; XYZ:STRC 1n +0.72
 - Worst pairs: XYZ:CL 1n -8.93; XYZ:BRENTOIL 1n -7.77; XYZ:EBAY 1n -6.10; XYZ:COST 3n -4.24; XYZ:AMAT 1n -3.98
 
@@ -84,13 +84,13 @@
   - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0062 n=9082 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0019 n=10716 p=0.0440 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:1:LONG:h15` edge=0.0014 n=12601 p=0.0067 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0015 n=10490 p=0.0320 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0019 n=10177 p=0.0075 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0012 n=13937 p=0.0550 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0019 n=10488 p=0.0513 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0019 n=11167 p=0.0512 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_20:0:LONG:h24` edge=0.0020 n=10341 p=0.0360 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24` edge=0.0021 n=10544 p=0.0310 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -118,9 +118,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1333 bull=0.3333 neutral=0.5333 | symbols=30
+- Label: **neutral** | breadth bear=0.1053 bull=0.3158 neutral=0.5789 | symbols=19
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-09T17:30:33Z
+- as_of: 2026-09-09T17:55:32Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -140,7 +140,7 @@
   - `feat_ext_vs_ma_20:0:LONG:h24` pnl=+15.22
   - `hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17` pnl=+0.76
 - Tradable slices: native **30/34** | hip3 **18/20**
-- **COMA LANES: hip3** — frozen with zero tradable slices; cannot earn its way out.
+- **COMA LANES: hip3** — frozen with no tradable slice on an earned green record; auditions may still open.
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 9
   - `feat_ext_vs_ma_50:0:LONG:h24` lane_not_green
@@ -151,6 +151,7 @@
   - `feat_trend_slope_20:2:LONG:h10` lane_not_green
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23` lane_not_green
   - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` lane_not_green
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24` lane_not_green
 
 ## 13. Signal activity
 
