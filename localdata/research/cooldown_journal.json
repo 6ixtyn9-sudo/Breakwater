@@ -94,5 +94,13 @@
     "signal_id": "1e0ffcf287411845",
     "slice_id": "hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24",
     "stopped_at": "2026-09-08T15:30:27+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "-16.4288",
+    "reason": "stop",
+    "signal_id": "94549cae5d8d0fc3",
+    "slice_id": "feat_atr_norm_ext:0:LONG:h24",
+    "stopped_at": "2026-09-09T16:00:38+00:00"
   }
 ]
