@@ -436,7 +436,7 @@ def _report_text() -> str:
         risk = sum(x["risk_zar"] for x in rows)
         total_open_risk += risk
         add(f"- **{lane.upper()}**: {len(rows)} open, stop-risk **{risk:.2f} ZAR**")
-        for x in sorted(rows, key=lambda v: v["risk_zar"], reverse=True)[:6]:
+        for x in sorted(rows, key=lambda v: v["risk_zar"], reverse=True):
             add(
                 f"  - {x.get('pair')} {x.get('side')} ntl={_num(x.get('notional_zar')):.0f} "
                 f"risk={x['risk_zar']:.2f} bars={x.get('bars_held')} "
