@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-09 19:27 UTC
+# Breakwater daily print — 2026-09-09 19:36 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -56,12 +56,12 @@
   - HYPEUSDC BUY ntl=391 risk=0.00 bars=27 stop=84.337499999999998800 peak=87.032
 
 - **HIP3**: 6 open, stop-risk **17.62 ZAR**
-  - XYZ:ASML BUY ntl=391 risk=6.90 bars=5 stop=1711.2750000000000930 peak=1742.0
+  - XYZ:ASML BUY ntl=391 risk=6.90 bars=6 stop=1711.2750000000000930 peak=1742.0
   - XYZ:EWJ BUY ntl=382 risk=3.96 bars=3 stop=96.215500000000005610 peak=97.224
-  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=3 stop=75.858250000000015135 peak=76.489
-  - XYZ:COST BUY ntl=391 risk=2.63 bars=3 stop=895.06499999999997360 peak=901.13
-  - XYZ:STRC BUY ntl=383 risk=0.97 bars=2 stop=97.718250000000000090 peak=97.966
-  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=29 stop=206.840000000000005950 peak=210.62
+  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=4 stop=75.858250000000015135 peak=76.489
+  - XYZ:COST BUY ntl=391 risk=2.63 bars=4 stop=895.06499999999997360 peak=901.13
+  - XYZ:STRC BUY ntl=383 risk=0.97 bars=3 stop=97.718250000000000090 peak=97.966
+  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=30 stop=206.840000000000005950 peak=210.62
 
 ## 5. Aggregate risk leash
 
@@ -84,13 +84,13 @@
   - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0062 n=9082 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0019 n=10716 p=0.0440 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:1:LONG:h15` edge=0.0014 n=12601 p=0.0067 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0015 n=10490 p=0.0320 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0019 n=10177 p=0.0075 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0012 n=13937 p=0.0550 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0019 n=10488 p=0.0513 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24` edge=0.0021 n=10544 p=0.0310 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0019 n=11167 p=0.0512 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_20:0:LONG:h24` edge=0.0020 n=10341 p=0.0360 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -118,9 +118,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1053 bull=0.2632 neutral=0.6316 | symbols=19
+- Label: **neutral** | breadth bear=0.1667 bull=0.2667 neutral=0.5667 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-09T19:25:30Z
+- as_of: 2026-09-09T19:30:34Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -155,12 +155,12 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-09T19:11:26: errors=4 signals=None regime_blocked=None
+- Latest scan 2026-09-09T19:36:27: errors=3 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=6
-- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 22, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 49, "regime_blocked": 216, "skipped": 113, "slice_full": 0, "slot_full": 454})
+- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 24, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 48, "regime_blocked": 211, "skipped": 110, "slice_full": 0, "slot_full": 449})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=9
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:BOT"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EBAY"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EWJ"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:STRC"}]
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EWJ"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EWT"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:SHEIN"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
