@@ -332,10 +332,10 @@ def _report_text() -> str:
     if tradability and tradability.get("coma"):
         add(f"> ## COMA ALARM — {', '.join(tradability['coma_lanes']).upper()}\n")
         add(
-            "> Frozen with **ZERO tradable slices**. No entry can open, so no close can\n"
-            "> print, so the lane can never unfreeze itself. This is a **dead lane, not a\n"
-            '> quiet one** — the runner will still report "operational". Operator action\n'
-            "> required.\n"
+            "> No **proven** slice in this lane. Auditions can still open entries, so\n"
+            "> this is not a dead lane: it trades, but nothing in it trades on a record\n"
+            "> it earned, so it cannot unfreeze itself. The runner will keep reporting\n"
+            "> operational, which is why this block exists. Attention, not intervention.\n"
         )
     elif tradability and (tradability["native_proven"] + tradability["hip3_proven"]) <= 3:
         add(
