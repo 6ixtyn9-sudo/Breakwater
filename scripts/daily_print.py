@@ -676,15 +676,15 @@ def _report_text() -> str:
                 )
                 if tradability["coma"]:
                     add(
-                        f"- **COMA LANES: {', '.join(tradability['coma_lanes'])}** — frozen with zero "
-                        f"tradable slices; cannot earn its way out."
+                        f"- **COMA LANES: {', '.join(tradability['coma_lanes'])}** — frozen with no "
+                        f"tradable slice on an earned green record; auditions may still open."
                     )
             add(
                 "- Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new "
                 "entries only; open positions run to their own stop/target/horizon."
             )
             add(f"- Slice blocks: {len(gate.blocked_slices)}")
-            top = sorted(gate.blocked_slices.items(), key=lambda kv: kv[0])[:8]
+            top = sorted(gate.blocked_slices.items(), key=lambda kv: kv[0])
             for sid, reason in top:
                 add(f"  - `{sid}` {reason}")
         else:
