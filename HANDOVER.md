@@ -982,3 +982,10 @@ END
   1910.30. Breadth is expensive so far and it is producing verdicts. The first
   data worth acting on is the 3rd close on feat_ret_20:0:LONG:h24 (1n/+11.91) and
   feat_atr_norm_ext:2:LONG:h13 (2n/+8.82).
+
+- Reconciliation with "Do NOT widen the book" in the previous section: 72adbb2 did
+  NOT add rows to monitored_slices.csv (still 34 native / 20 hip3). It changed which
+  EXISTING rows may trade inside an already-frozen lane, which spread open seats from
+  1 slice to 9 pairs. If that counts as widening, revert 72adbb2 cleanly rather than
+  letting the two rules cancel each other out by accident; the prohibition and the
+  audition allowance are not the same knob and should not be tuned against each other.
