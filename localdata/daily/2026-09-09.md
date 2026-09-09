@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-09 01:46 UTC
+# Breakwater daily print — 2026-09-09 01:57 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -73,13 +73,13 @@
   - `feat_ext_vs_ma_20:2:LONG:h13` edge=0.0075 n=17066 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0031 n=10995 p=0.0040 src=validated_walk_forward unproven=False paper=8n/+0.24
   - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0031 n=10020 p=0.0225 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0020 n=11409 p=0.0190 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_20:2:LONG:h24` edge=0.0012 n=1286 p=0.4874 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0074 n=8772 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0022 n=10516 p=0.0009 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0019 n=14225 p=0.0004 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0031 n=10995 p=0.0040 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0029 n=9916 p=0.0002 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
@@ -108,9 +108,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1 bull=0.4 neutral=0.5 | symbols=30
+- Label: **neutral** | breadth bear=0.0625 bull=0.375 neutral=0.5625 | symbols=16
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: neutral | consecutive_bear: 0 / bull 107
-- as_of: 2026-09-09T01:30:24Z
+- as_of: 2026-09-09T01:55:31Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
