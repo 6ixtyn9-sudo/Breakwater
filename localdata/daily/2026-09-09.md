@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-09 23:17 UTC
+# Breakwater daily print — 2026-09-09 23:57 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -19,13 +19,13 @@
 
 - Equity: **1904.17 ZAR** (seed 2000) | lifetime: **-95.83 ZAR** | closed: 84
 - Today: 11 closed, **-52.80 ZAR**
-- 7d: **-66.44 ZAR** | 30d: **-95.83 ZAR**
+- 7d: **-65.68 ZAR** | 30d: **-95.83 ZAR**
 
 ## 3. Lanes
 
 ### NATIVE
 
-- Closed: 61 | wins: 26 | win%: 42.6 | P&L: **-72.15 ZAR** | today: -49.95 | 7d: -42.76 | 30d: -72.15
+- Closed: 61 | wins: 26 | win%: 42.6 | P&L: **-72.15 ZAR** | today: -49.95 | 7d: -42.01 | 30d: -72.15
 - By exit: target +64.1, trail_stop +21.6, lane_gate +7.6, rotated -0.4, horizon -72.2, stop -92.9
 - By entry regime (n/pnl): bull 23/+24.7, bear 10/-32.8, neutral 28/-64.1
 - Top slices: feat_ext_vs_ma_20:0:LONG:h24 18n/9w +17.36; feat_ret_20:0:LONG:h24 1n/1w +11.91; feat_atr_norm_ext:2:LONG:h13 2n/2w +8.82; feat_ext_vs_ma_50:0:LONG:h21 2n/2w +2.35; feat_vol_regime:2:LONG:h11 1n/1w +0.26
@@ -119,7 +119,7 @@
 
 - Label: **neutral** | breadth bear=0.1111 bull=0.0556 neutral=0.8333 | symbols=18
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-09T23:15:27Z
+- as_of: 2026-09-09T23:55:16Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
