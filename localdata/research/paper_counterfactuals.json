@@ -96,44 +96,44 @@
     "trough_price": "203.96"
   },
   {
-    "actual_exit_bar_start": "",
-    "actual_exit_price": "",
-    "actual_exit_reason": "",
-    "actual_pnl_zar": "",
+    "actual_exit_bar_start": "2026-09-10T14:00:00+00:00",
+    "actual_exit_price": "903.044999999999973600",
+    "actual_exit_reason": "trail_stop",
+    "actual_pnl_zar": "0.4788",
     "entry_price": "901.13",
     "fee_bps": "9",
     "horizon_bars": 24,
     "initial_stop_price": "895.06499999999997360",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-09-10T13:00:00+00:00",
-    "missing_bars": 1,
+    "last_processed_bar_start": "2026-09-10T14:00:00+00:00",
+    "missing_bars": 0,
     "notional_zar": "390.824840",
     "pair": "XYZ:COST",
     "peak_price": "909.11",
     "policies": {
       "no_target_trail_1r": {
-        "active": true,
-        "bars_held": 22,
+        "active": false,
+        "bars_held": 23,
         "stop_price": "903.04499999999997360"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 22,
+        "bars_held": 23,
         "stop_price": "896.97999999999994720"
       },
       "target_2r_trail_1r": {
-        "active": true,
-        "bars_held": 22,
+        "active": false,
+        "bars_held": 23,
         "stop_price": "903.04499999999997360"
       },
       "target_3r_trail_1r": {
-        "active": true,
-        "bars_held": 22,
+        "active": false,
+        "bars_held": 23,
         "stop_price": "903.04499999999997360"
       },
       "target_4r_trail_1r": {
-        "active": true,
-        "bars_held": 22,
+        "active": false,
+        "bars_held": 23,
         "stop_price": "903.04499999999997360"
       }
     },
