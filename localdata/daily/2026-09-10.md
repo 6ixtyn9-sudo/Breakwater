@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 07:26 UTC
+# Breakwater daily print — 2026-09-10 07:37 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -51,10 +51,10 @@
 
 - **HIP3**: 5 open, stop-risk **10.50 ZAR**
   - XYZ:ASML BUY ntl=391 risk=6.90 bars=18 stop=1711.2750000000000930 peak=1742.0
-  - XYZ:COST BUY ntl=391 risk=2.63 bars=15 stop=895.06499999999997360 peak=901.13
+  - XYZ:COST BUY ntl=391 risk=2.63 bars=16 stop=895.06499999999997360 peak=901.13
   - XYZ:STRC BUY ntl=383 risk=0.97 bars=15 stop=97.718250000000000090 peak=97.966
   - XYZ:CRWD BUY ntl=393 risk=0.00 bars=42 stop=206.840000000000005950 peak=210.62
-  - XYZ:EWJ BUY ntl=382 risk=0.00 bars=15 stop=97.4705000000000056100 peak=98.479
+  - XYZ:EWJ BUY ntl=382 risk=0.00 bars=16 stop=97.4985000000000056100 peak=98.507
 
 ## 5. Aggregate risk leash
 
@@ -62,7 +62,7 @@
 - Remaining: 87.7168 | cap skips: 0 | unknown skips: 0
 - booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **ASTERUSDC** 15.4496 ZAR
-- positions without bars: 2 | replayed: 6 | invalid: 0
+- positions without bars: 5 | replayed: 2 | invalid: 0
 
 ## 6. Monitored books
 
@@ -112,9 +112,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.2308 bull=0.0769 neutral=0.6923 | symbols=13
+- Label: **neutral** | breadth bear=0.2333 bull=0.0667 neutral=0.7 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-10T07:25:30Z
+- as_of: 2026-09-10T07:30:25Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -150,11 +150,11 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-10T07:07:56: errors=0 signals=None regime_blocked=None
+- Latest scan 2026-09-10T07:37:47: errors=0 signals=None regime_blocked=None
 - this cycle: closed=0 new_signals=0 skipped=0 slot_full=0 slice_full=0 pair_held=0
 - Action funnel: lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=0
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=10
-- aggregate_risk: ok open=35.8062 cap=130.2791 used=0.3267 remaining=87.7168 replayed=6 no_new_bars=2
+- aggregate_risk: ok open=35.8062 cap=130.2791 used=0.3267 remaining=87.7168 replayed=2 no_new_bars=5
 - pair_errors: []
 
 ---
