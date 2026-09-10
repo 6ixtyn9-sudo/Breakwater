@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 00:01 UTC
+# Breakwater daily print — 2026-09-10 00:03 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -17,21 +17,21 @@
 
 ## 2. Paper account
 
-- Equity: **1895.11 ZAR** (seed 2000) | lifetime: **-104.89 ZAR** | closed: 85
+- Equity: **1904.17 ZAR** (seed 2000) | lifetime: **-95.83 ZAR** | closed: 84
 - Today: 0 closed, **+0.00 ZAR**
-- 7d: **-74.75 ZAR** | 30d: **-104.89 ZAR**
+- 7d: **-65.68 ZAR** | 30d: **-95.83 ZAR**
 
 ## 3. Lanes
 
 ### NATIVE
 
-- Closed: 62 | wins: 26 | win%: 41.9 | P&L: **-81.22 ZAR** | today: +0.00 | 7d: -51.07 | 30d: -81.22
-- By exit: target +64.1, trail_stop +21.6, lane_gate +7.6, rotated -0.4, horizon -72.2, stop -102.0
-- By entry regime (n/pnl): bull 23/+24.7, bear 10/-32.8, neutral 29/-73.2
+- Closed: 61 | wins: 26 | win%: 42.6 | P&L: **-72.15 ZAR** | today: +0.00 | 7d: -42.01 | 30d: -72.15
+- By exit: target +64.1, trail_stop +21.6, lane_gate +7.6, rotated -0.4, horizon -72.2, stop -92.9
+- By entry regime (n/pnl): bull 23/+24.7, bear 10/-32.8, neutral 28/-64.1
 - Top slices: feat_ext_vs_ma_20:0:LONG:h24 18n/9w +17.36; feat_ret_20:0:LONG:h24 1n/1w +11.91; feat_atr_norm_ext:2:LONG:h13 2n/2w +8.82; feat_ext_vs_ma_50:0:LONG:h21 2n/2w +2.35; feat_vol_regime:2:LONG:h11 1n/1w +0.26
 - Worst slices: feat_atr_norm_ext:0:LONG:h24 2n/0w -23.34; feat_ext_vs_ma_50:0:LONG:h24 4n/2w -22.58; feat_ret_5:0:LONG:h24 5n/2w -20.67; feat_ret_10:2:LONG:h15 2n/0w -11.37; feat_ret_10:0:LONG:h24 3n/2w -9.44
 - Top pairs: ZECUSDC 3n +39.15; LINKUSDC 5n +15.38; CRVUSDC 1n +13.20; MONUSDC 3n +8.57; JUPUSDC 1n +8.54
-- Worst pairs: XMRUSDC 4n -32.97; DOGEUSDC 6n -24.34; FARTCOINUSDC 1n -20.07; BNBUSDC 6n -18.98; UNIUSDC 1n -18.95
+- Worst pairs: XMRUSDC 4n -32.97; DOGEUSDC 6n -24.34; FARTCOINUSDC 1n -20.07; UNIUSDC 1n -18.95; PUMPUSDC 1n -17.84
 
 ### HIP3
 
@@ -45,22 +45,22 @@
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 7 open, stop-risk **100.85 ZAR**
-  - SUIUSDC BUY ntl=375 risk=19.10 bars=7 stop=0.7550100000000000565 peak=0.79553
-  - LINKUSDC BUY ntl=382 risk=17.07 bars=7 stop=11.45800000000000085 peak=11.994
-  - CRVUSDC BUY ntl=382 risk=16.59 bars=7 stop=0.3472399999999999610 peak=0.363
-  - ASTERUSDC BUY ntl=383 risk=15.45 bars=6 stop=0.7107175000000000190 peak=0.74063
-  - LTCUSDC BUY ntl=382 risk=12.85 bars=7 stop=52.29824999999999555 peak=54.118
-  - BNBUSDC BUY ntl=379 risk=9.94 bars=0 stop=703.189999999999995 peak=722.12
-  - ETHUSDC BUY ntl=380 risk=9.85 bars=3 stop=2400.949999999999975 peak=2464.8
+- **NATIVE**: 7 open, stop-risk **99.64 ZAR**
+  - SUIUSDC BUY ntl=375 risk=19.10 bars=6 stop=0.7550100000000000565 peak=0.79553
+  - LINKUSDC BUY ntl=382 risk=17.07 bars=6 stop=11.45800000000000085 peak=11.994
+  - CRVUSDC BUY ntl=382 risk=16.59 bars=6 stop=0.3472399999999999610 peak=0.363
+  - ASTERUSDC BUY ntl=383 risk=15.45 bars=5 stop=0.7107175000000000190 peak=0.74063
+  - LTCUSDC BUY ntl=382 risk=12.85 bars=6 stop=52.29824999999999555 peak=54.118
+  - ETHUSDC BUY ntl=380 risk=9.85 bars=2 stop=2400.949999999999975 peak=2464.8
+  - BNBUSDC BUY ntl=382 risk=8.72 bars=6 stop=722.3749999999999735 peak=739.25
 
 - **HIP3**: 6 open, stop-risk **17.62 ZAR**
-  - XYZ:ASML BUY ntl=391 risk=6.90 bars=10 stop=1711.2750000000000930 peak=1742.0
-  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=8 stop=96.215500000000005610 peak=97.224
-  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=8 stop=75.858250000000015135 peak=76.489
-  - XYZ:COST BUY ntl=391 risk=2.63 bars=8 stop=895.06499999999997360 peak=901.13
-  - XYZ:STRC BUY ntl=383 risk=0.97 bars=7 stop=97.718250000000000090 peak=97.966
-  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=34 stop=206.840000000000005950 peak=210.62
+  - XYZ:ASML BUY ntl=391 risk=6.90 bars=9 stop=1711.2750000000000930 peak=1742.0
+  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=7 stop=96.215500000000005610 peak=97.224
+  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=7 stop=75.858250000000015135 peak=76.489
+  - XYZ:COST BUY ntl=391 risk=2.63 bars=7 stop=895.06499999999997360 peak=901.13
+  - XYZ:STRC BUY ntl=383 risk=0.97 bars=6 stop=97.718250000000000090 peak=97.966
+  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=33 stop=206.840000000000005950 peak=210.62
 
 ## 5. Aggregate risk leash
 
@@ -71,7 +71,7 @@
 
 ## 6. Monitored books
 
-- Native: 32 | HIP-3: 20
+- Native: 33 | HIP-3: 20
 - Native top (by paper P&L):
   - `feat_ext_vs_ma_20:0:LONG:h24` edge=0.0086 n=15222 p=0.0000 src=validated_walk_forward unproven=False paper=18n/+17.36
   - `feat_ret_20:0:LONG:h24` edge=0.0083 n=15176 p=0.0000 src=validated_walk_forward unproven=False paper=1n/+11.91
@@ -83,13 +83,13 @@
   - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0062 n=9082 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0019 n=10716 p=0.0440 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:1:LONG:h15` edge=0.0014 n=12601 p=0.0067 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0015 n=10490 p=0.0320 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0019 n=10177 p=0.0075 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h16` edge=0.0012 n=13937 p=0.0550 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:0:LONG:h24` edge=0.0019 n=10488 p=0.0513 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0019 n=11167 p=0.0512 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_ext_vs_ma_20:0:LONG:h24` edge=0.0020 n=10341 p=0.0360 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:0:LONG:h24` edge=0.0021 n=10544 p=0.0310 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -117,9 +117,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1667 bull=0.0667 neutral=0.7667 | symbols=30
+- Label: **neutral** | breadth bear=0.1111 bull=0.0556 neutral=0.8333 | symbols=18
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-09T23:50:55Z
+- as_of: 2026-09-10T00:02:15Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -131,14 +131,14 @@
 
 ## 12. Green gate
 
-- Native lane: **RED** | closed=20 pnl=-74.70 | frozen=YES
+- Native lane: **RED** | closed=20 pnl=-70.18 | frozen=YES
 - HIP-3 lane: **RED** | closed=20 pnl=-18.03 | frozen=YES
 - Frozen lanes: hip3, native
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 2
   - `feat_ext_vs_ma_20:0:LONG:h24` pnl=+17.36
   - `hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17` pnl=+0.76
-- Tradable slices: native **28/32** | hip3 **18/20**
+- Tradable slices: native **29/33** | hip3 **18/20**
 - **COMA LANES: hip3** — frozen with no tradable slice on an earned green record; auditions may still open.
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 9
@@ -154,12 +154,12 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-10T00:01:38: errors=2 signals=None regime_blocked=None
+- Latest scan 2026-09-09T22:54:18: errors=0 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=6
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 27, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 42, "regime_blocked": 675, "skipped": 123, "slice_full": 0, "slot_full": 0})
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 23, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 39, "regime_blocked": 687, "skipped": 119, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=9
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:BB"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:SHAZ"}]
+- pair_errors: []
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
