@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 00:56 UTC
+# Breakwater daily print — 2026-09-10 00:57 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -46,21 +46,21 @@
 ## 4. Open positions & risk
 
 - **NATIVE**: 7 open, stop-risk **100.85 ZAR**
-  - SUIUSDC BUY ntl=375 risk=19.10 bars=8 stop=0.7550100000000000565 peak=0.79553
-  - LINKUSDC BUY ntl=382 risk=17.07 bars=8 stop=11.45800000000000085 peak=11.994
-  - CRVUSDC BUY ntl=382 risk=16.59 bars=8 stop=0.3472399999999999610 peak=0.363
-  - ASTERUSDC BUY ntl=383 risk=15.45 bars=7 stop=0.7107175000000000190 peak=0.74063
-  - LTCUSDC BUY ntl=382 risk=12.85 bars=8 stop=52.29824999999999555 peak=54.118
-  - BNBUSDC BUY ntl=379 risk=9.94 bars=1 stop=703.189999999999995 peak=722.12
-  - ETHUSDC BUY ntl=380 risk=9.85 bars=4 stop=2400.949999999999975 peak=2464.8
+  - SUIUSDC BUY ntl=375 risk=19.10 bars=7 stop=0.7550100000000000565 peak=0.79553
+  - LINKUSDC BUY ntl=382 risk=17.07 bars=7 stop=11.45800000000000085 peak=11.994
+  - CRVUSDC BUY ntl=382 risk=16.59 bars=7 stop=0.3472399999999999610 peak=0.363
+  - ASTERUSDC BUY ntl=383 risk=15.45 bars=6 stop=0.7107175000000000190 peak=0.74063
+  - LTCUSDC BUY ntl=382 risk=12.85 bars=7 stop=52.29824999999999555 peak=54.118
+  - BNBUSDC BUY ntl=379 risk=9.94 bars=0 stop=703.189999999999995 peak=722.12
+  - ETHUSDC BUY ntl=380 risk=9.85 bars=3 stop=2400.949999999999975 peak=2464.8
 
 - **HIP3**: 6 open, stop-risk **17.62 ZAR**
-  - XYZ:ASML BUY ntl=391 risk=6.90 bars=11 stop=1711.2750000000000930 peak=1742.0
-  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=9 stop=96.215500000000005610 peak=97.224
-  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=9 stop=75.858250000000015135 peak=76.489
+  - XYZ:ASML BUY ntl=391 risk=6.90 bars=10 stop=1711.2750000000000930 peak=1742.0
+  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=8 stop=96.215500000000005610 peak=97.224
+  - XYZ:NFLX BUY ntl=382 risk=3.15 bars=8 stop=75.858250000000015135 peak=76.489
   - XYZ:COST BUY ntl=391 risk=2.63 bars=8 stop=895.06499999999997360 peak=901.13
-  - XYZ:STRC BUY ntl=383 risk=0.97 bars=8 stop=97.718250000000000090 peak=97.966
-  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=35 stop=206.840000000000005950 peak=210.62
+  - XYZ:STRC BUY ntl=383 risk=0.97 bars=7 stop=97.718250000000000090 peak=97.966
+  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=34 stop=206.840000000000005950 peak=210.62
 
 ## 5. Aggregate risk leash
 
@@ -71,16 +71,16 @@
 
 ## 6. Monitored books
 
-- Native: 32 | HIP-3: 20
+- Native: 29 | HIP-3: 20
 - Native top (by paper P&L):
-  - `feat_ext_vs_ma_20:0:LONG:h24` edge=0.0086 n=15222 p=0.0000 src=validated_walk_forward unproven=False paper=18n/+17.36
-  - `feat_ret_20:0:LONG:h24` edge=0.0083 n=15176 p=0.0000 src=validated_walk_forward unproven=False paper=1n/+11.91
+  - `feat_ext_vs_ma_20:0:LONG:h24` edge=0.0070 n=15301 p=0.0000 src=validated_walk_forward unproven=False paper=18n/+17.36
   - `feat_atr_norm_ext:2:LONG:h13` edge=0.0077 n=15915 p=0.0000 src=validated_walk_forward unproven=False paper=2n/+8.82
-  - `feat_ret_20:2:LONG:h8` edge=0.0045 n=17527 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_vol_regime:2:LONG:h12` edge=0.0059 n=15279 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_atr_norm_ext:2:LONG:h12` edge=0.0072 n=15575 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ext_vs_ma_20:2:LONG:h13` edge=0.0075 n=17066 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_trend_strength_20:2:LONG:h13` edge=0.0063 n=15517 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_atr_norm_ext:2:LONG:h15` edge=0.0085 n=15663 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_ext_vs_ma_20:2:LONG:h13` edge=0.0070 n=17286 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_trend_slope_20:2:LONG:h11` edge=0.0065 n=17661 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_ret_20:2:LONG:h10` edge=0.0051 n=17687 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_vol_regime:2:LONG:h12` edge=0.0053 n=14691 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_realized_vol_20:2:LONG:h12` edge=0.0053 n=24468 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0062 n=9082 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ext_vs_ma_50:0:LONG:h24` edge=0.0019 n=10716 p=0.0440 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -98,9 +98,9 @@
 
 ## 8. Research / honesty checks
 
-- Latest research: 2026-09-09T00:10:31+00:00 | discovered 3744 | validated 766 | reg-confounded 2961 | hostile-unproven 0
-- floors: {"PERP": "70.0", "SPOT": "140.0"} | book: {"blocked_for_green_breadth": 0, "carried_cooldown": 0, "carried_decayed": 0, "carried_kinds": [], "carried_monitored": 0, "carried_total": 0, "concentrated": 0, "cooldown": 0, "decayed": 4, "families_considered": 38, "families_promoted": 37, "green_assets_total": 1567, "monitored": 33, "multi_horizon_min_passes": 2, "multi_horizon_select": "edge_per_bar", "net_edge_floor_enter_bps": {"PERP": "70.0", "SPOT": "140.0"}, "net_edge_floor_keep_bps": {"PERP": "49.6", "SPOT": "140.0"}, "paper_protected": 1, "per_asset_aware": true, "promotable": 358, "promoted_green_fraction_mean": 0.3633, "rows_total_after_sync": 38, "session_gate_blocked": 0, "validated": 766}
-- Short audit: discovered=1872 validated=1872 passing=0 eligible=0 best=-9.5b best_fail=temporal_pass,direction_ok,breadth_ok,regime_confounded,mean_net<=0
+- Latest research: 2026-09-10T00:34:58+00:00 | discovered 3744 | validated 524 | reg-confounded 3006 | hostile-unproven 0
+- floors: {"PERP": "72.8", "SPOT": "140.0"} | book: {"blocked_for_green_breadth": 0, "carried_cooldown": 0, "carried_decayed": 0, "carried_kinds": [], "carried_monitored": 0, "carried_total": 0, "concentrated": 0, "cooldown": 3, "decayed": 4, "families_considered": 35, "families_promoted": 35, "green_assets_total": 1277, "monitored": 28, "multi_horizon_min_passes": 2, "multi_horizon_select": "edge_per_bar", "net_edge_floor_enter_bps": {"PERP": "72.8", "SPOT": "140.0"}, "net_edge_floor_keep_bps": {"PERP": "52.7", "SPOT": "140.0"}, "paper_protected": 1, "per_asset_aware": true, "promotable": 319, "promoted_green_fraction_mean": 0.3141, "rows_total_after_sync": 36, "session_gate_blocked": 0, "validated": 524}
+- Short audit: discovered=1872 validated=1872 passing=0 eligible=0 best=-8.0b best_fail=temporal_pass,breadth_ok,regime_confounded,mean_net<=0
 - pair_errors: [{"error": "HTTPError: 500 Server Error: Internal Server Error for url: https://api.hyperliquid.xyz/info", "pair": "KBONKUSDC"}]
 - Deep audit: candidates=18720 preliminary_passes=0 audit_passes=0 plateaus=0 fetch_errors=32
 
@@ -117,9 +117,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1111 bull=0.0556 neutral=0.8333 | symbols=18
+- Label: **neutral** | breadth bear=0.1667 bull=0.0667 neutral=0.7667 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-10T00:55:30Z
+- as_of: 2026-09-09T23:50:55Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -138,7 +138,7 @@
 - Green islands kept alive inside red lanes: 2
   - `feat_ext_vs_ma_20:0:LONG:h24` pnl=+17.36
   - `hip3_xyz_equity_c0:feat_realized_vol_20:2:LONG:h17` pnl=+0.76
-- Tradable slices: native **28/32** | hip3 **18/20**
+- Tradable slices: native **29/29** | hip3 **18/20**
 - **COMA LANES: hip3** — frozen with no tradable slice on an earned green record; auditions may still open.
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 9
@@ -154,11 +154,12 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-10T00:52:23: errors=2 signals=None regime_blocked=None
+- Latest scan 2026-09-10T00:01:38: errors=2 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=6
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 27, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 6, "pair_held": 42, "regime_blocked": 675, "skipped": 123, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=9
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:COST"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:RDDT"}]
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:BB"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:SHAZ"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
