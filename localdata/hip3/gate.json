@@ -1,7 +1,7 @@
 {
- "as_of": "2026-09-09T01:45:31.307167+00:00",
+ "as_of": "2026-09-10T01:45:29.663427+00:00",
  "book_frozen": false,
- "book_rows": 20,
+ "book_rows": 17,
  "live_ready": false,
  "live_unresolved": [
   "market_calendars_not_enforced",
