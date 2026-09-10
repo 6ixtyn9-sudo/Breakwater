@@ -18,7 +18,7 @@ import csv
 import json
 import statistics
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -304,6 +304,25 @@ def _real_close_rows(trade_rows, lane=None):
     return out
 
 
+def _ledger_close_rows(trade_rows, lane=None):
+    """Real closes as sections 2/3 count them (this module's ACTUAL_EXITS).
+
+    The lifetime ledger set deliberately includes stale_data exits while
+    lane_gate's gate set does not. Kept as its own predicate so section 2b
+    can reconcile the two populations instead of silently differing.
+    """
+    out = []
+    for r in trade_rows:
+        if str(r.get("outcome") or "") not in {"win", "loss"}:
+            continue
+        if str(r.get("exit_reason") or "") not in ACTUAL_EXITS:
+            continue
+        if lane is not None and _lane(r.get("slice_id", "")) != lane:
+            continue
+        out.append(r)
+    return out
+
+
 def _close_stats(close_rows):
     """n, mean/sample-sd/SE of pnl_zar (net of fees) and mean notional."""
     pnl = [_num(r.get("pnl_zar")) for r in close_rows]
@@ -497,6 +516,32 @@ def _claimed_vs_realised_section(
         f"reasons); the other {max(len(trade_rows) - n, 0)} rows are skipped/guard "
         f"decisions and never count"
     )
+
+    # Reconcile against the sections 2/3 population: their lifetime ledger
+    # counts this module's ACTUAL_EXITS (which includes stale_data); this
+    # section's t uses lane_gate's smaller set. The sets are deliberately NOT
+    # unified (that would rewrite section 3 ledger history), so any disagreement
+    # is printed here instead of letting the verdict silently describe a
+    # different population than the equity line above it.
+    ledger_real = _ledger_close_rows(trade_rows)
+    delta = len(ledger_real) - n
+    if delta:
+        delta_rows = [
+            r
+            for r in ledger_real
+            if str(r.get("exit_reason") or "") not in lane_gate.ACTUAL_EXITS
+        ]
+        reasons = Counter(str(r.get("exit_reason") or "?") for r in delta_rows)
+        per_lane_delta = Counter(_lane(r.get("slice_id", "")) for r in delta_rows)
+        reason_txt = ", ".join(f"{k}={v}" for k, v in sorted(reasons.items()))
+        lines.append(
+            f"- Population delta vs sections 2/3: the lifetime ledger above counts "
+            f"{len(ledger_real)} closes; this section counts {n} under lane_gate; "
+            f"{delta} extra in the ledger (native {per_lane_delta.get('native', 0)} | "
+            f"hip3 {per_lane_delta.get('hip3', 0)}; exit reasons: {reason_txt}). The "
+            f"two sets are not unified on purpose; while this is non-zero the equity "
+            f"line and this verdict describe different populations."
+        )
     lines.append("")
     lines.append(
         "_Read-only and advisory: this section feeds no gate, admission decision or "
