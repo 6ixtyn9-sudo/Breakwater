@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import csv
 import json
+import statistics
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -25,6 +26,16 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "localdata"
 # Ensure the breakwater package under src/ is imported, not scripts/breakwater.py.
 sys.path.insert(0, str(ROOT / "src"))
+
+# Section 2b must count closes using the gate's real-close definition, never a
+# local copy that can drift from it. Both lane_gate._is_real_close and
+# lane_gate.ACTUAL_EXITS are reused below via the module, not re-derived.
+from breakwater import lane_gate  # noqa: E402
+
+# Section 2b sample gate and verdict thresholds are hard-coded on purpose: no
+# new configuration surface (env var, flag or YAML) for an advisory readout.
+MIN_VERDICT_CLOSES = 30
+VERDICT_T_THRESHOLD = 2.0
 
 ACTUAL_EXITS = {
     "target",
@@ -246,6 +257,300 @@ def _gate_top(book_rows):
     return out
 
 
+def _validated_edge_pool(validated_rows):
+    """Map slice_id -> mean_ret_costadj for rows that passed validation.
+
+    validated_slices.csv also holds failed candidates (validated=False); the
+    monitored books are promoted from passing rows, so the pool is the
+    validated=True subset only.
+    """
+    pool = {}
+    for r in validated_rows:
+        if str(r.get("validated") or "").strip() == "True":
+            pool[str(r.get("slice_id") or "")] = _num(r.get("mean_ret_costadj"))
+    return pool
+
+
+def _book_edges(book_rows, pool):
+    """Validated edges for monitored-book slices plus ids absent from the pool.
+
+    A book slice missing from validated_slices.csv is reported, never silently
+    dropped: a median over "whatever matched" would overstate coverage.
+    """
+    edges = []
+    missing = []
+    for r in book_rows:
+        sid = str(r.get("slice_id") or "")
+        if sid in pool:
+            edges.append(pool[sid])
+        else:
+            missing.append(sid)
+    return edges, missing
+
+
+def _real_close_rows(trade_rows, lane=None):
+    """Real closes under the gate's definition; never re-derived here.
+
+    Skipped/guard rows (~800 appended per cycle) are decision-ledger entries,
+    not closes. lane_gate owns the predicate and the ACTUAL_EXITS set.
+    """
+    out = []
+    for r in trade_rows:
+        if not lane_gate._is_real_close(r):
+            continue
+        if lane is not None and _lane(r.get("slice_id", "")) != lane:
+            continue
+        out.append(r)
+    return out
+
+
+def _ledger_close_rows(trade_rows, lane=None):
+    """Real closes as sections 2/3 count them (this module's ACTUAL_EXITS).
+
+    The lifetime ledger set deliberately includes stale_data exits while
+    lane_gate's gate set does not. Kept as its own predicate so section 2b
+    can reconcile the two populations instead of silently differing.
+    """
+    out = []
+    for r in trade_rows:
+        if str(r.get("outcome") or "") not in {"win", "loss"}:
+            continue
+        if str(r.get("exit_reason") or "") not in ACTUAL_EXITS:
+            continue
+        if lane is not None and _lane(r.get("slice_id", "")) != lane:
+            continue
+        out.append(r)
+    return out
+
+
+def _close_stats(close_rows):
+    """n, mean/sample-sd/SE of pnl_zar (net of fees) and mean notional."""
+    pnl = [_num(r.get("pnl_zar")) for r in close_rows]
+    notional = [_num(r.get("notional_zar")) for r in close_rows]
+    n = len(pnl)
+    mean = sum(pnl) / n if n else 0.0
+    sd = 0.0
+    if n > 1:
+        sd = (sum((v - mean) ** 2 for v in pnl) / (n - 1)) ** 0.5
+    se = sd / n ** 0.5 if n else 0.0
+    return {
+        "n": n,
+        "mean": mean,
+        "sd": sd,
+        "se": se,
+        "mean_notional": sum(notional) / n if n else 0.0,
+    }
+
+
+def _gap_t(mean, se, claimed_zar):
+    """One-sample t of a realised mean against a fixed claimed per-trade edge."""
+    if se <= 0.0:
+        if mean > claimed_zar:
+            return float("inf")
+        if mean < claimed_zar:
+            return float("-inf")
+        return 0.0
+    return (mean - claimed_zar) / se
+
+
+def _verdict(t, realised, claimed_zar):
+    """Coarse word list; a comparison, never a claim of proof or causality.
+
+    Mapping (VERDICT_T_THRESHOLD = 2):
+      |t| < 2                          -> NOT ESTABLISHED
+      t >= 2 and realised > claimed    -> EXCEEDS
+      t <= -2                          -> FALLS SHORT
+    Words such as "works"/"broken" are forbidden: the statistic only compares
+    a realised mean against the claimed constant.
+    """
+    if t >= VERDICT_T_THRESHOLD and realised > claimed_zar:
+        return "EXCEEDS"
+    if t <= -VERDICT_T_THRESHOLD:
+        return "FALLS SHORT"
+    return "NOT ESTABLISHED"
+
+
+def _claimed_vs_realised_section(
+    trade_rows, native_book, hip3_book, native_validated, hip3_validated
+):
+    """Section 2b: claimed research edge versus realised paper edge.
+
+    READ-ONLY AND ADVISORY. This section feeds no gate, admission decision or
+    promotion path and writes no state; it exists so the gap between the
+    median claimed edge over the monitored books and the forward paper book
+    cannot again be computed by hand during an audit.
+
+    Claimed: median mean_ret_costadj over monitored-book slices joined to the
+    validated pools (not over the whole validated file). Realised: mean
+    pnl_zar over lane_gate real closes; pnl_zar is net of fees (paper_trade.py
+    writes ``pnl_zar = gross - fees``). Below MIN_VERDICT_CLOSES closes the
+    section prints a mean and INSUFFICIENT SAMPLE, never a t-statistic.
+    """
+    lines = ["## 2b. Claimed vs realised", ""]
+    books = {"native": native_book, "hip3": hip3_book}
+    pools = {
+        "native": _validated_edge_pool(native_validated),
+        "hip3": _validated_edge_pool(hip3_validated),
+    }
+    info = {}
+    pooled_edges = []
+    missing_all = []
+    for lane in ("native", "hip3"):
+        edges, missing = _book_edges(books[lane], pools[lane])
+        info[lane] = {
+            "book_n": len(books[lane]),
+            "pool_n": len(pools[lane]),
+            "edges": edges,
+            "missing": missing,
+        }
+        pooled_edges.extend(edges)
+        missing_all.extend((lane, sid) for sid in missing)
+    native_n = info["native"]["book_n"]
+    hip3_n = info["hip3"]["book_n"]
+    lines.append(
+        f"- Book: {native_n + hip3_n} slices (native {native_n} | hip3 {hip3_n}); "
+        f"validated pools: native {info['native']['pool_n']} | "
+        f"hip3 {info['hip3']['pool_n']}; book slices absent from pools: {len(missing_all)}"
+    )
+    for lane, sid in missing_all[:10]:
+        lines.append(f"  - absent: `{sid}` ({lane})")
+    if len(missing_all) > 10:
+        lines.append(f"  - ... and {len(missing_all) - 10} more")
+
+    pooled_stats = _close_stats(_real_close_rows(trade_rows))
+    lane_stats = {
+        lane: _close_stats(_real_close_rows(trade_rows, lane))
+        for lane in ("native", "hip3")
+    }
+
+    if pooled_edges:
+        claimed_edge = statistics.median(pooled_edges)
+        claimed_zar = claimed_edge * pooled_stats["mean_notional"]
+        lines.append(
+            f"- Claimed edge (median mean_ret_costadj over {len(pooled_edges)} book "
+            f"slices present in the validated pools): {100 * claimed_edge:+.3f}% | at "
+            f"{pooled_stats['mean_notional']:.2f} ZAR mean notional/trade: "
+            f"{claimed_zar:+.2f} ZAR/trade"
+        )
+    else:
+        claimed_edge = None
+        claimed_zar = None
+        lines.append(
+            f"- Claimed edge: unknown (0/{native_n + hip3_n} book slices present in "
+            f"the validated pools)"
+        )
+
+    n = pooled_stats["n"]
+    if n == 0:
+        lines.append(
+            "- Realised (0 real closes per lane_gate._is_real_close, net of fees): "
+            f"no real closes | INSUFFICIENT SAMPLE (n<{MIN_VERDICT_CLOSES})"
+        )
+    elif n < MIN_VERDICT_CLOSES:
+        lines.append(
+            f"- Realised ({n} real closes per lane_gate._is_real_close, net of fees): "
+            f"{pooled_stats['mean']:+.2f} ZAR/trade | INSUFFICIENT SAMPLE "
+            f"(n<{MIN_VERDICT_CLOSES})"
+        )
+    else:
+        lines.append(
+            f"- Realised ({n} real closes per lane_gate._is_real_close, net of fees): "
+            f"{pooled_stats['mean']:+.2f} ZAR/trade | sd {pooled_stats['sd']:.2f} | "
+            f"SE {pooled_stats['se']:.2f}"
+        )
+    if claimed_zar is not None and n >= MIN_VERDICT_CLOSES:
+        gap = pooled_stats["mean"] - claimed_zar
+        t = _gap_t(pooled_stats["mean"], pooled_stats["se"], claimed_zar)
+        lines.append(
+            f"- Gap: {gap:+.2f} ZAR/trade | t = {t:+.2f} (one-sample t of realised "
+            f"mean vs the claimed constant) | verdict: "
+            f"{_verdict(t, pooled_stats['mean'], claimed_zar)}"
+        )
+    else:
+        why = (
+            "claimed edge unknown"
+            if claimed_zar is None
+            else f"INSUFFICIENT SAMPLE (n<{MIN_VERDICT_CLOSES})"
+        )
+        lines.append(f"- Gap: not computed | verdict: {why}")
+
+    for lane in ("native", "hip3"):
+        inf = info[lane]
+        st = lane_stats[lane]
+        if inf["edges"]:
+            med = statistics.median(inf["edges"])
+            notional_ref = st["mean_notional"] if st["n"] else pooled_stats["mean_notional"]
+            lane_claimed_zar = med * notional_ref
+            claim_txt = (
+                f"claimed median {100 * med:+.3f}% over {len(inf['edges'])}/"
+                f"{inf['book_n']} slices (pool {inf['pool_n']}) ~ "
+                f"{lane_claimed_zar:+.2f} ZAR"
+            )
+        else:
+            med = None
+            lane_claimed_zar = None
+            claim_txt = (
+                f"claimed unknown (0/{inf['book_n']} slices in pool {inf['pool_n']})"
+            )
+        if st["n"] == 0:
+            real_txt = f"0 real closes | INSUFFICIENT SAMPLE (n<{MIN_VERDICT_CLOSES})"
+        elif st["n"] < MIN_VERDICT_CLOSES:
+            real_txt = (
+                f"realised {st['n']} closes {st['mean']:+.2f} ZAR sd {st['sd']:.2f} | "
+                f"INSUFFICIENT SAMPLE (n<{MIN_VERDICT_CLOSES})"
+            )
+        elif lane_claimed_zar is not None:
+            lt = _gap_t(st["mean"], st["se"], lane_claimed_zar)
+            real_txt = (
+                f"realised {st['n']} closes {st['mean']:+.2f} ZAR sd {st['sd']:.2f} "
+                f"SE {st['se']:.2f} | gap {st['mean'] - lane_claimed_zar:+.2f} "
+                f"t {lt:+.2f} | {_verdict(lt, st['mean'], lane_claimed_zar)}"
+            )
+        else:
+            real_txt = f"realised {st['n']} closes {st['mean']:+.2f} ZAR | claimed unknown"
+        lines.append(f"- {lane}: {claim_txt} | {real_txt}")
+
+    lines.append(
+        f"- Ledger: {len(trade_rows)} decision rows; {n} real closes (outcome win/loss "
+        f"and exit_reason in lane_gate.ACTUAL_EXITS, {len(lane_gate.ACTUAL_EXITS)} exit "
+        f"reasons); the other {max(len(trade_rows) - n, 0)} rows are skipped/guard "
+        f"decisions and never count"
+    )
+
+    # Reconcile against the sections 2/3 population: their lifetime ledger
+    # counts this module's ACTUAL_EXITS (which includes stale_data); this
+    # section's t uses lane_gate's smaller set. The sets are deliberately NOT
+    # unified (that would rewrite section 3 ledger history), so any disagreement
+    # is printed here instead of letting the verdict silently describe a
+    # different population than the equity line above it.
+    ledger_real = _ledger_close_rows(trade_rows)
+    delta = len(ledger_real) - n
+    if delta:
+        delta_rows = [
+            r
+            for r in ledger_real
+            if str(r.get("exit_reason") or "") not in lane_gate.ACTUAL_EXITS
+        ]
+        reasons = Counter(str(r.get("exit_reason") or "?") for r in delta_rows)
+        per_lane_delta = Counter(_lane(r.get("slice_id", "")) for r in delta_rows)
+        reason_txt = ", ".join(f"{k}={v}" for k, v in sorted(reasons.items()))
+        lines.append(
+            f"- Population delta vs sections 2/3: the lifetime ledger above counts "
+            f"{len(ledger_real)} closes; this section counts {n} under lane_gate; "
+            f"{delta} extra in the ledger (native {per_lane_delta.get('native', 0)} | "
+            f"hip3 {per_lane_delta.get('hip3', 0)}; exit reasons: {reason_txt}). The "
+            f"two sets are not unified on purpose; while this is non-zero the equity "
+            f"line and this verdict describe different populations."
+        )
+    lines.append("")
+    lines.append(
+        "_Read-only and advisory: this section feeds no gate, admission decision or "
+        "promotion path._"
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _short_audit_from_files() -> dict:
     """Compute a short audit directly from committed validated rows.
 
@@ -386,6 +691,17 @@ def _report_text() -> str:
         f"30d: **{recent['30d']['native'][1] + recent['30d']['hip3'][1]:+.2f} ZAR**\n"
     )
 
+    # ---- claimed vs realised: read-only advisory verdict (section 2b) ----
+    native_book = _book_rows(DATA / "research" / "monitored_slices.csv")
+    hip3_book = _book_rows(DATA / "hip3" / "research" / "monitored_slices.csv")
+    native_validated = _read_csv(DATA / "research" / "validated_slices.csv")
+    hip3_validated = _read_csv(DATA / "hip3" / "research" / "validated_slices.csv")
+    add(
+        _claimed_vs_realised_section(
+            trade_rows, native_book, hip3_book, native_validated, hip3_validated
+        )
+    )
+
     # ---- per lane ----
     add("## 3. Lanes\n")
     for lane in ("native", "hip3"):
@@ -460,7 +776,19 @@ def _report_text() -> str:
         oc = _num(paper.get("aggregate_open_risk_zar"))
         util = _num(paper.get("aggregate_risk_utilization"))
         status = paper.get("aggregate_risk_status")
-        add(f"- Aggregate: **{oc:.2f} / {cap:.2f} ZAR | {100 * util:.1f}% | {status}**")
+        add(
+            "- Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any "
+            "live position (there is no live executor); the computed open stop-risk "
+            "is informational only."
+        )
+        add(
+            f"- Computed open stop-risk (section 4): **{total_open_risk:.2f} ZAR** "
+            f"(informational only, no cap applied)"
+        )
+        add(
+            f"- Paper shadow ledger (gates paper entries only, nothing live): "
+            f"**{oc:.2f} / {cap:.2f} ZAR | {100 * util:.1f}% | {status}**"
+        )
         add(
             f"- Remaining: {paper.get('aggregate_risk_remaining_zar')} | "
             f"cap skips: {paper.get('aggregate_risk_cap_skips')} | unknown skips: {paper.get('aggregate_risk_unknown_skips')}"
@@ -475,9 +803,7 @@ def _report_text() -> str:
         )
         add("")
 
-    # ---- books ----
-    native_book = _book_rows(DATA / "research" / "monitored_slices.csv")
-    hip3_book = _book_rows(DATA / "hip3" / "research" / "monitored_slices.csv")
+    # ---- books (loaded once above for section 2b) ----
     add("## 6. Monitored books\n")
     add(f"- Native: {len(native_book)} | HIP-3: {len(hip3_book)}")
     add("- Native top (by paper P&L):")
