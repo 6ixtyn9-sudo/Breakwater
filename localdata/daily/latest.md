@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 08:08 UTC
+# Breakwater daily print — 2026-09-10 08:27 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **387.80 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **387.43 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
@@ -20,6 +20,18 @@
 - Equity: **1861.13 ZAR** (seed 2000) | lifetime: **-138.87 ZAR** | closed: 91
 - Today: 6 closed, **-33.98 ZAR**
 - 7d: **-112.22 ZAR** | 30d: **-138.87 ZAR**
+
+## 2b. Claimed vs realised
+
+- Book: 46 slices (native 29 | hip3 17); validated pools: native 524 | hip3 464; book slices absent from pools: 0
+- Claimed edge (median mean_ret_costadj over 46 book slices present in the validated pools): +0.380% | at 391.32 ZAR mean notional/trade: +1.49 ZAR/trade
+- Realised (91 real closes per lane_gate._is_real_close, net of fees): -1.53 ZAR/trade | sd 8.41 | SE 0.88
+- Gap: -3.01 ZAR/trade | t = -3.42 (one-sample t of realised mean vs the claimed constant) | verdict: FALLS SHORT
+- native: claimed median +0.509% over 29/29 slices (pool 524) ~ +1.99 ZAR | realised 67 closes -1.74 ZAR sd 9.48 SE 1.16 | gap -3.73 t -3.22 | FALLS SHORT
+- hip3: claimed median +0.085% over 17/17 slices (pool 464) ~ +0.33 ZAR | realised 24 closes -0.92 ZAR sd 4.27 | INSUFFICIENT SAMPLE (n<30)
+- Ledger: 94911 decision rows; 91 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 94820 rows are skipped/guard decisions and never count
+
+_Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
 ## 3. Lanes
 
@@ -64,7 +76,9 @@
 
 ## 5. Aggregate risk leash
 
-- Aggregate: **0.00 / 0.00 ZAR | 0.0% | None**
+- Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
+- Computed open stop-risk (section 4): **117.10 ZAR** (informational only, no cap applied)
+- Paper shadow ledger (gates paper entries only, nothing live): **0.00 / 0.00 ZAR | 0.0% | None**
 - Remaining: None | cap skips: None | unknown skips: None
 - booked stats: null
 - positions without bars: None | replayed: None | invalid: None
@@ -117,9 +131,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.2333 bull=0.0333 neutral=0.7333 | symbols=30
+- Label: **neutral** | breadth bear=0.1765 bull=0.0588 neutral=0.7647 | symbols=17
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-10T08:00:24Z
+- as_of: 2026-09-10T08:25:45Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
