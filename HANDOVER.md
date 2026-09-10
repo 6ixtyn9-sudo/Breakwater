@@ -1036,3 +1036,84 @@ END
   failure mode - determine at the source, do not guess, and push back on the
   brief when the brief contradicts the code. A precise "no", with the line
   that proves it, is a passing outcome.
+
+## 2026-09-10: frozen 30-day run, pre-registered (day 0)
+
+One question, written before the run starts: does the pooled realised mean
+P&L per lane_gate real close, net of fees, reach the claimed edge? Primary
+read at the first close past n=300 real closes (at recent throughput, 98 in
+8.5 days, that lands mid-window; if day 30 arrives first, read at n_actual
+with the bands unchanged). Verdict bands are pinned to the live section 2b
+rule, not re-derived: MIN_VERDICT_CLOSES=30, t threshold 2.0 (|t|<2 NOT
+ESTABLISHED, t<=-2 FALLS SHORT, t>=+2 with realised>claimed EXCEEDS; n<30
+prints INSUFFICIENT SAMPLE, never a t). The two nulls are reported
+separately at every read: vs the frozen claimed constant AND vs zero.
+Section 2b is the scoreboard, never a trigger: no interim decisions, no
+day-15 verdicts, no knob changes before day 31 whatever it prints.
+
+Frozen claimed constant: +1.49 ZAR/trade (computed +1.4850 = median +0.3798%
+over 46/46 monitored slices joined to the validated pools - native median
++0.509% over 29/29, hip3 +0.085% over 17/17, pools 524/464 - at 390.95 ZAR
+mean notional/trade; origin/main b88e1c2, 2026-09-10T15:57:49Z). The live
+2b line keeps recomputing its ZAR conversion with compounding notional as
+equity moves; the day-30 test uses THIS number, not the live line. SE is
+recomputed from observed variance at read time (day-0 sd 8.25, SE 0.83 at
+n=98); at n=300 the same sd gives SE~0.48, so a band flip needs
+|mean-claimed|>=0.95, and a +0.52 print vs the zero null is only t~+1.09
+(morning read 1.07 at sd 8.41) - report both nulls, conflate neither.
+
+Day-0 anchor (same HEAD): 98 real closes (native 69 / hip3 29), realised
+-1.66 ZAR/trade, gap -3.14, t -3.77 vs claimed / -1.99 vs zero: FALLS SHORT,
+which the 2b-vocabulary section already calls EXPECTED, not an alarm.
+Counterfactual instrument healthy: control target_2r_trail_1r pairs all 98
+closes, delta exactly +0.0000 on the 66 clean rows (max abs 0.0000); the 32
+historical lane_gate rows (mean delta +4.47) stay excluded as contaminated.
+Full baseline table is in the pre-registration PR body.
+
+Freeze procedure (verified: sync_book is reached only from research and
+hip3-research; paper shadow-scan and guardian operate only read - trace in
+the PR body. "Frozen" is therefore a dispatcher toggle, not a code change):
+PAUSE in cron-job.org before 00:10 UTC / 02:10 SAST - tonight's research
+dispatch. The 02:10 UTC figure in the pre-flight brief was wrong by 2h;
+status.csv shows research_done 00:25-00:57 UTC daily, so 00:10 UTC is the
+real deadline. Pause the research refresh (POSTs research.yml) and the HIP-3
+job (POSTs hip3-research.yml, fires 01:45 UTC / 03:45 SAST); do not dispatch
+hip3-discovery.yml (already manual-only) or research.yml's deep_audit input
+(dies with the pause). KEEP: Paper (:00/:30 shadow-scan) and Guardian
+(:25/:55 operate) - sub-hourly cadences, tz-invariant - plus CI. gh
+equivalents, for the operator only, NEVER executed by the agent:
+gh workflow disable research.yml && gh workflow disable hip3-research.yml
+(day 31: enable in reverse). Pausing research does not silence the
+heartbeat: every Paper/Guardian state push still pings it through the
+commit_state.sh success trap.
+
+What stays static: book membership (the 46 monitored slice_ids),
+validated/discovered/asset_edge pools, promotion floors and quantiles,
+green-gate/coma logic, exit policy (stop/2R/horizon/trail/R-gate), seat
+counts, sizing fractions, fee bps, session and per-asset gates. What may
+evolve: positions, closes, paper_* and cooldown columns on existing book
+rows (see below), paper equity, regime_state, short-inventory observations,
+status.csv, the digest, counterfactual rows, risk_state. During the window
+monitored_slices.csv may change ONLY in status, cooldown_until,
+last_signal_bar, paper_trades, paper_wins, paper_losses, paper_pnl_zar - via
+read_book's expired-cooldown refresh (COOLDOWN->MONITORED on read),
+apply_signal_feedback (paper stats + stopout cooldown), and
+reconcile_paper_stats_from_log (paper stats from fills). All three iterate
+the existing row list; no add/remove path exists in any Paper or Guardian
+code path, and no Paper/Guardian path calls sync_book, write_validated,
+write_discovered, or write_asset_edges. If any commit during the window
+shows a slice_id added to or removed from either monitored book, the freeze
+is broken - say so loudly, do not repair it with code.
+
+Known non-violations (do not "fix" mid-window): (1) the native universe
+re-ingests in-runner once its 7-day cache expires (~15 Sep 00:25 UTC) and
+refreshes the NEW-name rank window per cycle, but paper/guardian roles never
+stage universe.csv, so committed state is unaffected and no book, gate, or
+exit changes; (2) paper-role commits do not stage the HIP-3 monitored book,
+so hip3 paper_* columns refresh only when hip3-research runs - during the
+window they freeze while the log (which the green gate actually reads)
+stays live; (3) the heartbeat is wired in all five dispatch workflows but
+this sandbox could not verify it is armed (secret list 403, run-log fetch
+EOF) - before day 0 the operator checks `gh secret list | grep HEARTBEAT`
+and one paper log for "Heartbeat pinged.", and arms with
+`gh secret set BREAKWATER_HEARTBEAT_URL`.
