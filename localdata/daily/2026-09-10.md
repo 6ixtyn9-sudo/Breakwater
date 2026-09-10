@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 08:57 UTC
+# Breakwater daily print — 2026-09-10 09:11 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -19,7 +19,7 @@
 
 - Equity: **1861.13 ZAR** (seed 2000) | lifetime: **-138.87 ZAR** | closed: 91
 - Today: 6 closed, **-33.98 ZAR**
-- 7d: **-112.22 ZAR** | 30d: **-138.87 ZAR**
+- 7d: **-114.76 ZAR** | 30d: **-138.87 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -29,7 +29,7 @@
 - Gap: -3.01 ZAR/trade | t = -3.42 (one-sample t of realised mean vs the claimed constant) | verdict: FALLS SHORT
 - native: claimed median +0.509% over 29/29 slices (pool 524) ~ +1.99 ZAR | realised 67 closes -1.74 ZAR sd 9.48 SE 1.16 | gap -3.73 t -3.22 | FALLS SHORT
 - hip3: claimed median +0.085% over 17/17 slices (pool 464) ~ +0.33 ZAR | realised 24 closes -0.92 ZAR sd 4.27 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 95606 decision rows; 91 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 95515 rows are skipped/guard decisions and never count
+- Ledger: 96328 decision rows; 91 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 96237 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -37,7 +37,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 67 | wins: 26 | win%: 38.8 | P&L: **-116.81 ZAR** | today: -35.59 | 7d: -90.16 | 30d: -116.81
+- Closed: 67 | wins: 26 | win%: 38.8 | P&L: **-116.81 ZAR** | today: -35.59 | 7d: -92.70 | 30d: -116.81
 - By exit: target +64.1, trail_stop +21.6, lane_gate +7.6, rotated -36.0, horizon -72.2, stop -102.0
 - By entry regime (n/pnl): bull 23/+24.7, bear 11/-38.9, neutral 33/-102.6
 - Top slices: feat_ext_vs_ma_20:0:LONG:h24 18n/9w +17.36; feat_ret_20:0:LONG:h24 1n/1w +11.91; feat_atr_norm_ext:2:LONG:h13 2n/2w +8.82; feat_ext_vs_ma_50:0:LONG:h21 2n/2w +2.35; feat_vol_regime:2:LONG:h11 1n/1w +0.26
@@ -58,14 +58,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 8 open, stop-risk **106.59 ZAR**
-  - ONDOUSDC BUY ntl=372 risk=17.25 bars=0 stop=0.3373299999999999995 peak=0.35372
-  - SUIUSDC BUY ntl=372 risk=16.80 bars=0 stop=0.729662499999999995 peak=0.76415
-  - ASTERUSDC BUY ntl=383 risk=15.45 bars=15 stop=0.7107175000000000190 peak=0.74063
-  - HYPEUSDC BUY ntl=372 risk=15.34 bars=0 stop=79.77874999999999920 peak=83.209
-  - LTCUSDC BUY ntl=372 risk=12.08 bars=0 stop=50.712999999999995975 peak=52.414
-  - XRPUSDC BUY ntl=372 risk=10.51 bars=0 stop=1.3424999999999999680 peak=1.3815
-  - ETHUSDC BUY ntl=380 risk=9.85 bars=12 stop=2400.949999999999975 peak=2464.8
-  - BNBUSDC BUY ntl=372 risk=9.31 bars=0 stop=700.8499999999999830 peak=718.83
+  - ONDOUSDC BUY ntl=372 risk=17.25 bars=1 stop=0.3373299999999999995 peak=0.35372
+  - SUIUSDC BUY ntl=372 risk=16.80 bars=1 stop=0.729662499999999995 peak=0.76415
+  - ASTERUSDC BUY ntl=383 risk=15.45 bars=16 stop=0.7107175000000000190 peak=0.74063
+  - HYPEUSDC BUY ntl=372 risk=15.34 bars=1 stop=79.77874999999999920 peak=83.209
+  - LTCUSDC BUY ntl=372 risk=12.08 bars=1 stop=50.712999999999995975 peak=52.414
+  - XRPUSDC BUY ntl=372 risk=10.51 bars=1 stop=1.3424999999999999680 peak=1.3815
+  - ETHUSDC BUY ntl=380 risk=9.85 bars=13 stop=2400.949999999999975 peak=2464.8
+  - BNBUSDC BUY ntl=372 risk=9.31 bars=1 stop=700.8499999999999830 peak=718.83
 
 - **HIP3**: 5 open, stop-risk **10.50 ZAR**
   - XYZ:ASML BUY ntl=391 risk=6.90 bars=19 stop=1711.2750000000000930 peak=1742.0
@@ -131,9 +131,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1765 bull=0.0588 neutral=0.7647 | symbols=17
+- Label: **neutral** | breadth bear=0.2333 bull=0.0333 neutral=0.7333 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-10T08:55:24Z
+- as_of: 2026-09-10T09:00:29Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -169,11 +169,11 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-10T08:40:32: errors=0 signals=None regime_blocked=None
+- Latest scan 2026-09-10T09:11:04: errors=1 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 13, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 34, "regime_blocked": 583, "skipped": 112, "slice_full": 15, "slot_full": 0})
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 16, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 32, "regime_blocked": 613, "skipped": 109, "slice_full": 14, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=10
-- pair_errors: []
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:BX"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
