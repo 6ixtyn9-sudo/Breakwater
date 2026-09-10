@@ -118,5 +118,13 @@
     "signal_id": "66a2b98c035f4c65",
     "slice_id": "feat_trend_strength_20:1:LONG:h19",
     "stopped_at": "2026-09-09T23:50:55+00:00"
+  },
+  {
+    "pair": "XYZ:ASML",
+    "pnl_zar": "-7.2568",
+    "reason": "stop",
+    "signal_id": "96208d86e98354d8",
+    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24",
+    "stopped_at": "2026-09-10T12:30:31+00:00"
   }
 ]
