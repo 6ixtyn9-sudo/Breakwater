@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 03:26 UTC
+# Breakwater daily print — 2026-09-10 03:38 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -46,15 +46,15 @@
 ## 4. Open positions & risk
 
 - **NATIVE**: 2 open, stop-risk **25.30 ZAR**
-  - ASTERUSDC BUY ntl=383 risk=15.45 bars=9 stop=0.7107175000000000190 peak=0.74063
+  - ASTERUSDC BUY ntl=383 risk=15.45 bars=10 stop=0.7107175000000000190 peak=0.74063
   - ETHUSDC BUY ntl=380 risk=9.85 bars=7 stop=2400.949999999999975 peak=2464.8
 
 - **HIP3**: 5 open, stop-risk **14.47 ZAR**
-  - XYZ:ASML BUY ntl=391 risk=6.90 bars=13 stop=1711.2750000000000930 peak=1742.0
-  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=11 stop=96.215500000000005610 peak=97.224
-  - XYZ:COST BUY ntl=391 risk=2.63 bars=11 stop=895.06499999999997360 peak=901.13
+  - XYZ:ASML BUY ntl=391 risk=6.90 bars=14 stop=1711.2750000000000930 peak=1742.0
+  - XYZ:EWJ BUY ntl=382 risk=3.96 bars=12 stop=96.215500000000005610 peak=97.224
+  - XYZ:COST BUY ntl=391 risk=2.63 bars=12 stop=895.06499999999997360 peak=901.13
   - XYZ:STRC BUY ntl=383 risk=0.97 bars=10 stop=97.718250000000000090 peak=97.966
-  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=37 stop=206.840000000000005950 peak=210.62
+  - XYZ:CRWD BUY ntl=393 risk=0.00 bars=38 stop=206.840000000000005950 peak=210.62
 
 ## 5. Aggregate risk leash
 
@@ -62,7 +62,7 @@
 - Remaining: 83.7538 | cap skips: 0 | unknown skips: 0
 - booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **ASTERUSDC** 15.4496 ZAR
-- positions without bars: 6 | replayed: 2 | invalid: 0
+- positions without bars: 2 | replayed: 5 | invalid: 0
 
 ## 6. Monitored books
 
@@ -112,9 +112,9 @@
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1538 bull=0.0769 neutral=0.7692 | symbols=13
+- Label: **neutral** | breadth bear=0.2 bull=0.0667 neutral=0.7333 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-10T03:25:30Z
+- as_of: 2026-09-10T03:30:26Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -150,11 +150,11 @@
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-10T03:10:59: errors=0 signals=None regime_blocked=None
-- this cycle: closed=1 new_signals=0 skipped=0 slot_full=0 slice_full=0 pair_held=0
+- Latest scan 2026-09-10T03:38:04: errors=0 signals=None regime_blocked=None
+- this cycle: closed=0 new_signals=0 skipped=0 slot_full=0 slice_full=0 pair_held=0
 - Action funnel: lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=0
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=10
-- aggregate_risk: ok open=39.7693 cap=130.2791 used=0.3571 remaining=83.7538 replayed=2 no_new_bars=6
+- aggregate_risk: ok open=39.7693 cap=130.2791 used=0.3571 remaining=83.7538 replayed=5 no_new_bars=2
 - pair_errors: []
 
 ---
