@@ -126,5 +126,37 @@
     "signal_id": "96208d86e98354d8",
     "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24",
     "stopped_at": "2026-09-10T12:30:31+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-15.6798",
+    "reason": "stop",
+    "signal_id": "d25b13aa93ecd064",
+    "slice_id": "feat_ext_vs_ma_10:0:LONG:h24",
+    "stopped_at": "2026-09-10T23:42:58+00:00"
+  },
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "-17.1343",
+    "reason": "stop",
+    "signal_id": "03464eaa284a2d18",
+    "slice_id": "feat_ext_vs_ma_10:0:LONG:h24",
+    "stopped_at": "2026-09-10T23:42:58+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-9.4647",
+    "reason": "stop",
+    "signal_id": "009b23ea644a6717",
+    "slice_id": "feat_ret_3:2:LONG:h19",
+    "stopped_at": "2026-09-10T23:42:58+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-5.5051",
+    "reason": "stop",
+    "signal_id": "1626b3051acfa25d",
+    "slice_id": "feat_vol_regime:0:LONG:h17",
+    "stopped_at": "2026-09-10T23:42:58+00:00"
   }
 ]
