@@ -96,8 +96,50 @@ def test_stale_data_row_is_not_a_real_close():
     # ledger view in section 2) does not count stale_data exits.
     rows = [_close(NATIVE_ID, -5.0, exit_reason="stale_data")]
     assert dp._real_close_rows(rows) == []
+    assert len(dp._ledger_close_rows(rows)) == 1
     text = _section(rows, [NATIVE_ID], [], {NATIVE_ID: 0.004}, {})
     assert "0 real closes" in text
+
+
+def test_population_delta_prints_when_ledger_and_gate_counts_differ():
+    # A stale_data exit is a real close for sections 2/3 but not for the gate
+    # set section 2b uses. The asymmetry must be printed, never hidden, and
+    # the sets must not be unified.
+    rows = [
+        _close(NATIVE_ID, -5.0, exit_reason="stale_data"),
+        _close(HIP3_ID, -2.0, exit_reason="stale_data"),
+    ]
+    text = _section(rows, [NATIVE_ID], [HIP3_ID], {NATIVE_ID: 0.004}, {HIP3_ID: 0.001})
+    assert "Population delta vs sections 2/3" in text
+    assert "counts 2 closes; this section counts 0 under lane_gate" in text
+    assert "2 extra in the ledger (native 1 | hip3 1" in text
+    assert "stale_data=2" in text
+    assert "not unified on purpose" in text
+
+
+def test_no_population_delta_line_when_sets_agree():
+    # horizon exits belong to both sets; with no stale_data rows the section
+    # must not invent a disagreement.
+    rows = [_close(NATIVE_ID, -2.0), _close(NATIVE_ID, -10.0)]
+    text = _section(rows, [NATIVE_ID], [], {NATIVE_ID: 0.01}, {})
+    assert "Population delta" not in text
+    # And all-skipped logs agree at zero.
+    skipped = _section([_skip() for _ in range(10)], [NATIVE_ID], [], {NATIVE_ID: 0.01}, {})
+    assert "Population delta" not in skipped
+
+
+def test_verdict_constants_are_pinned_to_policy_literals():
+    # These two numbers are the only "knobs" in an advisory section and the
+    # temptation during a bad fortnight is to move one so the verdict gets
+    # quieter. A change here must be deliberate, reviewed and visible, like
+    # the pinned gate constants in tests/test_lane_gate.py.
+    assert dp.MIN_VERDICT_CLOSES == 30
+    assert dp.VERDICT_T_THRESHOLD == 2.0
+    # Boundaries at the pinned threshold.
+    assert dp._verdict(-2.0, -1.0, 0.0) == "FALLS SHORT"
+    assert dp._verdict(2.0, 1.0, 0.0) == "EXCEEDS"
+    assert dp._verdict(-1.999, -1.0, 0.0) == "NOT ESTABLISHED"
+    assert dp._verdict(1.999, 1.0, 0.0) == "NOT ESTABLISHED"
 
 
 def test_two_row_fixture_known_mean_sd_and_t_to_two_decimal_places():
