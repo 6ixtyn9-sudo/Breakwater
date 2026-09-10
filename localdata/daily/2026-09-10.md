@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-10 09:57 UTC
+# Breakwater daily print — 2026-09-10 10:06 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -29,7 +29,7 @@
 - Gap: -3.01 ZAR/trade | t = -3.42 (one-sample t of realised mean vs the claimed constant) | verdict: FALLS SHORT
 - native: claimed median +0.509% over 29/29 slices (pool 524) ~ +1.99 ZAR | realised 67 closes -1.74 ZAR sd 9.48 SE 1.16 | gap -3.73 t -3.22 | FALLS SHORT
 - hip3: claimed median +0.085% over 17/17 slices (pool 464) ~ +0.33 ZAR | realised 24 closes -0.92 ZAR sd 4.27 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 97031 decision rows; 91 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 96940 rows are skipped/guard decisions and never count
+- Ledger: 97771 decision rows; 91 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 97680 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -58,21 +58,21 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 8 open, stop-risk **106.59 ZAR**
-  - ONDOUSDC BUY ntl=372 risk=17.25 bars=1 stop=0.3373299999999999995 peak=0.35372
-  - SUIUSDC BUY ntl=372 risk=16.80 bars=1 stop=0.729662499999999995 peak=0.76415
-  - ASTERUSDC BUY ntl=383 risk=15.45 bars=16 stop=0.7107175000000000190 peak=0.74063
-  - HYPEUSDC BUY ntl=372 risk=15.34 bars=1 stop=79.77874999999999920 peak=83.209
-  - LTCUSDC BUY ntl=372 risk=12.08 bars=1 stop=50.712999999999995975 peak=52.414
-  - XRPUSDC BUY ntl=372 risk=10.51 bars=1 stop=1.3424999999999999680 peak=1.3815
-  - ETHUSDC BUY ntl=380 risk=9.85 bars=13 stop=2400.949999999999975 peak=2464.8
-  - BNBUSDC BUY ntl=372 risk=9.31 bars=1 stop=700.8499999999999830 peak=718.83
+  - ONDOUSDC BUY ntl=372 risk=17.25 bars=2 stop=0.3373299999999999995 peak=0.35372
+  - SUIUSDC BUY ntl=372 risk=16.80 bars=2 stop=0.729662499999999995 peak=0.76415
+  - ASTERUSDC BUY ntl=383 risk=15.45 bars=17 stop=0.7107175000000000190 peak=0.74063
+  - HYPEUSDC BUY ntl=372 risk=15.34 bars=2 stop=79.77874999999999920 peak=83.209
+  - LTCUSDC BUY ntl=372 risk=12.08 bars=2 stop=50.712999999999995975 peak=52.414
+  - XRPUSDC BUY ntl=372 risk=10.51 bars=2 stop=1.3424999999999999680 peak=1.3815
+  - ETHUSDC BUY ntl=380 risk=9.85 bars=14 stop=2400.949999999999975 peak=2464.8
+  - BNBUSDC BUY ntl=372 risk=9.31 bars=2 stop=700.8499999999999830 peak=718.83
 
 - **HIP3**: 5 open, stop-risk **10.50 ZAR**
   - XYZ:ASML BUY ntl=391 risk=6.90 bars=20 stop=1711.2750000000000930 peak=1742.0
-  - XYZ:COST BUY ntl=391 risk=2.63 bars=17 stop=895.06499999999997360 peak=901.13
+  - XYZ:COST BUY ntl=391 risk=2.63 bars=19 stop=895.06499999999997360 peak=901.13
   - XYZ:STRC BUY ntl=383 risk=0.97 bars=16 stop=97.718250000000000090 peak=97.966
   - XYZ:CRWD BUY ntl=393 risk=0.00 bars=44 stop=206.840000000000005950 peak=210.62
-  - XYZ:EWJ BUY ntl=382 risk=0.00 bars=18 stop=97.4985000000000056100 peak=98.507
+  - XYZ:EWJ BUY ntl=382 risk=0.00 bars=19 stop=97.4985000000000056100 peak=98.507
 
 ## 5. Aggregate risk leash
 
@@ -131,9 +131,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1765 bull=0.0588 neutral=0.7647 | symbols=17
+- Label: **neutral** | breadth bear=0.2667 bull=0.0333 neutral=0.7 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **True** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 122
-- as_of: 2026-09-10T09:55:27Z
+- as_of: 2026-09-10T10:00:25Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -169,11 +169,11 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-10T09:36:33: errors=6 signals=None regime_blocked=None
+- Latest scan 2026-09-10T10:06:00: errors=2 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 14, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 31, "regime_blocked": 593, "skipped": 110, "slice_full": 11, "slot_full": 0})
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 18, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 30, "regime_blocked": 634, "skipped": 106, "slice_full": 19, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=2 blocks=10
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:BIRD"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:COST"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:DKNG"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EBAY"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:GEV"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:XBI"}]
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:GEV"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:XBI"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
