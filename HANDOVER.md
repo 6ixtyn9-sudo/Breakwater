@@ -989,3 +989,50 @@ END
   1 slice to 9 pairs. If that counts as widening, revert 72adbb2 cleanly rather than
   letting the two rules cancel each other out by accident; the prohibition and the
   audition allowance are not the same knob and should not be tuned against each other.
+
+## 2026-09-10: section 2b verdict vocabulary, before the frozen 30-day run (PR #7)
+
+- Section 2b (Claimed vs realised) prints three verdict words, and they
+  compare ONE thing: the realised mean P&L per real close (lane_gate real-close
+  definition, pnl_zar net of fees) against a fixed constant - the median
+  validated edge over the MONITORED BOOK slices joined to the validated pools,
+  converted at the mean per-trade notional. FALLS SHORT = realised mean is at
+  least 2 SE below that claimed constant; EXCEEDS = at least 2 SE above;
+  NOT ESTABLISHED = everything in between (and n<30 prints no t-statistic at
+  all). It is NOT a verdict that the strategy works or is broken: a book that
+  broke exactly even would still print FALLS SHORT against a positive claimed
+  edge. The realised mean versus ZERO is a different null (about t = -1.73 at
+  91 closes today); never conflate the two t-statistics. Expected first print
+  on the current book is FALLS SHORT (gap about -3.01 ZAR/trade, t about -3.42
+  at 91 closes, net of fees; mean fee_zar 0.3522 ZAR/trade is the fee
+  evidence). That line is EXPECTED, not a new alarm. The frozen 30-day run
+  uses this section as its scoreboard, with the pre-registered question
+  written down before the run starts.
+- If sections 2/3 and section 2b ever show different close counts, the
+  Population delta line in 2b names the difference by lane and exit reason
+  (today the only structural difference is the stale_data exit, which the
+  lifetime ledger counts and the lane_gate set does not; both populations are
+  91 right now). Do not "fix" a non-zero delta by unifying the two exit sets:
+  the ledger set is lifetime history, and rewriting it rewrites the record the
+  gate reads. Print the delta; investigate the rows.
+- Section 5's aggregate risk line now says NOT WIRED FOR LIVE TRADING. The
+  paper engine DOES enforce an aggregate cap on paper entries (5% of paper
+  equity; aggregate_risk_cap / aggregate_risk_unknown skips are real, see
+  paper_trade.py around the entry skip). What is unwired is any LIVE cap -
+  guardian passes aggregate_open_risk_zar=0 and there is no live executor
+  (section 9 item 3). Wiring the live cap remains an operator decision with
+  risk-policy consequences; the display change does not wire it or change any
+  admission behaviour.
+- Review lesson worth keeping as a standing rule. The PR #7 implementation
+  brief carried two confident errors that were each built one layer away from
+  the files: a verdict mapping contradicted by its own sample line (it showed
+  t = -3.71 next to NOT ESTABLISHED while defining t <= -2 as FALLS SHORT),
+  and a requested "no cap applied" label that was false for paper (the paper
+  engine skips entries when the aggregate cap binds). Both were caught by
+  opening the write path and re-deriving the number before printing the word;
+  shipping the requested wording would have authored a new instance of the
+  exact label-vs-computation defect class this week was spent removing. Rule:
+  a confident claim built one layer away from the file is the recurring
+  failure mode - determine at the source, do not guess, and push back on the
+  brief when the brief contradicts the code. A precise "no", with the line
+  that proves it, is a passing outcome.
