@@ -158,5 +158,37 @@
     "signal_id": "1626b3051acfa25d",
     "slice_id": "feat_vol_regime:0:LONG:h17",
     "stopped_at": "2026-09-11T00:04:53+00:00"
+  },
+  {
+    "pair": "CRVUSDC",
+    "pnl_zar": "-18.5243",
+    "reason": "stop",
+    "signal_id": "2897aaa3c7664e0f",
+    "slice_id": "feat_atr_norm_ext:2:LONG:h15",
+    "stopped_at": "2026-09-11T19:00:22+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-13.6686",
+    "reason": "stop",
+    "signal_id": "c1bd6e5156be410c",
+    "slice_id": "feat_atr_norm_ext:2:LONG:h15",
+    "stopped_at": "2026-09-11T19:00:22+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-9.1899",
+    "reason": "stop",
+    "signal_id": "25ed6844802ca199",
+    "slice_id": "feat_ext_vs_ma_20:2:LONG:h13",
+    "stopped_at": "2026-09-11T19:00:22+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-14.8438",
+    "reason": "stop",
+    "signal_id": "b824dcee6208fdd2",
+    "slice_id": "feat_ext_vs_ma_20:2:LONG:h13",
+    "stopped_at": "2026-09-11T19:00:22+00:00"
   }
 ]
