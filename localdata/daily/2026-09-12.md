@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-12 09:26 UTC
+# Breakwater daily print — 2026-09-12 09:37 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -22,7 +22,7 @@
 - Gap: -3.44 ZAR/trade | t = -4.56 (one-sample t of realised mean vs the claimed constant) | verdict: FALLS SHORT
 - native: claimed median +0.525% over 31/31 slices (pool 524) ~ +2.01 ZAR | realised 97 closes -2.20 ZAR sd 9.50 SE 0.96 | gap -4.20 t -4.36 | FALLS SHORT
 - hip3: claimed median +0.085% over 17/17 slices (pool 464) ~ +0.33 ZAR | realised 31 closes -0.67 ZAR sd 4.17 SE 0.75 | gap -1.00 t -1.33 | NOT ESTABLISHED
-- Ledger: 147514 decision rows; 128 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 147386 rows are skipped/guard decisions and never count
+- Ledger: 148302 decision rows; 128 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 148174 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -61,11 +61,11 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - **HIP3**: 6 open, stop-risk **19.53 ZAR**
   - XYZ:AVGO BUY ntl=364 risk=4.92 bars=19 stop=359.37499999999998860 peak=364.3
-  - XYZ:EWT BUY ntl=357 risk=4.46 bars=13 stop=109.37749999999999265 peak=110.76
+  - XYZ:EWT BUY ntl=357 risk=4.46 bars=15 stop=109.37749999999999265 peak=110.76
   - XYZ:HYUNDAI BUY ntl=357 risk=4.36 bars=13 stop=283.88000000000002330 peak=287.39
-  - XYZ:EBAY BUY ntl=357 risk=4.18 bars=14 stop=105.88750000000000230 peak=107.14
-  - XYZ:COST BUY ntl=364 risk=1.61 bars=18 stop=899.50250000000005440 peak=903.5
-  - XYZ:STRC BUY ntl=365 risk=0.00 bars=17 stop=98.1800000000000016850 peak=98.385
+  - XYZ:EBAY BUY ntl=357 risk=4.18 bars=15 stop=105.88750000000000230 peak=107.14
+  - XYZ:COST BUY ntl=364 risk=1.61 bars=19 stop=899.50250000000005440 peak=903.5
+  - XYZ:STRC BUY ntl=365 risk=0.00 bars=18 stop=98.1800000000000016850 peak=98.385
 
 ## 5. Aggregate risk leash
 
@@ -89,14 +89,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_ret_20:2:LONG:h10` edge=0.0051 n=17687 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_vol_regime:2:LONG:h12` edge=0.0053 n=14691 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_vol_regime:1:LONG:h24` edge=0.0057 n=8724 p=0.0001 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0017 n=10604 p=0.1017 src=validated_walk_forward unproven=False paper=1n/+6.16
+  - `hip3_xyz_equity_c0:feat_vol_regime:0:LONG:h20` edge=0.0015 n=8720 p=0.0082 src=validated_walk_forward unproven=False paper=1n/+0.12
   - `hip3_xyz_equity_c0:feat_atr_norm_ext:1:LONG:h16` edge=0.0011 n=9676 p=0.1282 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_trend_strength_20:0:LONG:h22` edge=0.0015 n=9595 p=0.0308 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ext_vs_ma_20:1:LONG:h16` edge=0.0008 n=11431 p=0.1760 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_realized_vol_20:0:LONG:h18` edge=0.0008 n=12593 p=0.2498 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24` edge=0.0017 n=10604 p=0.1017 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ret_20:1:LONG:h19` edge=0.0012 n=11409 p=0.0525 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_equity_c0:feat_ext_vs_ma_10:1:LONG:h20` edge=0.0008 n=12127 p=0.1730 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ret_5:1:LONG:h24` edge=0.0009 n=12246 p=0.1747 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -124,9 +124,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.3125 bull=0.1875 neutral=0.5 | symbols=16
+- Label: **neutral** | breadth bear=0.4333 bull=0.1 neutral=0.4667 | symbols=30
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 59 / bull 0
-- as_of: 2026-09-12T09:25:28Z
+- as_of: 2026-09-12T09:30:22Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -168,12 +168,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-12T09:07:49: errors=4 signals=None regime_blocked=None
+- Latest scan 2026-09-12T09:37:26: errors=0 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=5
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 58, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 5, "pair_held": 42, "regime_blocked": 638, "skipped": 122, "slice_full": 0, "slot_full": 0})
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 54, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 5, "pair_held": 43, "regime_blocked": 665, "skipped": 118, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=True frozen=native islands=3 blocks=16
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:DKNG"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EBAY"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:GEV"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:RDDT"}]
+- pair_errors: []
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
