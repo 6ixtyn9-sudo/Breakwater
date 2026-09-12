@@ -249,7 +249,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "325.36499999999998620",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-09-12T00:00:00+00:00",
+    "last_processed_bar_start": "2026-09-12T01:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "356.712520",
     "pair": "XYZ:AAPL",
@@ -262,7 +262,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 11,
+        "bars_held": 12,
         "stop_price": "329.30999999999997240"
       },
       "target_2r_trail_1r": {
@@ -537,7 +537,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "109.37749999999999265",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-09-12T00:00:00+00:00",
+    "last_processed_bar_start": "2026-09-12T01:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "357.155600",
     "pair": "XYZ:EWT",
@@ -545,27 +545,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 6,
+        "bars_held": 7,
         "stop_price": "109.37749999999999265"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 6,
+        "bars_held": 7,
         "stop_price": "109.37749999999999265"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 6,
+        "bars_held": 7,
         "stop_price": "109.37749999999999265"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 6,
+        "bars_held": 7,
         "stop_price": "109.37749999999999265"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 6,
+        "bars_held": 7,
         "stop_price": "109.37749999999999265"
       }
     },
@@ -585,35 +585,35 @@
     "horizon_bars": 24,
     "initial_stop_price": "283.88000000000002330",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-09-12T00:00:00+00:00",
+    "last_processed_bar_start": "2026-09-12T01:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "357.155600",
     "pair": "XYZ:HYUNDAI",
-    "peak_price": "287.69",
+    "peak_price": "287.81",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 5,
+        "bars_held": 6,
         "stop_price": "283.88000000000002330"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 5,
+        "bars_held": 6,
         "stop_price": "283.88000000000002330"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 5,
+        "bars_held": 6,
         "stop_price": "283.88000000000002330"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 5,
+        "bars_held": 6,
         "stop_price": "283.88000000000002330"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 5,
+        "bars_held": 6,
         "stop_price": "283.88000000000002330"
       }
     },
