@@ -214,5 +214,13 @@
     "signal_id": "e94e0c371ef369e0",
     "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24",
     "stopped_at": "2026-09-13T08:00:29+00:00"
+  },
+  {
+    "pair": "XYZ:STRC",
+    "pnl_zar": "-0.2842",
+    "reason": "trail_stop",
+    "signal_id": "df136231f200329a",
+    "slice_id": "hip3_xyz_equity_c0:feat_ret_1:1:LONG:h24",
+    "stopped_at": "2026-09-13T08:30:25+00:00"
   }
 ]
