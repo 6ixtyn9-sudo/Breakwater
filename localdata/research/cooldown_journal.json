@@ -222,5 +222,13 @@
     "signal_id": "df136231f200329a",
     "slice_id": "hip3_xyz_equity_c0:feat_ret_1:1:LONG:h24",
     "stopped_at": "2026-09-13T08:30:25+00:00"
+  },
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "-6.0352",
+    "reason": "stop",
+    "signal_id": "e7631a992f974235",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stopped_at": "2026-09-13T09:00:36+00:00"
   }
 ]
