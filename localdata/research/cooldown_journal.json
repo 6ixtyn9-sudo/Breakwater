@@ -198,5 +198,13 @@
     "signal_id": "f53c0705182ca9f4",
     "slice_id": "feat_ret_5:2:LONG:h19",
     "stopped_at": "2026-09-11T21:00:25+00:00"
+  },
+  {
+    "pair": "XYZ:HYUNDAI",
+    "pnl_zar": "-4.6835",
+    "reason": "stop",
+    "signal_id": "2c80b9b102a01fb9",
+    "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24",
+    "stopped_at": "2026-09-13T05:30:20+00:00"
   }
 ]
