@@ -238,5 +238,13 @@
     "signal_id": "1839249619450ef0",
     "slice_id": "feat_trend_strength_20:2:LONG:h12",
     "stopped_at": "2026-09-13T11:00:23+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "-5.5096",
+    "reason": "stop",
+    "signal_id": "6d6f0466fac7f25e",
+    "slice_id": "feat_ret_5:0:LONG:h16",
+    "stopped_at": "2026-09-13T13:00:27+00:00"
   }
 ]
