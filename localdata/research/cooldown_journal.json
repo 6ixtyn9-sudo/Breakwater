@@ -206,5 +206,13 @@
     "signal_id": "2c80b9b102a01fb9",
     "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24",
     "stopped_at": "2026-09-13T05:30:20+00:00"
+  },
+  {
+    "pair": "XYZ:AVGO",
+    "pnl_zar": "-5.2511",
+    "reason": "stop",
+    "signal_id": "e94e0c371ef369e0",
+    "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24",
+    "stopped_at": "2026-09-13T08:00:29+00:00"
   }
 ]
