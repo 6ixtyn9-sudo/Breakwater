@@ -230,5 +230,13 @@
     "signal_id": "e7631a992f974235",
     "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
     "stopped_at": "2026-09-13T09:00:36+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-3.3521",
+    "reason": "stop",
+    "signal_id": "1839249619450ef0",
+    "slice_id": "feat_trend_strength_20:2:LONG:h12",
+    "stopped_at": "2026-09-13T11:00:23+00:00"
   }
 ]
