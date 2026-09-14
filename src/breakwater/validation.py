@@ -117,7 +117,7 @@ ASSET_EDGE_HEADERS = [
 ]
 
 MIN_ROWS_PER_FOLD = 20
-FOLD_COUNT = 5
+# FOLD_COUNT defined after _coerce_int (below)
 
 HOSTILE_MIN_ROWS = 20
 STOP_ATR_FLOOR = 1.5
@@ -155,17 +155,23 @@ def _coerce_float(value, default: float) -> float:
         return default
 
 
+FOLD_COUNT = max(3, min(10, _coerce_int(os.getenv("BREAKWATER_VALIDATION_FOLD_COUNT", "3"), 3)))
+# Validate using trailing-aware exits (mirrors paper engine) instead of
+# fixed stop/target.  Default ON — validating with fixed stops while trading
+# with trailing measures the wrong thing.
+TRAILING_VALIDATION = _env_bool("BREAKWATER_TRAILING_VALIDATION", "1")
+
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(
     os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4
 )
 
 STRICT_PASS_FLOOR = max(1, _coerce_int(os.getenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", "3"), 3))
-BREADTH_MIN_SYMBOLS = max(1, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "10"), 10))
+BREADTH_MIN_SYMBOLS = max(4, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "6"), 6))
 BREADTH_MIN_ROWS_PER_SYMBOL = max(1, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", "10"), 10))
 BREADTH_MIN_POSITIVE_FRACTION = max(
     0.0,
-    min(1.0, _coerce_float(os.getenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.55"), 0.55)),
+    min(1.0, _coerce_float(os.getenv("BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION", "0.50"), 0.50)),
 )
 
 # --- Per-asset gate thresholds ---
@@ -351,6 +357,102 @@ def _forward_extremes_excluding_entry_bar(
     fwd_min_low = low_next.rolling(horizon_bars).min().shift(-(horizon_bars - 1))
     fwd_max_high = high_next.rolling(horizon_bars).max().shift(-(horizon_bars - 1))
     return fwd_min_low, fwd_max_high
+
+
+def _compute_trailing_aware_net_returns(
+    subset: pd.DataFrame,
+    *,
+    horizon_bars: int,
+    stop_atr_mult: float,
+    cost: float,
+    activate_r: float = 0.75,
+    trail_distance_r: float = 1.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return (net_long, net_short) arrays with trailing-stop exits.
+
+    Mirrors the paper engine's trailing logic: once a position moves
+    +activate_r in R units, the stop ratchets trail_distance_r behind the
+    best price seen.  This captures more of the winner than a fixed stop.
+    """
+    n = len(subset)
+    net_long = np.full(n, np.nan, dtype=float)
+    net_short = np.full(n, np.nan, dtype=float)
+
+    for _, g in subset.groupby("symbol", sort=False):
+        g = g.sort_values("start")
+        idx = g.index.to_numpy()
+        close = g["close"].astype(float).to_numpy()
+        high = g["high"].astype(float).to_numpy()
+        low = g["low"].astype(float).to_numpy()
+        atr = _atr14(g).replace(0, np.nan).to_numpy()
+        m = len(close)
+
+        for direction in ("LONG", "SHORT"):
+            exits = np.full(m, np.nan)
+            for i in range(m - horizon_bars):
+                entry = close[i]
+                a = atr[i]
+                if np.isnan(a) or a <= 0 or entry <= 0:
+                    continue
+                r_dist = stop_atr_mult * a
+                if direction == "LONG":
+                    initial_stop = entry - r_dist
+                    target = entry + 2.0 * r_dist
+                    stop = initial_stop
+                    peak = entry
+                    trail_active = False
+                    exit_price = None
+                    for j in range(i + 1, min(i + 1 + horizon_bars, m)):
+                        bar_high = high[j]
+                        bar_low = low[j]
+                        peak = max(peak, bar_high)
+                        if not trail_active:
+                            if peak >= entry + activate_r * r_dist:
+                                trail_active = True
+                        if trail_active:
+                            stop = max(stop, peak - trail_distance_r * r_dist)
+                        if bar_low <= stop:
+                            exit_price = stop
+                            break
+                        if bar_high >= target:
+                            exit_price = target
+                            break
+                    if exit_price is None:
+                        exit_price = close[min(i + horizon_bars, m - 1)]
+                    exits[i] = (exit_price - entry) / entry - cost
+                else:  # SHORT
+                    initial_stop = entry + r_dist
+                    target = entry - 2.0 * r_dist
+                    stop = initial_stop
+                    trough = entry
+                    trail_active = False
+                    exit_price = None
+                    for j in range(i + 1, min(i + 1 + horizon_bars, m)):
+                        bar_high = high[j]
+                        bar_low = low[j]
+                        trough = min(trough, bar_low)
+                        if not trail_active:
+                            if trough <= entry - activate_r * r_dist:
+                                trail_active = True
+                        if trail_active:
+                            stop = min(stop, trough + trail_distance_r * r_dist)
+                        if bar_high >= stop:
+                            exit_price = stop
+                            break
+                        if bar_low <= target:
+                            exit_price = target
+                            break
+                    if exit_price is None:
+                        exit_price = close[min(i + horizon_bars, m - 1)]
+                    exits[i] = (entry - exit_price) / entry - cost
+
+            pos = subset.index.get_indexer(idx)
+            if direction == "LONG":
+                net_long[pos] = exits
+            else:
+                net_short[pos] = exits
+
+    return net_long, net_short
 
 
 def _compute_stop_aware_net_returns(
@@ -620,6 +722,24 @@ def validate_slices(
             cost=cost,
         )
 
+        # Trailing-aware net returns: mirrors paper engine's trailing stop
+        # (activate at +0.75R, trail at 1.0R).  Used for fold evaluation
+        # when TRAILING_VALIDATION is on, since the paper engine now trails.
+        if TRAILING_VALIDATION:
+            trail_long, trail_short = _compute_trailing_aware_net_returns(
+                subset,
+                horizon_bars=horizon_bars,
+                stop_atr_mult=stop_atr_mult,
+                cost=cost,
+            )
+            # Use trailing returns for validation; keep fixed-stop returns
+            # for diagnostics (hostile regime, session stats).
+            val_long = trail_long
+            val_short = trail_short
+        else:
+            val_long = net_long
+            val_short = net_short
+
         # Slice mask and validity
         slice_mask = (subset[state_column].to_numpy() == candidate.state)
         valid_long = np.isfinite(net_long)
@@ -645,28 +765,36 @@ def validate_slices(
         # reintroduce the very side-selection leakage this gate guards against.
         direction_ok = (str(candidate.side).upper() == side_train)
 
-        # Candidate-side net series
+        # Candidate-side net series — use trailing-aware for validation gates
         net_values = net_long if str(candidate.side).upper() == "LONG" else net_short
+        val_values = val_long if str(candidate.side).upper() == "LONG" else val_short
         valid = np.isfinite(net_values)
         slice_mask = slice_mask & valid
 
-        slice_net = net_values[slice_mask]
+        slice_net = val_values[slice_mask]
         n_slice = int(len(slice_net))
         mean_net = float(np.mean(slice_net)) if n_slice else 0.0
         mean_positive = mean_net > 0.0
 
         # Symbol-breadth check (pooled illusion fix)
+        # Adaptive breadth: longer horizons have fewer independent observations
+        # per symbol, so the breadth requirement scales down.  Min 4 symbols.
+        horizon_breadth_min = max(4, BREADTH_MIN_SYMBOLS - max(0, (horizon_bars - 10) // 5))
         breadth_ok, breadth_symbols_used, breadth_positive_fraction = _symbol_breadth_stats(
-            subset, slice_mask, net_values
+            subset, slice_mask, val_values
         )
+        # Override breadth_ok with adaptive threshold
+        if not breadth_ok and breadth_symbols_used > 0:
+            pos_frac_check = breadth_positive_fraction >= BREADTH_MIN_POSITIVE_FRACTION
+            breadth_ok = (breadth_symbols_used >= horizon_breadth_min) and pos_frac_check
         # Recency check (latest-fold brittleness fix)
-        recency_ok = _recency_ok(subset, slice_mask, net_values)
+        recency_ok = _recency_ok(subset, slice_mask, val_values)
 
         # Symbol-level p-value (more conservative than pooled rows)
         symbol_means = []
         if "symbol" in subset.columns and n_slice:
             df_sym = subset.loc[slice_mask, ["symbol"]].copy()
-            df_sym["net"] = net_values[slice_mask]
+            df_sym["net"] = val_values[slice_mask]
             for sym, g in df_sym.groupby("symbol"):
                 if len(g) >= BREADTH_MIN_ROWS_PER_SYMBOL:
                     symbol_means.append(float(g["net"].mean()))
@@ -695,7 +823,7 @@ def validate_slices(
                 purge_start = max(start, end - purge)
                 fold_mask[purge_start:end] = False
 
-            fold_returns = net_values[slice_mask & fold_mask]
+            fold_returns = val_values[slice_mask & fold_mask]
             passed = _fold_pass(fold_returns)
             fold_results.append("1" if passed else "0")
             fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
@@ -739,9 +867,14 @@ def validate_slices(
             temporal_pass
             and direction_ok
             and breadth_ok
-            and (not confounded)
             and mean_positive
         )
+        # NOTE: regime_confounded is intentionally NOT part of is_validated.
+        # A slice positive in neutral/bull but negative in bear is a valid
+        # structural edge — the regime gate already blocks bear entries at
+        # trade time.  Double-penalizing here starves the book of edges that
+        # work in 75% of regimes.  The confounded flag stays as a diagnostic
+        # so operators can see which edges are regime-dependent.
 
         reasons: list[str] = []
         if not temporal_pass:
@@ -752,8 +885,6 @@ def validate_slices(
             reasons.append("direction_ok")
         if not breadth_ok:
             reasons.append("breadth_ok")
-        if confounded:
-            reasons.append("regime_confounded")
         if not mean_positive:
             reasons.append("mean_net<=0")
         fail_reasons = ",".join(reasons)

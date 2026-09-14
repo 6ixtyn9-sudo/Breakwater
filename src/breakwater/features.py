@@ -25,6 +25,12 @@ FEATURE_COLUMNS = [
     "feat_vol_regime",
     "feat_trend_slope_20",
     "feat_trend_strength_20",
+    # Composite features: cross-feature interactions that capture non-linear
+    # relationships single features miss.  Discovery bins these the same way
+    # as base features; walk-forward + breadth guards prevent overfitting.
+    "feat_vol_trend",       # vol_regime × trend_slope: trending in volatility
+    "feat_ret_vol",         # ret_20 × vol_regime: momentum-volatility interaction
+    "feat_ext_strength",    # ext_vs_ma_20 × trend_strength: reversion vs trend
 ]
 
 
@@ -94,6 +100,11 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
 
     df["feat_trend_slope_20"] = close.rolling(20).apply(slope, raw=False)
     df["feat_trend_strength_20"] = close.rolling(20).apply(strength, raw=False)
+
+    # Composite features: cross-feature interactions
+    df["feat_vol_trend"] = df["feat_vol_regime"] * df["feat_trend_slope_20"]
+    df["feat_ret_vol"] = df["feat_ret_20"] * df["feat_vol_regime"]
+    df["feat_ext_strength"] = df["feat_ext_vs_ma_20"] * df["feat_trend_strength_20"]
     return df
 
 

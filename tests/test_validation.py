@@ -137,9 +137,11 @@ def test_regime_series_labels_the_prior():
     assert (labels == "bull").any()
 
 
-def test_bull_only_edge_is_regime_confounded_and_not_validated():
-    """Regime-confound safeguard: an edge that only works in friendly regimes must
-    not be promoted as a structural edge."""
+def test_bull_only_edge_is_regime_confounded_but_can_be_validated():
+    """Regime-confounded edges are flagged as diagnostic, but no longer blocked
+    from validation.  The regime gate blocks hostile-regime entries at trade
+    time, so double-penalizing here would starve the book of edges that work
+    in 75% of regimes."""
     rng = np.random.default_rng(11)
     bars = 500
     drift = np.zeros(bars)
@@ -177,8 +179,9 @@ def test_bull_only_edge_is_regime_confounded_and_not_validated():
     rows = validate_slices(prepared, long_candidates)
     confounded = [row for row in rows if row.regime_confounded]
     assert confounded, "expected at least one regime-confounded slice"
+    # Confounded is now a diagnostic flag, not a validation blocker.
+    # The regime gate handles hostile-regime entry blocking at trade time.
     for row in confounded:
-        assert row.validated is False
         assert row.hostile_n >= 20
 
 
