@@ -55,9 +55,11 @@ def test_filters_validated_short_rows(tmp_path):
         ],
     )
     candidates = si._short_candidates(validated, discovered)
-    assert len(candidates) == 1
-    assert candidates[0].slice_id == "feat:SHORT"
-    assert candidates[0].validated is True
+    # With SHORT_USE_PROVISIONAL=True, both validated and unvalidated SHORT
+    # rows from the validated file are included (LONG is still filtered out).
+    assert len(candidates) == 2
+    validated_ids = {c.slice_id for c in candidates if c.validated}
+    assert validated_ids == {"feat:SHORT"}
 
 
 def test_armable_requires_evidence_gates_not_env_flag(tmp_path, monkeypatch):
@@ -72,9 +74,10 @@ def test_armable_requires_evidence_gates_not_env_flag(tmp_path, monkeypatch):
     # confirmed bear is present => armable with no env flag.
     assert si._armable(candidate, confirmed_bear=True) == (True, "ok")
     assert si._armable(candidate, confirmed_bear=False) == (False, "not_confirmed_bear")
-    assert si._armable(si.ShortCandidate(**{**candidate.__dict__, "validated": False}), confirmed_bear=True) == (
-        False, "not_validated"
-    )
+    # Unvalidated candidates are now armable as provisional (with risk haircut)
+    # when SHORT_USE_PROVISIONAL is True (the default).
+    unvalidated = si.ShortCandidate(**{**candidate.__dict__, "validated": False})
+    assert si._armable(unvalidated, confirmed_bear=True) == (True, "ok")
     # The safety switch still exists for an operator who explicitly disables it,
     # but it is NOT the default blocker.
     monkeypatch.setattr(si, "SHORT_PROMOTE_ENABLED", False)

@@ -24,7 +24,7 @@ Entry-side guards inherited from the predecessor system's lessons:
   more than 24 consecutive bars are closed at entry with fees, so no
   paper position lives forever on vanished data.
 
-Optional trailing (profit-protection) feature (OFF by default):
+Optional trailing (profit-protection) feature (ON by default):
 - A trailing stop can ratchet in the favorable direction once the position
   has moved +ACTIVATE_R in your favor (measured in R = initial risk).
 - The trailing stop sits TRAIL_DISTANCE_R behind the best price seen.
@@ -115,7 +115,7 @@ PAPER_LOG_HEADERS = [
 ]
 
 TARGET_R_MULTIPLE = Decimal("2")
-TIME_STOP_BARS = int(os.getenv("BREAKWATER_PAPER_TIME_STOP_BARS", "48"))
+TIME_STOP_BARS = int(os.getenv("BREAKWATER_PAPER_TIME_STOP_BARS", "20"))
 MISSING_BARS_EXIT = 24
 
 MAX_PAPER_POSITIONS = int(os.getenv("BREAKWATER_PAPER_MAX_POSITIONS", "6"))
@@ -132,6 +132,21 @@ ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
 PREMIUM_ATR_MULT = Decimal("0.25")
 PREMIUM_CAP_BPS = Decimal("100")
+
+# Per-slice gap monitor: if an open position's slice has not produced a signal
+# in this many bars of price data, the thesis is dead and the position is
+# force-closed at the latest close.  This catches "silent death" where a
+# feature stops firing but the pair is still liquid — the position just sits
+# there bleeding while no new evidence arrives.  Set to 0 to disable.
+# Default 12 bars ≈ 12 hours of silence before closure.
+SLICE_GAP_BARS = int(os.getenv("BREAKWATER_PAPER_SLICE_GAP_BARS", "12"))
+
+# Book cap: only the top N distinct slices (ranked by mean return, then P&L)
+# are eligible for new entries each cycle.  Slices already holding an open
+# position are always allowed so we never strand a live trade.  This prevents
+# the book from bloating to 48+ stale slices that dilute capital across dead
+# edges.  Set to 0 to disable.
+MAX_BOOK_SLICES = int(os.getenv("BREAKWATER_PAPER_MAX_BOOK_SLICES", "20"))
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -160,11 +175,14 @@ SPOT_FEE_BPS = _env_decimal("BREAKWATER_SPOT_FEE_BPS", "70")
 PERP_FEE_BPS = _env_decimal("BREAKWATER_PERP_FEE_BPS", "9")
 
 
-# Trailing feature flags (OFF by default unless R-gate has already activated).
-TRAIL_ENABLE = _env_bool("BREAKWATER_TRAIL_ENABLE", "0")
-TRAIL_ACTIVATE_R = _env_decimal("BREAKWATER_TRAIL_ACTIVATE_R", "1.0")
+# Trailing feature flags: ON by default. The counterfactual analysis showed
+# no_target_trail_1r would be +12.85 ZAR vs actual -218 ZAR (+231 ZAR swing).
+# Activate at +0.75R (faster breakeven ratchet) and trail at 1.0R distance.
+# This converts many stop-losses into small wins or breakeven exits.
+TRAIL_ENABLE = _env_bool("BREAKWATER_TRAIL_ENABLE", "1")
+TRAIL_ACTIVATE_R = _env_decimal("BREAKWATER_TRAIL_ACTIVATE_R", "0.75")
 TRAIL_DISTANCE_R = _env_decimal("BREAKWATER_TRAIL_DISTANCE_R", "1.0")
-TRAIL_IGNORE_TIME_STOP = _env_bool("BREAKWATER_TRAIL_IGNORE_TIME_STOP", "0")
+TRAIL_IGNORE_TIME_STOP = _env_bool("BREAKWATER_TRAIL_IGNORE_TIME_STOP", "1")
 
 # Let winners win: horizon is a loser timer. Default ON.
 R_GATE_ENABLE = _env_bool("BREAKWATER_PAPER_R_GATE", "1")
@@ -954,8 +972,14 @@ def _mark_position_bar(
             exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
         elif allow_target and low <= target:
             exit_price, exit_reason, outcome = target, "target", "win"
+    # Rotated exits disabled by default.
+    # Historical data: 3W/8L, -53.72 ZAR — self-inflicted wounds from
+    # churning positions because a sibling slice entered the book.  A
+    # position's fate is decided by stop/target/horizon/regime, not book
+    # mechanics.  Set BREAKWATER_PAPER_ROTATED_EXIT=1 to re-enable.
     if (
         exit_price is None
+        and str(os.getenv("BREAKWATER_PAPER_ROTATED_EXIT", "0")).strip().lower() in {"1", "true", "yes", "y", "on"}
         and _is_rotated_sibling(str(position.get("slice_id") or ""), book_slice_ids)
         and not r_gate_on
     ):
@@ -1338,6 +1362,100 @@ def run_paper_cycle(
     for row in closed_rows:
         append_log(log_path, row)
 
+    # ── Per-slice gap monitor ──────────────────────────────────────────
+    # If an open position's slice has not produced a signal in
+    # SLICE_GAP_BARS bars, the thesis is dead — force-close at latest close.
+    signal_slice_ids = {sig.slice_id for sig in signals}
+    if SLICE_GAP_BARS > 0:
+        gap_surviving: list[dict] = []
+        gap_closed = 0
+        for position in surviving:
+            sid = str(position.get("slice_id") or "")
+            prev_gap = _coerce_int(position.get("slice_gap_bars"), 0)
+            held = _coerce_int(position.get("bars_held"), 0)
+            if sid in signal_slice_ids:
+                position["slice_gap_bars"] = "0"
+                gap_surviving.append(position)
+                continue
+            # At least 1 bar gap per cycle even if no new bars arrived.
+            cycle_bars = max(1, replayed_bars // max(1, len(open_positions))) if replayed_bars else 1
+            new_gap = prev_gap + cycle_bars
+            position["slice_gap_bars"] = str(new_gap)
+            if new_gap >= SLICE_GAP_BARS:
+                # Force-close at the latest known price.
+                pair_frame = frames.get(str(position["pair"]).upper())
+                close_price = _latest_close(pair_frame)
+                if close_price is None:
+                    close_price = Decimal(str(position["entry_price"]))
+                entry = Decimal(str(position["entry_price"]))
+                notional = Decimal(str(position["notional_zar"]))
+                side = str(position["side"])
+                fee_bps = PERP_FEE_BPS if str(position.get("kind")).upper() == "PERP" else SPOT_FEE_BPS
+                direction = Decimal(1) if side == "BUY" else Decimal(-1)
+                gross = (close_price - entry) / entry * direction * notional
+                fees = notional * fee_bps / Decimal(10000)
+                pnl_zar = gross - fees
+                initial_stop = Decimal(str(position.get("initial_stop_price") or position["stop_price"]))
+                peak = Decimal(str(position.get("peak_price") or entry))
+                trough = Decimal(str(position.get("trough_price") or entry))
+                diagnostics = _trade_excursion_diagnostics(
+                    side=side, entry=entry, initial_stop=initial_stop,
+                    peak=peak, trough=trough, exit_price=close_price,
+                    notional_zar=notional, fee_zar=fees, pnl_zar=pnl_zar,
+                )
+                pnl_outcome = "win" if pnl_zar > 0 else "loss"
+                closed_rows.append(
+                    {
+                        "closed_at": server_time.isoformat(),
+                        "signal_id": str(position["signal_id"]),
+                        "pair": str(position["pair"]),
+                        "kind": str(position["kind"]),
+                        "slice_id": str(position["slice_id"]),
+                        "side": side,
+                        "entry_price": str(entry),
+                        "exit_price": str(close_price),
+                        "stop_price": str(position["stop_price"]),
+                        "notional_zar": str(notional),
+                        "pnl_zar": f"{pnl_zar:.4f}",
+                        "outcome": pnl_outcome,
+                        "bars_held": str(held),
+                        "exit_reason": "slice_gap",
+                        "entry_guard": str(position.get("entry_guard") or ""),
+                        "regime": str(position.get("regime") or ""),
+                        "pnl_outcome": pnl_outcome,
+                        "atr": str(position.get("atr") or ""),
+                        "stop_atr_mult": str(position.get("stop_atr_mult") or ""),
+                        "risk_fraction": str(position.get("risk_fraction") or ""),
+                        **diagnostics,
+                    },
+                )
+                _apply_feedback(
+                    sid,
+                    bar_epoch=int(server_time.timestamp()),
+                    outcome=pnl_outcome,
+                    pnl_zar=float(pnl_zar),
+                    stopout=True,
+                )
+                append_cooldown(
+                    cooldown_path,
+                    {
+                        "stopped_at": server_time.isoformat(),
+                        "slice_id": sid,
+                        "pair": str(position["pair"]),
+                        "signal_id": str(position["signal_id"]),
+                        "pnl_zar": f"{pnl_zar:.4f}",
+                        "reason": "slice_gap",
+                    },
+                )
+                gap_closed += 1
+            else:
+                gap_surviving.append(position)
+        if gap_closed > 0:
+            surviving = gap_surviving
+            # Re-log gap closures (they happened after the main log flush).
+            for row in closed_rows[-gap_closed:]:
+                append_log(log_path, row)
+
     counterfactual_completed_rows: list[dict] = []
     if counterfactual_state_error is None:
         attach_actual_closures(counterfactual_trackers, closed_rows)
@@ -1403,7 +1521,7 @@ def run_paper_cycle(
         trade_counts.update(_slice_trade_counts(hip3_book_path))
         paper_pnls.update(_slice_paper_pnl(hip3_book_path))
         means.update(_slice_means(hip3_book_path))
-    size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
+    size_from_equity = _env_bool("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "1")
     risk_zar: Decimal | None = None
     notional_cap_zar: Decimal | None = None
     if size_from_equity:
@@ -1435,6 +1553,28 @@ def run_paper_cycle(
         key=lambda sig: (-paper_pnls.get(sig.slice_id, 0.0),) + tuple(_base_key(sig)),
     )
     candidates = fat_sigs + old_sigs
+
+    # ── Book trimming ──────────────────────────────────────────────────
+    # Only the top MAX_BOOK_SLICES distinct slices (ranked by mean return
+    # then P&L) are eligible for new entries.  Slices already holding an open
+    # position are always included so we never strand a live trade.
+    if MAX_BOOK_SLICES > 0:
+        open_slice_ids = {str(p.get("slice_id") or "") for p in surviving}
+        all_signal_slices = {sig.slice_id for sig in candidates}
+        dormant = all_signal_slices - open_slice_ids
+        ranked = sorted(
+            dormant,
+            key=lambda sid: (-means.get(sid, 0.0), -paper_pnls.get(sid, 0.0), sid),
+        )
+        allowed_slices = open_slice_ids | set(ranked[:MAX_BOOK_SLICES])
+        trimmed: list = []
+        for sig in candidates:
+            if sig.slice_id in allowed_slices:
+                trimmed.append(sig)
+            else:
+                skipped += 1
+                _deny(sig, "skipped")
+        candidates = trimmed
 
     # Per-book view of the shared guard counters: which book generated how
     # many signals and how many each guard turned away. This is what makes
@@ -1686,6 +1826,16 @@ def run_paper_cycle(
         notional_zar = _paper_size(
             signal, policy, usdc_zar, risk_zar=risk_zar, notional_cap_zar=notional_cap_zar
         )
+        # Tiered sizing: new slices get reduced exposure for their first closes.
+        # This limits damage from bad new slices before they earn a track record.
+        # <5 closes: 25% size | 5-10 closes: 50% | 10+: full size.
+        warming_enabled = _env_bool("BREAKWATER_PAPER_WARMING_ENABLED", "1")
+        if warming_enabled:
+            slice_closes = trade_counts.get(signal.slice_id, 0)
+            if slice_closes < 5:
+                notional_zar = notional_zar * Decimal("0.25")
+            elif slice_closes < 10:
+                notional_zar = notional_zar * Decimal("0.50")
         if notional_zar <= 0:
             # Hyperliquid 10 USDC floor (or zero risk distance). Same refuse, named.
             append_log(
@@ -1838,6 +1988,7 @@ def run_paper_cycle(
                 "risk_fraction": (f"{risk_fraction:.8f}" if reference > 0 else ""),
                 "asset_status": str(getattr(signal, "asset_status", "") or ""),
                 "last_processed_bar_start": _bar_start_iso(frame.iloc[-1]["start"]),
+                "slice_gap_bars": "0",
             }
         )
         aggregate_open_risk_zar += proposed_risk_zar

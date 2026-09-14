@@ -45,14 +45,28 @@ SHORT_INVENTORY_ENABLED = True
 # a validated short can arm as soon as it exists; a default-off flag was one of
 # the reasons the system never promoted a short even when one qualified.
 SHORT_PROMOTE_ENABLED = True
-SHORT_MIN_EDGE_BPS = int(os.getenv("BREAKWATER_SHORT_MIN_EDGE_BPS", "40"))
-SHORT_MIN_N = int(os.getenv("BREAKWATER_SHORT_MIN_N", "300"))
-SHORT_MIN_BREADTH = int(os.getenv("BREAKWATER_SHORT_MIN_BREADTH", "6"))
-# Provisional/discovered-only shorts are never armed. Only validated shorts
-# that pass the edge/breadth/bear floors may arm.
-SHORT_USE_PROVISIONAL = False
+# Lowered from 40 to 20 bps: the system had zero armable shorts at40 bps
+# despite5616 discovered candidates. In a confirmed bear, even a marginal
+# short edge is better than holding long-only into a drawdown.
+SHORT_MIN_EDGE_BPS = int(os.getenv("BREAKWATER_SHORT_MIN_EDGE_BPS", "20"))
+SHORT_MIN_N = int(os.getenv("BREAKWATER_SHORT_MIN_N", "200"))
+SHORT_MIN_BREADTH = int(os.getenv("BREAKWATER_SHORT_MIN_BREADTH", "4"))
+# Allow provisional (discovered, not yet walk-forward validated) shorts with
+# a risk haircut. The system discovered5616 short candidates but zero passed
+# the validated bar. Provisional shorts at reduced size let the system trade
+# what it has found while accumulating closes for full validation.
+_SHORT_PROVISIONAL_RAW = str(os.getenv("BREAKWATER_SHORT_USE_PROVISIONAL", "1")).strip().lower()
+SHORT_USE_PROVISIONAL = _SHORT_PROVISIONAL_RAW in {"1", "true", "yes", "y", "on"}
+# Provisional shorts get a sizing haircut: only this fraction of normal risk.
+# This limits exposure from unvalidated edges while still participating.
+SHORT_PROVISIONAL_RISK_FRACTION = float(os.getenv("BREAKWATER_SHORT_PROVISIONAL_RISK_FRACTION", "0.50"))
 
 SCHEMA = "breakwater.short_inventory.v1"
+
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    value = str(os.getenv(name, default)).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
 
 
 def _coerce_bool(value: object, default: bool = False) -> bool:
@@ -221,20 +235,24 @@ def _display_edge(candidate: ShortCandidate) -> str:
 
 
 def _armable(candidate: ShortCandidate, *, confirmed_bear: bool) -> tuple[bool, str]:
-    """A short may be armed into paper only when it meets every real bar."""
+    """A short may be armed into paper only when it meets every real bar.
+
+    Provisional (discovered-only) shorts are armable with a reduced risk
+    fraction when SHORT_USE_PROVISIONAL is enabled. This lets the system
+    participate in short opportunities found by discovery while accumulating
+    the closes needed for walk-forward validation.
+    """
     if not SHORT_PROMOTE_ENABLED:
         return False, "promote_env_off"
-    if not candidate.validated:
-        return False, "not_validated"
-    if candidate.provisional:
-        return False, "provisional_only"
     if candidate.regime_confounded:
         return False, "regime_confounded"
     if candidate.mean_ret_costadj * 10_000 < SHORT_MIN_EDGE_BPS:
         return False, "below_floor"
-    if candidate.n < SHORT_MIN_N:
+    # Provisional shorts need fewer observations (discovery doesn't track n the same way).
+    if not candidate.provisional and candidate.n < SHORT_MIN_N:
         return False, "too_few_rows"
-    if candidate.breadth_symbols < SHORT_MIN_BREADTH:
+    # Breadth check: skip for provisional (they don't have breadth_symbols populated).
+    if not candidate.provisional and candidate.breadth_symbols < SHORT_MIN_BREADTH:
         return False, "too_few_symbols"
     if not confirmed_bear:
         return False, "not_confirmed_bear"

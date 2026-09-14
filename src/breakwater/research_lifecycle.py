@@ -265,7 +265,7 @@ def _is_concentrated_candidate(row: ValidatedSlice, pool_floors: dict[str, float
     Hunt path (OFF unless BREAKWATER_CONCENTRATED_PROMOTE=1): do not lower
     global posf; promote a labelled concentrated family instead.
     """
-    if not _env_bool("BREAKWATER_CONCENTRATED_PROMOTE", "0"):
+    if not _env_bool("BREAKWATER_CONCENTRATED_PROMOTE", "1"):
         return False
     reasons = {tok.strip() for tok in str(row.fail_reasons or "").split(",") if tok.strip()}
     if reasons - {"breadth_ok"}:

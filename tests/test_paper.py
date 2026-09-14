@@ -142,6 +142,9 @@ def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None
     os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     os.environ.setdefault("BREAKWATER_PAPER_RISK_TO_MEAN_K", "0")
     os.environ.setdefault("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "0")
+    # Disable tiered warming in tests: they test paper mechanics, not the
+    # warming gate. Warming is tested separately in its own test.
+    os.environ.setdefault("BREAKWATER_PAPER_WARMING_ENABLED", "0")
     positions_path = tmp_path / "positions.json"
     if positions is not None:
         positions_path.write_text(json.dumps(positions))
@@ -876,7 +879,8 @@ def test_unreadable_position_state_is_preserved_and_fails_closed(tmp_path, monke
     assert positions_path.read_text() == "{broken"
 
 
-def test_rotated_sibling_exits_at_close(tmp_path):
+def test_rotated_sibling_exits_at_close(tmp_path, monkeypatch):
+    monkeypatch.setenv("BREAKWATER_PAPER_ROTATED_EXIT", "1")
     position = open_position(entry="100", stop="95", bars="2")
     position[0]["slice_id"] = "feat_ret_10:2:LONG:h14"
     position[0]["horizon_bars"] = "14"
@@ -947,6 +951,7 @@ def hip3_cycle(tmp_path, signals, frames, positions=None, hip3_book=None, book=B
     os.environ.setdefault("BREAKWATER_PAPER_SIZE_FROM_EQUITY", "0")
     os.environ.setdefault("BREAKWATER_PAPER_RISK_TO_MEAN_K", "0")
     os.environ.setdefault("BREAKWATER_PAPER_AGGREGATE_RISK_BUFFER_BPS", "0")
+    os.environ.setdefault("BREAKWATER_PAPER_WARMING_ENABLED", "0")
     positions_path = tmp_path / "positions.json"
     if positions is not None:
         positions_path.write_text(json.dumps(positions))

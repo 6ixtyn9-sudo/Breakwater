@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -96,7 +97,8 @@ def detect_big_wave(
         return None
 
     side = Side.BUY if long_setup else Side.SELL
-    stop = entry - Decimal(2) * atr if side is Side.BUY else entry + Decimal(2) * atr
+    stop_atr_mult = Decimal(os.getenv("BREAKWATER_STOP_ATR_MULT", "1.5"))
+    stop = entry - stop_atr_mult * atr if side is Side.BUY else entry + stop_atr_mult * atr
     if stop <= 0:
         return None
     trend_strength = abs(D(row["ema20"] - row["ema50"])) / atr

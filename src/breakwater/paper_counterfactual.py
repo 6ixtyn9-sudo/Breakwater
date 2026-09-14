@@ -323,7 +323,7 @@ def advance_counterfactuals(
     frames: dict,
     server_time: datetime,
     missing_bars_exit: int,
-    time_stop_bars: int = 48,
+    time_stop_bars: int = 20,
     max_bars: int = 240,
 ) -> CounterfactualAdvance:
     completed_rows: list[dict] = []
