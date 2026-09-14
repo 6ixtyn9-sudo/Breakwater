@@ -1569,18 +1569,24 @@ def run_paper_cycle(
         book_stats[_bkey_book(signal)][key] += 1
 
     # ── Book trimming ──────────────────────────────────────────────────
-    # Only the top MAX_BOOK_SLICES distinct slices (ranked by mean return
-    # then P&L) are eligible for new entries.  Slices already holding an open
-    # position are always included so we never strand a live trade.
+    # Only the top MAX_BOOK_SLICES distinct NATIVE slices (ranked by mean
+    # return then P&L) are eligible for new entries.  Slices already holding
+    # an open position are always included so we never strand a live trade.
+    # HIP-3 slices are EXEMPT: they have their own seat ring-fence
+    # (hip3_max_positions, HIP3_MAX_POSITIONS_PER_SLICE) and must not be
+    # silently killed by a native-centric mean-return ranking.
     if MAX_BOOK_SLICES > 0:
         open_slice_ids = {str(p.get("slice_id") or "") for p in surviving}
         all_signal_slices = {sig.slice_id for sig in candidates}
         dormant = all_signal_slices - open_slice_ids
+        # Only rank native dormant slices; HIP-3 slices pass through.
+        native_dormant = {sid for sid in dormant if not sid.startswith("hip3_")}
+        hip3_dormant = dormant - native_dormant
         ranked = sorted(
-            dormant,
+            native_dormant,
             key=lambda sid: (-means.get(sid, 0.0), -paper_pnls.get(sid, 0.0), sid),
         )
-        allowed_slices = open_slice_ids | set(ranked[:MAX_BOOK_SLICES])
+        allowed_slices = open_slice_ids | hip3_dormant | set(ranked[:MAX_BOOK_SLICES])
         trimmed: list = []
         for sig in candidates:
             if sig.slice_id in allowed_slices:
