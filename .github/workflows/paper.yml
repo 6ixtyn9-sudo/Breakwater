@@ -50,7 +50,7 @@ jobs:
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
-          BREAKWATER_PAPER_TIME_STOP_BARS: "12"
+          BREAKWATER_PAPER_TIME_STOP_BARS: "20"  # CHANGED: was "12"
           BREAKWATER_PAPER_MAX_POSITIONS: "24"
           BREAKWATER_PAPER_OLD_SEATS: "12"
           BREAKWATER_PAPER_FAT_SEATS: "10"
@@ -58,11 +58,21 @@ jobs:
           BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_KIND || '30' }}
           BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE: ${{ vars.BREAKWATER_PAPER_MAX_POSITIONS_PER_SLICE || '5' }}
 
-          # Trailing (profit-protecting stop) - OFF by default
-          BREAKWATER_TRAIL_ENABLE: "0"
-          BREAKWATER_TRAIL_ACTIVATE_R: "1.0"
+          # Trailing (profit-protecting stop) - ON per counterfactual analysis.
+          # Activate at +0.75R, trail at 1.0R distance, ignore time-stop when active.
+          BREAKWATER_TRAIL_ENABLE: "1"           # CHANGED: was "0"
+          BREAKWATER_TRAIL_ACTIVATE_R: "0.75"    # CHANGED: was "1.0"
           BREAKWATER_TRAIL_DISTANCE_R: "1.0"
-          BREAKWATER_TRAIL_IGNORE_TIME_STOP: "0"
+          BREAKWATER_TRAIL_IGNORE_TIME_STOP: "1" # CHANGED: was "0"
+
+          # Warming: smaller position sizes until slice has enough closes
+          BREAKWATER_PAPER_WARMING_ENABLED: "1"  # NEW
+          # Gap monitor: pause entries when price gaps beyond book
+          BREAKWATER_PAPER_SLICE_GAP_BARS: "12"  # NEW
+          BREAKWATER_PAPER_MAX_BOOK_SLICES: "20"  # NEW
+          # Rotated exit (a/re-a after time-stop): disabled pending counterfactual proof
+          BREAKWATER_PAPER_ROTATED_EXIT: "0"     # NEW
+
           # Mandate / arming (paper uses authenticated endpoints)
           BREAKWATER_HIP3_PAPER: ${{ vars.BREAKWATER_HIP3_PAPER || '1' }}
           BREAKWATER_LIVE_ACK: ${{ vars.BREAKWATER_LIVE_ACK || 'off' }}
