@@ -294,5 +294,13 @@
     "signal_id": "ef60c645e51bf04e",
     "slice_id": "feat_ext_vs_ma_10:2:LONG:h15",
     "stopped_at": "2026-09-14T00:07:14+00:00"
+  },
+  {
+    "pair": "XYZ:EWT",
+    "pnl_zar": "-4.7794",
+    "reason": "stop",
+    "signal_id": "87cd1593a093cfc7",
+    "slice_id": "hip3_xyz_equity_c0:feat_realized_vol_20:1:LONG:h24",
+    "stopped_at": "2026-09-14T01:00:26+00:00"
   }
 ]
