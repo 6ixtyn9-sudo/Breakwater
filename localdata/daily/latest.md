@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-14 16:26 UTC
+# Breakwater daily print — 2026-09-14 16:35 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -27,7 +27,7 @@
 - Gap: not computed | verdict: INSUFFICIENT SAMPLE (n<30)
 - native: claimed unknown (0/5 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
 - hip3: claimed median +0.148% over 7/7 slices (pool 349) ~ +0.00 ZAR | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 348 decision rows; 0 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 348 rows are skipped/guard decisions and never count
+- Ledger: 441 decision rows; 0 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 441 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -68,7 +68,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - XYZ:AVGO SELL ntl=100 risk=2.13 bars=0 stop=354.34500000000002395 peak=346.95
   - XYZ:AMZN SELL ntl=100 risk=1.83 bars=0 stop=258.29249999999999080 peak=253.65
   - XYZ:BABA SELL ntl=100 risk=1.65 bars=0 stop=111.54500000000000465 peak=109.73
-  - XYZ:COST SELL ntl=100 risk=0.94 bars=0 stop=926.8850000000000470 peak=918.28
+  - XYZ:COST SELL ntl=100 risk=0.94 bars=1 stop=926.8850000000000470 peak=918.28
   - XYZ:STRC SELL ntl=100 risk=0.29 bars=0 stop=98.98699999999999560 peak=98.697
 
 ## 5. Aggregate risk leash
@@ -77,9 +77,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **84.68 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **84.68 / 140.00 ZAR | 65.5% | ok**
 - Remaining: 48.3352 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 5, "pair_held": 8, "signals": 185, "skipped": 113, "slice_full": 59, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 3, "pair_held": 4, "signals": 27, "skipped": 0, "slice_full": 0, "slot_full": 20}}
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 190, "skipped": 0, "slice_full": 0, "slot_full": 190}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 34, "skipped": 0, "slice_full": 0, "slot_full": 34}}
 - Highest-risk: **UNIUSDC** 10.0000 ZAR
-- positions without bars: 0 | replayed: 16 | invalid: 0
+- positions without bars: 23 | replayed: 1 | invalid: 0
 
 ## 6. Monitored books
 
@@ -125,9 +125,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1667 bull=0.0833 neutral=0.75 | symbols=24
+- Label: **neutral** | breadth bear=0.1667 bull=0.0667 neutral=0.7667 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-14T16:25:25Z
+- as_of: 2026-09-14T16:30:33Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -150,13 +150,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-14T16:04:33: errors=3 signals=212 regime_blocked=72
-- this cycle: closed=0 new_signals=212 skipped=113 slot_full=20 slice_full=59 pair_held=12
-- Action funnel: regime_blocked=72 | lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=59 | pair_held=12 | slot_full=20 | skipped=113
-- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 12, "regime_blocked": 72, "skipped": 113, "slice_full": 59, "slot_full": 20})
+- Latest scan 2026-09-14T16:35:11: errors=0 signals=224 regime_blocked=93
+- this cycle: closed=0 new_signals=224 skipped=0 slot_full=224 slice_full=0 pair_held=0
+- Action funnel: regime_blocked=93 | lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=224 | skipped=0
+- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 0, "regime_blocked": 93, "skipped": 0, "slice_full": 0, "slot_full": 224})
 - green_gate: native_green=False hip3_green=False frozen=none islands=0 blocks=0
-- aggregate_risk: ok open=59.8288 cap=140.0000 used=0.6547 remaining=48.3352 replayed=16 no_new_bars=0
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:AAOI"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EWT"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:PLATINUM"}]
+- aggregate_risk: ok open=84.6840 cap=140.0000 used=0.6547 remaining=48.3352 replayed=1 no_new_bars=23
+- pair_errors: []
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
