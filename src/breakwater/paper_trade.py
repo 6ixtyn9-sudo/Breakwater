@@ -1554,6 +1554,20 @@ def run_paper_cycle(
     )
     candidates = fat_sigs + old_sigs
 
+    # Per-book view of the shared guard counters: which book generated how
+    # many signals and how many each guard turned away. This is what makes
+    # "how many HIP-3 trades couldn't get a seat?" a number instead of an
+    # inference. Shared counters above stay the source of truth.
+    book_stats = {
+        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
+        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
+    }
+    for sig in signals:
+        book_stats[_bkey_book(sig)]["signals"] += 1
+
+    def _deny(signal, key: str) -> None:
+        book_stats[_bkey_book(signal)][key] += 1
+
     # ── Book trimming ──────────────────────────────────────────────────
     # Only the top MAX_BOOK_SLICES distinct slices (ranked by mean return
     # then P&L) are eligible for new entries.  Slices already holding an open
@@ -1575,20 +1589,6 @@ def run_paper_cycle(
                 skipped += 1
                 _deny(sig, "skipped")
         candidates = trimmed
-
-    # Per-book view of the shared guard counters: which book generated how
-    # many signals and how many each guard turned away. This is what makes
-    # "how many HIP-3 trades couldn't get a seat?" a number instead of an
-    # inference. Shared counters above stay the source of truth.
-    book_stats = {
-        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
-        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
-    }
-    for sig in signals:
-        book_stats[_bkey_book(sig)]["signals"] += 1
-
-    def _deny(signal, key: str) -> None:
-        book_stats[_bkey_book(signal)][key] += 1
 
     for signal in candidates:
         if len(surviving) >= MAX_PAPER_POSITIONS:
