@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-14 21:26 UTC
+# Breakwater daily print — 2026-09-14 21:31 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -28,7 +28,7 @@
 - Gap: not computed | verdict: claimed edge unknown
 - native: claimed unknown (0/5 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
 - hip3: claimed unknown (0/1 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1061 decision rows; 0 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1061 rows are skipped/guard decisions and never count
+- Ledger: 1104 decision rows; 0 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1104 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -44,43 +44,36 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 19 open, stop-risk **51.14 ZAR**
-  - TAOUSDC BUY ntl=200 risk=7.22 bars=6 stop=224.20000000000000175 peak=232.6
-  - INJUSDC BUY ntl=95 risk=5.00 bars=6 stop=5.855224999999999825 peak=6.1788
-  - ASTERUSDC BUY ntl=200 risk=4.99 bars=6 stop=0.6782624999999999730 peak=0.69562
+- **NATIVE**: 12 open, stop-risk **61.27 ZAR**
+  - WLDUSDC BUY ntl=194 risk=10.15 bars=0 stop=0.3699825000000000015 peak=0.39041
+  - INJUSDC BUY ntl=181 risk=10.15 bars=0 stop=5.990850000000000120 peak=6.3458
+  - FARTCOINUSDC BUY ntl=185 risk=10.15 bars=0 stop=0.13784999999999999745 peak=0.14586
+  - LINKUSDC BUY ntl=203 risk=7.54 bars=0 stop=11.275250000000000715 peak=11.71
   - ENAUSDC BUY ntl=100 risk=4.90 bars=5 stop=0.1347025000000000005 peak=0.14164
   - JUPUSDC BUY ntl=100 risk=4.47 bars=6 stop=0.2266600000000000090 peak=0.23726
-  - HYPEUSDC BUY ntl=100 risk=4.19 bars=6 stop=76.1829999999999980 peak=79.513
-  - SUIUSDC BUY ntl=100 risk=3.53 bars=6 stop=0.6972224999999999185 peak=0.72274
+  - ETHUSDC BUY ntl=102 risk=3.33 bars=0 stop=2474.224999999999770 peak=2558.1
   - KPEPEUSDC BUY ntl=100 risk=3.11 bars=5 stop=0.003371749999999999855 peak=0.00348
-  - LINKUSDC BUY ntl=100 risk=2.87 bars=6 stop=11.101750000000000755 peak=11.43
-  - DOGEUSDC BUY ntl=100 risk=2.51 bars=6 stop=0.0818242499999999985 peak=0.083935
+  - DOGEUSDC BUY ntl=102 risk=3.04 bars=0 stop=0.0822045000000000045 peak=0.084743
   - SOLUSDC BUY ntl=100 risk=2.31 bars=6 stop=99.4602499999999960 peak=101.81
-  - LTCUSDC BUY ntl=100 risk=2.25 bars=6 stop=52.57149999999999735 peak=53.783
-  - BTCUSDC BUY ntl=100 risk=2.01 bars=6 stop=76838.50 peak=78417.0
-  - BNBUSDC BUY ntl=100 risk=1.77 bars=6 stop=708.82750000000002130 peak=721.6
-  - FARTCOINUSDC BUY ntl=100 risk=0.00 bars=6 stop=0.140994999999999992050 peak=0.14688
-  - XRPUSDC BUY ntl=100 risk=0.00 bars=6 stop=1.43109999999999992250 peak=1.4778
-  - ETHUSDC BUY ntl=200 risk=0.00 bars=6 stop=2514.724999999999750 peak=2571.7
-  - XPLUSDC BUY ntl=100 risk=0.00 bars=6 stop=0.081503750000000009950 peak=0.085265
+  - BTCUSDC BUY ntl=102 risk=2.13 bars=0 stop=77262.75000000000005 peak=78919.0
   - UNIUSDC BUY ntl=197 risk=0.00 bars=5 stop=6.3999499999999999750 peak=6.7235
 
 - **HIP3**: 5 open, stop-risk **6.85 ZAR**
   - XYZ:AVGO SELL ntl=100 risk=2.13 bars=5 stop=354.34500000000002395 peak=346.95
   - XYZ:AMZN SELL ntl=100 risk=1.83 bars=5 stop=258.29249999999999080 peak=253.65
-  - XYZ:BABA SELL ntl=100 risk=1.65 bars=4 stop=111.54500000000000465 peak=109.73
-  - XYZ:COST SELL ntl=100 risk=0.94 bars=5 stop=926.8850000000000470 peak=918.28
-  - XYZ:STRC SELL ntl=100 risk=0.29 bars=4 stop=98.98699999999999560 peak=98.697
+  - XYZ:BABA SELL ntl=100 risk=1.65 bars=5 stop=111.54500000000000465 peak=109.73
+  - XYZ:COST SELL ntl=100 risk=0.94 bars=6 stop=926.8850000000000470 peak=918.28
+  - XYZ:STRC SELL ntl=100 risk=0.29 bars=5 stop=98.98699999999999560 peak=98.697
 
 ## 5. Aggregate risk leash
 
 - Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
-- Computed open stop-risk (section 4): **57.98 ZAR** (informational only, no cap applied)
-- Paper shadow ledger (gates paper entries only, nothing live): **57.98 / 140.00 ZAR | 46.4% | ok**
-- Remaining: 75.0343 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 76, "skipped": 0, "slice_full": 0, "slot_full": 76}}
-- Highest-risk: **TAOUSDC** 7.2227 ZAR
-- positions without bars: 3 | replayed: 21 | invalid: 0
+- Computed open stop-risk (section 4): **68.12 ZAR** (informational only, no cap applied)
+- Paper shadow ledger (gates paper entries only, nothing live): **68.12 / 142.11 ZAR | 51.7% | ok**
+- Remaining: 68.5770 | cap skips: 0 | unknown skips: 0
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 7, "pair_held": 5, "signals": 59, "skipped": 21, "slice_full": 15, "slot_full": 11}}
+- Highest-risk: **FARTCOINUSDC** 10.1505 ZAR
+- positions without bars: 21 | replayed: 3 | invalid: 0
 
 ## 6. Monitored books
 
@@ -120,9 +113,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.125 bull=0.0833 neutral=0.7917 | symbols=24
+- Label: **neutral** | breadth bear=0.0333 bull=0.0667 neutral=0.9 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-14T21:25:29Z
+- as_of: 2026-09-14T21:30:29Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -145,12 +138,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-14T21:01:44: errors=0 signals=76 regime_blocked=35
-- this cycle: closed=0 new_signals=76 skipped=0 slot_full=76 slice_full=0 pair_held=0
-- Action funnel: regime_blocked=35 | lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=76 | skipped=0
-- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 0, "regime_blocked": 35, "skipped": 0, "slice_full": 0, "slot_full": 76})
+- Latest scan 2026-09-14T21:31:52: errors=0 signals=59 regime_blocked=25
+- this cycle: closed=14 new_signals=59 skipped=21 slot_full=11 slice_full=15 pair_held=5
+- Action funnel: regime_blocked=25 | lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=15 | pair_held=5 | slot_full=11 | skipped=21
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 5, "regime_blocked": 25, "skipped": 21, "slice_full": 15, "slot_full": 11})
 - green_gate: native_green=False hip3_green=False frozen=none islands=0 blocks=0
-- aggregate_risk: ok open=57.9849 cap=140.0000 used=0.4640 remaining=75.0343 replayed=21 no_new_bars=3
+- aggregate_risk: ok open=21.6309 cap=142.1072 used=0.5174 remaining=68.5770 replayed=3 no_new_bars=21
 - pair_errors: []
 
 ---

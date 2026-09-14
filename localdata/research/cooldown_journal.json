@@ -1,1 +1,114 @@
-[]
+[
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "1.6617",
+    "reason": "slice_gap",
+    "signal_id": "22a12adac1ccd998",
+    "slice_id": "feat_ret_1:2:LONG:h16",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "0.3244",
+    "reason": "slice_gap",
+    "signal_id": "4ea6d00deec3c50c",
+    "slice_id": "feat_vol_regime:2:LONG:h12",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "FARTCOINUSDC",
+    "pnl_zar": "3.5626",
+    "reason": "slice_gap",
+    "signal_id": "8ad74dae47d48cea",
+    "slice_id": "feat_vol_regime:2:LONG:h12",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "1.5550",
+    "reason": "slice_gap",
+    "signal_id": "1460deccbf2fc240",
+    "slice_id": "feat_vol_regime:2:LONG:h12",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "2.3597",
+    "reason": "slice_gap",
+    "signal_id": "217290eed815ce88",
+    "slice_id": "feat_vol_regime:2:LONG:h12",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "LTCUSDC",
+    "pnl_zar": "-0.1978",
+    "reason": "slice_gap",
+    "signal_id": "0768ca68cea7ada9",
+    "slice_id": "feat_vol_regime:2:LONG:h12",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "0.5502",
+    "reason": "slice_gap",
+    "signal_id": "aeb68fe80fa19309",
+    "slice_id": "feat_ret_20:2:LONG:h10",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "3.3438",
+    "reason": "slice_gap",
+    "signal_id": "8abe43d3a3ce8433",
+    "slice_id": "feat_ret_20:2:LONG:h10",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "INJUSDC",
+    "pnl_zar": "2.4946",
+    "reason": "slice_gap",
+    "signal_id": "0730c5288e4fa303",
+    "slice_id": "feat_ext_vs_ma_10:2:LONG:h15",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "ASTERUSDC",
+    "pnl_zar": "2.2926",
+    "reason": "slice_gap",
+    "signal_id": "e143f0537d6b408e",
+    "slice_id": "feat_ret_5:0:LONG:h16",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "4.3453",
+    "reason": "slice_gap",
+    "signal_id": "db01b98f263d93a0",
+    "slice_id": "feat_ret_5:0:LONG:h16",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "TAOUSDC",
+    "pnl_zar": "2.2534",
+    "reason": "slice_gap",
+    "signal_id": "fba2e275c9206935",
+    "slice_id": "feat_ret_5:0:LONG:h16",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "0.8726",
+    "reason": "slice_gap",
+    "signal_id": "8b4b90c0fd077a92",
+    "slice_id": "feat_trend_slope_20:2:LONG:h11",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "XPLUSDC",
+    "pnl_zar": "4.6853",
+    "reason": "slice_gap",
+    "signal_id": "a54c4c065db4be34",
+    "slice_id": "feat_trend_slope_20:2:LONG:h11",
+    "stopped_at": "2026-09-14T21:30:29+00:00"
+  }
+]
