@@ -1,7 +1,8 @@
 {
- "as_of": "2026-09-10T01:45:26.128244+00:00",
+ "as_of": "2026-09-14T14:36:00.068301+00:00",
  "dexs": [
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [
     [
      "xyz:EUR",
@@ -407,6 +408,10 @@
     ],
     [
      "xyz:SNDK",
+     "0.5"
+    ],
+    [
+     "xyz:SNXX",
      "0.5"
     ],
     [
@@ -888,6 +893,10 @@
      "500000000.0"
     ],
     [
+     "xyz:SNXX",
+     "25000000.0"
+    ],
+    [
      "xyz:SOFTBANK",
      "25000000.0"
     ],
@@ -986,6 +995,7 @@
      "registerAsset",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ],
@@ -1013,6 +1023,7 @@
      "setMarginTableIds",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ],
@@ -1020,6 +1031,7 @@
      "setOpenInterestCaps",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ],
@@ -1027,6 +1039,7 @@
      "setFundingMultipliers",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ],
@@ -1034,6 +1047,7 @@
      "setMarginModes",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ],
@@ -1047,6 +1061,7 @@
      "setFundingInterestRates",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ],
@@ -1054,12 +1069,14 @@
      "setPerpAnnotation",
      [
       "0x7d16f116d252db609c56d27d6c9605eb03e16657",
+      "0x8c4190018486a2dbac2629d688136e8990170ff2",
       "0xc0892b4f864807ec26dde6ad8dad6914e079059d"
      ]
     ]
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [],
    "assetToFundingMultiplier": [
     [
@@ -1269,6 +1286,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [],
    "assetToFundingMultiplier": [
     [
@@ -1440,6 +1458,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [],
    "assetToFundingMultiplier": [
     [
@@ -1569,6 +1588,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [
     [
      "km:AAPL",
@@ -1813,6 +1833,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [],
    "assetToFundingMultiplier": [],
    "assetToStreamingOiCap": [],
@@ -1824,6 +1845,7 @@
    "subDeployers": []
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [
     [
      "cash:META",
@@ -2027,6 +2049,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [],
    "assetToFundingMultiplier": [
     [
@@ -2051,6 +2074,10 @@
     ],
     [
      "para:CIEN",
+     "0.6"
+    ],
+    [
+     "para:CIFR",
      "0.6"
     ],
     [
@@ -2156,6 +2183,10 @@
      "25000000.0"
     ],
     [
+     "para:CIFR",
+     "25000000.0"
+    ],
+    [
      "para:COHR",
      "25000000.0"
     ],
@@ -2248,6 +2279,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [
     [
      "mkts:SMALL2000",
@@ -2356,6 +2388,7 @@
    ]
   },
   {
+   "assetToFundingClamp": [],
    "assetToFundingInterestRate": [],
    "assetToFundingMultiplier": [
     [
@@ -2364,7 +2397,11 @@
     ],
     [
      "io:GPRO",
-     "0.125"
+     "0.5"
+    ],
+    [
+     "io:IONQ",
+     "0.5"
     ],
     [
      "io:NBIS",
@@ -2382,10 +2419,14 @@
    "assetToStreamingOiCap": [
     [
      "io:ANTH",
-     "33000000.0"
+     "36000000.0"
     ],
     [
      "io:GPRO",
+     "5000000.0"
+    ],
+    [
+     "io:IONQ",
      "5000000.0"
     ],
     [
