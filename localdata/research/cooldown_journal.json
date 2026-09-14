@@ -253,7 +253,7 @@
     "reason": "stop",
     "signal_id": "6e48081c290060e9",
     "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:0:LONG:h20",
-    "stopped_at": "2026-09-13T23:57:00+00:00"
+    "stopped_at": "2026-09-14T00:07:14+00:00"
   },
   {
     "pair": "LTCUSDC",
@@ -261,7 +261,7 @@
     "reason": "trail_stop",
     "signal_id": "fb4918c37c21aaee",
     "slice_id": "feat_ext_vs_ma_10:2:LONG:h15",
-    "stopped_at": "2026-09-13T23:57:00+00:00"
+    "stopped_at": "2026-09-14T00:07:14+00:00"
   },
   {
     "pair": "ARBUSDC",
@@ -269,7 +269,7 @@
     "reason": "stop",
     "signal_id": "50972a563e3cb480",
     "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
-    "stopped_at": "2026-09-13T23:57:00+00:00"
+    "stopped_at": "2026-09-14T00:07:14+00:00"
   },
   {
     "pair": "DOGEUSDC",
@@ -277,7 +277,7 @@
     "reason": "stop",
     "signal_id": "368c58b7f083e853",
     "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
-    "stopped_at": "2026-09-13T23:57:00+00:00"
+    "stopped_at": "2026-09-14T00:07:14+00:00"
   },
   {
     "pair": "SOLUSDC",
@@ -285,7 +285,7 @@
     "reason": "stop",
     "signal_id": "28e4a6a47ad45f8b",
     "slice_id": "feat_ret_5:2:LONG:h19",
-    "stopped_at": "2026-09-13T23:57:00+00:00"
+    "stopped_at": "2026-09-14T00:07:14+00:00"
   },
   {
     "pair": "SUIUSDC",
@@ -293,6 +293,6 @@
     "reason": "stop",
     "signal_id": "ef60c645e51bf04e",
     "slice_id": "feat_ext_vs_ma_10:2:LONG:h15",
-    "stopped_at": "2026-09-13T23:57:00+00:00"
+    "stopped_at": "2026-09-14T00:07:14+00:00"
   }
 ]
