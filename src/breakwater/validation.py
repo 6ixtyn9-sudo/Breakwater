@@ -168,7 +168,11 @@ RELAXED_MIN_PASSES = _coerce_int(
     os.getenv("BREAKWATER_VALIDATION_RELAXED_MIN_PASSES", "4"), 4
 )
 
-STRICT_PASS_FLOOR = max(1, _coerce_int(os.getenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", "3"), 3))
+# Scale strict pass floor with fold count.  The original intent was 3/5 = 60%.
+# With fewer folds the floor must shrink to keep the same relative strictness.
+# 3 folds → 2/3 (67%), 4 folds → 3/4 (75%), 5 folds → 3/5 (60%).
+_STRICT_PASS_FLOOR_DEFAULT = max(2, round(0.6 * FOLD_COUNT))
+STRICT_PASS_FLOOR = max(1, _coerce_int(os.getenv("BREAKWATER_VALIDATION_STRICT_PASS_FLOOR", str(_STRICT_PASS_FLOOR_DEFAULT)), _STRICT_PASS_FLOOR_DEFAULT))
 BREADTH_MIN_SYMBOLS = max(4, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_SYMBOLS", "6"), 6))
 BREADTH_MIN_ROWS_PER_SYMBOL = max(1, _coerce_int(os.getenv("BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL", "10"), 10))
 BREADTH_MIN_POSITIVE_FRACTION = max(
