@@ -406,5 +406,13 @@
     "signal_id": "0ddac93f1e6be8a8",
     "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
     "stopped_at": "2026-09-15T08:01:02+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-2.9875",
+    "reason": "stop",
+    "signal_id": "127498cf97d68ef9",
+    "slice_id": "feat_realized_vol_20:2:LONG:h24",
+    "stopped_at": "2026-09-15T15:09:37+00:00"
   }
 ]
