@@ -1123,3 +1123,4 @@ closed_at,signal_id,pair,kind,slice_id,side,entry_price,exit_price,stop_price,no
 2026-09-14T22:00:30+00:00,,FARTCOINUSDC,PERP,feat_atr_norm_ext:2:LONG:h13,BUY,,,,0,0,skipped,0,asset_not_green,asset_not_green,neutral,,,,,,,,,,,,,,
 2026-09-14T22:00:30+00:00,,ASTERUSDC,PERP,feat_atr_norm_ext:2:LONG:h13,BUY,,,,0,0,skipped,0,asset_not_green,asset_not_green,neutral,,,,,,,,,,,,,,
 2026-09-14T22:00:30+00:00,,ONDOUSDC,PERP,feat_atr_norm_ext:2:LONG:h13,BUY,,,,0,0,skipped,0,asset_not_green,asset_not_green,neutral,,,,,,,,,,,,,,
+2026-09-15T01:00:30+00:00,edb5986d09736440,XYZ:STRC,PERP,hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23,SELL,98.697,98.11700000000000880,98.98699999999999560,100.0000,0.4977,win,8,target,passed,bull,win,0.0828571428571416,3.500000,0.00293829,98.98699999999999560,98.697,98.021,2.331034,0.000000,2.000000,0.0900,1.693699,ohlc_upper_bound_stop_first_exit,2026-09-15T00:00:00+00:00
