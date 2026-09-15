@@ -157,9 +157,11 @@ def _coerce_float(value, default: float) -> float:
 
 FOLD_COUNT = max(3, min(10, _coerce_int(os.getenv("BREAKWATER_VALIDATION_FOLD_COUNT", "3"), 3)))
 # Validate using trailing-aware exits (mirrors paper engine) instead of
-# fixed stop/target.  Default ON — validating with fixed stops while trading
-# with trailing measures the wrong thing.
-TRAILING_VALIDATION = _env_bool("BREAKWATER_TRAILING_VALIDATION", "1")
+# fixed stop/target.  OFF by default — the per-bar simulation is O(n*h)
+# per symbol per candidate, which 3x's research runtime.  The fixed-stop
+# proxy is a reasonable approximation; the key improvements (3 folds, no
+# confound blocking, adaptive breadth, composites) matter more.
+TRAILING_VALIDATION = _env_bool("BREAKWATER_TRAILING_VALIDATION", "0")
 
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(
