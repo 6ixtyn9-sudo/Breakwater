@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-15 03:26 UTC
+# Breakwater daily print — 2026-09-15 03:31 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -10,9 +10,9 @@
 
 ## 2. Paper account
 
-- Equity: **2002.49 ZAR** (seed 2000) | lifetime: **+2.49 ZAR** | closed: 5
-- Today: 5 closed, **+2.49 ZAR**
-- 7d: **+2.49 ZAR** | 30d: **+2.49 ZAR**
+- Equity: **2002.99 ZAR** (seed 2000) | lifetime: **+2.99 ZAR** | closed: 6
+- Today: 6 closed, **+2.99 ZAR**
+- 7d: **+2.99 ZAR** | 30d: **+2.99 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -24,11 +24,11 @@
   - absent: `feat_atr_norm_ext:2:LONG:h13` (native)
   - absent: `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23` (hip3)
 - Claimed edge: unknown (0/6 book slices present in the validated pools)
-- Realised (5 real closes per lane_gate._is_real_close, net of fees): +0.50 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
+- Realised (6 real closes per lane_gate._is_real_close, net of fees): +0.50 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
 - Gap: not computed | verdict: claimed edge unknown
 - native: claimed unknown (0/5 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- hip3: claimed unknown (0/1 slices in pool 11) | realised 5 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1145 decision rows; 5 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1140 rows are skipped/guard decisions and never count
+- hip3: claimed unknown (0/1 slices in pool 11) | realised 6 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
+- Ledger: 1150 decision rows; 6 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1144 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -40,13 +40,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### HIP3
 
-- Closed: 5 | wins: 5 | win%: 100.0 | P&L: **+2.49 ZAR** | today: +2.49 | 7d: +2.49 | 30d: +2.49
-- By exit: target +2.5
-- By entry regime (n/pnl): bull 5/+2.5
-- Top slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 5n/5w +2.49
-- Worst slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 5n/5w +2.49
-- Top pairs: XYZ:STRC 5n +2.49
-- Worst pairs: XYZ:STRC 5n +2.49
+- Closed: 6 | wins: 6 | win%: 100.0 | P&L: **+2.99 ZAR** | today: +2.99 | 7d: +2.99 | 30d: +2.99
+- By exit: target +3.0
+- By entry regime (n/pnl): bull 6/+3.0
+- Top slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 6n/6w +2.99
+- Worst slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 6n/6w +2.99
+- Top pairs: XYZ:STRC 6n +2.99
+- Worst pairs: XYZ:STRC 6n +2.99
 
 ## 4. Open positions & risk
 
@@ -94,7 +94,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 7. HIP-3 live gate
 
-- Closed paper trades: **5/50** | ghost rows: **0/50** | PnL: **+2.49 ZAR**
+- Closed paper trades: **6/50** | ghost rows: **0/50** | PnL: **+2.99 ZAR**
 - Gate verdict: **NOT READY**
 
 ## 8. Research / honesty checks
@@ -118,9 +118,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.3 bull=0.05 neutral=0.65 | symbols=20
+- Label: **neutral** | breadth bear=0.3333 bull=0.0606 neutral=0.5758 | symbols=32
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-15T03:25:33Z
+- as_of: 2026-09-15T03:30:34Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -133,7 +133,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 12. Green gate
 
 - Native lane: **RED** | closed=0 pnl=+0.00 | frozen=NO
-- HIP-3 lane: **RED** | closed=5 pnl=+2.49 | frozen=NO
+- HIP-3 lane: **RED** | closed=6 pnl=+2.99 | frozen=NO
 - Frozen lanes: none
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 0
