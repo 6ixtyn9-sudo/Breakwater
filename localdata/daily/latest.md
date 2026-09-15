@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-15 04:26 UTC
+# Breakwater daily print — 2026-09-15 04:31 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -27,7 +27,7 @@
 - Gap: not computed | verdict: INSUFFICIENT SAMPLE (n<30)
 - native: claimed unknown (0/5 slices in pool 0) | realised 4 closes -0.44 ZAR sd 0.17 | INSUFFICIENT SAMPLE (n<30)
 - hip3: claimed median +0.057% over 9/9 slices (pool 11) ~ +0.06 ZAR | realised 8 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1193 decision rows; 12 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1181 rows are skipped/guard decisions and never count
+- Ledger: 1214 decision rows; 12 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1202 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -77,7 +77,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Remaining: 84.0169 | cap skips: 0 | unknown skips: 0
 - booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 18, "skipped": 18, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **FARTCOINUSDC** 10.1505 ZAR
-- positions without bars: 0 | replayed: 102 | invalid: 0
+- positions without bars: 10 | replayed: 0 | invalid: 0
 
 ## 6. Monitored books
 
@@ -124,9 +124,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.2632 bull=0.0526 neutral=0.6842 | symbols=19
+- Label: **neutral** | breadth bear=0.3438 bull=0.0625 neutral=0.5625 | symbols=31
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-15T04:25:31Z
+- as_of: 2026-09-15T04:30:27Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -150,12 +150,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-15T04:11:53: errors=0 signals=None regime_blocked=11
-- this cycle: closed=7 new_signals=18 skipped=18 slot_full=0 slice_full=0 pair_held=0
-- Action funnel: regime_blocked=11 | lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=18
-- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 0, "regime_blocked": 11, "skipped": 18, "slice_full": 0, "slot_full": 0})
-- green_gate: native_green=False hip3_green=False frozen=none islands=0 blocks=0
-- aggregate_risk: ok open=54.4962 cap=142.1748 used=0.4091 remaining=84.0169 replayed=102 no_new_bars=0
+- Latest scan 2026-09-15T04:31:40: errors=0 signals=None regime_blocked=2
+- this cycle: closed=0 new_signals=18 skipped=18 slot_full=0 slice_full=0 pair_held=0
+- Action funnel: regime_blocked=2 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=18
+- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 2, "skipped": 18, "slice_full": 0, "slot_full": 0})
+- green_gate: native_green=False hip3_green=False frozen=none islands=0 blocks=1
+- aggregate_risk: ok open=54.4962 cap=142.1748 used=0.4091 remaining=84.0169 replayed=0 no_new_bars=10
 - pair_errors: []
 
 ---
