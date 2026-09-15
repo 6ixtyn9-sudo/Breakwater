@@ -864,7 +864,7 @@ class BreakwaterEngine:
                 regime_shift=regime_shift,
                 asset_edge_lookup=asset_edge_lookup,
             )
-        elif not hip3_active:
+        else:
             signals = self._big_wave_fallback(targets, frames, server_time)
 
         # --- Multi-engine signals (momentum, mean reversion, lead/lag) ---
@@ -875,8 +875,6 @@ class BreakwaterEngine:
         )
         signals.extend(engine_signals)
 
-        if hip3_active:
-            signals = self._big_wave_fallback(targets, frames, server_time)
         if hip3_active:
             # Fail-closed for the active HIP-3 lane.
             hip3_asset_edge_lookup = build_asset_edge_lookup(
@@ -1135,10 +1133,12 @@ class BreakwaterEngine:
 
         # Build a unified frames dict for engines (they don't care about SPOT/PERP split)
         engine_frames: dict[str, pd.DataFrame] = {}
-        for kind_frames in frames_by_kind.values():
+        pair_kind: dict[str, str] = {}
+        for kind, kind_frames in frames_by_kind.items():
             for pair, frame in kind_frames.items():
                 if frame is not None and not frame.empty and len(frame) >= 60:
                     engine_frames[pair] = frame
+                    pair_kind[pair] = kind
 
         if not engine_frames:
             return []
@@ -1179,7 +1179,7 @@ class BreakwaterEngine:
         seen: set[str] = set()
         for r in ranked:
             side = Side.BUY if r.side == "BUY" else Side.SELL
-            slice_id = f"engine_{r.engine}:{r.signal_type}:2:{r.side}:h{r.horizon_bars}"
+            slice_id = f"engine_{r.engine}:{r.signal_type}:2:{r.side}:h{r.horizon_bars}:{r.pair}"
             bar_start = server_time.astimezone(timezone.utc)
             digest = hashlib.sha256(
                 f"{r.pair}|{slice_id}|{bar_start.isoformat()}".encode()
@@ -1188,7 +1188,7 @@ class BreakwaterEngine:
                 continue
             seen.add(digest)
 
-            kind = "PERP"  # engine signals default to PERP
+            kind = pair_kind.get(r.pair, "PERP")  # preserve original kind (SPOT/PERP)
             entry = Decimal(str(r.entry_price))
             stop = Decimal(str(r.stop_price))
             atr = Decimal(str(r.atr))

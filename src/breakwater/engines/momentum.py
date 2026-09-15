@@ -137,8 +137,8 @@ def scan_momentum(
                 ))
 
         # --- Breakout signal ---
-        recent_high = high.iloc[-breakout_lookback:].max()
-        recent_low = low.iloc[-breakout_lookback:].min()
+        recent_high = high.iloc[-breakout_lookback-1:-1].max()
+        recent_low = low.iloc[-breakout_lookback-1:-1].min()
 
         if cur_close >= recent_high and cur_adx > adx_threshold:
             breakout_pct = (cur_close - recent_high) / recent_high
