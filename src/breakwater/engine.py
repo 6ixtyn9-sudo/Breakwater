@@ -1130,6 +1130,7 @@ class BreakwaterEngine:
         from breakwater.engines.momentum import scan_momentum
         from breakwater.engines.mean_reversion import scan_mean_reversion
         from breakwater.engines.lead_lag import scan_lead_lag
+        from breakwater.engines.simple_trend import scan_simple_trend
         from breakwater.engines.ranker import rank_signals
 
         # Build a unified frames dict for engines (they don't care about SPOT/PERP split)
@@ -1150,6 +1151,7 @@ class BreakwaterEngine:
         # Run all engines
         engine_results: dict[str, list] = {}
         for engine_name, scan_fn in [
+            ("simple_trend", scan_simple_trend),
             ("momentum", scan_momentum),
             ("mean_reversion", scan_mean_reversion),
             ("lead_lag", scan_lead_lag),
