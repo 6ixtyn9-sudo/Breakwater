@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-15 03:21 UTC
+# Breakwater daily print — 2026-09-15 03:26 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -10,9 +10,9 @@
 
 ## 2. Paper account
 
-- Equity: **2001.00 ZAR** (seed 2000) | lifetime: **+1.00 ZAR** | closed: 2
-- Today: 2 closed, **+1.00 ZAR**
-- 7d: **+1.00 ZAR** | 30d: **+1.00 ZAR**
+- Equity: **2002.49 ZAR** (seed 2000) | lifetime: **+2.49 ZAR** | closed: 5
+- Today: 5 closed, **+2.49 ZAR**
+- 7d: **+2.49 ZAR** | 30d: **+2.49 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -24,11 +24,11 @@
   - absent: `feat_atr_norm_ext:2:LONG:h13` (native)
   - absent: `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23` (hip3)
 - Claimed edge: unknown (0/6 book slices present in the validated pools)
-- Realised (2 real closes per lane_gate._is_real_close, net of fees): +0.50 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
+- Realised (5 real closes per lane_gate._is_real_close, net of fees): +0.50 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
 - Gap: not computed | verdict: claimed edge unknown
 - native: claimed unknown (0/5 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- hip3: claimed unknown (0/1 slices in pool 11) | realised 2 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1130 decision rows; 2 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1128 rows are skipped/guard decisions and never count
+- hip3: claimed unknown (0/1 slices in pool 11) | realised 5 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
+- Ledger: 1145 decision rows; 5 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1140 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -40,13 +40,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### HIP3
 
-- Closed: 2 | wins: 2 | win%: 100.0 | P&L: **+1.00 ZAR** | today: +1.00 | 7d: +1.00 | 30d: +1.00
-- By exit: target +1.0
-- By entry regime (n/pnl): bull 2/+1.0
-- Top slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 2n/2w +1.00
-- Worst slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 2n/2w +1.00
-- Top pairs: XYZ:STRC 2n +1.00
-- Worst pairs: XYZ:STRC 2n +1.00
+- Closed: 5 | wins: 5 | win%: 100.0 | P&L: **+2.49 ZAR** | today: +2.49 | 7d: +2.49 | 30d: +2.49
+- By exit: target +2.5
+- By entry regime (n/pnl): bull 5/+2.5
+- Top slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 5n/5w +2.49
+- Worst slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 5n/5w +2.49
+- Top pairs: XYZ:STRC 5n +2.49
+- Worst pairs: XYZ:STRC 5n +2.49
 
 ## 4. Open positions & risk
 
@@ -94,7 +94,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 7. HIP-3 live gate
 
-- Closed paper trades: **2/50** | ghost rows: **0/50** | PnL: **+1.00 ZAR**
+- Closed paper trades: **5/50** | ghost rows: **0/50** | PnL: **+2.49 ZAR**
 - Gate verdict: **NOT READY**
 
 ## 8. Research / honesty checks
@@ -118,9 +118,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.25 bull=0.0312 neutral=0.6875 | symbols=31
+- Label: **neutral** | breadth bear=0.3 bull=0.05 neutral=0.65 | symbols=20
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-15T01:30:28Z
+- as_of: 2026-09-15T03:25:33Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -133,7 +133,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 12. Green gate
 
 - Native lane: **RED** | closed=0 pnl=+0.00 | frozen=NO
-- HIP-3 lane: **RED** | closed=2 pnl=+1.00 | frozen=NO
+- HIP-3 lane: **RED** | closed=5 pnl=+2.49 | frozen=NO
 - Frozen lanes: none
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 0
@@ -143,12 +143,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-11T20:07:35: errors=0 signals=None regime_blocked=None
+- Latest scan 2026-09-11T23:39:32: errors=1 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
-- Action funnel: lane_gate_blocked=4
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 2, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 4, "pair_held": 29, "regime_blocked": 510, "skipped": 138, "slice_full": 0, "slot_full": 91})
-- green_gate: native_green=False hip3_green=True frozen=native islands=3 blocks=14
-- pair_errors: []
+- Action funnel: lane_gate_blocked=5
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 5, "pair_held": 34, "regime_blocked": 573, "skipped": 108, "slice_full": 0, "slot_full": 0})
+- green_gate: native_green=False hip3_green=True frozen=native islands=3 blocks=15
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:XBI"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
