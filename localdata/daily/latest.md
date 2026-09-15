@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-15 08:02 UTC
+# Breakwater daily print — 2026-09-15 08:08 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -16,11 +16,11 @@
 
 ## 2b. Claimed vs realised
 
-- Book: 610 slices (native 145 | hip3 465); validated pools: native 309 | hip3 732; book slices absent from pools: 0
-- Claimed edge (median mean_ret_costadj over 610 book slices present in the validated pools): +0.161% | at 100.10 ZAR mean notional/trade: +0.16 ZAR/trade
+- Book: 706 slices (native 241 | hip3 465); validated pools: native 524 | hip3 732; book slices absent from pools: 0
+- Claimed edge (median mean_ret_costadj over 706 book slices present in the validated pools): +0.215% | at 100.10 ZAR mean notional/trade: +0.22 ZAR/trade
 - Realised (15 real closes per lane_gate._is_real_close, net of fees): -0.06 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
 - Gap: not computed | verdict: INSUFFICIENT SAMPLE (n<30)
-- native: claimed median +0.473% over 145/145 slices (pool 309) ~ +0.47 ZAR | realised 7 closes -0.70 ZAR sd 0.71 | INSUFFICIENT SAMPLE (n<30)
+- native: claimed median +0.683% over 241/241 slices (pool 524) ~ +0.68 ZAR | realised 7 closes -0.70 ZAR sd 0.71 | INSUFFICIENT SAMPLE (n<30)
 - hip3: claimed median +0.119% over 465/465 slices (pool 732) ~ +0.12 ZAR | realised 8 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
 - Ledger: 1404 decision rows; 15 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1389 rows are skipped/guard decisions and never count
 
@@ -72,16 +72,16 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 6. Monitored books
 
-- Native: 145 | HIP-3: 465
+- Native: 241 | HIP-3: 465
 - Native top (by paper P&L):
-  - `feat_trend_slope_20:2:LONG:h11` edge=0.0058 n=17004 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_trend_slope_20:2:LONG:h12` edge=0.0063 n=16968 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ret_20:2:LONG:h12` edge=0.0053 n=17135 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_trend_slope_20:2:LONG:h13` edge=0.0068 n=16931 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ret_20:2:LONG:h13` edge=0.0057 n=17086 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ext_vs_ma_50:1:LONG:h13` edge=0.0014 n=11294 p=0.2307 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_trend_slope_20:2:LONG:h14` edge=0.0071 n=16890 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ext_vs_ma_20:2:LONG:h14` edge=0.0067 n=16847 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_trend_slope_20:2:LONG:h11` edge=0.0065 n=17661 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_atr_norm_ext:2:LONG:h11` edge=0.0060 n=15728 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_ret_20:2:LONG:h11` edge=0.0056 n=17668 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_trend_slope_20:2:LONG:h12` edge=0.0070 n=17635 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_atr_norm_ext:2:LONG:h12` edge=0.0067 n=15719 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_ext_vs_ma_20:2:LONG:h12` edge=0.0064 n=17309 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_ret_20:2:LONG:h12` edge=0.0061 n=17652 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_vol_regime:2:LONG:h12` edge=0.0053 n=14691 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h6` edge=0.0049 n=505 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h8` edge=0.0070 n=503 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -118,9 +118,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.5 bull=0.0833 neutral=0.4167 | symbols=12
+- Label: **bear** | breadth bear=0.5667 bull=0.0667 neutral=0.3333 | symbols=29
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 4 / bull 0
-- as_of: 2026-09-15T07:55:36Z
+- as_of: 2026-09-15T07:30:30Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -137,7 +137,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Frozen lanes: none
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 0
-- Tradable slices: native **145/145** | hip3 **465/465**
+- Tradable slices: native **240/241** | hip3 **465/465**
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 1
   - `feat_atr_norm_ext:2:LONG:h13` slice_pnl=-4.88
