@@ -334,5 +334,69 @@
     "signal_id": "6b7c48faabf5a306",
     "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23",
     "stopped_at": "2026-09-15T04:10:28+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-2.2216",
+    "reason": "stop",
+    "signal_id": "15299b945591873b",
+    "slice_id": "feat_atr_norm_ext:2:LONG:h13",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "UNIUSDC",
+    "pnl_zar": "6.8789",
+    "reason": "slice_gap",
+    "signal_id": "d71523856b776fb7",
+    "slice_id": "feat_ret_5:2:LONG:h19",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "FARTCOINUSDC",
+    "pnl_zar": "-6.6546",
+    "reason": "slice_gap",
+    "signal_id": "fba6826e165e1928",
+    "slice_id": "feat_ret_5:2:LONG:h19",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "INJUSDC",
+    "pnl_zar": "-7.8502",
+    "reason": "slice_gap",
+    "signal_id": "743f650e7758d52e",
+    "slice_id": "feat_ret_5:2:LONG:h19",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "-5.3490",
+    "reason": "slice_gap",
+    "signal_id": "c5b7f534fbae9cef",
+    "slice_id": "feat_ret_5:2:LONG:h19",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "WLDUSDC",
+    "pnl_zar": "-8.6816",
+    "reason": "slice_gap",
+    "signal_id": "59830f13ca4c957b",
+    "slice_id": "feat_ret_5:2:LONG:h19",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-2.6079",
+    "reason": "slice_gap",
+    "signal_id": "ae6c85777eec8c91",
+    "slice_id": "feat_ret_10:2:LONG:h15",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-3.0158",
+    "reason": "slice_gap",
+    "signal_id": "d495183873d7e6e2",
+    "slice_id": "feat_ret_10:2:LONG:h15",
+    "stopped_at": "2026-09-15T07:00:26+00:00"
   }
 ]
