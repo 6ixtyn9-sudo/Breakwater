@@ -110,5 +110,37 @@
     "signal_id": "a54c4c065db4be34",
     "slice_id": "feat_trend_slope_20:2:LONG:h11",
     "stopped_at": "2026-09-14T21:30:29+00:00"
+  },
+  {
+    "pair": "XYZ:AMZN",
+    "pnl_zar": "-0.1531",
+    "reason": "slice_gap",
+    "signal_id": "024a3e5fd220fd04",
+    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
+    "stopped_at": "2026-09-15T01:30:28+00:00"
+  },
+  {
+    "pair": "XYZ:AVGO",
+    "pnl_zar": "0.0541",
+    "reason": "slice_gap",
+    "signal_id": "92344be6faca0eed",
+    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
+    "stopped_at": "2026-09-15T01:30:28+00:00"
+  },
+  {
+    "pair": "XYZ:BABA",
+    "pnl_zar": "0.9671",
+    "reason": "slice_gap",
+    "signal_id": "738dc988d22f433a",
+    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
+    "stopped_at": "2026-09-15T01:30:28+00:00"
+  },
+  {
+    "pair": "XYZ:COST",
+    "pnl_zar": "0.0069",
+    "reason": "slice_gap",
+    "signal_id": "6b7c48faabf5a306",
+    "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23",
+    "stopped_at": "2026-09-15T01:30:28+00:00"
   }
 ]
