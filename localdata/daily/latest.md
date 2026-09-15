@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-15 06:25 UTC
+# Breakwater daily print — 2026-09-15 06:31 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -27,7 +27,7 @@
 - Gap: not computed | verdict: INSUFFICIENT SAMPLE (n<30)
 - native: claimed unknown (0/5 slices in pool 0) | realised 6 closes -0.44 ZAR sd 0.26 | INSUFFICIENT SAMPLE (n<30)
 - hip3: claimed median +0.057% over 9/9 slices (pool 11) ~ +0.06 ZAR | realised 8 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1266 decision rows; 14 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1252 rows are skipped/guard decisions and never count
+- Ledger: 1285 decision rows; 14 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1271 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -75,7 +75,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Remaining: 92.4622 | cap skips: 0 | unknown skips: 0
 - booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 9, "skipped": 9, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **FARTCOINUSDC** 10.1505 ZAR
-- positions without bars: 0 | replayed: 8 | invalid: 0
+- positions without bars: 8 | replayed: 0 | invalid: 0
 
 ## 6. Monitored books
 
@@ -122,14 +122,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.4118 bull=0.0588 neutral=0.5294 | symbols=17
-- confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 1 / bull 0
-- as_of: 2026-09-15T06:25:21Z
-- Defensive gate: off (no confirmed flip)
+- Label: **bear** | breadth bear=0.5 bull=0.0625 neutral=0.4062 | symbols=31
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: neutral | consecutive_bear: 2 / bull 0
+- as_of: 2026-09-15T06:30:33Z
+- Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
-- confirmed_bear: **False** | promote_env: ON
+- confirmed_bear: **True** | promote_env: ON
 - candidates: 2304 | eligible: 0 | observations: 0 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=0 eligible=0 best=30.3b best_fail=breadth_ok
@@ -148,12 +148,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-15T06:01:42: errors=0 signals=None regime_blocked=7
+- Latest scan 2026-09-15T06:31:37: errors=0 signals=None regime_blocked=9
 - this cycle: closed=0 new_signals=9 skipped=9 slot_full=0 slice_full=0 pair_held=0
-- Action funnel: regime_blocked=7 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=9
-- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 7, "skipped": 9, "slice_full": 0, "slot_full": 0})
+- Action funnel: regime_blocked=9 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=9
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 9, "skipped": 9, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=none islands=0 blocks=1
-- aggregate_risk: ok open=46.4876 cap=142.1115 used=0.3494 remaining=92.4622 replayed=8 no_new_bars=0
+- aggregate_risk: ok open=46.4876 cap=142.1115 used=0.3494 remaining=92.4622 replayed=0 no_new_bars=8
 - pair_errors: []
 
 ---
