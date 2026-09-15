@@ -6,15 +6,11 @@ trending for N bars, enters in that direction.
 Signals:
   - SMA crossover (50/200 golden/death cross)
   - N-bar breakout (price breaks above/below recent high/low)
-  - ADX trend strength filter (only enter when trend is strong)
-
-Works in trending markets. Use regime detector to disable in ranging markets.
+  - Trend alignment (price on correct side of SMA, ADX confirms direction)
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -30,7 +26,7 @@ class MomentumSignal:
     edge: float  # expected edge per bar (bps)
     confidence: float  # 0-1
     horizon_bars: int
-    signal_type: str  # "sma_cross", "breakout", "adx_trend"
+    signal_type: str  # "sma_cross", "breakout", "trend_align"
     regime_fit: float  # 0-1
 
 
@@ -67,26 +63,19 @@ def _atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) ->
 def scan_momentum(
     frames: dict[str, pd.DataFrame],
     *,
-    sma_fast: int = 50,
-    sma_slow: int = 200,
+    sma_fast: int = 20,
+    sma_slow: int = 50,
     breakout_lookback: int = 20,
-    adx_threshold: float = 25.0,
+    adx_threshold: float = 18.0,
     adx_period: int = 14,
-    min_confidence: float = 0.3,
+    min_confidence: float = 0.2,
 ) -> list[MomentumSignal]:
     """Scan all pairs for momentum/trend signals.
 
-    Args:
-        frames: dict of symbol -> DataFrame with columns [open, high, low, close, volume].
-        sma_fast: fast SMA period for crossover.
-        sma_slow: slow SMA period for crossover.
-        breakout_lookback: bars to look back for breakout.
-        adx_threshold: minimum ADX to confirm a trend.
-        adx_period: ADX calculation period.
-        min_confidence: minimum confidence to emit a signal.
-
-    Returns:
-        List of MomentumSignal, sorted by confidence descending.
+    Lowered thresholds for real market conditions:
+    - SMA: 20/50 (faster crossovers, more signals)
+    - ADX: 18 (crypto trends show earlier at lower ADX)
+    - Added trend_align signal (price on correct side of SMA + ADX confirmation)
     """
     signals: list[MomentumSignal] = []
 
@@ -98,7 +87,6 @@ def scan_momentum(
         high = df["high"].astype(float)
         low = df["low"].astype(float)
 
-        # SMA crossover
         sma_f = close.rolling(sma_fast).mean()
         sma_s = close.rolling(sma_slow).mean()
         atr = _atr(high, low, close)
@@ -116,47 +104,34 @@ def scan_momentum(
             continue
 
         # --- SMA crossover signal ---
-        # Golden cross: fast crosses above slow
         if prev_sma_f <= prev_sma_s and cur_sma_f > cur_sma_s:
-            trend_strength = min(1.0, cur_adx / 50.0)
-            confidence = 0.4 + 0.3 * trend_strength
-            # Higher confidence if price is above both SMAs
+            trend_strength = min(1.0, cur_adx / 40.0)
+            confidence = 0.35 + 0.3 * trend_strength
             if cur_close > cur_sma_f:
                 confidence += 0.1
             stop = cur_close - 2.0 * cur_atr
             edge_bps = max(1.0, (cur_close - cur_sma_s) / cur_close * 10000 * 0.1)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
-                    pair=symbol,
-                    side="BUY",
-                    entry_price=cur_close,
-                    stop_price=stop,
-                    atr=cur_atr,
-                    edge=edge_bps,
-                    confidence=min(1.0, confidence),
-                    horizon_bars=20,
+                    pair=symbol, side="BUY", entry_price=cur_close,
+                    stop_price=stop, atr=cur_atr, edge=edge_bps,
+                    confidence=min(1.0, confidence), horizon_bars=20,
                     signal_type="sma_cross",
                     regime_fit=1.0 if cur_adx > adx_threshold else 0.5,
                 ))
 
-        # Death cross: fast crosses below slow
         elif prev_sma_f >= prev_sma_s and cur_sma_f < cur_sma_s:
-            trend_strength = min(1.0, cur_adx / 50.0)
-            confidence = 0.4 + 0.3 * trend_strength
+            trend_strength = min(1.0, cur_adx / 40.0)
+            confidence = 0.35 + 0.3 * trend_strength
             if cur_close < cur_sma_f:
                 confidence += 0.1
             stop = cur_close + 2.0 * cur_atr
             edge_bps = max(1.0, (cur_sma_s - cur_close) / cur_close * 10000 * 0.1)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
-                    pair=symbol,
-                    side="SELL",
-                    entry_price=cur_close,
-                    stop_price=stop,
-                    atr=cur_atr,
-                    edge=edge_bps,
-                    confidence=min(1.0, confidence),
-                    horizon_bars=20,
+                    pair=symbol, side="SELL", entry_price=cur_close,
+                    stop_price=stop, atr=cur_atr, edge=edge_bps,
+                    confidence=min(1.0, confidence), horizon_bars=20,
                     signal_type="sma_cross",
                     regime_fit=1.0 if cur_adx > adx_threshold else 0.5,
                 ))
@@ -165,49 +140,65 @@ def scan_momentum(
         recent_high = high.iloc[-breakout_lookback:].max()
         recent_low = low.iloc[-breakout_lookback:].min()
 
-        # Bullish breakout: close above recent high with trend confirmation
-        if cur_close > recent_high and cur_adx > adx_threshold:
+        if cur_close >= recent_high and cur_adx > adx_threshold:
             breakout_pct = (cur_close - recent_high) / recent_high
-            confidence = 0.5 + min(0.3, breakout_pct * 100)
-            # Extra confidence if fast SMA > slow SMA (trend aligned)
+            confidence = 0.35 + min(0.3, breakout_pct * 50)
             if cur_sma_f > cur_sma_s:
                 confidence += 0.1
             stop = cur_close - 2.0 * cur_atr
             edge_bps = max(1.0, breakout_pct * 10000 * 0.2)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
-                    pair=symbol,
-                    side="BUY",
-                    entry_price=cur_close,
-                    stop_price=stop,
-                    atr=cur_atr,
-                    edge=edge_bps,
-                    confidence=min(1.0, confidence),
-                    horizon_bars=10,
-                    signal_type="breakout",
-                    regime_fit=1.0,
+                    pair=symbol, side="BUY", entry_price=cur_close,
+                    stop_price=stop, atr=cur_atr, edge=edge_bps,
+                    confidence=min(1.0, confidence), horizon_bars=10,
+                    signal_type="breakout", regime_fit=1.0,
                 ))
 
-        # Bearish breakout: close below recent low with trend confirmation
-        elif cur_close < recent_low and cur_adx > adx_threshold:
+        elif cur_close <= recent_low and cur_adx > adx_threshold:
             breakout_pct = (recent_low - cur_close) / recent_low
-            confidence = 0.5 + min(0.3, breakout_pct * 100)
+            confidence = 0.35 + min(0.3, breakout_pct * 50)
             if cur_sma_f < cur_sma_s:
                 confidence += 0.1
             stop = cur_close + 2.0 * cur_atr
             edge_bps = max(1.0, breakout_pct * 10000 * 0.2)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
-                    pair=symbol,
-                    side="SELL",
-                    entry_price=cur_close,
-                    stop_price=stop,
-                    atr=cur_atr,
-                    edge=edge_bps,
-                    confidence=min(1.0, confidence),
-                    horizon_bars=10,
-                    signal_type="breakout",
-                    regime_fit=1.0,
+                    pair=symbol, side="SELL", entry_price=cur_close,
+                    stop_price=stop, atr=cur_atr, edge=edge_bps,
+                    confidence=min(1.0, confidence), horizon_bars=10,
+                    signal_type="breakout", regime_fit=1.0,
                 ))
+
+        # --- Trend alignment signal (most permissive) ---
+        # Price on the correct side of SMA20 + SMA50 aligned + ADX confirms direction
+        if cur_adx > adx_threshold:
+            # Bullish alignment: price > SMA20 > SMA50
+            if cur_close > cur_sma_f > cur_sma_s:
+                dist_from_sma = (cur_close - cur_sma_f) / cur_atr
+                confidence = 0.25 + min(0.3, dist_from_sma * 0.05)
+                edge_bps = max(1.0, (cur_close - cur_sma_s) / cur_close * 10000 * 0.05)
+                stop = cur_close - 2.0 * cur_atr
+                if confidence >= min_confidence:
+                    signals.append(MomentumSignal(
+                        pair=symbol, side="BUY", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=15,
+                        signal_type="trend_align", regime_fit=0.8,
+                    ))
+
+            # Bearish alignment: price < SMA20 < SMA50
+            elif cur_close < cur_sma_f < cur_sma_s:
+                dist_from_sma = (cur_sma_f - cur_close) / cur_atr
+                confidence = 0.25 + min(0.3, dist_from_sma * 0.05)
+                edge_bps = max(1.0, (cur_sma_s - cur_close) / cur_close * 10000 * 0.05)
+                stop = cur_close + 2.0 * cur_atr
+                if confidence >= min_confidence:
+                    signals.append(MomentumSignal(
+                        pair=symbol, side="SELL", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=15,
+                        signal_type="trend_align", regime_fit=0.8,
+                    ))
 
     return sorted(signals, key=lambda s: -s.confidence)

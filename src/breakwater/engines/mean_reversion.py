@@ -4,17 +4,13 @@ Assets that deviate far from their mean tend to revert. Buys oversold,
 sells overbought.
 
 Signals:
-  - RSI extremes (<30 oversold → BUY, >70 overbought → SELL)
+  - RSI extremes (<35 oversold, >65 overbought — tighter bands for crypto)
   - Bollinger Band bounces (price touches lower/upper band)
   - Z-score of price vs SMA (standard deviations from mean)
-
-Works in ranging markets. Use regime detector to disable in trending markets.
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -74,29 +70,20 @@ def scan_mean_reversion(
     frames: dict[str, pd.DataFrame],
     *,
     rsi_period: int = 14,
-    rsi_oversold: float = 30.0,
-    rsi_overbought: float = 70.0,
+    rsi_oversold: float = 35.0,
+    rsi_overbought: float = 65.0,
     bb_period: int = 20,
-    bb_std: float = 2.0,
+    bb_std: float = 1.8,
     zscore_period: int = 20,
-    zscore_threshold: float = 2.0,
-    min_confidence: float = 0.3,
+    zscore_threshold: float = 1.5,
+    min_confidence: float = 0.2,
 ) -> list[MeanReversionSignal]:
     """Scan all pairs for mean reversion signals.
 
-    Args:
-        frames: dict of symbol -> DataFrame with columns [open, high, low, close, volume].
-        rsi_period: RSI calculation period.
-        rsi_oversold: RSI level considered oversold (buy signal).
-        rsi_overbought: RSI level considered overbought (sell signal).
-        bb_period: Bollinger Band SMA period.
-        bb_std: Bollinger Band standard deviation multiplier.
-        zscore_period: Z-score rolling window.
-        zscore_threshold: Z-score threshold for extreme deviation.
-        min_confidence: minimum confidence to emit a signal.
-
-    Returns:
-        List of MeanReversionSignal, sorted by confidence descending.
+    Lowered thresholds for real market conditions:
+    - RSI: 35/65 (crypto oscillates in tighter bands than equities)
+    - Bollinger: 1.8 std (closer bands = more touches)
+    - Z-score: 1.5 (more frequent signals)
     """
     signals: list[MeanReversionSignal] = []
 
@@ -126,131 +113,88 @@ def scan_mean_reversion(
 
         # --- RSI signals ---
         if not np.isnan(cur_rsi):
-            # Oversold → BUY
             if cur_rsi < rsi_oversold:
-                extremity = (rsi_oversold - cur_rsi) / rsi_oversold  # 0-1
-                confidence = 0.4 + 0.4 * extremity
+                extremity = (rsi_oversold - cur_rsi) / rsi_oversold
+                confidence = 0.3 + 0.35 * extremity
                 stop = cur_close - 2.0 * cur_atr
-                # Expected edge: distance to mean / 2 (mean reversion assumption)
-                target = cur_bb_mid
+                target = cur_bb_mid if not np.isnan(cur_bb_mid) else cur_close * 1.01
                 edge_bps = max(1.0, (target - cur_close) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
-                        pair=symbol,
-                        side="BUY",
-                        entry_price=cur_close,
-                        stop_price=stop,
-                        atr=cur_atr,
-                        edge=edge_bps,
-                        confidence=min(1.0, confidence),
-                        horizon_bars=10,
-                        signal_type="rsi",
-                        regime_fit=0.3,  # low in trending, high in ranging
+                        pair=symbol, side="BUY", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=10,
+                        signal_type="rsi", regime_fit=0.4,
                     ))
 
-            # Overbought → SELL
             elif cur_rsi > rsi_overbought:
                 extremity = (cur_rsi - rsi_overbought) / (100 - rsi_overbought)
-                confidence = 0.4 + 0.4 * extremity
+                confidence = 0.3 + 0.35 * extremity
                 stop = cur_close + 2.0 * cur_atr
-                target = cur_bb_mid
+                target = cur_bb_mid if not np.isnan(cur_bb_mid) else cur_close * 0.99
                 edge_bps = max(1.0, (cur_close - target) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
-                        pair=symbol,
-                        side="SELL",
-                        entry_price=cur_close,
-                        stop_price=stop,
-                        atr=cur_atr,
-                        edge=edge_bps,
-                        confidence=min(1.0, confidence),
-                        horizon_bars=10,
-                        signal_type="rsi",
-                        regime_fit=0.3,
+                        pair=symbol, side="SELL", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=10,
+                        signal_type="rsi", regime_fit=0.4,
                     ))
 
         # --- Bollinger Band signals ---
         if not np.isnan(cur_bb_lower) and not np.isnan(cur_bb_upper):
-            # Price touches lower band → BUY
             if cur_close <= cur_bb_lower:
                 deviation = (cur_bb_lower - cur_close) / cur_atr if cur_atr > 0 else 0
-                confidence = 0.4 + min(0.3, deviation * 0.1)
+                confidence = 0.3 + min(0.3, deviation * 0.15)
                 stop = cur_close - 2.0 * cur_atr
                 edge_bps = max(1.0, (cur_bb_mid - cur_close) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
-                        pair=symbol,
-                        side="BUY",
-                        entry_price=cur_close,
-                        stop_price=stop,
-                        atr=cur_atr,
-                        edge=edge_bps,
-                        confidence=min(1.0, confidence),
-                        horizon_bars=10,
-                        signal_type="bollinger",
-                        regime_fit=0.3,
+                        pair=symbol, side="BUY", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=10,
+                        signal_type="bollinger", regime_fit=0.4,
                     ))
 
-            # Price touches upper band → SELL
             elif cur_close >= cur_bb_upper:
                 deviation = (cur_close - cur_bb_upper) / cur_atr if cur_atr > 0 else 0
-                confidence = 0.4 + min(0.3, deviation * 0.1)
+                confidence = 0.3 + min(0.3, deviation * 0.15)
                 stop = cur_close + 2.0 * cur_atr
                 edge_bps = max(1.0, (cur_close - cur_bb_mid) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
-                        pair=symbol,
-                        side="SELL",
-                        entry_price=cur_close,
-                        stop_price=stop,
-                        atr=cur_atr,
-                        edge=edge_bps,
-                        confidence=min(1.0, confidence),
-                        horizon_bars=10,
-                        signal_type="bollinger",
-                        regime_fit=0.3,
+                        pair=symbol, side="SELL", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=10,
+                        signal_type="bollinger", regime_fit=0.4,
                     ))
 
         # --- Z-score signals ---
         if not np.isnan(cur_zscore):
-            # Extreme negative z-score → BUY
             if cur_zscore < -zscore_threshold:
                 extremity = min(1.0, (abs(cur_zscore) - zscore_threshold) / zscore_threshold)
-                confidence = 0.4 + 0.3 * extremity
+                confidence = 0.3 + 0.3 * extremity
                 stop = cur_close - 2.0 * cur_atr
-                edge_bps = max(1.0, abs(cur_zscore) * 10)  # ~10 bps per z-score unit
+                edge_bps = max(1.0, abs(cur_zscore) * 8)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
-                        pair=symbol,
-                        side="BUY",
-                        entry_price=cur_close,
-                        stop_price=stop,
-                        atr=cur_atr,
-                        edge=edge_bps,
-                        confidence=min(1.0, confidence),
-                        horizon_bars=10,
-                        signal_type="zscore",
-                        regime_fit=0.3,
+                        pair=symbol, side="BUY", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=10,
+                        signal_type="zscore", regime_fit=0.4,
                     ))
 
-            # Extreme positive z-score → SELL
             elif cur_zscore > zscore_threshold:
                 extremity = min(1.0, (cur_zscore - zscore_threshold) / zscore_threshold)
-                confidence = 0.4 + 0.3 * extremity
+                confidence = 0.3 + 0.3 * extremity
                 stop = cur_close + 2.0 * cur_atr
-                edge_bps = max(1.0, abs(cur_zscore) * 10)
+                edge_bps = max(1.0, abs(cur_zscore) * 8)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
-                        pair=symbol,
-                        side="SELL",
-                        entry_price=cur_close,
-                        stop_price=stop,
-                        atr=cur_atr,
-                        edge=edge_bps,
-                        confidence=min(1.0, confidence),
-                        horizon_bars=10,
-                        signal_type="zscore",
-                        regime_fit=0.3,
+                        pair=symbol, side="SELL", entry_price=cur_close,
+                        stop_price=stop, atr=cur_atr, edge=edge_bps,
+                        confidence=min(1.0, confidence), horizon_bars=10,
+                        signal_type="zscore", regime_fit=0.4,
                     ))
 
     return sorted(signals, key=lambda s: -s.confidence)

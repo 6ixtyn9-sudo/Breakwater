@@ -1692,7 +1692,10 @@ def run_paper_cycle(
             skipped += 1
             _deny(signal, "skipped")
             continue
-        if signal.slice_id not in book_slice_ids:
+        # Engine signals (multi-engine) bypass the book filter — they are
+        # independent of the book and trade on their own edge.
+        is_engine_signal = signal.slice_id.startswith("engine_")
+        if signal.slice_id not in book_slice_ids and not is_engine_signal:
             append_log(
                 log_path,
                 {
