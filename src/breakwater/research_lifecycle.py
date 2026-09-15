@@ -76,7 +76,10 @@ PNL_DECAY_MIN_TRADES = 3
 # `green` per-asset rows to be promotable, and its promo edge is computed over
 # the green rows only (not the pooled all-symbol average). Deliberately a
 # module constant, NOT an env knob.
-MIN_GREEN_ASSETS_FOR_PROMOTION = 3
+# HIP-3 asset classes have 2-5 members (e.g. commodity=5, fx=2). Requiring 3
+# green out of 5 is a 60% bar; requiring 3 out of 2 is impossible.  Two green
+# assets still proves the edge is not a single-asset fluke.
+MIN_GREEN_ASSETS_FOR_PROMOTION = 2
 STOPOUT_COOLDOWN_BARS = 24
 BAR_SECONDS = 3600
 

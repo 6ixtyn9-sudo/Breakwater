@@ -607,12 +607,12 @@ def test_sync_book_per_asset_green_breadth_blocks_thin_slice(tmp_path):
     bp = tmp_path / "book.csv"
     ap = tmp_path / "asset_edges.csv"
     write_validated(vp, [validated_row(mean=0.01)])
-    edges = [_asset_edge_row(asset=f"A{i}", mean=0.01, status="green") for i in range(2)]
-    edges += [_asset_edge_row(asset=f"B{i}", mean=-0.01, status="blocked") for i in range(8)]
+    edges = [_asset_edge_row(asset=f"A{i}", mean=0.01, status="green") for i in range(1)]
+    edges += [_asset_edge_row(asset=f"B{i}", mean=-0.01, status="blocked") for i in range(9)]
     write_asset_edges(ap, edges)
     s = sync_book(validated_path=vp, book_path=bp)
     assert s["per_asset_aware"] is True and s["monitored"] == 0 and s["blocked_for_green_breadth"] == 1
-    assert MIN_GREEN_ASSETS_FOR_PROMOTION > 2 and read_book(bp) == []
+    assert MIN_GREEN_ASSETS_FOR_PROMOTION > 1 and read_book(bp) == []
 
 
 def test_sync_book_per_asset_promo_edge_not_pooled(tmp_path, monkeypatch):
