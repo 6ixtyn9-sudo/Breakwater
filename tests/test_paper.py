@@ -214,7 +214,9 @@ def test_paper_fee_uses_configured_bps(tmp_path, monkeypatch):
     from breakwater import paper_trade
 
     monkeypatch.setattr(paper_trade, "PERP_FEE_BPS", Decimal("100"))
-    # notional 150 @ 100 bps round trip -> 1.50 ZAR fee
+    # notional 150 @ 100 bps round trip — fee now on both entry and exit notionals.
+    # entry 100, stop hit at 95: exit_notional = 150*95/100 = 142.5
+    # fee = (150 + 142.5) * (100/2) / 10000 = 1.4625
     result = cycle(
         tmp_path,
         signals=[],
@@ -223,7 +225,7 @@ def test_paper_fee_uses_configured_bps(tmp_path, monkeypatch):
     )
     assert result["closed"] == 1
     log = pd.read_csv(tmp_path / "log.csv")
-    assert Decimal(str(log.iloc[0]["fee_zar"])) == Decimal("1.50")
+    assert Decimal(str(log.iloc[0]["fee_zar"])) == Decimal("1.4625")
 
 
 def test_replays_unseen_bars_stop_first_after_runner_delay(tmp_path):

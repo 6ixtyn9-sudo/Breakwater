@@ -627,11 +627,24 @@ def sync_book(
     # Carry rows that still meet keep floors, regardless of whether their kind
     # was promoted this run. Previously this dropped all old rows of promoted
     # kinds, losing proven edges that hadn't traded yet.
-    carried = [
-        r
-        for r in existing_rows
-        if _carry_eligible(r)
-    ]
+    # Also apply staleness decay: carried rows that haven't seen a signal in
+    # LIVE_DECAY_BARS should be dropped. PnL-based decay happens during
+    # promotion, not here.
+    carried = []
+    for r in existing_rows:
+        if not _carry_eligible(r):
+            continue
+        status = str(r.get("status") or "")
+        if status == DECAYED:
+            continue
+        if status == MONITORED:
+            last_signal = _coerce_int(r.get("last_signal_bar"), 0)
+            stale = last_signal > 0 and (now_epoch - last_signal) > LIVE_DECAY_BARS * BAR_SECONDS
+            if stale:
+                r = dict(r)
+                r["status"] = DECAYED
+                summary["carried_decayed"] = summary.get("carried_decayed", 0) + 1
+        carried.append(r)
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
         summary["carried_total"] = len(carried)

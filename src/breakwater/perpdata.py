@@ -77,6 +77,7 @@ def fetch_perp_candles(
     count: int = 220,
     session: requests.Session | None = None,
     info_url: str = HYPERLIQUID_INFO_URL,
+    server_time: datetime | None = None,
 ) -> list[Candle]:
     if interval not in INTERVAL_SECONDS:
         raise ValueError("unsupported perp candle interval")
@@ -135,4 +136,8 @@ def fetch_perp_candles(
             ))
         except (KeyError, TypeError, ValueError):
             raise RuntimeError("hyperliquid candle schema is unrecognized")
+    # Filter incomplete candles (same as market.py completed_candles).
+    # Without this, the last bar may be mid-formation, causing repainting entries.
+    if server_time is not None:
+        candles = [c for c in candles if c.complete_at() <= server_time]
     return candles

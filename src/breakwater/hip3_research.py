@@ -567,7 +567,7 @@ def _apply_hip3_class_breadth(
     if not _hip3_env_class_breadth():
         return validated
 
-    class_rows_by_fp: dict[tuple[str, int, str, int], object] = dict(precomputed_rows or {})
+    class_rows_by_fp: dict[tuple[str, str, int, str, int], object] = dict(precomputed_rows or {})
     if precomputed_rows is None:
         for market_class, frames in sorted(frames_by_class.items()):
             if not frames:
@@ -582,7 +582,7 @@ def _apply_hip3_class_breadth(
                 found = _slice_stats(prepared, "PERP", FEATURE_COLUMNS, horizon_bars=horizon)
                 checked = validate_slices(prepared, found)
                 for row in checked:
-                    key = (row.feature, row.state, str(row.side).upper(), row.horizon_bars)
+                    key = (market_class, row.feature, row.state, str(row.side).upper(), row.horizon_bars)
                     # Keep the strongest class row per fingerprint (best edge per bar).
                     current = class_rows_by_fp.get(key)
                     if current is None or row.mean_ret_costadj > current.mean_ret_costadj:
@@ -599,7 +599,7 @@ def _apply_hip3_class_breadth(
         if not market_class:
             out.append(row)
             continue
-        class_row = class_rows_by_fp.get((feature, state, side, horizon))
+        class_row = class_rows_by_fp.get((market_class, feature, state, side, horizon))
         # Upgrade only a row that is failing (only) because its own group is a
         # single symbol, while the full class-walk-forward evidence passes.
         if class_row is None or not class_row.breadth_ok or not class_row.validated:

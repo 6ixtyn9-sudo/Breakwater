@@ -1298,7 +1298,9 @@ def run_paper_cycle(
         fee_bps = PERP_FEE_BPS if position["kind"] == "PERP" else SPOT_FEE_BPS
         direction = Decimal(1) if side == "BUY" else Decimal(-1)
         gross = (exit_price - entry) / entry * direction * notional_zar
-        fees = notional_zar * fee_bps / Decimal(10000)
+        # Fee on both entry and exit notionals (half fee per side).
+        exit_notional = notional_zar * exit_price / entry if entry > 0 else notional_zar
+        fees = (notional_zar + exit_notional) * (fee_bps / Decimal(2)) / Decimal(10000)
         pnl_zar = gross - fees
         diagnostics = _trade_excursion_diagnostics(
             side=side,
@@ -1395,7 +1397,8 @@ def run_paper_cycle(
                 fee_bps = PERP_FEE_BPS if str(position.get("kind")).upper() == "PERP" else SPOT_FEE_BPS
                 direction = Decimal(1) if side == "BUY" else Decimal(-1)
                 gross = (close_price - entry) / entry * direction * notional
-                fees = notional * fee_bps / Decimal(10000)
+                exit_notional = notional * close_price / entry if entry > 0 else notional
+                fees = (notional + exit_notional) * (fee_bps / Decimal(2)) / Decimal(10000)
                 pnl_zar = gross - fees
                 initial_stop = Decimal(str(position.get("initial_stop_price") or position["stop_price"]))
                 peak = Decimal(str(position.get("peak_price") or entry))

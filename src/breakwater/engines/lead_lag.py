@@ -151,17 +151,32 @@ def scan_lead_lag(
         close = df["close"].astype(float)
         high = df["high"].astype(float)
         low = df["low"].astype(float)
-        returns = close.pct_change()
         cur_close = close.iloc[-1]
         cur_atr = float(_atr(high, low, close).iloc[-1])
 
         if np.isnan(cur_atr) or cur_atr <= 0:
             continue
 
+        # Timestamp-align returns to avoid positional mismatch when frames
+        # have different start times or counts.
+        btc_starts = btc_frame["start"] if "start" in btc_frame.columns else btc_frame.index
+        alt_starts = df["start"] if "start" in df.index or "start" in df.columns else df.index
+        if "start" in btc_frame.columns and "start" in df.columns:
+            btc_aligned = btc_frame.set_index("start")["close"].astype(float)
+            alt_aligned = df.set_index("start")["close"].astype(float)
+            joined = btc_aligned.to_frame("btc").join(alt_aligned.to_frame("alt"), how="inner").dropna()
+            if len(joined) < lookback_window:
+                continue
+            btc_ret = joined["btc"].pct_change()
+            alt_ret = joined["alt"].pct_change()
+        else:
+            btc_ret = btc_returns
+            alt_ret = close.pct_change()
+
         # Align returns to lookback window, excluding recent trigger move
         # to avoid correlation contamination from the move itself.
-        alt_recent = returns.iloc[-lookback_window:-btc_move_lookback] if btc_move_lookback > 0 else returns.iloc[-lookback_window:]
-        btc_corr_recent = btc_returns.iloc[-lookback_window:-btc_move_lookback] if btc_move_lookback > 0 else btc_returns.iloc[-lookback_window:]
+        alt_recent = alt_ret.iloc[-lookback_window:-btc_move_lookback] if btc_move_lookback > 0 else alt_ret.iloc[-lookback_window:]
+        btc_corr_recent = btc_ret.iloc[-lookback_window:-btc_move_lookback] if btc_move_lookback > 0 else btc_ret.iloc[-lookback_window:]
 
         # Find lead/lag relationship
         best_lag, best_corr = _find_lead_lag(btc_corr_recent, alt_recent, max_lag)

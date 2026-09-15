@@ -403,9 +403,9 @@ class BreakwaterEngine:
                     # prefixed coins (dex:ASSET) are their own coin on the
                     # same public candle endpoint.
                     candles = (
-                        fetch_perp_candles(coin, count=perp_count)
+                        fetch_perp_candles(coin, count=perp_count, server_time=server_time)
                         if ":" in pair
-                        else fetch_perp_candles_for_pair(pair, count=perp_count)
+                        else fetch_perp_candles_for_pair(pair, count=perp_count, server_time=server_time)
                     )
                 else:
                     candles = fetch_recent_candles(

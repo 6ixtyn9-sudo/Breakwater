@@ -92,16 +92,19 @@ def test_defensive_exit_vs_r_gate():
     assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=True, asset_status="blocked") is False
 
 
-def test_defensive_exit_only_closes_per_asset_blocked():
-    """A confirmed global macro shift must NOT blanket-close individual assets.
-    Only a per-asset blocked position is defensively exited; green and untested
-    assets ride their own stop/horizon and the green-lane freeze."""
+def test_defensive_exit_closes_opposite_in_confirmed_regime():
+    """In a confirmed bear, ALL BUY positions are defensively exited (not just blocked).
+    R-gated winners (already banked +1R) are kept."""
     shift = _shift(confirmed_bear=True)
-    for status in ("green", "untested", "", "unknown"):
-        assert defensive_exit({"side": "BUY", "asset_status": status}, shift, r_gate_on=False, asset_status=status) is False
-    assert defensive_exit({"side": "BUY", "asset_status": "blocked"}, shift, r_gate_on=False, asset_status="blocked") is True
-    # Legacy/unknown positions have no per-asset evidence, so they are not blanket-closed.
-    assert defensive_exit({"side": "BUY"}, shift, r_gate_on=False) is False
+    # All BUY positions exit in confirmed bear when not R-gated
+    for status in ("green", "untested", "blocked", "", "unknown"):
+        assert defensive_exit({"side": "BUY", "asset_status": status}, shift, r_gate_on=False, asset_status=status) is True
+    # R-gated winners survive
+    assert defensive_exit({"side": "BUY", "asset_status": "blocked"}, shift, r_gate_on=True, asset_status="blocked") is False
+    # SELL positions survive in bear
+    assert defensive_exit({"side": "SELL", "asset_status": "blocked"}, shift, r_gate_on=False, asset_status="blocked") is False
+    # No shift = no exit
+    assert defensive_exit({"side": "BUY"}, None, r_gate_on=False) is False
 
 
 def test_update_regime_state_confirms_after_two_cycles(tmp_path):

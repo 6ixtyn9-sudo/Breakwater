@@ -72,7 +72,7 @@ def test_class_breadth_upgrades_only_breadth_failure():
         }
     )
     row = _group_row("hip3_xyz_equity_c0:feat_atr_norm_ext:1:SHORT:h24")
-    precomputed = {("feat_atr_norm_ext", 1, "SHORT", 24): class_row}
+    precomputed = {("equity", "feat_atr_norm_ext", 1, "SHORT", 24): class_row}
     out = _apply_hip3_class_breadth(
         [row],
         frames_by_class={},
@@ -97,7 +97,7 @@ def test_class_breadth_does_not_upgrade_other_failures():
     )
     # Row fails breadth AND recency - must stay invalid.
     row = _group_row("hip3_xyz_equity_c0:feat_atr_norm_ext:1:SHORT:h24", fail_reasons="breadth_ok,recency_ok")
-    precomputed = {("feat_atr_norm_ext", 1, "SHORT", 24): class_row}
+    precomputed = {("equity", "feat_atr_norm_ext", 1, "SHORT", 24): class_row}
     out = _apply_hip3_class_breadth(
         [row],
         frames_by_class={},
