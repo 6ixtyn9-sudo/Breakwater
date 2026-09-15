@@ -398,5 +398,13 @@
     "signal_id": "d495183873d7e6e2",
     "slice_id": "feat_ret_10:2:LONG:h15",
     "stopped_at": "2026-09-15T07:00:26+00:00"
+  },
+  {
+    "pair": "XYZ:PALLADIUM",
+    "pnl_zar": "-1.0751",
+    "reason": "stop",
+    "signal_id": "0ddac93f1e6be8a8",
+    "slice_id": "hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23",
+    "stopped_at": "2026-09-15T08:01:02+00:00"
   }
 ]
