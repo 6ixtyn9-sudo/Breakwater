@@ -1149,26 +1149,21 @@ class BreakwaterEngine:
 
         # Run all engines
         engine_results: dict[str, list] = {}
-        try:
-            mom = scan_momentum(engine_frames)
-            if mom:
-                engine_results["momentum"] = mom
-        except Exception:
-            pass
-
-        try:
-            mr = scan_mean_reversion(engine_frames)
-            if mr:
-                engine_results["mean_reversion"] = mr
-        except Exception:
-            pass
-
-        try:
-            ll = scan_lead_lag(engine_frames)
-            if ll:
-                engine_results["lead_lag"] = ll
-        except Exception:
-            pass
+        for engine_name, scan_fn in [
+            ("momentum", scan_momentum),
+            ("mean_reversion", scan_mean_reversion),
+            ("lead_lag", scan_lead_lag),
+        ]:
+            try:
+                result = scan_fn(engine_frames)
+                if result:
+                    engine_results[engine_name] = result
+            except Exception as exc:
+                import sys
+                print(
+                    f"[engine] {engine_name} raised {type(exc).__name__}: {exc}",
+                    file=sys.stderr,
+                )
 
         if not engine_results:
             return []
@@ -1199,6 +1194,9 @@ class BreakwaterEngine:
             if entry <= 0 or stop <= 0 or atr <= 0:
                 continue
 
+            # Convert edge from bps to fractional (SliceSignal.edge is fractional return)
+            edge_fractional = r.edge / 10000.0
+
             signals.append(SliceSignal(
                 signal_id=digest,
                 pair=r.pair,
@@ -1212,7 +1210,7 @@ class BreakwaterEngine:
                 entry_price=entry,
                 stop_price=stop,
                 atr=atr,
-                edge=r.edge,
+                edge=edge_fractional,
                 horizon_bars=r.horizon_bars,
                 stop_atr_mult=2.0,
                 regime=regime,
