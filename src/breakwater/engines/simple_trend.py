@@ -68,6 +68,8 @@ def scan_simple_trend(
 
         if np.isnan(cur_atr) or cur_atr <= 0:
             continue
+        # ATR floor: prevent tiny ATR from causing max leverage in low-vol periods
+        cur_atr = max(cur_atr, cur_close * 0.005)
 
         sma = close.rolling(sma_period).mean()
         cur_sma = sma.iloc[-1]

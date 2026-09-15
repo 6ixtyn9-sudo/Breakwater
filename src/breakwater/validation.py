@@ -161,7 +161,7 @@ FOLD_COUNT = max(3, min(10, _coerce_int(os.getenv("BREAKWATER_VALIDATION_FOLD_CO
 # per symbol per candidate, which 3x's research runtime.  The fixed-stop
 # proxy is a reasonable approximation; the key improvements (3 folds, no
 # confound blocking, adaptive breadth, composites) matter more.
-TRAILING_VALIDATION = _env_bool("BREAKWATER_TRAILING_VALIDATION", "0")
+TRAILING_VALIDATION = _env_bool("BREAKWATER_TRAILING_VALIDATION", "1")
 
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(
@@ -332,9 +332,14 @@ def _calibrate_stop_atr_mult(prepared: pd.DataFrame, candidate, state_column: st
     subset = prepared.dropna(subset=[state_column, mae_col])
     mask = subset[state_column] == candidate.state
     values = subset.loc[mask, mae_col].to_numpy()
-    if len(values) < MIN_ROWS_PER_FOLD:
+    # Use only the first 60% of values (training portion) to avoid
+    # lookahead bias: calibrating on the full history means later folds
+    # are evaluated with a stop tuned on their own future data.
+    train_size = max(MIN_ROWS_PER_FOLD, int(len(values) * 0.6))
+    train_values = values[:train_size]
+    if len(train_values) < MIN_ROWS_PER_FOLD:
         return 2.0
-    percentile = float(np.percentile(values, 90))
+    percentile = float(np.percentile(train_values, 90))
     return min(STOP_ATR_CEIL, max(STOP_ATR_FLOOR, percentile))
 
 
@@ -650,17 +655,23 @@ def _compute_asset_edges_for_slice(
 
         if n < PER_ASSET_MIN_ROWS:
             status, reason = "untested", "insufficient_rows"
-        # Intentional allow-bias: an untested asset (folds_with_rows == 0) with a
-        # positive mean is allowed so the gate never zeros action. If this is
-        # unintended, require folds_with_rows > 0 so green requires fold evidence.
-        elif mean_net > 0.0 and (
-            folds_with_rows == 0
-            or (folds_positive / folds_with_rows) >= PER_ASSET_MIN_FOLD_POSITIVE_FRACTION
-        ):
-            status, reason = "green", ""
         else:
-            status = "blocked"
-            reason = "not_green_per_asset"
+            # Adaptive threshold: thin classes (1-2 folds) need lower bar since
+            # 60% means 1/1 or 2/2 must be positive. Scale down for few folds.
+            effective_fraction = PER_ASSET_MIN_FOLD_POSITIVE_FRACTION
+            if folds_with_rows <= 2:
+                effective_fraction = max(0.5, effective_fraction - 0.1 * (3 - folds_with_rows))
+            # Intentional allow-bias: an untested asset (folds_with_rows == 0) with a
+            # positive mean is allowed so the gate never zeros action. If this is
+            # unintended, require folds_with_rows > 0 so green requires fold evidence.
+            if mean_net > 0.0 and (
+                folds_with_rows == 0
+                or (folds_positive / folds_with_rows) >= effective_fraction
+            ):
+                status, reason = "green", ""
+            else:
+                status = "blocked"
+                reason = "not_green_per_asset"
 
         out.append(
             AssetEdge(

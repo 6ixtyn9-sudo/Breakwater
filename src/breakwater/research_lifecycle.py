@@ -645,6 +645,24 @@ def sync_book(
                 r["status"] = DECAYED
                 summary["carried_decayed"] = summary.get("carried_decayed", 0) + 1
         carried.append(r)
+    # Deduplicate by family key (kind, feature, state, side) keeping best
+    # edge-per-bar. Without this, multiple horizons of the same family coexist.
+    if carried:
+        by_family: dict[tuple, list[dict]] = {}
+        for r in carried:
+            fkey = (str(r.get("kind")), str(r.get("feature")), str(r.get("state")), str(r.get("side")))
+            by_family.setdefault(fkey, []).append(r)
+        deduped = []
+        for fkey, family_rows in by_family.items():
+            if len(family_rows) == 1:
+                deduped.append(family_rows[0])
+            else:
+                best = max(family_rows, key=lambda r: (
+                    float(r.get("mean_ret_costadj") or 0) / max(1, _coerce_int(r.get("horizon_bars"), 1)),
+                    float(r.get("mean_ret_costadj") or 0),
+                ))
+                deduped.append(best)
+        carried = deduped
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})
         summary["carried_total"] = len(carried)
@@ -801,27 +819,37 @@ def apply_signal_feedback(
 
 
 def _write_book(path: Path, rows: list[dict]) -> None:
+    import fcntl
+
     # Ensure no legacy-only keys sneak into the writer
     for row in rows:
         _convert_legacy_semantics_inplace(row)
     path.parent.mkdir(parents=True, exist_ok=True)
-    file_descriptor, temporary_name = tempfile.mkstemp(
-        prefix=path.name + ".", suffix=".tmp", dir=path.parent
-    )
+    # Lock file to prevent corruption from concurrent research/paper runs.
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    lock_fd = open(lock_path, "w")
     try:
-        with os.fdopen(file_descriptor, "w", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=BOOK_HEADERS)
-            writer.writeheader()
-            writer.writerows(rows)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary_name, path)
-    except Exception:
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+        file_descriptor, temporary_name = tempfile.mkstemp(
+            prefix=path.name + ".", suffix=".tmp", dir=path.parent
+        )
         try:
-            os.unlink(temporary_name)
-        except OSError:
-            pass
-        raise
+            with os.fdopen(file_descriptor, "w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=BOOK_HEADERS)
+                writer.writeheader()
+                writer.writerows(rows)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_name, path)
+        except Exception:
+            try:
+                os.unlink(temporary_name)
+            except OSError:
+                pass
+            raise
+    finally:
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+        lock_fd.close()
 
 
 def read_cooldown_journal(path: Path) -> list[dict]:

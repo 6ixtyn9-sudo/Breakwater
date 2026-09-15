@@ -327,7 +327,7 @@ def advance_counterfactuals(
     server_time: datetime,
     missing_bars_exit: int,
     time_stop_bars: int = 20,
-    max_bars: int = 240,
+    max_bars: int = 120,
 ) -> CounterfactualAdvance:
     completed_rows: list[dict] = []
     surviving_trackers: list[dict] = []

@@ -55,8 +55,10 @@ def _data_freshness(signal: Signal) -> float:
     Shorter horizon = fresher. Longer horizon = more time for regime to change.
     """
     h = max(1, signal.horizon_bars)
-    # 1 bar = 1.0 freshness, 50 bars = 0.5 freshness
-    return max(0.1, 1.0 / (1.0 + h / 50.0))
+    # 1 bar = 1.0 freshness, 100 bars = 0.5 freshness
+    # Less aggressive penalty so long-horizon momentum is not crowded out
+    # by short-horizon simple_trend.
+    return max(0.1, 1.0 / (1.0 + h / 100.0))
 
 
 def rank_signals(

@@ -102,9 +102,11 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     df["feat_trend_strength_20"] = close.rolling(20).apply(strength, raw=False)
 
     # Composite features: cross-feature interactions
-    df["feat_vol_trend"] = df["feat_vol_regime"] * df["feat_trend_slope_20"]
-    df["feat_ret_vol"] = df["feat_ret_20"] * df["feat_vol_regime"]
-    df["feat_ext_strength"] = df["feat_ext_vs_ma_20"] * df["feat_trend_strength_20"]
+    # Fill NaN with 0 before multiplying to avoid NaN propagation:
+    # if one component is NaN, the composite should be 0 (neutral), not NaN.
+    df["feat_vol_trend"] = df["feat_vol_regime"].fillna(0) * df["feat_trend_slope_20"].fillna(0)
+    df["feat_ret_vol"] = df["feat_ret_20"].fillna(0) * df["feat_vol_regime"].fillna(0)
+    df["feat_ext_strength"] = df["feat_ext_vs_ma_20"].fillna(0) * df["feat_trend_strength_20"].fillna(0)
     return df
 
 

@@ -136,6 +136,14 @@ def fetch_perp_candles(
             ))
         except (KeyError, TypeError, ValueError):
             raise RuntimeError("hyperliquid candle schema is unrecognized")
+    # Dedupe by start timestamp (market.py does this for spot via dict).
+    seen_starts: set = set()
+    deduped: list[Candle] = []
+    for c in candles:
+        if c.start not in seen_starts:
+            seen_starts.add(c.start)
+            deduped.append(c)
+    candles = deduped
     # Filter incomplete candles (same as market.py completed_candles).
     # Without this, the last bar may be mid-formation, causing repainting entries.
     if server_time is not None:

@@ -110,6 +110,8 @@ def scan_mean_reversion(
 
         if np.isnan(cur_atr) or cur_atr <= 0:
             continue
+        # ATR floor: prevent tiny ATR from causing max leverage in low-vol periods
+        cur_atr = max(cur_atr, cur_close * 0.005)
 
         # --- RSI signals ---
         if not np.isnan(cur_rsi):

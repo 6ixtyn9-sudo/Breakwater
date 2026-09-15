@@ -156,6 +156,8 @@ def scan_lead_lag(
 
         if np.isnan(cur_atr) or cur_atr <= 0:
             continue
+        # ATR floor: prevent tiny ATR from causing max leverage in low-vol periods
+        cur_atr = max(cur_atr, cur_close * 0.005)
 
         # Timestamp-align returns to avoid positional mismatch when frames
         # have different start times or counts.

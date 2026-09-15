@@ -102,6 +102,8 @@ def scan_momentum(
 
         if np.isnan(cur_atr) or cur_atr <= 0 or np.isnan(cur_adx):
             continue
+        # ATR floor: prevent tiny ATR from causing max leverage in low-vol periods
+        cur_atr = max(cur_atr, cur_close * 0.005)
 
         # --- SMA crossover signal ---
         if prev_sma_f <= prev_sma_s and cur_sma_f > cur_sma_s:

@@ -943,16 +943,21 @@ def _mark_position_bar(
     bars_held = _coerce_int(position.get("bars_held"), 0) + 1
     initial_stop_price = Decimal(str(position.get("initial_stop_price") or stop))
     r_dist = abs(entry - initial_stop_price)
-    peak_seen = max(Decimal(str(position.get("peak_price") or entry)), high)
-    trough_seen = min(Decimal(str(position.get("trough_price") or entry)), low)
-    mfe_r = Decimal(0)
+    prev_peak = Decimal(str(position.get("peak_price") or entry))
+    prev_trough = Decimal(str(position.get("trough_price") or entry))
+    peak_seen = max(prev_peak, high)
+    trough_seen = min(prev_trough, low)
+    # R-gate uses PREVIOUS peak (excluding current bar) so a bar that just
+    # touches +1R does not suppress its own horizon exit. "Already banked"
+    # means prior bars, not the current forming bar.
+    prev_mfe_r = Decimal(0)
     if r_dist > 0:
-        mfe_r = (
-            (peak_seen - entry) / r_dist
+        prev_mfe_r = (
+            (prev_peak - entry) / r_dist
             if side == "BUY"
-            else (entry - trough_seen) / r_dist
+            else (entry - prev_trough) / r_dist
         )
-    r_gate_on = bool(R_GATE_ENABLE and r_dist > 0 and mfe_r >= R_GATE_SUPPRESS_R)
+    r_gate_on = bool(R_GATE_ENABLE and r_dist > 0 and prev_mfe_r >= R_GATE_SUPPRESS_R)
     target = (
         entry + (entry - initial_stop_price) * TARGET_R_MULTIPLE
         if side == "BUY"
@@ -1066,12 +1071,23 @@ def _mark_position_bar(
                     else trough_seen <= entry - TRAIL_ACTIVATE_R * r_dist
                 )
             if trail_active:
-                stop = (
+                new_stop = (
                     max(stop, peak_seen - TRAIL_DISTANCE_R * r_dist)
                     if side == "BUY"
                     else min(stop, trough_seen + TRAIL_DISTANCE_R * r_dist)
                 )
+                stop = new_stop
                 position["stop_price"] = str(stop)
+                # Re-check: if the new trailed stop would be hit by this
+                # same bar, exit now. Without this, a bar that activates
+                # trail (high >= entry+0.75R) then retraces below the new
+                # trailed stop would survive and exit next bar instead.
+                if side == "BUY" and low <= stop:
+                    exit_price, outcome = stop, ("win" if stop >= entry else "loss")
+                    exit_reason = "trail_stop"
+                elif side == "SELL" and high >= stop:
+                    exit_price, outcome = stop, ("win" if stop <= entry else "loss")
+                    exit_reason = "trail_stop"
             position["initial_stop_price"] = str(initial_stop_price)
             position["peak_price"] = str(peak_seen)
             position["trough_price"] = str(trough_seen)

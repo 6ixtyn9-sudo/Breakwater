@@ -292,11 +292,13 @@ def test_replay_ratchets_then_hits_trail_on_next_unseen_bar(tmp_path):
 
 
 def test_horizon_does_not_cut_a_plus_one_r_winner(tmp_path):
-    """R-gate: once MFE >= +1R, horizon is a loser timer only."""
+    """R-gate: once MFE >= +1R (in PRIOR bars), horizon is a loser timer only."""
     position = open_position(entry="100", stop="95", bars="5")
     position[0]["horizon_bars"] = "6"
     position[0]["initial_stop_price"] = "95"
-    position[0]["peak_price"] = "100"
+    # Prior peak must be >= entry + 1R = 105 for r_gate to activate.
+    # R-gate now uses previous peak, not current bar.
+    position[0]["peak_price"] = "106"
     result = cycle(
         tmp_path,
         signals=[],

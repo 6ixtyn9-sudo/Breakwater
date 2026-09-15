@@ -353,7 +353,12 @@ class BreakwaterEngine:
         return server_time, status
 
     def _universe(self) -> UniverseSnapshot:
-        snapshot = read_universe(self.settings.universe_path)
+        snapshot = None
+        try:
+            snapshot = read_universe(self.settings.universe_path)
+        except RuntimeError:
+            # Corrupt universe file — re-ingest instead of halting
+            snapshot = None
         if (
             snapshot is not None
             and not is_legacy_universe(snapshot)
