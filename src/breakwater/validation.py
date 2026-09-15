@@ -774,7 +774,13 @@ def validate_slices(
         # Candidate-side net series — use trailing-aware for validation gates
         net_values = net_long if str(candidate.side).upper() == "LONG" else net_short
         val_values = val_long if str(candidate.side).upper() == "LONG" else val_short
-        valid = np.isfinite(net_values)
+        # valid MUST be based on val_values (the returns actually being
+        # evaluated), not net_values.  When TRAILING_VALIDATION is ON,
+        # val_values (trailing) has more NaN entries than net_values
+        # (fixed-stop) because the per-bar trailing loop skips ATR-warmup
+        # rows.  Using net_values for the mask lets NaN slip into fold
+        # means, which np.mean propagates as NaN.
+        valid = np.isfinite(val_values)
         slice_mask = slice_mask & valid
 
         slice_net = val_values[slice_mask]
