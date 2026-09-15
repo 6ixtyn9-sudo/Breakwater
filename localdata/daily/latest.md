@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-09-15 17:58 UTC
+# Breakwater daily print — 2026-09-15 18:27 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **390.17 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **387.25 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
@@ -135,14 +135,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.6923 bull=0.0 neutral=0.3077 | symbols=13
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 13 / bull 0
-- as_of: 2026-09-15T17:55:28Z
-- Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
+- Label: **neutral** | breadth bear=0.3846 bull=0.1538 neutral=0.4615 | symbols=13
+- confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
+- as_of: 2026-09-15T18:25:35Z
+- Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
-- confirmed_bear: **True** | promote_env: ON
+- confirmed_bear: **False** | promote_env: ON
 - candidates: 2304 | eligible: 0 | observations: 0 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=365 eligible=530 best=208.4b best_fail=temporal_pass,breadth_ok
