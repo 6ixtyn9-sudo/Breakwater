@@ -1,18 +1,18 @@
-# Breakwater daily print — 2026-09-15 01:10 UTC
+# Breakwater daily print — 2026-09-15 01:26 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **398.30 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **393.23 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
 ## 2. Paper account
 
-- Equity: **2000.00 ZAR** (seed 2000) | lifetime: **+0.00 ZAR** | closed: 0
-- Today: 0 closed, **+0.00 ZAR**
-- 7d: **+0.00 ZAR** | 30d: **+0.00 ZAR**
+- Equity: **2000.50 ZAR** (seed 2000) | lifetime: **+0.50 ZAR** | closed: 1
+- Today: 1 closed, **+0.50 ZAR**
+- 7d: **+0.50 ZAR** | 30d: **+0.50 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -24,11 +24,11 @@
   - absent: `feat_atr_norm_ext:2:LONG:h13` (native)
   - absent: `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23` (hip3)
 - Claimed edge: unknown (0/6 book slices present in the validated pools)
-- Realised (0 real closes per lane_gate._is_real_close, net of fees): no real closes | INSUFFICIENT SAMPLE (n<30)
+- Realised (1 real closes per lane_gate._is_real_close, net of fees): +0.50 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
 - Gap: not computed | verdict: claimed edge unknown
 - native: claimed unknown (0/5 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- hip3: claimed unknown (0/1 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1124 decision rows; 0 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1124 rows are skipped/guard decisions and never count
+- hip3: claimed unknown (0/1 slices in pool 0) | realised 1 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
+- Ledger: 1125 decision rows; 1 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1124 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -40,7 +40,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### HIP3
 
-- Closed: 0 | wins: 0 | win%: 0.0 | P&L: **+0.00 ZAR** | today: +0.00 | 7d: +0.00 | 30d: +0.00
+- Closed: 1 | wins: 1 | win%: 100.0 | P&L: **+0.50 ZAR** | today: +0.50 | 7d: +0.50 | 30d: +0.50
+- By exit: target +0.5
+- By entry regime (n/pnl): bull 1/+0.5
+- Top slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 1n/1w +0.50
+- Worst slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 1n/1w +0.50
+- Top pairs: XYZ:STRC 1n +0.50
+- Worst pairs: XYZ:STRC 1n +0.50
 
 ## 4. Open positions & risk
 
@@ -69,11 +75,10 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
 - Computed open stop-risk (section 4): **68.12 ZAR** (informational only, no cap applied)
-- Paper shadow ledger (gates paper entries only, nothing live): **68.12 / 142.11 ZAR | 51.7% | ok**
-- Remaining: 68.5770 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 45, "skipped": 14, "slice_full": 0, "slot_full": 31}}
-- Highest-risk: **FARTCOINUSDC** 10.1505 ZAR
-- positions without bars: 1 | replayed: 16 | invalid: 0
+- Paper shadow ledger (gates paper entries only, nothing live): **0.00 / 0.00 ZAR | 0.0% | None**
+- Remaining: None | cap skips: None | unknown skips: None
+- booked stats: null
+- positions without bars: None | replayed: None | invalid: None
 
 ## 6. Monitored books
 
@@ -89,7 +94,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 7. HIP-3 live gate
 
-- Closed paper trades: **0/50** | ghost rows: **0/50** | PnL: **+0.00 ZAR**
+- Closed paper trades: **1/50** | ghost rows: **0/50** | PnL: **+0.50 ZAR**
 - Gate verdict: **NOT READY**
 
 ## 8. Research / honesty checks
@@ -113,9 +118,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.2667 bull=0.0667 neutral=0.6667 | symbols=30
+- Label: **neutral** | breadth bear=0.1 bull=0.1 neutral=0.8 | symbols=20
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-15T00:00:28Z
+- as_of: 2026-09-15T01:25:40Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -128,7 +133,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 12. Green gate
 
 - Native lane: **RED** | closed=0 pnl=+0.00 | frozen=NO
-- HIP-3 lane: **RED** | closed=0 pnl=+0.00 | frozen=NO
+- HIP-3 lane: **RED** | closed=1 pnl=+0.50 | frozen=NO
 - Frozen lanes: none
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 0
@@ -138,12 +143,11 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-14T22:01:53: errors=0 signals=45 regime_blocked=20
-- this cycle: closed=0 new_signals=45 skipped=14 slot_full=31 slice_full=0 pair_held=0
-- Action funnel: regime_blocked=20 | lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=31 | skipped=14
-- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 0, "regime_blocked": 20, "skipped": 14, "slice_full": 0, "slot_full": 31})
-- green_gate: native_green=False hip3_green=False frozen=none islands=0 blocks=0
-- aggregate_risk: ok open=68.1186 cap=142.1072 used=0.5174 remaining=68.5770 replayed=16 no_new_bars=1
+- Latest scan 2026-09-11T20:07:35: errors=0 signals=None regime_blocked=None
+- this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
+- Action funnel: lane_gate_blocked=4
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 2, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 4, "pair_held": 29, "regime_blocked": 510, "skipped": 138, "slice_full": 0, "slot_full": 91})
+- green_gate: native_green=False hip3_green=True frozen=native islands=3 blocks=14
 - pair_errors: []
 
 ---
