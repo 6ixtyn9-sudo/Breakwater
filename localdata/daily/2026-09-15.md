@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-09-15 14:01 UTC
+# Breakwater daily print — 2026-09-15 14:29 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **391.72 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **389.35 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
@@ -135,9 +135,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.3333 bull=0.0667 neutral=0.5667 | symbols=29
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 8 / bull 0
-- as_of: 2026-09-15T13:25:13Z
+- Label: **bear** | breadth bear=0.6429 bull=0.0714 neutral=0.2857 | symbols=14
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: neutral | consecutive_bear: 9 / bull 0
+- as_of: 2026-09-15T14:25:29Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
