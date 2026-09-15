@@ -624,12 +624,13 @@ def sync_book(
             return False
         return (now_epoch - last_signal) <= LIVE_DECAY_BARS * BAR_SECONDS
 
-    # Carry rows for kinds that did not promote this run, but drop thin leftovers
-    # that would fail today's net-edge / n floors.
+    # Carry rows that still meet keep floors, regardless of whether their kind
+    # was promoted this run. Previously this dropped all old rows of promoted
+    # kinds, losing proven edges that hadn't traded yet.
     carried = [
         r
         for r in existing_rows
-        if r.get("kind") not in promoted_kinds and _carry_eligible(r)
+        if _carry_eligible(r)
     ]
     if carried:
         summary["carried_kinds"] = sorted({str(r.get("kind")) for r in carried if r.get("kind")})

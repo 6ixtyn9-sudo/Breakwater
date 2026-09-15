@@ -1125,6 +1125,15 @@ class BreakwaterEngine:
         if engine_flag not in {"1", "true", "yes", "on"}:
             return []
 
+        # Session gate: honor BREAKWATER_PAPER_SESSIONS so engine signals
+        # respect the same session filter as book signals from monitor_book.
+        from breakwater.monitor import _paper_sessions, _utc_session
+        allowed_sessions = _paper_sessions()
+        if allowed_sessions:
+            current_session = _utc_session(server_time)
+            if current_session not in allowed_sessions:
+                return []
+
         from breakwater.engines.momentum import scan_momentum
         from breakwater.engines.mean_reversion import scan_mean_reversion
         from breakwater.engines.lead_lag import scan_lead_lag

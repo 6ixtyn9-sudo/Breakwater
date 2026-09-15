@@ -152,8 +152,8 @@ def update_regime_state(
             consecutive["bull"] += 1
             consecutive["bear"] = 0
         else:
-            consecutive["bear"] = int(previous.get("consecutive_bear") or 0)
-            consecutive["bull"] = int(previous.get("consecutive_bull") or 0)
+            consecutive["bear"] = 0
+            consecutive["bull"] = 0
 
         confirmed_bear = consecutive["bear"] >= FLIP_CONFIRM_CYCLES
         confirmed_bull = consecutive["bull"] >= FLIP_CONFIRM_CYCLES

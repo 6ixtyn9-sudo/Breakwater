@@ -357,17 +357,20 @@ def _slice_stats(
 
             n_long = int(np.isfinite(long_net).sum())
             n_short = int(np.isfinite(short_net).sum())
-            if n_long < MIN_SLICE_ROWS or n_short < MIN_SLICE_ROWS:
-                continue
 
             long_mean, long_median, long_hit, long_t, long_p = _stat_block(long_net)
             short_mean, short_median, short_hit, short_t, short_p = _stat_block(short_net)
 
-            # Emit BOTH directions for every feature:state.
+            # Emit each direction independently — a state with enough
+            # LONG rows but not enough SHORT rows should still produce a
+            # LONG candidate.  Requiring both sides to meet the floor
+            # halves yield for asymmetric features.
             for side, n, mean, median, hit_rate, t_stat, p_value, ret_col in (
                 ("LONG", n_long, long_mean, long_median, long_hit, long_t, long_p, "fwd_trade_net_long"),
                 ("SHORT", n_short, short_mean, short_median, short_hit, short_t, short_p, "fwd_trade_net_short"),
             ):
+                if n < MIN_SLICE_ROWS:
+                    continue
 
                 asia_n, asia_mean, asia_hit = _session_stats_from_col(
                     subset, mask, SESSION_ASIA, ret_col

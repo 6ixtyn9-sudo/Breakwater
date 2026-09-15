@@ -185,7 +185,7 @@ class GreenGate:
         lane = _lane(slice_id)
         if lane not in self.frozen_lanes:
             return True
-        if PROBE_UNTESTED:
+        if PROBE_UNTESTED and not str(slice_id).startswith("engine_"):
             stats = self.slices.get(str(slice_id))
             if stats is None or stats.closed < SLICE_MIN_CLOSED:
                 return True

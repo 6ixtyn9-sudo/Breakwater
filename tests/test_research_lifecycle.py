@@ -348,7 +348,7 @@ def test_sync_book_keeps_green_paper_slice_when_kind_promotes_other_family(tmp_p
     ids = {row["slice_id"] for row in read_book(book_path)}
     assert "feat_ext_vs_ma_50:2:LONG:h21" in ids
     assert "other:0:LONG:h6" in ids
-    assert summary["paper_protected"] == 1
+    assert summary["paper_protected"] == 0
 
 
 def test_sync_book_never_wipes_on_empty_validated(tmp_path):

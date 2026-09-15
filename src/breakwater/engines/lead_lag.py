@@ -158,11 +158,13 @@ def scan_lead_lag(
         if np.isnan(cur_atr) or cur_atr <= 0:
             continue
 
-        # Align returns to lookback window
-        alt_recent = returns.iloc[-lookback_window:]
+        # Align returns to lookback window, excluding recent trigger move
+        # to avoid correlation contamination from the move itself.
+        alt_recent = returns.iloc[-lookback_window:-btc_move_lookback] if btc_move_lookback > 0 else returns.iloc[-lookback_window:]
+        btc_corr_recent = btc_returns.iloc[-lookback_window:-btc_move_lookback] if btc_move_lookback > 0 else btc_returns.iloc[-lookback_window:]
 
         # Find lead/lag relationship
-        best_lag, best_corr = _find_lead_lag(btc_recent, alt_recent, max_lag)
+        best_lag, best_corr = _find_lead_lag(btc_corr_recent, alt_recent, max_lag)
 
         if abs(best_corr) < min_correlation or best_lag < 1:
             continue

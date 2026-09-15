@@ -1378,7 +1378,9 @@ def run_paper_cycle(
                 gap_surviving.append(position)
                 continue
             # At least 1 bar gap per cycle even if no new bars arrived.
-            cycle_bars = max(1, replayed_bars // max(1, len(open_positions))) if replayed_bars else 1
+            # Only increment gap when new bars actually arrived to avoid
+            # premature closes from low-frequency runs.
+            cycle_bars = max(1, replayed_bars // max(1, len(open_positions))) if replayed_bars else 0
             new_gap = prev_gap + cycle_bars
             position["slice_gap_bars"] = str(new_gap)
             if new_gap >= SLICE_GAP_BARS:
@@ -1502,7 +1504,7 @@ def run_paper_cycle(
         else "equity_fraction"
     )
 
-    open_pairs = {str(position["pair"]).upper() for position in surviving}
+    open_pairs = {(str(position["pair"]).upper(), str(position.get("kind") or "").upper()) for position in surviving}
     open_slice_counts: dict[str, int] = {}
     for position in surviving:
         sid = str(position.get("slice_id") or "")
@@ -1683,7 +1685,7 @@ def run_paper_cycle(
             )
             continue
 
-        if signal.pair.upper() in open_pairs:
+        if (signal.pair.upper(), signal.kind.upper()) in open_pairs:
             pair_held += 1
             _deny(signal, "pair_held")
             continue
@@ -2003,7 +2005,7 @@ def run_paper_cycle(
         aggregate_open_risk_zar += proposed_risk_zar
         aggregate_guard_risk_zar += proposed_risk_zar + proposed_buffer_zar
         aggregate_risk_added_zar += proposed_risk_zar
-        open_pairs.add(signal.pair.upper())
+        open_pairs.add((signal.pair.upper(), signal.kind.upper()))
         open_slice_counts[signal.slice_id] = open_slice_counts.get(signal.slice_id, 0) + 1
 
     # Never overwrite an unreadable state file with an empty list. Operators
