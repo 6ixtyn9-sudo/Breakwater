@@ -1,22 +1,29 @@
-# Breakwater daily print — 2026-09-15 19:29 UTC
+# Breakwater daily print — 2026-09-15 19:30 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
+> ## COMA ALARM — NATIVE
+
+> No **proven** slice in this lane. Auditions can still open entries, so
+> this is not a dead lane: it trades, but nothing in it trades on a record
+> it earned, so it cannot unfreeze itself. The runner will keep reporting
+> operational, which is why this block exists. Attention, not intervention.
+
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **384.47 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **385.79 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
 ## 2. Paper account
 
-- Equity: **2008.03 ZAR** (seed 2000) | lifetime: **+8.03 ZAR** | closed: 20
-- Today: 20 closed, **+8.03 ZAR**
-- 7d: **+8.03 ZAR** | 30d: **+8.03 ZAR**
+- Equity: **1991.90 ZAR** (seed 2000) | lifetime: **-8.10 ZAR** | closed: 24
+- Today: 24 closed, **-8.10 ZAR**
+- 7d: **-8.10 ZAR** | 30d: **-8.10 ZAR**
 
 ## 2b. Claimed vs realised
 
-- Book: 531 slices (native 66 | hip3 465); validated pools: native 0 | hip3 732; book slices absent from pools: 66
+- Book: 530 slices (native 65 | hip3 465); validated pools: native 0 | hip3 732; book slices absent from pools: 65
   - absent: `feat_trend_slope_20:2:LONG:h11` (native)
   - absent: `feat_trend_slope_20:2:LONG:h12` (native)
   - absent: `feat_trend_slope_20:2:LONG:h13` (native)
@@ -27,13 +34,13 @@
   - absent: `feat_realized_vol_20:2:LONG:h14` (native)
   - absent: `feat_atr_norm_ext:2:LONG:h15` (native)
   - absent: `feat_trend_slope_20:2:LONG:h15` (native)
-  - ... and 56 more
-- Claimed edge (median mean_ret_costadj over 465 book slices present in the validated pools): +0.119% | at 99.71 ZAR mean notional/trade: +0.12 ZAR/trade
-- Realised (20 real closes per lane_gate._is_real_close, net of fees): +0.40 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
+  - ... and 55 more
+- Claimed edge (median mean_ret_costadj over 465 book slices present in the validated pools): +0.119% | at 99.42 ZAR mean notional/trade: +0.12 ZAR/trade
+- Realised (24 real closes per lane_gate._is_real_close, net of fees): -0.34 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
 - Gap: not computed | verdict: INSUFFICIENT SAMPLE (n<30)
-- native: claimed unknown (0/66 slices in pool 0) | realised 9 closes +0.23 ZAR sd 3.76 | INSUFFICIENT SAMPLE (n<30)
+- native: claimed unknown (0/65 slices in pool 0) | realised 13 closes -1.08 ZAR sd 3.75 | INSUFFICIENT SAMPLE (n<30)
 - hip3: claimed median +0.119% over 465/465 slices (pool 732) ~ +0.12 ZAR | realised 11 closes +0.54 ZAR sd 0.72 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 17461 decision rows; 20 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 17441 rows are skipped/guard decisions and never count
+- Ledger: 18061 decision rows; 24 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 18037 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -41,13 +48,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 9 | wins: 1 | win%: 11.1 | P&L: **+2.05 ZAR** | today: +2.05 | 7d: +2.05 | 30d: +2.05
-- By exit: target +9.9, horizon -2.7, stop -5.2
-- By entry regime (n/pnl): bear 3/+8.9, neutral 6/-6.9
-- Top slices: feat_ret_10:2:LONG:h19 1n/1w +9.91; feat_realized_vol_20:2:LONG:h24 1n/0w -2.99; feat_atr_norm_ext:2:LONG:h13 7n/0w -4.88
-- Worst slices: feat_atr_norm_ext:2:LONG:h13 7n/0w -4.88; feat_realized_vol_20:2:LONG:h24 1n/0w -2.99; feat_ret_10:2:LONG:h19 1n/1w +9.91
+- Closed: 13 | wins: 1 | win%: 7.7 | P&L: **-14.08 ZAR** | today: -14.08 | 7d: -14.08 | 30d: -14.08
+- By exit: target +9.9, horizon -2.7, stop -21.3
+- By entry regime (n/pnl): bear 4/+3.9, bull 1/-3.8, neutral 8/-14.2
+- Top slices: feat_ret_10:2:LONG:h19 1n/1w +9.91; feat_atr_norm_ext:2:LONG:h13 7n/0w -4.88; feat_atr_norm_ext:2:LONG:h19 2n/0w -7.26; feat_realized_vol_20:2:LONG:h24 3n/0w -11.86
+- Worst slices: feat_realized_vol_20:2:LONG:h24 3n/0w -11.86; feat_atr_norm_ext:2:LONG:h19 2n/0w -7.26; feat_atr_norm_ext:2:LONG:h13 7n/0w -4.88; feat_ret_10:2:LONG:h19 1n/1w +9.91
 - Top pairs: ARBUSDC 1n +9.91; ENAUSDC 1n -0.10; SOLUSDC 2n -0.74; KPEPEUSDC 1n -0.81; JUPUSDC 2n -1.01
-- Worst pairs: ETHUSDC 1n -2.99; BTCUSDC 1n -2.22; JUPUSDC 2n -1.01; KPEPEUSDC 1n -0.81; SOLUSDC 2n -0.74
+- Worst pairs: FILUSDC 1n -5.08; TRUMPUSDC 1n -4.96; XRPUSDC 1n -3.79; ETHUSDC 1n -2.99; BNBUSDC 1n -2.30
 
 ### HIP3
 
@@ -61,37 +68,34 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 8 open, stop-risk **33.36 ZAR**
-  - NEARUSDC BUY ntl=87 risk=5.00 bars=8 stop=2.2467999999999997775 peak=2.3839
-  - FILUSDC BUY ntl=91 risk=5.00 bars=9 stop=0.8385550000000000010 peak=0.88729
-  - ZECUSDC BUY ntl=97 risk=5.00 bars=9 stop=1077.0250000000000175 peak=1135.3
-  - TRUMPUSDC BUY ntl=100 risk=4.87 bars=0 stop=1.8895000000000000045 peak=1.9858
-  - HYPEUSDC BUY ntl=100 risk=4.30 bars=1 stop=73.40625000000000455 peak=76.691
-  - XRPUSDC BUY ntl=100 risk=3.70 bars=9 stop=1.3395500000000000160 peak=1.3911
-  - ETHUSDC BUY ntl=100 risk=3.28 bars=1 stop=2342.225000000000085 peak=2421.2
-  - BNBUSDC BUY ntl=100 risk=2.21 bars=0 stop=707.15500000000001725 peak=723.05
+- **NATIVE**: 5 open, stop-risk **22.09 ZAR**
+  - NEARUSDC BUY ntl=87 risk=5.00 bars=9 stop=2.2467999999999997775 peak=2.3839
+  - ZECUSDC BUY ntl=97 risk=5.00 bars=10 stop=1077.0250000000000175 peak=1135.3
+  - SOLUSDC BUY ntl=100 risk=4.51 bars=0 stop=93.65725000000000685 peak=98.1
+  - HYPEUSDC BUY ntl=100 risk=4.30 bars=2 stop=73.40625000000000455 peak=76.691
+  - ETHUSDC BUY ntl=100 risk=3.28 bars=2 stop=2342.225000000000085 peak=2421.2
 
 - **HIP3**: 6 open, stop-risk **5.86 ZAR**
-  - XYZ:BRENTOIL BUY ntl=100 risk=1.78 bars=10 stop=100.81750000000000215 peak=102.64
-  - XYZ:SILVER BUY ntl=100 risk=1.42 bars=10 stop=62.312499999999996790 peak=63.209
-  - XYZ:NATGAS BUY ntl=100 risk=1.18 bars=10 stop=3.0126500000000001925 peak=3.0487
-  - PARA:AVGO SELL ntl=100 risk=0.94 bars=1 stop=345.24999999999999390 peak=342.04
+  - XYZ:BRENTOIL BUY ntl=100 risk=1.78 bars=11 stop=100.81750000000000215 peak=102.64
+  - XYZ:SILVER BUY ntl=100 risk=1.42 bars=11 stop=62.312499999999996790 peak=63.209
+  - XYZ:NATGAS BUY ntl=100 risk=1.18 bars=11 stop=3.0126500000000001925 peak=3.0487
+  - PARA:AVGO SELL ntl=100 risk=0.94 bars=4 stop=345.24999999999999390 peak=342.04
   - PARA:MELI SELL ntl=100 risk=0.55 bars=4 stop=1870.17500000000001210 peak=1860.0
-  - XYZ:COPPER BUY ntl=100 risk=0.00 bars=10 stop=6.4019500000000000900 peak=6.4481
+  - XYZ:COPPER BUY ntl=100 risk=0.00 bars=11 stop=6.4221500000000000900 peak=6.4683
 
 ## 5. Aggregate risk leash
 
 - Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
-- Computed open stop-risk (section 4): **39.23 ZAR** (informational only, no cap applied)
-- Paper shadow ledger (gates paper entries only, nothing live): **39.23 / 140.67 ZAR | 30.3% | ok**
-- Remaining: 97.9996 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 1672, "skipped": 0, "slice_full": 0, "slot_full": 1672}, "native": {"lane_gate_blocked": 0, "opened": 2, "pair_held": 27, "signals": 198, "skipped": 169, "slice_full": 0, "slot_full": 0}}
+- Computed open stop-risk (section 4): **27.96 ZAR** (informational only, no cap applied)
+- Paper shadow ledger (gates paper entries only, nothing live): **27.96 / 139.54 ZAR | 22.0% | ok**
+- Remaining: 108.8726 | cap skips: 0 | unknown skips: 0
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 1625, "skipped": 0, "slice_full": 0, "slot_full": 1625}, "native": {"lane_gate_blocked": 0, "opened": 1, "pair_held": 11, "signals": 152, "skipped": 140, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **ZECUSDC** 4.9990 ZAR
-- positions without bars: 1 | replayed: 14 | invalid: 0
+- positions without bars: 1 | replayed: 15 | invalid: 0
 
 ## 6. Monitored books
 
-- Native: 66 | HIP-3: 465
+- Native: 65 | HIP-3: 465
 - Native top (by paper P&L):
   - `feat_ret_10:2:LONG:h19` edge=0.0077 n=16875 p=0.0000 src=validated_walk_forward unproven=False paper=1n/+9.91
   - `feat_trend_slope_20:2:LONG:h11` edge=0.0058 n=17004 p=0.0000 src=validated_walk_forward unproven=False paper=2n/+5.56
@@ -102,14 +106,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_ext_vs_ma_50:2:LONG:h14` edge=0.0064 n=16441 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_ret_20:2:LONG:h14` edge=0.0060 n=17052 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0015 n=10074 p=0.0492 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20` edge=0.0175 n=268 p=0.0651 src=validated_walk_forward unproven=False paper=1n/+2.05
+  - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h24` edge=0.0064 n=993 p=0.0000 src=validated_walk_forward unproven=False paper=1n/+1.02
   - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h6` edge=0.0049 n=505 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h8` edge=0.0070 n=503 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h8` edge=0.0047 n=295 p=0.0022 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h9` edge=0.0082 n=502 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h9` edge=0.0054 n=295 p=0.0151 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h10` edge=0.0094 n=501 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0108 n=499 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h12` edge=0.0117 n=497 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -137,9 +141,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.5 bull=0.0 neutral=0.5 | symbols=14
+- Label: **bear** | breadth bear=0.6 bull=0.0 neutral=0.3667 | symbols=29
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 1 / bull 0
-- as_of: 2026-09-15T19:25:39Z
+- as_of: 2026-09-15T19:00:32Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -151,25 +155,27 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 12. Green gate
 
-- Native lane: **RED** | closed=9 pnl=+2.05 | frozen=NO
+- Native lane: **RED** | closed=13 pnl=-14.08 | frozen=YES
 - HIP-3 lane: **GREEN** | closed=11 pnl=+5.98 | frozen=NO
-- Frozen lanes: none
+- Frozen lanes: native
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 0
-- Tradable slices: native **66/66** | hip3 **465/465**
+- Tradable slices: native **65/65** | hip3 **465/465**
+- **COMA LANES: native** — frozen with no tradable slice on an earned green record; auditions may still open.
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
-- Slice blocks: 1
-  - `feat_atr_norm_ext:2:LONG:h13` slice_pnl=-4.88
+- Slice blocks: 2
+  - `feat_atr_norm_ext:2:LONG:h13` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h24` lane_not_green
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-15T18:39:07: errors=2 signals=None regime_blocked=None
-- this cycle: closed=0 new_signals=1870 skipped=169 slot_full=1672 slice_full=0 pair_held=27
-- Action funnel: lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=27 | slot_full=1672 | skipped=169
-- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 27, "regime_blocked": 616, "skipped": 169, "slice_full": 0, "slot_full": 1672})
+- Latest scan 2026-09-15T19:30:19: errors=2 signals=None regime_blocked=None
+- this cycle: closed=4 new_signals=1777 skipped=140 slot_full=1625 slice_full=0 pair_held=11
+- Action funnel: lane_gate_blocked=0 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=11 | slot_full=1625 | skipped=140
+- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 0, "pair_held": 11, "regime_blocked": 553, "skipped": 140, "slice_full": 0, "slot_full": 1625})
 - green_gate: native_green=False hip3_green=True frozen=none islands=0 blocks=1
-- aggregate_risk: ok open=32.1466 cap=140.6713 used=0.3033 remaining=97.9996 replayed=14 no_new_bars=1
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EWT"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:NFLX"}]
+- aggregate_risk: ok open=23.4427 cap=139.5422 used=0.2198 remaining=108.8726 replayed=15 no_new_bars=1
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:IREN"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:NFLX"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._

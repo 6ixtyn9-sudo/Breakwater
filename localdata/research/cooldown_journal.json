@@ -414,5 +414,37 @@
     "signal_id": "127498cf97d68ef9",
     "slice_id": "feat_realized_vol_20:2:LONG:h24",
     "stopped_at": "2026-09-15T15:09:37+00:00"
+  },
+  {
+    "pair": "FILUSDC",
+    "pnl_zar": "-5.0786",
+    "reason": "stop",
+    "signal_id": "feb37a4672f95654",
+    "slice_id": "feat_realized_vol_20:2:LONG:h24",
+    "stopped_at": "2026-09-15T19:00:32+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.7932",
+    "reason": "stop",
+    "signal_id": "7ad71598031dc231",
+    "slice_id": "feat_realized_vol_20:2:LONG:h24",
+    "stopped_at": "2026-09-15T19:00:32+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-2.2983",
+    "reason": "stop",
+    "signal_id": "0c883d1826248dac",
+    "slice_id": "feat_atr_norm_ext:2:LONG:h19",
+    "stopped_at": "2026-09-15T19:00:32+00:00"
+  },
+  {
+    "pair": "TRUMPUSDC",
+    "pnl_zar": "-4.9609",
+    "reason": "stop",
+    "signal_id": "2a5c09e7dbc84866",
+    "slice_id": "feat_atr_norm_ext:2:LONG:h19",
+    "stopped_at": "2026-09-15T19:00:32+00:00"
   }
 ]
