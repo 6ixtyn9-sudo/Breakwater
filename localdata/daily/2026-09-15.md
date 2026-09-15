@@ -1,18 +1,18 @@
-# Breakwater daily print — 2026-09-15 01:01 UTC
+# Breakwater daily print — 2026-09-15 01:10 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **393.23 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **398.30 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
 ## 2. Paper account
 
-- Equity: **2000.50 ZAR** (seed 2000) | lifetime: **+0.50 ZAR** | closed: 1
-- Today: 1 closed, **+0.50 ZAR**
-- 7d: **+0.50 ZAR** | 30d: **+0.50 ZAR**
+- Equity: **2000.00 ZAR** (seed 2000) | lifetime: **+0.00 ZAR** | closed: 0
+- Today: 0 closed, **+0.00 ZAR**
+- 7d: **+0.00 ZAR** | 30d: **+0.00 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -24,11 +24,11 @@
   - absent: `feat_atr_norm_ext:2:LONG:h13` (native)
   - absent: `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h23` (hip3)
 - Claimed edge: unknown (0/6 book slices present in the validated pools)
-- Realised (1 real closes per lane_gate._is_real_close, net of fees): +0.50 ZAR/trade | INSUFFICIENT SAMPLE (n<30)
+- Realised (0 real closes per lane_gate._is_real_close, net of fees): no real closes | INSUFFICIENT SAMPLE (n<30)
 - Gap: not computed | verdict: claimed edge unknown
 - native: claimed unknown (0/5 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
-- hip3: claimed unknown (0/1 slices in pool 0) | realised 1 closes +0.50 ZAR sd 0.00 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 1125 decision rows; 1 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1124 rows are skipped/guard decisions and never count
+- hip3: claimed unknown (0/1 slices in pool 0) | 0 real closes | INSUFFICIENT SAMPLE (n<30)
+- Ledger: 1124 decision rows; 0 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 1124 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -40,13 +40,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### HIP3
 
-- Closed: 1 | wins: 1 | win%: 100.0 | P&L: **+0.50 ZAR** | today: +0.50 | 7d: +0.50 | 30d: +0.50
-- By exit: target +0.5
-- By entry regime (n/pnl): bull 1/+0.5
-- Top slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 1n/1w +0.50
-- Worst slices: hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23 1n/1w +0.50
-- Top pairs: XYZ:STRC 1n +0.50
-- Worst pairs: XYZ:STRC 1n +0.50
+- Closed: 0 | wins: 0 | win%: 0.0 | P&L: **+0.00 ZAR** | today: +0.00 | 7d: +0.00 | 30d: +0.00
 
 ## 4. Open positions & risk
 
@@ -95,13 +89,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 7. HIP-3 live gate
 
-- Closed paper trades: **1/50** | ghost rows: **0/50** | PnL: **+0.50 ZAR**
+- Closed paper trades: **0/50** | ghost rows: **0/50** | PnL: **+0.00 ZAR**
 - Gate verdict: **NOT READY**
 
 ## 8. Research / honesty checks
 
-- Latest research: 2026-09-14T16:15:56+00:00 | discovered 4608 | validated 0 | reg-confounded 3697 | hostile-unproven 0
-- floors: {"PERP": "84.2", "SPOT": "140.0"} | book: {"blocked_for_green_breadth": 0, "carried_cooldown": 0, "carried_decayed": 1, "carried_kinds": ["PERP"], "carried_monitored": 5, "carried_total": 6, "concentrated": 0, "cooldown": 0, "decayed": 0, "families_considered": 0, "families_promoted": 0, "green_assets_total": 0, "monitored": 0, "multi_horizon_min_passes": 2, "multi_horizon_select": "edge_per_bar", "net_edge_floor_enter_bps": {"PERP": "84.2", "SPOT": "140.0"}, "net_edge_floor_keep_bps": {"PERP": "66.8", "SPOT": "140.0"}, "paper_protected": 0, "per_asset_aware": true, "promotable": 0, "promoted_green_fraction_mean": null, "rows_total_after_sync": 6, "session_gate_blocked": 0, "validated": 0}
+- Latest research: 2026-09-15T00:10:28+00:00 | discovered 4608 | validated 0 | reg-confounded 3614 | hostile-unproven 0
+- floors: {"PERP": "82.8", "SPOT": "140.0"} | book: {"blocked_for_green_breadth": 0, "carried_cooldown": 0, "carried_decayed": 1, "carried_kinds": ["PERP"], "carried_monitored": 5, "carried_total": 6, "concentrated": 0, "cooldown": 0, "decayed": 0, "families_considered": 0, "families_promoted": 0, "green_assets_total": 0, "monitored": 0, "multi_horizon_min_passes": 2, "multi_horizon_select": "edge_per_bar", "net_edge_floor_enter_bps": {"PERP": "82.8", "SPOT": "140.0"}, "net_edge_floor_keep_bps": {"PERP": "63.8", "SPOT": "140.0"}, "paper_protected": 0, "per_asset_aware": true, "promotable": 0, "promoted_green_fraction_mean": null, "rows_total_after_sync": 6, "session_gate_blocked": 0, "validated": 0}
 - Short audit: discovered=2304 validated=2304 passing=0 eligible=0 best=nanb best_fail=temporal_pass,breadth_ok,mean_net<=0
 - pair_errors: [{"error": "HTTPError: 500 Server Error: Internal Server Error for url: https://api.hyperliquid.xyz/info", "pair": "KBONKUSDC"}]
 - Deep audit: candidates=46080 preliminary_passes=0 audit_passes=0 plateaus=0 fetch_errors=27
@@ -119,9 +113,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.25 bull=0.0938 neutral=0.625 | symbols=31
+- Label: **neutral** | breadth bear=0.2667 bull=0.0667 neutral=0.6667 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from:  | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-15T01:00:30Z
+- as_of: 2026-09-15T00:00:28Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
@@ -134,7 +128,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 12. Green gate
 
 - Native lane: **RED** | closed=0 pnl=+0.00 | frozen=NO
-- HIP-3 lane: **RED** | closed=1 pnl=+0.50 | frozen=NO
+- HIP-3 lane: **RED** | closed=0 pnl=+0.00 | frozen=NO
 - Frozen lanes: none
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
 - Green islands kept alive inside red lanes: 0
