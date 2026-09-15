@@ -1,11 +1,29 @@
-"""Multi-engine signal generation for Breakwater.
+"""Breakwater Multi-Engine Discovery.
 
-Each engine specializes in one type of trading edge:
-- engine_factor: Statistical/factor-based (current pipeline)
-- engine_momentum: Trend following
-- engine_mean_reversion: RSI/Bollinger/z-score reversion
-- engine_cross_asset: BTC leads, alts follow
+Multiple specialized engines, each producing signals based on a different
+methodology. A meta-ranker selects the top 20.
 
-All engines implement the same interface:
-    def generate(df: pd.DataFrame, ...) -> list[Signal]
+Engines:
+  1. Factor/Statistical (existing pipeline in validation.py)
+  2. Momentum/Trend (momentum.py)
+  3. Mean Reversion (mean_reversion.py)
+  4. Cross-Asset Lead/Lag (lead_lag.py)
+  5-8. TODO: Funding Rate, Liquidation, On-Chain, Sentiment
 """
+
+from breakwater.engines.momentum import MomentumSignal, scan_momentum
+from breakwater.engines.mean_reversion import MeanReversionSignal, scan_mean_reversion
+from breakwater.engines.lead_lag import LeadLagSignal, scan_lead_lag, scan_pairs_divergence
+from breakwater.engines.ranker import RankedSignal, rank_signals
+
+__all__ = [
+    "MomentumSignal",
+    "MeanReversionSignal",
+    "LeadLagSignal",
+    "RankedSignal",
+    "scan_momentum",
+    "scan_mean_reversion",
+    "scan_lead_lag",
+    "scan_pairs_divergence",
+    "rank_signals",
+]
