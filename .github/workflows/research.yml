@@ -95,7 +95,6 @@ jobs:
           # RELAXED VALIDATION (still walk-forward + hostile-regime + net-positive)
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
           BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: ${{ vars.BREAKWATER_VALIDATION_RELAXED_MIN_PASSES || '2' }}
-          BREAKWATER_VALIDATION_STRICT_PASS_FLOOR: ${{ vars.BREAKWATER_VALIDATION_STRICT_PASS_FLOOR || '3' }}
 
           # Breadth knobs (env-backed in validation.py)
           BREAKWATER_BREADTH_MIN_SYMBOLS: ${{ vars.BREAKWATER_BREADTH_MIN_SYMBOLS || '6' }}
