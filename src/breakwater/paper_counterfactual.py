@@ -101,8 +101,11 @@ def append_counterfactual_rows(path: Path, rows: list[dict]) -> None:
     if exists:
         with path.open(newline="") as handle:
             header = next(csv.reader(handle), [])
-        if header != COUNTERFACTUAL_HEADERS:
+        # Empty file (0 bytes / no header) is treated as non-existent.
+        if header and header != COUNTERFACTUAL_HEADERS:
             raise RuntimeError("paper counterfactual log has an unsupported schema")
+        if not header:
+            exists = False
     with path.open("a", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=COUNTERFACTUAL_HEADERS)
         if not exists:
