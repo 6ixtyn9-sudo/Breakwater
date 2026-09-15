@@ -44,7 +44,7 @@ from breakwater.market import (
     authoritative_server_time,
     fetch_recent_candles,
 )
-from breakwater.models import Candle, Lifecycle, PairType
+from breakwater.models import Candle, Lifecycle, PairType, Side
 from breakwater.monitor import SliceSignal, monitor_book, regime_of, signal_pair_type
 from breakwater.paper_trade import append_log, read_positions, run_paper_cycle
 from breakwater.perpdata import fetch_perp_candles, fetch_perp_candles_for_pair, pair_to_coin
@@ -866,6 +866,17 @@ class BreakwaterEngine:
             )
         elif not hip3_active:
             signals = self._big_wave_fallback(targets, frames, server_time)
+
+        # --- Multi-engine signals (momentum, mean reversion, lead/lag) ---
+        # Run engines on the same frames the book monitor uses. Engine signals
+        # are independent of the book — they don't need validated slices.
+        engine_signals = self._run_engines(
+            frames_by_kind, frames, server_time, regime_shift,
+        )
+        signals.extend(engine_signals)
+
+        if hip3_active:
+            signals = self._big_wave_fallback(targets, frames, server_time)
         if hip3_active:
             # Fail-closed for the active HIP-3 lane.
             hip3_asset_edge_lookup = build_asset_edge_lookup(
@@ -1098,6 +1109,118 @@ class BreakwaterEngine:
             json.dumps(status_detail, sort_keys=True),
         )
         return result
+
+    def _run_engines(
+        self,
+        frames_by_kind: dict[str, dict],
+        all_frames: dict[str, pd.DataFrame],
+        server_time: datetime,
+        regime_shift: object | None,
+    ) -> list[SliceSignal]:
+        """Run momentum, mean reversion, and lead/lag engines.
+
+        These engines are independent of the book — they produce signals
+        from price data alone, without needing validated slices.
+        """
+        # Check if multi-engine mode is enabled
+        engine_flag = str(os.getenv("BREAKWATER_MULTI_ENGINE", "1")).strip().lower()
+        if engine_flag not in {"1", "true", "yes", "on"}:
+            return []
+
+        from breakwater.engines.momentum import scan_momentum
+        from breakwater.engines.mean_reversion import scan_mean_reversion
+        from breakwater.engines.lead_lag import scan_lead_lag
+        from breakwater.engines.ranker import rank_signals
+
+        # Build a unified frames dict for engines (they don't care about SPOT/PERP split)
+        engine_frames: dict[str, pd.DataFrame] = {}
+        for kind_frames in frames_by_kind.values():
+            for pair, frame in kind_frames.items():
+                if frame is not None and not frame.empty and len(frame) >= 60:
+                    engine_frames[pair] = frame
+
+        if not engine_frames:
+            return []
+
+        # Determine current regime for ranker
+        regime = "unknown"
+        if regime_shift is not None:
+            regime = getattr(regime_shift, "label", "unknown")
+
+        # Run all engines
+        engine_results: dict[str, list] = {}
+        try:
+            mom = scan_momentum(engine_frames)
+            if mom:
+                engine_results["momentum"] = mom
+        except Exception:
+            pass
+
+        try:
+            mr = scan_mean_reversion(engine_frames)
+            if mr:
+                engine_results["mean_reversion"] = mr
+        except Exception:
+            pass
+
+        try:
+            ll = scan_lead_lag(engine_frames)
+            if ll:
+                engine_results["lead_lag"] = ll
+        except Exception:
+            pass
+
+        if not engine_results:
+            return []
+
+        # Rank and pick top signals
+        max_engine_signals = int(os.getenv("BREAKWATER_MAX_ENGINE_SIGNALS", "5"))
+        ranked = rank_signals(engine_results, max_signals=max_engine_signals, regime=regime)
+
+        # Convert to SliceSignal format
+        signals: list[SliceSignal] = []
+        seen: set[str] = set()
+        for r in ranked:
+            side = Side.BUY if r.side == "BUY" else Side.SELL
+            slice_id = f"engine_{r.engine}:{r.signal_type}:2:{r.side}:h{r.horizon_bars}"
+            bar_start = server_time.astimezone(timezone.utc)
+            digest = hashlib.sha256(
+                f"{r.pair}|{slice_id}|{bar_start.isoformat()}".encode()
+            ).hexdigest()[:16]
+            if digest in seen:
+                continue
+            seen.add(digest)
+
+            kind = "PERP"  # engine signals default to PERP
+            entry = Decimal(str(r.entry_price))
+            stop = Decimal(str(r.stop_price))
+            atr = Decimal(str(r.atr))
+
+            if entry <= 0 or stop <= 0 or atr <= 0:
+                continue
+
+            signals.append(SliceSignal(
+                signal_id=digest,
+                pair=r.pair,
+                kind=kind,
+                slice_id=slice_id,
+                feature=r.engine,
+                state=2,
+                side=side,
+                observed_at=server_time.astimezone(timezone.utc),
+                bar_start=bar_start,
+                entry_price=entry,
+                stop_price=stop,
+                atr=atr,
+                edge=r.edge,
+                horizon_bars=r.horizon_bars,
+                stop_atr_mult=2.0,
+                regime=regime,
+                hostile_unproven=False,
+                asset_status="untested",
+            ))
+
+        return signals
 
     def _big_wave_fallback(
         self,
