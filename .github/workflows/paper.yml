@@ -84,8 +84,8 @@ jobs:
           BREAKWATER_PAPER_ENTRY_MODE: ${{ vars.BREAKWATER_PAPER_ENTRY_MODE || 'aligned' }}
           BREAKWATER_PAPER_SELECTION_MODE: ${{ vars.BREAKWATER_PAPER_SELECTION_MODE || 'profit' }}
           BREAKWATER_PAPER_R_GATE: ${{ vars.BREAKWATER_PAPER_R_GATE || '1' }}
-          # Hunt: skip Asia (00-07 UTC); juice on this book is EU/US
-          BREAKWATER_PAPER_SESSIONS: ${{ vars.BREAKWATER_PAPER_SESSIONS || 'eu,us' }}
+          # Hunt: include Asia now (00-07 UTC) – book trades all sessions
+          BREAKWATER_PAPER_SESSIONS: ${{ vars.BREAKWATER_PAPER_SESSIONS || 'eu,us,asia' }}
           BREAKWATER_FILTER_NONPOSITIVE_BOOK: "1"
           BREAKWATER_PAPER_MAX_RISK_FRACTION: ${{ vars.BREAKWATER_PAPER_MAX_RISK_FRACTION || '0.06' }}
           BREAKWATER_PAPER_RISK_TO_MEAN_K: ${{ vars.BREAKWATER_PAPER_RISK_TO_MEAN_K || '8' }}
