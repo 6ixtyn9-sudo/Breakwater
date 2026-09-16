@@ -1,0 +1,249 @@
+name: Breakwater Research Sharded
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: breakwater-research
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # --- Shard 1: horizons 1-8 ---
+  shard-1:
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - name: Research shard (h=1-8)
+        env:
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+          BREAKWATER_MODE: readonly
+          BREAKWATER_RESEARCH_SHARD: shard1
+          BREAKWATER_RESEARCH_HORIZONS: "1,2,3,4,5,6,7,8"
+          BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
+          BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
+          BREAKWATER_MIN_NET_EDGE_COST_MULT: ${{ vars.BREAKWATER_MIN_NET_EDGE_COST_MULT || '2' }}
+          BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE || '0.25' }}
+          BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE || '0.40' }}
+          BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
+          BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
+          BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: "1"
+          BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
+          BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}
+          BREAKWATER_PERP_CANDLE_COUNT: ${{ vars.BREAKWATER_PERP_CANDLE_COUNT || '1000' }}
+          BREAKWATER_RESEARCH_MAX_PAIRS: ${{ vars.BREAKWATER_RESEARCH_MAX_PAIRS || '60' }}
+          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
+          BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
+          BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
+          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: ${{ vars.BREAKWATER_VALIDATION_RELAXED_MIN_PASSES || '2' }}
+          BREAKWATER_BREADTH_MIN_SYMBOLS: ${{ vars.BREAKWATER_BREADTH_MIN_SYMBOLS || '6' }}
+          BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: ${{ vars.BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL || '10' }}
+          BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: ${{ vars.BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION || '0.40' }}
+          BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '20' }}
+          BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.60' }}
+          BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_FOLD_MIN_ROWS || '3' }}
+          BREAKWATER_CONCENTRATED_PROMOTE: ${{ vars.BREAKWATER_CONCENTRATED_PROMOTE || '1' }}
+          BREAKWATER_CONCENTRATED_MIN_MEAN: ${{ vars.BREAKWATER_CONCENTRATED_MIN_MEAN || '0.004' }}
+        run: PYTHONPATH=src python scripts/breakwater.py research
+      - name: Upload shard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard1
+          path: |
+            localdata/research/discovered_slices_shard1.csv
+            localdata/research/validated_slices_shard1.csv
+            localdata/research/asset_edges_shard1.csv
+          retention-days: 1
+
+  # --- Shard 2: horizons 9-16 ---
+  shard-2:
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - name: Research shard (h=9-16)
+        env:
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+          BREAKWATER_MODE: readonly
+          BREAKWATER_RESEARCH_SHARD: shard2
+          BREAKWATER_RESEARCH_HORIZONS: "9,10,11,12,13,14,15,16"
+          BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
+          BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
+          BREAKWATER_MIN_NET_EDGE_COST_MULT: ${{ vars.BREAKWATER_MIN_NET_EDGE_COST_MULT || '2' }}
+          BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE || '0.25' }}
+          BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE || '0.40' }}
+          BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
+          BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
+          BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: "1"
+          BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
+          BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}
+          BREAKWATER_PERP_CANDLE_COUNT: ${{ vars.BREAKWATER_PERP_CANDLE_COUNT || '1000' }}
+          BREAKWATER_RESEARCH_MAX_PAIRS: ${{ vars.BREAKWATER_RESEARCH_MAX_PAIRS || '60' }}
+          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
+          BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
+          BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
+          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: ${{ vars.BREAKWATER_VALIDATION_RELAXED_MIN_PASSES || '2' }}
+          BREAKWATER_BREADTH_MIN_SYMBOLS: ${{ vars.BREAKWATER_BREADTH_MIN_SYMBOLS || '6' }}
+          BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: ${{ vars.BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL || '10' }}
+          BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: ${{ vars.BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION || '0.40' }}
+          BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '20' }}
+          BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.60' }}
+          BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_FOLD_MIN_ROWS || '3' }}
+          BREAKWATER_CONCENTRATED_PROMOTE: ${{ vars.BREAKWATER_CONCENTRATED_PROMOTE || '1' }}
+          BREAKWATER_CONCENTRATED_MIN_MEAN: ${{ vars.BREAKWATER_CONCENTRATED_MIN_MEAN || '0.004' }}
+        run: PYTHONPATH=src python scripts/breakwater.py research
+      - name: Upload shard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard2
+          path: |
+            localdata/research/discovered_slices_shard2.csv
+            localdata/research/validated_slices_shard2.csv
+            localdata/research/asset_edges_shard2.csv
+          retention-days: 1
+
+  # --- Shard 3: horizons 17-24 ---
+  shard-3:
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - name: Research shard (h=17-24)
+        env:
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+          BREAKWATER_MODE: readonly
+          BREAKWATER_RESEARCH_SHARD: shard3
+          BREAKWATER_RESEARCH_HORIZONS: "17,18,19,20,21,22,23,24"
+          BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
+          BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
+          BREAKWATER_MIN_NET_EDGE_COST_MULT: ${{ vars.BREAKWATER_MIN_NET_EDGE_COST_MULT || '2' }}
+          BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE || '0.25' }}
+          BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE || '0.40' }}
+          BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
+          BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
+          BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: "1"
+          BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
+          BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}
+          BREAKWATER_PERP_CANDLE_COUNT: ${{ vars.BREAKWATER_PERP_CANDLE_COUNT || '1000' }}
+          BREAKWATER_RESEARCH_MAX_PAIRS: ${{ vars.BREAKWATER_RESEARCH_MAX_PAIRS || '60' }}
+          BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
+          BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
+          BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
+          BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: ${{ vars.BREAKWATER_VALIDATION_RELAXED_MIN_PASSES || '2' }}
+          BREAKWATER_BREADTH_MIN_SYMBOLS: ${{ vars.BREAKWATER_BREADTH_MIN_SYMBOLS || '6' }}
+          BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: ${{ vars.BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL || '10' }}
+          BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: ${{ vars.BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION || '0.40' }}
+          BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '20' }}
+          BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.60' }}
+          BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_FOLD_MIN_ROWS || '3' }}
+          BREAKWATER_CONCENTRATED_PROMOTE: ${{ vars.BREAKWATER_CONCENTRATED_PROMOTE || '1' }}
+          BREAKWATER_CONCENTRATED_MIN_MEAN: ${{ vars.BREAKWATER_CONCENTRATED_MIN_MEAN || '0.004' }}
+        run: PYTHONPATH=src python scripts/breakwater.py research
+      - name: Upload shard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard3
+          path: |
+            localdata/research/discovered_slices_shard3.csv
+            localdata/research/validated_slices_shard3.csv
+            localdata/research/asset_edges_shard3.csv
+          retention-days: 1
+
+  # --- Merge: combine shards + sync book ---
+  merge:
+    needs: [shard-1, shard-2, shard-3]
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - name: Download all shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: localdata/research/
+      - name: Move shard files to research dir
+        run: |
+          set -euo pipefail
+          for shard in shard1 shard2 shard3; do
+            for f in localdata/research/$shard/*.csv; do
+              [ -f "$f" ] && mv "$f" localdata/research/
+            done
+            rmdir localdata/research/$shard 2>/dev/null || true
+          done
+          ls -la localdata/research/*shard*.csv 2>/dev/null || echo "No shard files found"
+      - name: Merge shards and sync book
+        run: PYTHONPATH=src python scripts/merge_research_shards.py
+      - name: Validation diagnostics summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -f localdata/research/validated_slices.csv ]; then
+            echo "No validated_slices.csv; skipping."
+            exit 0
+          fi
+          python - <<'PY'
+          import csv
+          from collections import Counter
+          path = "localdata/research/validated_slices.csv"
+          total = 0
+          validated_true = 0
+          by_reason = Counter()
+          with open(path, newline="") as f:
+              for row in csv.DictReader(f):
+                  total += 1
+                  if row.get("validated") == "True":
+                      validated_true += 1
+                  for tok in (row.get("fail_reasons") or "").split(","):
+                      tok = tok.strip()
+                      if tok:
+                          by_reason[tok] += 1
+          print(f"Rows: {total}")
+          print(f"Validated True: {validated_true}")
+          print("Fail reasons:")
+          for k, v in by_reason.most_common(15):
+              print(f"  {k:24s} {v}")
+          PY
+      - name: Persist state
+        if: always()
+        env:
+          BREAKWATER_HEARTBEAT_URL: ${{ secrets.BREAKWATER_HEARTBEAT_URL }}
+        run: bash scripts/commit_state.sh research

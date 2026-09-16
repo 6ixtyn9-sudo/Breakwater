@@ -189,15 +189,21 @@ class Settings:
 
     @property
     def discovered_path(self) -> Path:
-        return self.data_dir / "research" / "discovered_slices.csv"
+        suffix = os.getenv("BREAKWATER_RESEARCH_SHARD", "").strip()
+        name = f"discovered_slices_{suffix}.csv" if suffix else "discovered_slices.csv"
+        return self.data_dir / "research" / name
 
     @property
     def validated_path(self) -> Path:
-        return self.data_dir / "research" / "validated_slices.csv"
+        suffix = os.getenv("BREAKWATER_RESEARCH_SHARD", "").strip()
+        name = f"validated_slices_{suffix}.csv" if suffix else "validated_slices.csv"
+        return self.data_dir / "research" / name
 
     @property
     def asset_edges_path(self) -> Path:
-        return self.data_dir / "research" / "asset_edges.csv"
+        suffix = os.getenv("BREAKWATER_RESEARCH_SHARD", "").strip()
+        name = f"asset_edges_{suffix}.csv" if suffix else "asset_edges.csv"
+        return self.data_dir / "research" / name
 
     @property
     def book_path(self) -> Path:
