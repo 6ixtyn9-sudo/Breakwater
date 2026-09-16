@@ -462,5 +462,13 @@
     "signal_id": "be7478bd98979555",
     "slice_id": "engine_momentum:trend_align:2:SELL:h15:XLMZAR",
     "stopped_at": "2026-09-16T12:00:32+00:00"
+  },
+  {
+    "pair": "ARBUSDC",
+    "pnl_zar": "-5.0530",
+    "reason": "stop",
+    "signal_id": "90779595ff008b17",
+    "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:ARBUSDC",
+    "stopped_at": "2026-09-16T13:00:31+00:00"
   }
 ]
