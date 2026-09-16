@@ -86,6 +86,7 @@ def scan_momentum(
         close = df["close"].astype(float)
         high = df["high"].astype(float)
         low = df["low"].astype(float)
+        volume = df["volume"].astype(float) if "volume" in df.columns else None
 
         sma_f = close.rolling(sma_fast).mean()
         sma_s = close.rolling(sma_slow).mean()
@@ -142,7 +143,14 @@ def scan_momentum(
         recent_high = high.iloc[-breakout_lookback-1:-1].max()
         recent_low = low.iloc[-breakout_lookback-1:-1].min()
 
-        if cur_close >= recent_high and cur_adx > adx_threshold:
+        # Volume filter: breakouts on low volume are unreliable.
+        vol_ok = True
+        if volume is not None and len(volume) >= 20:
+            vol_avg = volume.iloc[-20:].mean()
+            if vol_avg > 0:
+                vol_ok = float(volume.iloc[-1]) >= 0.5 * vol_avg
+
+        if cur_close >= recent_high and cur_adx > adx_threshold and vol_ok:
             breakout_pct = (cur_close - recent_high) / recent_high
             confidence = 0.35 + min(0.3, breakout_pct * 50)
             if cur_sma_f > cur_sma_s:
@@ -157,7 +165,7 @@ def scan_momentum(
                     signal_type="breakout", regime_fit=1.0,
                 ))
 
-        elif cur_close <= recent_low and cur_adx > adx_threshold:
+        elif cur_close <= recent_low and cur_adx > adx_threshold and vol_ok:
             breakout_pct = (recent_low - cur_close) / recent_low
             confidence = 0.35 + min(0.3, breakout_pct * 50)
             if cur_sma_f < cur_sma_s:
