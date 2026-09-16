@@ -213,7 +213,7 @@ def scan_lead_lag(
 
         edge_bps = max(1.0, move_mag * 100 * edge_fraction * 0.3)
 
-        stop_distance = 2.0 * cur_atr
+        stop_distance = 1.5 * cur_atr
         if alt_side == "BUY":
             stop = cur_close - stop_distance
         else:
@@ -323,7 +323,7 @@ def scan_pairs_divergence(
                     pair=sym_a,
                     side="SELL",
                     entry_price=float(closes[sym_a].iloc[-1]),
-                    stop_price=float(closes[sym_a].iloc[-1]) + 2.0 * cur_atr_a,
+                    stop_price=float(closes[sym_a].iloc[-1]) + 1.5 * cur_atr_a,
                     atr=cur_atr_a,
                     edge=edge_bps,
                     confidence=min(1.0, confidence),
@@ -336,7 +336,7 @@ def scan_pairs_divergence(
                     pair=sym_b,
                     side="BUY",
                     entry_price=float(closes[sym_b].iloc[-1]),
-                    stop_price=float(closes[sym_b].iloc[-1]) - 2.0 * cur_atr_b,
+                    stop_price=float(closes[sym_b].iloc[-1]) - 1.5 * cur_atr_b,
                     atr=cur_atr_b,
                     edge=edge_bps,
                     confidence=min(1.0, confidence),
@@ -350,7 +350,7 @@ def scan_pairs_divergence(
                     pair=sym_a,
                     side="BUY",
                     entry_price=float(closes[sym_a].iloc[-1]),
-                    stop_price=float(closes[sym_a].iloc[-1]) - 2.0 * cur_atr_a,
+                    stop_price=float(closes[sym_a].iloc[-1]) - 1.5 * cur_atr_a,
                     atr=cur_atr_a,
                     edge=edge_bps,
                     confidence=min(1.0, confidence),
@@ -363,7 +363,7 @@ def scan_pairs_divergence(
                     pair=sym_b,
                     side="SELL",
                     entry_price=float(closes[sym_b].iloc[-1]),
-                    stop_price=float(closes[sym_b].iloc[-1]) + 2.0 * cur_atr_b,
+                    stop_price=float(closes[sym_b].iloc[-1]) + 1.5 * cur_atr_b,
                     atr=cur_atr_b,
                     edge=edge_bps,
                     confidence=min(1.0, confidence),

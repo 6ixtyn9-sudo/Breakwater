@@ -118,7 +118,7 @@ def scan_mean_reversion(
             if cur_rsi < rsi_oversold:
                 extremity = (rsi_oversold - cur_rsi) / rsi_oversold
                 confidence = 0.3 + 0.35 * extremity
-                stop = cur_close - 2.0 * cur_atr
+                stop = cur_close - 1.5 * cur_atr
                 target = cur_bb_mid if not np.isnan(cur_bb_mid) else cur_close * 1.01
                 edge_bps = max(1.0, (target - cur_close) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
@@ -132,7 +132,7 @@ def scan_mean_reversion(
             elif cur_rsi > rsi_overbought:
                 extremity = (cur_rsi - rsi_overbought) / (100 - rsi_overbought)
                 confidence = 0.3 + 0.35 * extremity
-                stop = cur_close + 2.0 * cur_atr
+                stop = cur_close + 1.5 * cur_atr
                 target = cur_bb_mid if not np.isnan(cur_bb_mid) else cur_close * 0.99
                 edge_bps = max(1.0, (cur_close - target) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
@@ -148,7 +148,7 @@ def scan_mean_reversion(
             if cur_close <= cur_bb_lower:
                 deviation = (cur_bb_lower - cur_close) / cur_atr if cur_atr > 0 else 0
                 confidence = 0.3 + min(0.3, deviation * 0.15)
-                stop = cur_close - 2.0 * cur_atr
+                stop = cur_close - 1.5 * cur_atr
                 edge_bps = max(1.0, (cur_bb_mid - cur_close) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
@@ -161,7 +161,7 @@ def scan_mean_reversion(
             elif cur_close >= cur_bb_upper:
                 deviation = (cur_close - cur_bb_upper) / cur_atr if cur_atr > 0 else 0
                 confidence = 0.3 + min(0.3, deviation * 0.15)
-                stop = cur_close + 2.0 * cur_atr
+                stop = cur_close + 1.5 * cur_atr
                 edge_bps = max(1.0, (cur_close - cur_bb_mid) / cur_close * 10000 * 0.3)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
@@ -176,7 +176,7 @@ def scan_mean_reversion(
             if cur_zscore < -zscore_threshold:
                 extremity = min(1.0, (abs(cur_zscore) - zscore_threshold) / zscore_threshold)
                 confidence = 0.3 + 0.3 * extremity
-                stop = cur_close - 2.0 * cur_atr
+                stop = cur_close - 1.5 * cur_atr
                 edge_bps = max(1.0, abs(cur_zscore) * 8)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(
@@ -189,7 +189,7 @@ def scan_mean_reversion(
             elif cur_zscore > zscore_threshold:
                 extremity = min(1.0, (cur_zscore - zscore_threshold) / zscore_threshold)
                 confidence = 0.3 + 0.3 * extremity
-                stop = cur_close + 2.0 * cur_atr
+                stop = cur_close + 1.5 * cur_atr
                 edge_bps = max(1.0, abs(cur_zscore) * 8)
                 if confidence >= min_confidence:
                     signals.append(MeanReversionSignal(

@@ -90,7 +90,7 @@ def scan_simple_trend(
             strength = min(1.0, abs(ret) / 0.03)
             confidence = 0.2 + 0.2 * strength
             edge_bps = max(1.0, abs(ret) * 10000 * 0.15)
-            stop = cur_close - 2.0 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+            stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
             if confidence >= min_confidence:
                 signals.append(SimpleTrendSignal(
                     pair=symbol, side=side, entry_price=cur_close,
@@ -108,7 +108,7 @@ def scan_simple_trend(
                 strength = min(1.0, abs(dist) / 0.05)
                 confidence = 0.2 + 0.15 * strength
                 edge_bps = max(1.0, abs(dist) * 10000 * 0.2)
-                stop = cur_close - 2.0 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+                stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
                 if confidence >= min_confidence:
                     signals.append(SimpleTrendSignal(
                         pair=symbol, side=side, entry_price=cur_close,
@@ -124,7 +124,7 @@ def scan_simple_trend(
             streak_ret = abs((close.iloc[-1] - close.iloc[-3]) / close.iloc[-3])
             confidence = 0.25 + min(0.2, streak_ret * 10)
             edge_bps = max(1.0, streak_ret * 10000 * 0.15)
-            stop = cur_close - 2.0 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+            stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
             if confidence >= min_confidence:
                 signals.append(SimpleTrendSignal(
                     pair=symbol, side=side, entry_price=cur_close,
@@ -139,7 +139,7 @@ def scan_simple_trend(
         if not fired and not np.isnan(cur_sma) and cur_sma > 0:
             side = "BUY" if cur_close >= cur_sma else "SELL"
             edge_bps = 0.5
-            stop = cur_close - 2.0 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+            stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
             signals.append(SimpleTrendSignal(
                 pair=symbol, side=side, entry_price=cur_close,
                 stop_price=stop, atr=cur_atr, edge=edge_bps,

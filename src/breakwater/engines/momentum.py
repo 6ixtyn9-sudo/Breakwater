@@ -111,7 +111,7 @@ def scan_momentum(
             confidence = 0.35 + 0.3 * trend_strength
             if cur_close > cur_sma_f:
                 confidence += 0.1
-            stop = cur_close - 2.0 * cur_atr
+            stop = cur_close - 1.5 * cur_atr
             edge_bps = max(1.0, (cur_close - cur_sma_s) / cur_close * 10000 * 0.1)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
@@ -127,7 +127,7 @@ def scan_momentum(
             confidence = 0.35 + 0.3 * trend_strength
             if cur_close < cur_sma_f:
                 confidence += 0.1
-            stop = cur_close + 2.0 * cur_atr
+            stop = cur_close + 1.5 * cur_atr
             edge_bps = max(1.0, (cur_sma_s - cur_close) / cur_close * 10000 * 0.1)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
@@ -147,7 +147,7 @@ def scan_momentum(
             confidence = 0.35 + min(0.3, breakout_pct * 50)
             if cur_sma_f > cur_sma_s:
                 confidence += 0.1
-            stop = cur_close - 2.0 * cur_atr
+            stop = cur_close - 1.5 * cur_atr
             edge_bps = max(1.0, breakout_pct * 10000 * 0.2)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
@@ -162,7 +162,7 @@ def scan_momentum(
             confidence = 0.35 + min(0.3, breakout_pct * 50)
             if cur_sma_f < cur_sma_s:
                 confidence += 0.1
-            stop = cur_close + 2.0 * cur_atr
+            stop = cur_close + 1.5 * cur_atr
             edge_bps = max(1.0, breakout_pct * 10000 * 0.2)
             if confidence >= min_confidence:
                 signals.append(MomentumSignal(
@@ -180,7 +180,7 @@ def scan_momentum(
                 dist_from_sma = (cur_close - cur_sma_f) / cur_atr
                 confidence = 0.25 + min(0.3, dist_from_sma * 0.05)
                 edge_bps = max(1.0, (cur_close - cur_sma_s) / cur_close * 10000 * 0.05)
-                stop = cur_close - 2.0 * cur_atr
+                stop = cur_close - 1.5 * cur_atr
                 if confidence >= min_confidence:
                     signals.append(MomentumSignal(
                         pair=symbol, side="BUY", entry_price=cur_close,
@@ -194,7 +194,7 @@ def scan_momentum(
                 dist_from_sma = (cur_sma_f - cur_close) / cur_atr
                 confidence = 0.25 + min(0.3, dist_from_sma * 0.05)
                 edge_bps = max(1.0, (cur_sma_s - cur_close) / cur_close * 10000 * 0.05)
-                stop = cur_close + 2.0 * cur_atr
+                stop = cur_close + 1.5 * cur_atr
                 if confidence >= min_confidence:
                     signals.append(MomentumSignal(
                         pair=symbol, side="SELL", entry_price=cur_close,

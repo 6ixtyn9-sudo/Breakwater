@@ -1224,9 +1224,9 @@ class BreakwaterEngine:
                 atr=atr,
                 edge=edge_fractional,
                 horizon_bars=r.horizon_bars,
-                stop_atr_mult=2.0,
+                stop_atr_mult=1.5,
                 regime=regime,
-                hostile_unproven=False,
+                hostile_unproven=True,
                 asset_status="untested",
             ))
 
