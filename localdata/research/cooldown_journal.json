@@ -470,5 +470,69 @@
     "signal_id": "90779595ff008b17",
     "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:ARBUSDC",
     "stopped_at": "2026-09-16T13:00:31+00:00"
+  },
+  {
+    "pair": "ZECUSDC",
+    "pnl_zar": "-4.9325",
+    "reason": "stop",
+    "signal_id": "44412c4cb3d2a503",
+    "slice_id": "engine_mean_reversion:bollinger:2:SELL:h10:ZECUSDC",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "NEARUSDC",
+    "pnl_zar": "-3.2722",
+    "reason": "stop",
+    "signal_id": "82924706aa3b2ce2",
+    "slice_id": "engine_mean_reversion:bollinger:2:SELL:h10:NEARUSDC",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "PARA:AVGO",
+    "pnl_zar": "-0.3678",
+    "reason": "slice_gap",
+    "signal_id": "af3e25c9597deaf0",
+    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h24",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "PARA:MELI",
+    "pnl_zar": "1.0704",
+    "reason": "slice_gap",
+    "signal_id": "b050caf279041f6c",
+    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h24",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "PARA:RDDT",
+    "pnl_zar": "-0.8970",
+    "reason": "slice_gap",
+    "signal_id": "4a8124e5249eee6b",
+    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h24",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "PARA:CRWD",
+    "pnl_zar": "1.0324",
+    "reason": "slice_gap",
+    "signal_id": "9699e27dcf8eb7f5",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h24",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "PARA:IGV",
+    "pnl_zar": "-0.0897",
+    "reason": "slice_gap",
+    "signal_id": "e8814c9c3df37754",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h24",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "UNIUSDC",
+    "pnl_zar": "1.0747",
+    "reason": "slice_gap",
+    "signal_id": "19567bc67ee99df1",
+    "slice_id": "engine_momentum:sma_cross:2:SELL:h20:UNIUSDC",
+    "stopped_at": "2026-09-16T14:00:31+00:00"
   }
 ]
