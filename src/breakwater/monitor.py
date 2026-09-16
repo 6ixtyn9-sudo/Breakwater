@@ -34,7 +34,7 @@ from breakwater.features import compute_price_features
 from breakwater.hip3 import hip3_in_market_session, hip3_slice_market_class
 from breakwater.models import Side
 
-DEFAULT_STOP_ATR_MULT = Decimal("2.0")
+DEFAULT_STOP_ATR_MULT = Decimal("1.5")
 REGIME_MIN_BARS = 200
 
 EDGE_SEMANTICS_NET_V1 = "net_v1"
@@ -329,6 +329,11 @@ def monitor_book(
                 continue
 
             atr = Decimal(str(atr_raw))
+            # ATR floor: 0.5% of close. Prevents tiny ATR from causing
+            # huge notional positions and catastrophic stop losses.
+            atr_floor = close * Decimal("0.005")
+            if atr < atr_floor:
+                atr = atr_floor
             stop_distance = Decimal(str(stop_atr_mult)) * atr
             stop = close - stop_distance if side is Side.BUY else close + stop_distance
             if stop <= 0:

@@ -1911,6 +1911,12 @@ def run_paper_cycle(
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
         stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
         risk_cap = _env_decimal("BREAKWATER_PAPER_MAX_RISK_FRACTION", "0.03")
+        # Hard ceiling: even if workflow overrides MAX_RISK_FRACTION to 6%,
+        # we cap at a lower value to prevent catastrophic single-trade losses.
+        # Default 0 = disabled (use MAX_RISK_FRACTION as-is). Set in prod.
+        hard_ceiling = _env_decimal("BREAKWATER_PAPER_HARD_RISK_CEILING", "0")
+        if hard_ceiling > 0 and (risk_cap <= 0 or risk_cap > hard_ceiling):
+            risk_cap = hard_ceiling
         mean = Decimal(str(means.get(signal.slice_id, 0.0) or 0.0))
         k_mean = _env_decimal("BREAKWATER_PAPER_RISK_TO_MEAN_K", "8")
         edge_cap_hit = mean > 0 and k_mean > 0 and risk_fraction > k_mean * mean

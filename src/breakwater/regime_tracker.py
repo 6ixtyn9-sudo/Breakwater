@@ -256,6 +256,15 @@ def regime_gate(
         return (True, "regime_blocked") if (strict or hostile_unproven) else (False, "")
     if side == "SELL" and regime == "bull":
         return (True, "regime_blocked") if (strict or hostile_unproven) else (False, "")
+    # Block unproven BUY in neutral regime (unless asset is green).
+    # Neutral = choppy, buying in chop bleeds money. Only green assets
+    # that have proven themselves get to BUY in neutral.
+    if side == "BUY" and regime == "neutral":
+        block_neutral = str(os.getenv("BREAKWATER_REGIME_GATE_BLOCK_NEUTRAL", "0")).strip().lower() in {
+            "1", "true", "yes", "y", "on",
+        }
+        if block_neutral and asset_status != "green":
+            return True, "neutral_blocked"
     return False, ""
 
 
@@ -268,15 +277,22 @@ def defensive_exit(
 ) -> bool:
     """Should this position be closed early on a confirmed macro shift?
 
-    In a confirmed bear, ALL BUY positions are closed (not just blocked).
-    In a confirmed bull, ALL SELL positions are closed.
-    Winners that already banked +1R are kept (r_gate protects them).
+    Only closes blocked assets in a confirmed shift. Green/proven assets
+    ride through regime changes. Also requires bars_held >= 3 to avoid
+    churn on fresh positions that haven't had time to develop.
     """
     if shift is None or not (shift.confirmed_bear or shift.confirmed_bull):
         return False
     side = str(position.get("side") or "").upper()
     # Never exit a winner that has already banked its move; R-gate keeps winners.
     if r_gate_on:
+        return False
+    # Only close blocked assets — green/proven ride through regime changes
+    if asset_status != "blocked":
+        return False
+    # Require minimum holding to avoid churn
+    bars_held = int(position.get("bars_held", 0) or 0)
+    if bars_held < 3:
         return False
     if side == "BUY" and shift.confirmed_bear:
         return True
