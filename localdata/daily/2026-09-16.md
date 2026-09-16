@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-09-16 19:11 UTC
+# Breakwater daily print — 2026-09-16 19:27 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **382.91 ZAR** | high-water: **435.05 ZAR**
+- Mode: **readonly** | VALR equity: **379.90 ZAR** | high-water: **435.05 ZAR**
 - Key perms: trade, view access | perps API: unavailable (ValrAuthenticationError: VALR authentication rejected request with HTTP 401)
 - risk_allowed: **True** reasons=[]
 
@@ -16,7 +16,7 @@
 
 ## 2b. Claimed vs realised
 
-- Book: 30 slices (native 13 | hip3 17); validated pools: native 14 | hip3 160; book slices absent from pools: 15
+- Book: 31 slices (native 13 | hip3 18); validated pools: native 14 | hip3 160; book slices absent from pools: 16
   - absent: `feat_trend_slope_20:2:LONG:h12` (native)
   - absent: `feat_ext_vs_ma_20:2:LONG:h15` (native)
   - absent: `feat_ext_vs_ma_50:2:LONG:h15` (native)
@@ -26,13 +26,13 @@
   - absent: `feat_ret_10:2:LONG:h19` (native)
   - absent: `feat_trend_slope_20:2:LONG:h11` (native)
   - absent: `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20` (hip3)
-  - absent: `hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20` (hip3)
-  - ... and 5 more
+  - absent: `hip3_para_equity_c0:feat_ret_20:2:SHORT:h21` (hip3)
+  - ... and 6 more
 - Claimed edge (median mean_ret_costadj over 15 book slices present in the validated pools): +0.130% | at 99.22 ZAR mean notional/trade: +0.13 ZAR/trade
 - Realised (85 real closes per lane_gate._is_real_close, net of fees): -0.57 ZAR/trade | sd 2.24 | SE 0.24
 - Gap: -0.70 ZAR/trade | t = -2.90 (one-sample t of realised mean vs the claimed constant) | verdict: FALLS SHORT
 - native: claimed median +0.188% over 5/13 slices (pool 14) ~ +0.19 ZAR | realised 63 closes -0.96 ZAR sd 2.24 SE 0.28 | gap -1.15 t -4.05 | FALLS SHORT
-- hip3: claimed median +0.064% over 10/17 slices (pool 160) ~ +0.06 ZAR | realised 22 closes +0.53 ZAR sd 1.86 | INSUFFICIENT SAMPLE (n<30)
+- hip3: claimed median +0.064% over 10/18 slices (pool 160) ~ +0.06 ZAR | realised 22 closes +0.53 ZAR sd 1.86 | INSUFFICIENT SAMPLE (n<30)
 - Ledger: 27572 decision rows; 85 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 27487 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
@@ -92,7 +92,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 6. Monitored books
 
-- Native: 13 | HIP-3: 17
+- Native: 13 | HIP-3: 18
 - Native top (by paper P&L):
   - `feat_trend_slope_20:2:LONG:h11` edge=0.0058 n=17004 p=0.0000 src=validated_walk_forward unproven=False paper=2n/+5.56
   - `feat_ret_10:2:LONG:h19` edge=0.0077 n=16875 p=0.0000 src=validated_walk_forward unproven=False paper=9n/+5.29
@@ -103,14 +103,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_close_position:0:LONG:h11` edge=0.0019 n=14671 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_trend_slope_20:2:LONG:h12` edge=0.0063 n=16968 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20` edge=0.0186 n=285 p=0.0503 src=validated_walk_forward unproven=False paper=2n/+5.58
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
-  - `hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20` edge=0.0175 n=268 p=0.0651 src=validated_walk_forward unproven=False paper=1n/+2.05
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h13` edge=0.0007 n=1256 p=0.4781 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ret_20:1:LONG:h18` edge=0.0001 n=1563 p=0.9678 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_trend_strength_20:0:LONG:h23` edge=0.0001 n=1455 p=0.9492 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h21` edge=0.0016 n=11089 p=0.0125 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_ret_20:2:SHORT:h21` edge=0.0001 n=9425 p=0.4234 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -138,9 +138,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.5667 bull=0.0333 neutral=0.3667 | symbols=29
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 26 / bull 0
-- as_of: 2026-09-16T19:00:30Z
+- Label: **bear** | breadth bear=0.5882 bull=0.0588 neutral=0.3529 | symbols=17
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 27 / bull 0
+- as_of: 2026-09-16T19:25:25Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -159,7 +159,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Green islands kept alive inside red lanes: 2
   - `feat_realized_vol_20:2:LONG:h20` pnl=+1.47
   - `feat_ret_10:2:LONG:h19` pnl=+5.29
-- Tradable slices: native **12/13** | hip3 **16/17**
+- Tradable slices: native **12/13** | hip3 **17/18**
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 7
   - `feat_atr_norm_ext:2:LONG:h13` lane_not_green
