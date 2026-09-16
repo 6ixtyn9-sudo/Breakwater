@@ -550,5 +550,61 @@
     "signal_id": "45f8f336920024d6",
     "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
     "stopped_at": "2026-09-16T18:00:31+00:00"
+  },
+  {
+    "pair": "LITUSDC",
+    "pnl_zar": "-3.5647",
+    "reason": "stop",
+    "signal_id": "3a26426468c921ab",
+    "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:LITUSDC",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "PARA:CRDO",
+    "pnl_zar": "-2.4291",
+    "reason": "stop",
+    "signal_id": "07183d43fe2bbaee",
+    "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "ZECUSDC",
+    "pnl_zar": "-4.5466",
+    "reason": "stop",
+    "signal_id": "8f5431b4346639e3",
+    "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:ZECUSDC",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "NEARUSDC",
+    "pnl_zar": "-3.6511",
+    "reason": "stop",
+    "signal_id": "ddc5f2b71d8cedb4",
+    "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:NEARUSDC",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "SHIBUSDT",
+    "pnl_zar": "-1.6778",
+    "reason": "stop",
+    "signal_id": "c294eaf3ae16de75",
+    "slice_id": "engine_momentum:breakout:2:SELL:h10:SHIBUSDT",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "PENDLEUSDC",
+    "pnl_zar": "-2.9539",
+    "reason": "stop",
+    "signal_id": "2a1e54819d3b67f6",
+    "slice_id": "engine_momentum:breakout:2:SELL:h10:PENDLEUSDC",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "FILUSDC",
+    "pnl_zar": "-2.4469",
+    "reason": "stop",
+    "signal_id": "e58546f42afcaae0",
+    "slice_id": "engine_momentum:trend_align:2:SELL:h15:FILUSDC",
+    "stopped_at": "2026-09-16T19:00:30+00:00"
   }
 ]
