@@ -82,36 +82,28 @@ def test_per_asset_status_does_not_override_hostile_symbol_rule():
 
 
 def test_defensive_exit_vs_r_gate():
-    # Macro shift only closes a per-asset BLOCKED position with bars_held >= 3;
-    # the R-gate still wins for winners regardless of per-asset status.
-    long_pos = {"side": "BUY", "asset_status": "blocked", "bars_held": "5"}
-    short_pos = {"side": "SELL", "asset_status": "blocked", "bars_held": "5"}
+    # Macro shift only closes a per-asset BLOCKED position; the R-gate still wins
+    # for winners regardless of per-asset status. Require bars_held>=3 to avoid churn.
+    long_pos = {"side": "BUY", "asset_status": "blocked", "bars_held": "3"}
+    short_pos = {"side": "SELL", "asset_status": "blocked", "bars_held": "3"}
     assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=False, asset_status="blocked") is True
     assert defensive_exit(short_pos, _shift(confirmed_bear=True), r_gate_on=False, asset_status="blocked") is False
     assert defensive_exit(short_pos, _shift(confirmed_bull=True), r_gate_on=False, asset_status="blocked") is True
     assert defensive_exit(long_pos, _shift(confirmed_bear=True), r_gate_on=True, asset_status="blocked") is False
-    # Blocked but too few bars → no exit
-    short_hold = {"side": "BUY", "asset_status": "blocked", "bars_held": "1"}
-    assert defensive_exit(short_hold, _shift(confirmed_bear=True), r_gate_on=False, asset_status="blocked") is False
+    # Churn guard: <3 bars never exits
+    assert defensive_exit({"side": "BUY", "asset_status": "blocked", "bars_held": "1"}, _shift(confirmed_bear=True), r_gate_on=False, asset_status="blocked") is False
 
 
-def test_defensive_exit_closes_opposite_in_confirmed_regime():
-    """In a confirmed bear, only BLOCKED BUY positions with bars_held >= 3 are defensively exited.
-    Green/untested positions ride through regime changes. R-gated winners are kept."""
+def test_defensive_exit_only_closes_per_asset_blocked():
+    """A confirmed global macro shift must NOT blanket-close individual assets.
+    Only a per-asset blocked position is defensively exited; green and untested
+    assets ride their own stop/horizon and the green-lane freeze."""
     shift = _shift(confirmed_bear=True)
-    # Only blocked assets with enough bars exit in confirmed bear
-    assert defensive_exit({"side": "BUY", "bars_held": "5"}, shift, r_gate_on=False, asset_status="blocked") is True
-    # Green / untested assets ride through
-    for status in ("green", "untested", ""):
-        assert defensive_exit({"side": "BUY", "bars_held": "5", "asset_status": status}, shift, r_gate_on=False, asset_status=status) is False
-    # Blocked but too few bars → no exit (anti-churn)
-    assert defensive_exit({"side": "BUY", "bars_held": "1", "asset_status": "blocked"}, shift, r_gate_on=False, asset_status="blocked") is False
-    # R-gated winners survive
-    assert defensive_exit({"side": "BUY", "bars_held": "5", "asset_status": "blocked"}, shift, r_gate_on=True, asset_status="blocked") is False
-    # SELL positions survive in bear
-    assert defensive_exit({"side": "SELL", "bars_held": "5", "asset_status": "blocked"}, shift, r_gate_on=False, asset_status="blocked") is False
-    # No shift = no exit
-    assert defensive_exit({"side": "BUY"}, None, r_gate_on=False) is False
+    for status in ("green", "untested", "", "unknown"):
+        assert defensive_exit({"side": "BUY", "asset_status": status, "bars_held": "3"}, shift, r_gate_on=False, asset_status=status) is False
+    assert defensive_exit({"side": "BUY", "asset_status": "blocked", "bars_held": "3"}, shift, r_gate_on=False, asset_status="blocked") is True
+    # Legacy/unknown positions have no per-asset evidence, so they are not blanket-closed.
+    assert defensive_exit({"side": "BUY", "bars_held": "3"}, shift, r_gate_on=False) is False
 
 
 def test_update_regime_state_confirms_after_two_cycles(tmp_path):
