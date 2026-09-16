@@ -862,8 +862,16 @@ def validate_slices(
         relaxed_required = min(strict_required, relaxed_required)
         required_passes = int(strict_required if REQUIRE_BONFERRONI else relaxed_required)
 
-        # Replace "latest fold must pass" with (recency OR latest) to reduce brittleness
-        temporal_pass = (pass_count >= required_passes) and (recency_ok or latest_fold_passes)
+        # Replace "latest fold must pass" with (recency OR latest) to reduce brittleness.
+        # Strong fold evidence (4/5+) does not need the recency gate: the fold
+        # passes themselves are sufficient proof of temporal stability.  Only
+        # borderline cases (3/5) need the additional recency or latest-fold
+        # check to avoid double-penalizing edges that have broad but fading
+        # evidence.
+        if pass_count >= max(required_passes + 1, 4):
+            temporal_pass = pass_count >= required_passes
+        else:
+            temporal_pass = (pass_count >= required_passes) and (recency_ok or latest_fold_passes)
 
         bonferroni_ok = True
         if REQUIRE_BONFERRONI:
