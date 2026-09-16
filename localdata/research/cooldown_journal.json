@@ -534,5 +534,13 @@
     "signal_id": "19567bc67ee99df1",
     "slice_id": "engine_momentum:sma_cross:2:SELL:h20:UNIUSDC",
     "stopped_at": "2026-09-16T14:00:31+00:00"
+  },
+  {
+    "pair": "UNIUSDC",
+    "pnl_zar": "-4.1900",
+    "reason": "stop",
+    "signal_id": "1933ca74f7dfa279",
+    "slice_id": "engine_momentum:breakout:2:SELL:h10:UNIUSDC",
+    "stopped_at": "2026-09-16T17:00:29+00:00"
   }
 ]
