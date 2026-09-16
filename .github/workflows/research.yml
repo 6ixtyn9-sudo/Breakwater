@@ -272,7 +272,6 @@ jobs:
           summaries = []
           for fk, byh in fam.items():
               rr = [byh[h] for h in sorted(byh.keys()) if h > 0]
-              # Choose best horizon among those that look directionally sane and not confounded.
               candidates = [
                   r for r in rr
                   if is_true(r.get("direction_ok")) and not is_true(r.get("regime_confounded"))
@@ -281,7 +280,6 @@ jobs:
                   continue
               best = max(candidates, key=edge_per_bar)
 
-              # Flip points
               hs = sorted(byh.keys())
               def first_h(pred):
                   for h in hs:
@@ -325,7 +323,11 @@ jobs:
           BREAKWATER_DATA_DIR: localdata
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: "0.05"
         run: |
-          PYTHONPATH=src python scripts/breakwater.py             deep-research-audit             --lane "${{ inputs.deep_audit }}"             --max-pairs 60             --candle-count 5000
+          PYTHONPATH=src python scripts/breakwater.py \
+            deep-research-audit \
+            --lane "${{ inputs.deep_audit }}" \
+            --max-pairs 60 \
+            --candle-count 5000
 
       - name: Persist research inputs and status
         if: always()
