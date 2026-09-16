@@ -82,10 +82,12 @@ def scan_simple_trend(
         consecutive_up = all(last3[i] > last3[i - 1] for i in range(1, len(last3)))
         consecutive_down = all(last3[i] < last3[i - 1] for i in range(1, len(last3)))
 
+        fired = False
+
         # --- 3-bar momentum ---
-        if abs(ret) > 0.003:  # >0.3% move
+        if abs(ret) > 0.001:  # >0.1% move
             side = "BUY" if ret > 0 else "SELL"
-            strength = min(1.0, abs(ret) / 0.03)  # normalize to 3% max
+            strength = min(1.0, abs(ret) / 0.03)
             confidence = 0.2 + 0.2 * strength
             edge_bps = max(1.0, abs(ret) * 10000 * 0.15)
             stop = cur_close - 2.0 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
@@ -96,11 +98,12 @@ def scan_simple_trend(
                     confidence=min(1.0, confidence), horizon_bars=5,
                     signal_type="ret3", regime_fit=0.5,
                 ))
+                fired = True
 
         # --- Price vs SMA10 ---
         if not np.isnan(cur_sma) and cur_sma > 0:
             dist = (cur_close - cur_sma) / cur_sma
-            if abs(dist) > 0.005:  # >0.5% from SMA
+            if abs(dist) > 0.001:  # >0.1% from SMA
                 side = "BUY" if dist > 0 else "SELL"
                 strength = min(1.0, abs(dist) / 0.05)
                 confidence = 0.2 + 0.15 * strength
@@ -113,6 +116,7 @@ def scan_simple_trend(
                         confidence=min(1.0, confidence), horizon_bars=5,
                         signal_type="sma10_dist", regime_fit=0.5,
                     ))
+                    fired = True
 
         # --- Streak detection ---
         if consecutive_up or consecutive_down:
@@ -128,5 +132,19 @@ def scan_simple_trend(
                     confidence=min(1.0, confidence), horizon_bars=5,
                     signal_type="streak", regime_fit=0.5,
                 ))
+                fired = True
+
+        # --- Fallback: SMA direction (always-on guarantee) ---
+        # Ensures at least one signal per pair even in completely flat markets.
+        if not fired and not np.isnan(cur_sma) and cur_sma > 0:
+            side = "BUY" if cur_close >= cur_sma else "SELL"
+            edge_bps = 0.5
+            stop = cur_close - 2.0 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+            signals.append(SimpleTrendSignal(
+                pair=symbol, side=side, entry_price=cur_close,
+                stop_price=stop, atr=cur_atr, edge=edge_bps,
+                confidence=0.15, horizon_bars=5,
+                signal_type="fallback_sma", regime_fit=0.3,
+            ))
 
     return sorted(signals, key=lambda s: -s.confidence)

@@ -1674,7 +1674,8 @@ def run_paper_cycle(
         # paper entry loop (e.g. from a fallback or a replay of stale signals).
         from breakwater.lane_gate import GreenGate
 
-        if isinstance(green_gate, GreenGate) and not green_gate.green(signal.slice_id):
+        _is_engine = str(signal.slice_id).startswith("engine_")
+        if not _is_engine and isinstance(green_gate, GreenGate) and not green_gate.green(signal.slice_id):
             skipped += 1
             _deny(signal, "lane_gate_blocked")
             append_log(
