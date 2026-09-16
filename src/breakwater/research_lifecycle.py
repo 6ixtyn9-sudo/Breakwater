@@ -382,10 +382,20 @@ def _slice_asset_composition(
 
 
 def _promo_edge(row: ValidatedSlice, comp: dict[str, dict] | None) -> float:
-    """Effective promo edge for a slice (green-only mean, else pooled)."""
+    """Effective promo edge for a slice (green-only mean, else pooled).
+
+    The green-only mean is only used when the slice has enough green assets
+    (>= MIN_GREEN_ASSETS_FOR_PROMOTION) to produce a stable estimate. With
+    only 1-2 green assets out of 100+, the green-only mean is noisy and can
+    be inflated by chance, which poisons the pool floor for everyone.
+    """
     if comp is not None:
         c = comp.get(row.slice_id)
-        if c and c["green_edge_mean"] is not None:
+        if (
+            c
+            and c["green_edge_mean"] is not None
+            and int(c.get("n_green", 0)) >= MIN_GREEN_ASSETS_FOR_PROMOTION
+        ):
             return c["green_edge_mean"]
     return row.mean_ret_costadj
 
@@ -416,16 +426,21 @@ def sync_book(
     # Autotuned quality bar: a NEW slice must sit inside the top
     # BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE of this run's candidate pool for
     # its kind; an EXISTING slice only has to stay inside the looser KEEP
-    # quantile (hysteresis: enter top 25%, survive top 40% - no boundary
-    # flapping). Both are backstopped by the static + cost-linked floors
-    # inside _effective_floor, so the bar can never price an edge below
-    # its cost of doing business.
+    # quantile (hysteresis, no boundary flapping). Both are backstopped by
+    # the static + cost-linked floors inside _effective_floor, so the bar
+    # can never price an edge below its cost of doing business.
+    #
+    # IMPORTANT: the pool is built from the POOLED edge (mean_ret_costadj),
+    # NOT the green-only mean. Green-only means from slices with few green
+    # assets (e.g. 2 out of 119) are noisy and inflate the floor for
+    # everyone. The green-only mean is used for individual slice promotion
+    # decisions (_row_promo_edge), not for computing the global quality bar.
     enter_q = _env_float("BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE", "0.25")
     keep_q = _env_float("BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE", "0.40")
     pools: dict[str, list[float]] = {}
     for row in validated_rows:
         try:
-            edge = float(_promo_edge(row, comp))
+            edge = float(row.mean_ret_costadj)
         except (TypeError, ValueError):
             continue
         pools.setdefault(str(row.kind), []).append(edge)
