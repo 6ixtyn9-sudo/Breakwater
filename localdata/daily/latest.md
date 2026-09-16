@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-16 18:08 UTC
+# Breakwater daily print — 2026-09-16 18:21 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -16,7 +16,7 @@
 
 ## 2b. Claimed vs realised
 
-- Book: 30 slices (native 13 | hip3 17); validated pools: native 14 | hip3 160; book slices absent from pools: 15
+- Book: 31 slices (native 13 | hip3 18); validated pools: native 14 | hip3 160; book slices absent from pools: 16
   - absent: `feat_trend_slope_20:2:LONG:h12` (native)
   - absent: `feat_ext_vs_ma_20:2:LONG:h15` (native)
   - absent: `feat_ext_vs_ma_50:2:LONG:h15` (native)
@@ -25,15 +25,15 @@
   - absent: `feat_ext_strength:2:LONG:h15` (native)
   - absent: `feat_ret_10:2:LONG:h19` (native)
   - absent: `feat_trend_slope_20:2:LONG:h11` (native)
+  - absent: `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20` (hip3)
   - absent: `hip3_para_equity_c0:feat_ret_20:2:SHORT:h21` (hip3)
-  - absent: `hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20` (hip3)
-  - ... and 5 more
+  - ... and 6 more
 - Claimed edge (median mean_ret_costadj over 15 book slices present in the validated pools): +0.130% | at 98.00 ZAR mean notional/trade: +0.13 ZAR/trade
 - Realised (76 real closes per lane_gate._is_real_close, net of fees): -0.47 ZAR/trade | sd 2.02 | SE 0.23
 - Gap: -0.60 ZAR/trade | t = -2.57 (one-sample t of realised mean vs the claimed constant) | verdict: FALLS SHORT
 - native: claimed median +0.188% over 5/13 slices (pool 14) ~ +0.18 ZAR | realised 56 closes -0.75 ZAR sd 2.23 SE 0.30 | gap -0.94 t -3.14 | FALLS SHORT
-- hip3: claimed median +0.064% over 10/17 slices (pool 160) ~ +0.06 ZAR | realised 20 closes +0.33 ZAR sd 0.92 | INSUFFICIENT SAMPLE (n<30)
-- Ledger: 27386 decision rows; 76 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 27310 rows are skipped/guard decisions and never count
+- hip3: claimed median +0.064% over 10/18 slices (pool 160) ~ +0.06 ZAR | realised 20 closes +0.33 ZAR sd 0.92 | INSUFFICIENT SAMPLE (n<30)
+- Ledger: 27475 decision rows; 76 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 27399 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -92,7 +92,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 6. Monitored books
 
-- Native: 13 | HIP-3: 17
+- Native: 13 | HIP-3: 18
 - Native top (by paper P&L):
   - `feat_trend_slope_20:2:LONG:h11` edge=0.0058 n=17004 p=0.0000 src=validated_walk_forward unproven=False paper=2n/+5.56
   - `feat_ret_10:2:LONG:h19` edge=0.0077 n=16875 p=0.0000 src=validated_walk_forward unproven=False paper=8n/+4.70
@@ -139,8 +139,8 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 10. Regime shift
 
 - Label: **bear** | breadth bear=0.6 bull=0.0333 neutral=0.3333 | symbols=29
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 24 / bull 0
-- as_of: 2026-09-16T18:00:31Z
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 25 / bull 0
+- as_of: 2026-09-16T18:13:27Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -159,7 +159,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Green islands kept alive inside red lanes: 2
   - `feat_realized_vol_20:2:LONG:h20` pnl=+1.47
   - `feat_ret_10:2:LONG:h19` pnl=+4.70
-- Tradable slices: native **12/13** | hip3 **16/17**
+- Tradable slices: native **12/13** | hip3 **17/18**
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 7
   - `feat_atr_norm_ext:2:LONG:h13` lane_not_green
@@ -172,12 +172,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-09-16T18:08:38: errors=1 signals=None regime_blocked=None
+- Latest scan 2026-09-16T18:21:36: errors=1 signals=None regime_blocked=None
 - this cycle: closed=None new_signals=None skipped=None slot_full=None slice_full=None pair_held=None
 - Action funnel: lane_gate_blocked=2
-- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 2, "pair_held": 20, "regime_blocked": 70, "skipped": 18, "slice_full": 0, "slot_full": 162})
+- **NO ACTION:** dominant blocker = `slot_full` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 2, "pair_held": 24, "regime_blocked": 70, "skipped": 17, "slice_full": 0, "slot_full": 162})
 - green_gate: native_green=False hip3_green=True frozen=native islands=2 blocks=7
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:AAOI"}]
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:QNT"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
