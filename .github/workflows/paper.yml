@@ -17,7 +17,7 @@ defaults:
 jobs:
   paper:
     runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
