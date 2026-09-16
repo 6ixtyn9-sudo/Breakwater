@@ -446,5 +446,13 @@
     "signal_id": "2a5c09e7dbc84866",
     "slice_id": "feat_atr_norm_ext:2:LONG:h19",
     "stopped_at": "2026-09-15T19:00:32+00:00"
+  },
+  {
+    "pair": "PARA:CIEN",
+    "pnl_zar": "-1.6551",
+    "reason": "stop",
+    "signal_id": "44f0efe21a2730f4",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h24",
+    "stopped_at": "2026-09-16T11:00:31+00:00"
   }
 ]
