@@ -601,9 +601,30 @@ def sync_book(
             }
         )
 
-    def _carry_eligible(row: dict) -> bool:
+    # Build lookup of current-validated edges so carry-forward uses fresh
+    # research data instead of stale promotion-time values.  A slice whose
+    # edge has decayed below the floor in the current research run must NOT
+    # survive on its old stored value.
+    _current_validated: dict[str, float] = {}
+    for _vrow in validated_rows:
         try:
-            edge = float(row.get("mean_ret_costadj") or 0.0)
+            _current_validated[_vrow.slice_id] = float(_vrow.mean_ret_costadj)
+        except (TypeError, ValueError):
+            pass
+
+    def _carry_eligible(row: dict) -> bool:
+        sid = str(row.get("slice_id") or "")
+        # Use current research edge if available; fall back to stored value
+        # only for slices not in this run's validated set (e.g. HIP-3 slices
+        # from a separate research cycle).
+        if sid in _current_validated:
+            edge = _current_validated[sid]
+        else:
+            try:
+                edge = float(row.get("mean_ret_costadj") or 0.0)
+            except (TypeError, ValueError):
+                return False
+        try:
             n_rows = int(row.get("n") or 0)
         except (TypeError, ValueError):
             return False
