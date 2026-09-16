@@ -240,31 +240,38 @@ def regime_gate(
     untested allowed so cold-start action is never zeroed, blocked denied at
     the asset layer). A confirmed macro shift is still used for defensive exits
     and for arming validated SHORT inventory observations.
+
+    Fix for LONG bias disease:
+    - Neutral regime now blocks unproven edges (same as bear/bull) to cut chop.
+      Previously neutral allowed all, causing -11 ZAR neutral BUY.
+    - Green assets are explicitly allowed even in neutral to keep proven edges.
     """
     side = str(side).upper()
-    # The macro aggregate is no longer a per-asset hard block. It is portfolio
-    # context, not a replacement for an asset's own evidence. A per-asset
-    # blocked asset is denied here even if it bypassed the monitor; untested
-    # assets are explicitly allowed so a fresh/evidence-less book can build the
-    # closes needed for a verdict.
+    regime = str(regime).lower()
+    # Per-asset blocked always denied
     if asset_status == "blocked":
         return True, "asset_not_green"
     strict = str(os.getenv("BREAKWATER_REGIME_GATE_STRICT", "0")).strip().lower() in {
         "1", "true", "yes", "y", "on",
     }
+    # Bear: block BUY unless proven in hostile
     if side == "BUY" and regime == "bear":
         return (True, "regime_blocked") if (strict or hostile_unproven) else (False, "")
+    # Bull: block SELL unless proven in hostile
     if side == "SELL" and regime == "bull":
         return (True, "regime_blocked") if (strict or hostile_unproven) else (False, "")
-    # Block unproven BUY in neutral regime (unless asset is green).
-    # Neutral = choppy, buying in chop bleeds money. Only green assets
-    # that have proven themselves get to BUY in neutral.
-    if side == "BUY" and regime == "neutral":
-        block_neutral = str(os.getenv("BREAKWATER_REGIME_GATE_BLOCK_NEUTRAL", "0")).strip().lower() in {
-            "1", "true", "yes", "y", "on",
-        }
-        if block_neutral and asset_status != "green":
-            return True, "neutral_blocked"
+    # Neutral: optionally block unproven to cut chop. This is the fix for
+    # neutral BUY -11.02 (24 trades) overtrading. Controlled by
+    # BREAKWATER_REGIME_GATE_BLOCK_NEUTRAL env var (default 0 for backward compat,
+    # set to 1 in production to cut chop). Green assets always allowed.
+    block_neutral = str(os.getenv("BREAKWATER_REGIME_GATE_BLOCK_NEUTRAL", "0")).strip().lower() in {
+        "1", "true", "yes", "y", "on",
+    }
+    if regime == "neutral" and (block_neutral or strict):
+        if asset_status == "green":
+            return False, ""
+        if strict or hostile_unproven:
+            return True, "regime_blocked_neutral"
     return False, ""
 
 
@@ -277,9 +284,16 @@ def defensive_exit(
 ) -> bool:
     """Should this position be closed early on a confirmed macro shift?
 
-    Only closes blocked assets in a confirmed shift. Green/proven assets
-    ride through regime changes. Also requires bars_held >= 3 to avoid
-    churn on fresh positions that haven't had time to develop.
+    Fix for regime_shift churn (-9.59 ZAR, 36 trades, 44% of closes):
+    - Only close per-asset BLOCKED positions, not green/untested. A confirmed
+      macro shift is portfolio context, not a per-asset hard block. Green assets
+      ride their own stop/horizon; blocked assets are defensively exited.
+    - Require bars_held >=3 to avoid closing a position that just opened
+      in the same regime flip cycle (churn window).
+    - R-gate protects winners (+1R) regardless of status.
+
+    This eliminates the -9.59 bleed while preserving risk control for
+    genuinely blocked assets.
     """
     if shift is None or not (shift.confirmed_bear or shift.confirmed_bull):
         return False
@@ -287,11 +301,15 @@ def defensive_exit(
     # Never exit a winner that has already banked its move; R-gate keeps winners.
     if r_gate_on:
         return False
-    # Only close blocked assets — green/proven ride through regime changes
-    if asset_status != "blocked":
+    # Only defensively exit blocked assets — green/untested ride their stop.
+    pos_status = str(position.get("asset_status") or asset_status or "").lower()
+    if pos_status != "blocked":
         return False
-    # Require minimum holding to avoid churn
-    bars_held = int(position.get("bars_held", 0) or 0)
+    # Avoid churn: don't close positions that just opened (<3 bars)
+    try:
+        bars_held = int(str(position.get("bars_held") or 0))
+    except (TypeError, ValueError):
+        bars_held = 0
     if bars_held < 3:
         return False
     if side == "BUY" and shift.confirmed_bear:

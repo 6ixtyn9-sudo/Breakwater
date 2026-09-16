@@ -1674,8 +1674,7 @@ def run_paper_cycle(
         # paper entry loop (e.g. from a fallback or a replay of stale signals).
         from breakwater.lane_gate import GreenGate
 
-        _is_engine = str(signal.slice_id).startswith("engine_")
-        if not _is_engine and isinstance(green_gate, GreenGate) and not green_gate.green(signal.slice_id):
+        if isinstance(green_gate, GreenGate) and not green_gate.green(signal.slice_id):
             skipped += 1
             _deny(signal, "lane_gate_blocked")
             append_log(
@@ -1910,12 +1909,15 @@ def run_paper_cycle(
         initial_risk_distance = abs(reference - initial_stop_price)
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
         stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
-        risk_cap = _env_decimal("BREAKWATER_PAPER_MAX_RISK_FRACTION", "0.03")
-        # Hard ceiling: even if workflow overrides MAX_RISK_FRACTION to 6%,
-        # we cap at a lower value to prevent catastrophic single-trade losses.
-        # Default 0 = disabled (use MAX_RISK_FRACTION as-is). Set in prod.
-        hard_ceiling = _env_decimal("BREAKWATER_PAPER_HARD_RISK_CEILING", "0")
-        if hard_ceiling > 0 and (risk_cap <= 0 or risk_cap > hard_ceiling):
+        # Risk cap: env var but hard-capped at 4% to prevent 5-6% risk trades
+        # that were 47% of book in Sep 14 audit. Workflow currently sets 0.06,
+        # but we enforce max 0.04 regardless to protect R2000 book.
+        # Hard ceiling itself is env-configurable for tests (default 0.04).
+        env_risk_cap = _env_decimal("BREAKWATER_PAPER_MAX_RISK_FRACTION", "0.03")
+        hard_ceiling = _env_decimal("BREAKWATER_PAPER_HARD_RISK_CEILING", "0.04")
+        if env_risk_cap > 0:
+            risk_cap = min(env_risk_cap, hard_ceiling)
+        else:
             risk_cap = hard_ceiling
         mean = Decimal(str(means.get(signal.slice_id, 0.0) or 0.0))
         k_mean = _env_decimal("BREAKWATER_PAPER_RISK_TO_MEAN_K", "8")

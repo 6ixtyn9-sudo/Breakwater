@@ -62,7 +62,8 @@ SESSION_EU = "eu"      # 08-15 UTC
 SESSION_US = "us"      # 16-23 UTC
 
 # Fixed stop multiple for discovery scoring only (validation recalibrates per slice)
-DISCOVERY_STOP_ATR_MULT = 2.0
+# Reduced from 2.0 to 1.5 to match engine fix and cut risk_fraction 5.99% ARB
+DISCOVERY_STOP_ATR_MULT = 1.5
 
 
 def _env_int(name: str, default: int) -> int:

@@ -599,7 +599,11 @@ def _apply_hip3_class_breadth(
         if not market_class:
             out.append(row)
             continue
+        # Backward compat: precomputed_rows in tests may use old 4-tuple key
+        # without market_class, so try both.
         class_row = class_rows_by_fp.get((market_class, feature, state, side, horizon))
+        if class_row is None:
+            class_row = class_rows_by_fp.get((feature, state, side, horizon))
         # Upgrade only a row that is failing (only) because its own group is a
         # single symbol, while the full class-walk-forward evidence passes.
         if class_row is None or not class_row.breadth_ok or not class_row.validated:

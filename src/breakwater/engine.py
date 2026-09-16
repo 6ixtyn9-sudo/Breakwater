@@ -1158,7 +1158,9 @@ class BreakwaterEngine:
         if regime_shift is not None:
             regime = getattr(regime_shift, "label", "unknown")
 
-        # Run all engines
+        # Run all engines with P0/P1 fixes:
+        # - mean_reversion BUY in bear hard-disabled at source (-14.29 ZAR 6 trades)
+        # - volume filter <50% of 20-bar avg to avoid low-volume breakouts
         engine_results: dict[str, list] = {}
         for engine_name, scan_fn in [
             ("simple_trend", scan_simple_trend),
@@ -1169,7 +1171,21 @@ class BreakwaterEngine:
             try:
                 result = scan_fn(engine_frames)
                 if result:
-                    engine_results[engine_name] = result
+                    if engine_name == "mean_reversion" and regime == "bear":
+                        result = [r for r in result if r.side != "BUY"]
+                    filtered = []
+                    for sig in result:
+                        frame = engine_frames.get(sig.pair)
+                        if frame is not None and "volume" in frame.columns:
+                            vol = frame["volume"].astype(float)
+                            if len(vol) >= 20:
+                                avg_vol = vol.iloc[-20:-1].mean()
+                                cur_vol = vol.iloc[-1]
+                                if avg_vol > 0 and cur_vol < avg_vol * 0.5:
+                                    continue
+                        filtered.append(sig)
+                    if filtered:
+                        engine_results[engine_name] = filtered
             except Exception as exc:
                 import sys
                 print(
