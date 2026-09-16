@@ -542,5 +542,13 @@
     "signal_id": "1933ca74f7dfa279",
     "slice_id": "engine_momentum:breakout:2:SELL:h10:UNIUSDC",
     "stopped_at": "2026-09-16T17:00:29+00:00"
+  },
+  {
+    "pair": "PARA:CIEN",
+    "pnl_zar": "-1.8167",
+    "reason": "stop",
+    "signal_id": "45f8f336920024d6",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
+    "stopped_at": "2026-09-16T18:00:31+00:00"
   }
 ]
