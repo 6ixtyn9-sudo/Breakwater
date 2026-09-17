@@ -10,11 +10,6 @@ defaults:
   run:
     shell: bash
 jobs:
-  # ---------------------------------------------------------------------------
-  # SHARD: 4 parallel jobs for 24 horizons (6 horizons per shard)
-  # Each shard: 40 pairs, 1000 candles, 38 features, 6 horizons
-  # Was 1 job ×24 horizons ×60 pairs ×26 features ~3-5h, now 4× parallel ~1h
-  # ---------------------------------------------------------------------------
   research-shard:
     strategy:
       fail-fast: false
@@ -119,7 +114,7 @@ jobs:
         run: |
           set -euo pipefail
           ls -lh /tmp/hip3-shards/
-          python - <<'PY'
+          PYTHONPATH=src python - <<'PY'
           import csv, glob
           from pathlib import Path
           from breakwater.discovery import DISCOVERY_HEADERS
@@ -134,7 +129,6 @@ jobs:
                   with open(fp, newline="") as f:
                       r=csv.DictReader(f)
                       rows.extend(list(r))
-              # Deduplicate by slice_id keep best mean
               by_id={}
               for row in rows:
                   sid=row.get("slice_id","")
@@ -168,28 +162,16 @@ jobs:
                   w.writeheader()
                   w.writerows(rows)
               print(f"Merged asset_edges {len(rows)} rows")
-          # Merge coverage (keep latest)
           import shutil
           cov_files=glob.glob("/tmp/hip3-shards/candle_coverage.csv")
           if cov_files:
               shutil.copy(cov_files[0], "localdata/hip3/research/candle_coverage.csv")
               print(f"Copied coverage from {cov_files[0]}")
-          # Sync HIP-3 book (paper gate logic inside hip3_research)
           from breakwater.config import get_settings
-          from breakwater.hip3_research import write_paper_gate, _promotion_gate, _hip3_paper_evidence, l2_half_spread_bps, measured_round_trip_cost_bps, MIN_SPREAD_SAMPLES
           from breakwater.research_lifecycle import sync_book
-          from breakwater.hyperliquid import HyperliquidReadOnlyVenue
-          import json, os, csv
-          from decimal import Decimal
           settings=get_settings()
-          # For merge, we need to recompute promotion gate? Simplified: just sync if validated exists
-          # The full gate logic needs spread samples etc, but we can just sync book with merged validated
-          # and let gate file be written as paper_ready if any validated
-          from pathlib import Path
           validated_path=settings.hip3_validated_path
           book_path=settings.hip3_book_path
-          # Count validated
-          import csv
           validated_count=0
           if validated_path.exists():
               with open(validated_path, newline="") as f:
@@ -197,7 +179,6 @@ jobs:
                       if row.get("validated")=="True":
                           validated_count+=1
           print(f"HIP-3 validated count after merge: {validated_count}")
-          # Try to sync book (will respect existing gate logic if we have gate file)
           try:
               summary=sync_book(validated_path=validated_path, book_path=book_path)
               print(f"HIP-3 book sync: {summary}")
@@ -209,7 +190,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f localdata/hip3/research/validated_slices.csv ]; then echo "No validated"; exit 0; fi
-          python - <<'PY'
+          PYTHONPATH=src python - <<'PY'
           import csv
           from collections import Counter
           path="localdata/hip3/research/validated_slices.csv"
