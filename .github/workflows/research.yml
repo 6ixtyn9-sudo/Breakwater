@@ -21,12 +21,6 @@ defaults:
   run:
     shell: bash
 jobs:
-  # ---------------------------------------------------------------------------
-  # SHARD: 8 parallel jobs — 4 horizons × 2 kinds (SPOT/PERP)
-  # Each shard does 1 horizon × 1 kind × 40 pairs × 1000 candles × 38 features
-  # ~0.5s per 1000 bars after optimization, ~60-90min per shard
-  # All 8 finish in parallel in ~90min vs 7h38m sequential for 38 features
-  # ---------------------------------------------------------------------------
   research-shard:
     strategy:
       fail-fast: false
@@ -61,9 +55,6 @@ jobs:
           BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '2' }}
           BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
           BREAKWATER_MIN_GREEN_ASSETS_FOR_PROMOTION: ${{ vars.BREAKWATER_MIN_GREEN_ASSETS_FOR_PROMOTION || '1' }}
-          BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '15' }}
-          BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.50' }}
-          BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: ${{ vars.BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION || '0.35' }}
           BREAKWATER_RESEARCH_HORIZONS: ${{ matrix.horizon }}
           BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ matrix.horizon }}
@@ -83,7 +74,6 @@ jobs:
           BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '15' }}
           BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.50' }}
           BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_FOLD_MIN_ROWS || '3' }}
-          BREAKWATER_MIN_GREEN_ASSETS_FOR_PROMOTION: ${{ vars.BREAKWATER_MIN_GREEN_ASSETS_FOR_PROMOTION || '1' }}
           BREAKWATER_CONCENTRATED_PROMOTE: ${{ vars.BREAKWATER_CONCENTRATED_PROMOTE || '1' }}
           BREAKWATER_CONCENTRATED_MIN_MEAN: ${{ vars.BREAKWATER_CONCENTRATED_MIN_MEAN || '0.004' }}
         run: |
