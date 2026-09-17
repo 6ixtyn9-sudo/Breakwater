@@ -120,7 +120,7 @@ jobs:
           set -euo pipefail
           ls -lh /tmp/hip3-shards/
           PYTHONPATH=src python - <<'PY'
-          import csv, glob
+          import csv, glob, re
           from pathlib import Path
           from breakwater.discovery import DISCOVERY_HEADERS
           from breakwater.validation import VALIDATED_HEADERS, ASSET_EDGE_HEADERS
@@ -153,20 +153,37 @@ jobs:
                   w.writerows(by_id.values())
               print(f"Merged {pattern} -> {out_path} {len(by_id)} rows from {len(files)} files")
               return len(by_id)
-          merge_csv("/tmp/hip3-shards/discovered_slices_h*.csv", Path("localdata/hip3/research/discovered_slices.csv"), DISCOVERY_HEADERS)
-          merge_csv("/tmp/hip3-shards/validated_slices_h*.csv", Path("localdata/hip3/research/validated_slices.csv"), VALIDATED_HEADERS)
-          files=glob.glob("/tmp/hip3-shards/asset_edges_h*.csv")
-          if files:
+          def merge_asset_edges(pattern, out_path, headers):
+              files=glob.glob(pattern)
+              if not files:
+                  print(f"No asset_edges files for {pattern}")
+                  return 0
               rows=[]
               for fp in files:
                   with open(fp, newline="") as f:
                       rows.extend(list(csv.DictReader(f)))
-              out=Path("localdata/hip3/research/asset_edges.csv")
-              with open(out,"w",newline="") as outf:
-                  w=csv.DictWriter(outf, fieldnames=ASSET_EDGE_HEADERS)
+              by_key={}
+              for row in rows:
+                  key=(row.get("slice_id",""), row.get("asset","").upper())
+                  prev=by_key.get(key)
+                  if prev is None:
+                      by_key[key]=row
+                  else:
+                      try:
+                          if float(row.get("mean_ret_costadj",0)) > float(prev.get("mean_ret_costadj",0)):
+                              by_key[key]=row
+                      except:
+                          pass
+              out_path.parent.mkdir(parents=True, exist_ok=True)
+              with open(out_path,"w",newline="") as out:
+                  w=csv.DictWriter(out, fieldnames=headers)
                   w.writeheader()
-                  w.writerows(rows)
-              print(f"Merged asset_edges {len(rows)} rows")
+                  w.writerows(by_key.values())
+              print(f"Merged asset_edges {pattern} -> {out_path} {len(by_key)} rows from {len(files)} files")
+              return len(by_key)
+          merge_csv("/tmp/hip3-shards/discovered_slices_h*.csv", Path("localdata/hip3/research/discovered_slices.csv"), DISCOVERY_HEADERS)
+          merge_csv("/tmp/hip3-shards/validated_slices_h*.csv", Path("localdata/hip3/research/validated_slices.csv"), VALIDATED_HEADERS)
+          merge_asset_edges("/tmp/hip3-shards/asset_edges_h*.csv", Path("localdata/hip3/research/asset_edges.csv"), ASSET_EDGE_HEADERS)
           import shutil
           cov_files=glob.glob("/tmp/hip3-shards/candle_coverage.csv")
           if cov_files:
@@ -174,13 +191,14 @@ jobs:
               print(f"Copied coverage from {cov_files[0]}")
           from breakwater.config import get_settings
           from breakwater.research_lifecycle import sync_book
+          import csv as csvm
           settings=get_settings()
           validated_path=settings.hip3_validated_path
           book_path=settings.hip3_book_path
           validated_count=0
           if validated_path.exists():
               with open(validated_path, newline="") as f:
-                  for row in csv.DictReader(f):
+                  for row in csvm.DictReader(f):
                       if row.get("validated")=="True":
                           validated_count+=1
           print(f"HIP-3 validated count after merge: {validated_count}")
@@ -189,6 +207,7 @@ jobs:
               print(f"HIP-3 book sync: {summary}")
           except Exception as e:
               print(f"Book sync failed: {e}")
+              import traceback; traceback.print_exc()
           PY
       - name: HIP-3 diagnostics
         if: always()
