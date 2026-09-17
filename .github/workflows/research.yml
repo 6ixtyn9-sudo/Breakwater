@@ -52,55 +52,33 @@ jobs:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: readonly
-          # Doctrine fallbacks (2026-08-19): fat 6-name edges, 20bp net floor,
-          # two-horizon promote, ~1000h bars. Secrets/vars still win if set.
-          # Prefer Actions Variables (not Secrets) for these non-sensitive knobs.
-          # Promotion floor for net-edge (sync_book directional gate)
           BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
-          # Quality bar = max(static, k x round-trip cost); spot dies at 2 x 70 bps
           BREAKWATER_MIN_NET_EDGE_COST_MULT: ${{ vars.BREAKWATER_MIN_NET_EDGE_COST_MULT || '2' }}
-          # Autotune: new slices must make the top X% of this run's pool (per kind)
           BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE || '0.25' }}
-          # Existing slices survive at the looser quantile (hysteresis, no flapping)
           BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE || '0.40' }}
-          # Cost model (round-trip bps) - must match paper.yml
           BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
           BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
-          # Multi-horizon robustness promotion gate
           BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '2' }}
           BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
-          # Sharded: single horizon + single kind per job
-          # Original had '' (single h6) or '12,15,20,24' sequential. Now parallel.
           BREAKWATER_RESEARCH_HORIZONS: ${{ matrix.horizon }}
           BREAKWATER_RESEARCH_HORIZONS_MAX: "24"
           BREAKWATER_RESEARCH_HORIZON_BARS: ${{ matrix.horizon }}
-          # Shard suffix: files become discovered_slices_h12_SPOT.csv etc.
           BREAKWATER_RESEARCH_SHARD: h${{ matrix.horizon }}_${{ matrix.kind }}
-          # Kind filter: only research this kind in this shard (saves 50% time)
           BREAKWATER_RESEARCH_KIND: ${{ matrix.kind }}
-          # === Research scale knobs — FIXED Sep 17: 38 features needs less pairs ===
-          # Was 60 pairs, 1000 candles, 5h14m max with 26 features. 38 features ~7.5h sequential.
-          # Now 40 pairs, 1000 candles, 8 shards parallel → ~90min total.
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}
           BREAKWATER_PERP_CANDLE_COUNT: ${{ vars.BREAKWATER_PERP_CANDLE_COUNT || '1000' }}
           BREAKWATER_RESEARCH_MAX_PAIRS: ${{ vars.BREAKWATER_RESEARCH_MAX_PAIRS || '40' }}
-          # === Discovery binning knobs ===
           BREAKWATER_DISCOVERY_STATE_QUANTILES: ${{ vars.BREAKWATER_DISCOVERY_STATE_QUANTILES || '0.333333,0.666666' }}
           BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS: ${{ vars.BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS || '200' }}
-          # Optional politeness delay for paged candle fetches
           BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: ${{ vars.BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS || '0.05' }}
-          # RELAXED VALIDATION (still walk-forward + hostile-regime + net-positive)
           BREAKWATER_VALIDATION_REQUIRE_BONFERRONI: "0"
           BREAKWATER_VALIDATION_RELAXED_MIN_PASSES: ${{ vars.BREAKWATER_VALIDATION_RELAXED_MIN_PASSES || '2' }}
-          # Breadth knobs (env-backed in validation.py)
           BREAKWATER_BREADTH_MIN_SYMBOLS: ${{ vars.BREAKWATER_BREADTH_MIN_SYMBOLS || '6' }}
           BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL: ${{ vars.BREAKWATER_BREADTH_MIN_ROWS_PER_SYMBOL || '10' }}
           BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION: ${{ vars.BREAKWATER_BREADTH_MIN_POSITIVE_FRACTION || '0.40' }}
-          # Per-asset research: pooled edge -> which assets carry it.
           BREAKWATER_PER_ASSET_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_MIN_ROWS || '20' }}
           BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION: ${{ vars.BREAKWATER_PER_ASSET_MIN_FOLD_POSITIVE_FRACTION || '0.60' }}
           BREAKWATER_PER_ASSET_FOLD_MIN_ROWS: ${{ vars.BREAKWATER_PER_ASSET_FOLD_MIN_ROWS || '3' }}
-          # Hunt: promote fat fail-only-breadth families (does not lower 0.40)
           BREAKWATER_CONCENTRATED_PROMOTE: ${{ vars.BREAKWATER_CONCENTRATED_PROMOTE || '1' }}
           BREAKWATER_CONCENTRATED_MIN_MEAN: ${{ vars.BREAKWATER_CONCENTRATED_MIN_MEAN || '0.004' }}
         run: |
@@ -118,10 +96,6 @@ jobs:
             localdata/research/asset_edges_h${{ matrix.horizon }}_${{ matrix.kind }}.csv
           if-no-files-found: error
           retention-days: 2
-  # ---------------------------------------------------------------------------
-  # MERGE: combine 8 shards (4 horizons × 2 kinds) into final book
-  # This runs after all shards, merges CSVs, runs sync_book, diagnostics
-  # ---------------------------------------------------------------------------
   merge:
     needs: research-shard
     runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
@@ -159,7 +133,7 @@ jobs:
           echo "=== Shards downloaded ==="
           ls -lh /tmp/shards/
           echo "=== Merging ==="
-          python - <<'PY'
+          PYTHONPATH=src python - <<'PY'
           import csv, glob
           from pathlib import Path
           def merge_csv(pattern, out_path, headers):
@@ -176,12 +150,10 @@ jobs:
                               rows.append(row)
                   except Exception as e:
                       print(f"Failed to read {fp}: {e}")
-              # Deduplicate by slice_id, keep highest mean_ret_costadj
               by_id={}
               for row in rows:
                   sid=row.get("slice_id","")
                   h=row.get("horizon_bars","")
-                  # Ensure horizon tagging: single-horizon shards don't have :h tag
                   if h and f":h{h}" not in sid:
                       row["slice_id"]=f"{sid}:h{h}"
                       sid=row["slice_id"]
@@ -205,7 +177,6 @@ jobs:
           from breakwater.validation import VALIDATED_HEADERS, ASSET_EDGE_HEADERS
           n_disc = merge_csv("/tmp/shards/discovered_slices_h*.csv", Path("localdata/research/discovered_slices.csv"), DISCOVERY_HEADERS)
           n_val = merge_csv("/tmp/shards/validated_slices_h*.csv", Path("localdata/research/validated_slices.csv"), VALIDATED_HEADERS)
-          # Asset edges: simple concat (per-asset, no dedup by slice_id alone)
           files=glob.glob("/tmp/shards/asset_edges_h*.csv")
           if files:
               rows=[]
@@ -222,7 +193,6 @@ jobs:
               print(f"Merged asset_edges {len(rows)} rows from {len(files)} files")
           else:
               print("No asset_edges shards found")
-          # Sync book using merged validated file
           from breakwater.config import get_settings
           from breakwater.research_lifecycle import sync_book
           from datetime import datetime, timezone
@@ -240,7 +210,7 @@ jobs:
             echo "No localdata/research/validated_slices.csv found; skipping diagnostics."
             exit 0
           fi
-          python - <<'PY'
+          PYTHONPATH=src python - <<'PY'
           import csv
           from collections import Counter
           path = "localdata/research/validated_slices.csv"
@@ -288,7 +258,7 @@ jobs:
             echo "No localdata/research/validated_slices.csv found; skipping horizon summary."
             exit 0
           fi
-          python - <<'PY'
+          PYTHONPATH=src python - <<'PY'
           import csv
           from collections import defaultdict
           from math import isnan
@@ -353,7 +323,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f localdata/research/asset_edges.csv ]; then echo "No asset_edges.csv"; exit 0; fi
-          python - <<'PY'
+          PYTHONPATH=src python - <<'PY'
           import csv
           from collections import Counter
           path="localdata/research/asset_edges.csv"
