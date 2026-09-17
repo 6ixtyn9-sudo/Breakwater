@@ -74,12 +74,24 @@ PNL_DECAY_MIN_TRADES = 3
 
 # Per-asset-aware promotion: a validated slice must have at least this many
 # `green` per-asset rows to be promotable, and its promo edge is computed over
-# the green rows only (not the pooled all-symbol average). Deliberately a
-# module constant, NOT an env knob.
+# the green rows only (not the pooled all-symbol average).
 # HIP-3 asset classes have 2-5 members (e.g. commodity=5, fx=2). Requiring 3
 # green out of 5 is a 60% bar; requiring 3 out of 2 is impossible.  Two green
 # assets still proves the edge is not a single-asset fluke.
-MIN_GREEN_ASSETS_FOR_PROMOTION = 2
+# Sep 17: env-backed for neutral regime tuning (66% neutral market needs 1 green min).
+def _min_green_assets_for_promotion() -> int:
+    raw = os.getenv("BREAKWATER_MIN_GREEN_ASSETS_FOR_PROMOTION", "2")
+    try:
+        v = int(str(raw).strip())
+    except (TypeError, ValueError):
+        v = 2
+    return max(1, min(10, v))
+
+MIN_GREEN_ASSETS_FOR_PROMOTION = _min_green_assets_for_promotion()
+
+def _get_min_green_assets() -> int:
+    # Re-read env each sync_book call so workflow env vars take effect
+    return _min_green_assets_for_promotion()
 STOPOUT_COOLDOWN_BARS = 24
 BAR_SECONDS = 3600
 
@@ -385,7 +397,7 @@ def _promo_edge(row: ValidatedSlice, comp: dict[str, dict] | None) -> float:
     """Effective promo edge for a slice (green-only mean, else pooled).
 
     The green-only mean is only used when the slice has enough green assets
-    (>= MIN_GREEN_ASSETS_FOR_PROMOTION) to produce a stable estimate. With
+    (>= min_green) to produce a stable estimate. With
     only 1-2 green assets out of 100+, the green-only mean is noisy and can
     be inflated by chance, which poisons the pool floor for everyone.
     """
@@ -394,7 +406,7 @@ def _promo_edge(row: ValidatedSlice, comp: dict[str, dict] | None) -> float:
         if (
             c
             and c["green_edge_mean"] is not None
-            and int(c.get("n_green", 0)) >= MIN_GREEN_ASSETS_FOR_PROMOTION
+            and int(c.get("n_green", 0)) >= _get_min_green_assets()
         ):
             return c["green_edge_mean"]
     return row.mean_ret_costadj
@@ -451,7 +463,7 @@ def sync_book(
         if comp is None:
             return True
         c = comp.get(row.slice_id)
-        return bool(c and c["n_green"] >= MIN_GREEN_ASSETS_FOR_PROMOTION)
+        return bool(c and c["n_green"] >= _get_min_green_assets())
 
     def _row_promo_edge(row: ValidatedSlice) -> float:
         return float(_promo_edge(row, comp))

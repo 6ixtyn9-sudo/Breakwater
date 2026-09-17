@@ -80,6 +80,22 @@ FEATURE_COLUMNS = [
     "feat_keltner_pos",     # (close - KC_lower)/(KC_upper - KC_lower): Keltner pos
     "feat_cci_20",          # CCI(20): commodity channel index for range
     "feat_adx_14",          # ADX(14): trend strength, low=neutral regime
+    # --- NEW: 15 more for 70 total — universal neutral & Asia session ---
+    "feat_atr_percent",     # ATR14/close: ATR as % of price
+    "feat_kc_width",        # (KC_upper - KC_lower)/EMA20: Keltner width
+    "feat_bb_squeeze_20",   # BB_width / KC_width: squeeze indicator
+    "feat_vol_roc_20",      # volume / volume_prev_20 -1: volume ROC
+    "feat_price_roc_5",     # close / close_prev_5 -1: price ROC 5
+    "feat_ema_cross_10_20", # EMA10 - EMA20 / close: EMA cross
+    "feat_macd_12_26",      # EMA12 - EMA26: MACD line
+    "feat_donchian_width_20", # (high20 - low20)/ATR: Donchian width
+    "feat_asia_range",      # hl_range when Asia else 0: Asia session range
+    "feat_session_mom",     # intraday_mom * vol_regime: session momentum
+    "feat_vwap_upper_dist", # (high - VWAP)/VWAP: upper wick vs VWAP
+    "feat_vwap_lower_dist", # (low - VWAP)/VWAP: lower wick vs VWAP
+    "feat_rsi_21",          # RSI(21): longer momentum
+    "feat_stoch_d_14",      # SMA(stoch_k_14,3): stochastic %D
+    "feat_range_pos_50",    # (close - low50)/(high50 - low50): longer range pos
 ]
 
 
@@ -406,7 +422,6 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     df["feat_cci_20"] = (typical - typical_sma_20) / (0.015 * mean_dev.replace(0, np.nan))
 
     # ADX 14: trend strength, low = neutral regime (66% of time)
-    # Simplified ADX: use high/low/close
     up_move = high.diff()
     down_move = -low.diff()
     plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
@@ -418,6 +433,64 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     minus_di = 100.0 * (minus_dm.rolling(14).mean() / tr_smooth.replace(0, np.nan))
     dx = 100.0 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
     df["feat_adx_14"] = dx.rolling(14).mean()
+
+    # --- NEW: 15 more for 70 total ---
+    # ATR percent: ATR/close
+    df["feat_atr_percent"] = atr / close.replace(0, np.nan)
+
+    # Keltner width: (KC_upper - KC_lower)/EMA20
+    df["feat_kc_width"] = (kc_upper - kc_lower) / ema_20.replace(0, np.nan)
+
+    # BB squeeze: BB_width / KC_width, low = squeeze
+    df["feat_bb_squeeze_20"] = df["feat_bb_width_20"] / df["feat_kc_width"].replace(0, np.nan)
+
+    # Volume ROC: volume / volume_prev_20 -1
+    vol_prev_20 = vol.shift(20)
+    df["feat_vol_roc_20"] = vol / vol_prev_20.replace(0, np.nan) - 1.0
+
+    # Price ROC 5: close / close_prev_5 -1
+    df["feat_price_roc_5"] = close / close.shift(5).replace(0, np.nan) - 1.0
+
+    # EMA cross 10-20: (EMA10 - EMA20)/close
+    ema_10 = close.ewm(span=10, adjust=False).mean()
+    df["feat_ema_cross_10_20"] = (ema_10 - ema_20) / close.replace(0, np.nan)
+
+    # MACD 12-26: EMA12 - EMA26
+    ema_12 = close.ewm(span=12, adjust=False).mean()
+    ema_26 = close.ewm(span=26, adjust=False).mean()
+    df["feat_macd_12_26"] = ema_12 - ema_26
+
+    # Donchian width 20: (high20 - low20)/ATR
+    df["feat_donchian_width_20"] = (high_20 - low_20) / atr.replace(0, np.nan)
+
+    # Asia range: hl_range when Asia else 0
+    if "feat_hour_utc" in df.columns:
+        is_asia = df["feat_hour_utc"].between(0, 7)
+        df["feat_asia_range"] = df["feat_hl_range"].where(is_asia, 0.0)
+    else:
+        df["feat_asia_range"] = 0.0
+
+    # Session momentum: intraday_mom * vol_regime
+    df["feat_session_mom"] = df["feat_intraday_mom"].fillna(0) * df["feat_vol_regime"].fillna(0)
+
+    # VWAP upper/lower dist
+    df["feat_vwap_upper_dist"] = (high - vwap) / vwap.replace(0, np.nan)
+    df["feat_vwap_lower_dist"] = (low - vwap) / vwap.replace(0, np.nan)
+
+    # RSI 21: longer momentum
+    gain_21 = gain.ewm(span=21, adjust=False).mean()
+    loss_21 = loss.ewm(span=21, adjust=False).mean()
+    rs_21 = gain_21 / loss_21.replace(0, np.nan)
+    df["feat_rsi_21"] = 100.0 - (100.0 / (1.0 + rs_21))
+
+    # Stochastic %D: SMA of %K
+    df["feat_stoch_d_14"] = df["feat_stoch_k_14"].rolling(3).mean()
+
+    # Range pos 50: longer range position
+    high_50 = high.rolling(50).max()
+    low_50 = low.rolling(50).min()
+    range_50 = (high_50 - low_50).replace(0, np.nan)
+    df["feat_range_pos_50"] = (close - low_50) / range_50
 
     return df
 
