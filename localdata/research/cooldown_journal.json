@@ -670,5 +670,13 @@
     "signal_id": "ceef8d37b83acdaf",
     "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
     "stopped_at": "2026-09-17T10:00:35+00:00"
+  },
+  {
+    "pair": "PARA:TER",
+    "pnl_zar": "-1.7980",
+    "reason": "stop",
+    "signal_id": "3dc97c3809321996",
+    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:2:SHORT:h20",
+    "stopped_at": "2026-09-17T16:00:31+00:00"
   }
 ]
