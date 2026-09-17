@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-09-17 19:26 UTC
+# Breakwater daily print — 2026-09-17 19:47 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -16,8 +16,7 @@
 
 ## 2b. Claimed vs realised
 
-- Book: 26 slices (native 8 | hip3 18); validated pools: native 74 | hip3 160; book slices absent from pools: 16
-  - absent: `feat_trend_slope_20:2:LONG:h12` (native)
+- Book: 26 slices (native 8 | hip3 18); validated pools: native 108 | hip3 160; book slices absent from pools: 15
   - absent: `feat_ext_vs_ma_20:2:LONG:h15` (native)
   - absent: `feat_ext_vs_ma_50:2:LONG:h15` (native)
   - absent: `feat_ret_20:2:LONG:h14` (native)
@@ -27,11 +26,12 @@
   - absent: `feat_trend_slope_20:2:LONG:h11` (native)
   - absent: `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20` (hip3)
   - absent: `hip3_para_equity_c0:feat_ret_20:2:SHORT:h21` (hip3)
-  - ... and 6 more
-- Claimed edge (median mean_ret_costadj over 10 book slices present in the validated pools): +0.064% | at 100.69 ZAR mean notional/trade: +0.06 ZAR/trade
+  - absent: `hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20` (hip3)
+  - ... and 5 more
+- Claimed edge (median mean_ret_costadj over 11 book slices present in the validated pools): +0.072% | at 100.69 ZAR mean notional/trade: +0.07 ZAR/trade
 - Realised (105 real closes per lane_gate._is_real_close, net of fees): -0.37 ZAR/trade | sd 2.43 | SE 0.24
-- Gap: -0.44 ZAR/trade | t = -1.85 (one-sample t of realised mean vs the claimed constant) | verdict: NOT ESTABLISHED
-- native: claimed unknown (0/8 slices in pool 74) | realised 77 closes -0.47 ZAR | claimed unknown
+- Gap: -0.45 ZAR/trade | t = -1.88 (one-sample t of realised mean vs the claimed constant) | verdict: NOT ESTABLISHED
+- native: claimed median +0.522% over 1/8 slices (pool 108) ~ +0.53 ZAR | realised 77 closes -0.47 ZAR sd 2.54 SE 0.29 | gap -1.00 t -3.46 | FALLS SHORT
 - hip3: claimed median +0.064% over 10/18 slices (pool 160) ~ +0.06 ZAR | realised 28 closes -0.10 ZAR sd 2.11 | INSUFFICIENT SAMPLE (n<30)
 - Ledger: 33746 decision rows; 105 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 8 exit reasons); the other 33641 rows are skipped/guard decisions and never count
 
@@ -142,9 +142,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.0 bull=0.2857 neutral=0.7143 | symbols=21
+- Label: **neutral** | breadth bear=0.0 bull=0.3667 neutral=0.6333 | symbols=30
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-09-17T19:25:32Z
+- as_of: 2026-09-17T19:00:32Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
