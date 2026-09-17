@@ -61,6 +61,14 @@ FEATURE_COLUMNS = [
     "feat_asia_vol",        # vol_regime when Asia (0-7 UTC) else 0: Asia low vol
     "feat_donchian_break",  # (close - high20_prev)/ATR: breakout strength
     "feat_mean_rev_strength", # -ext_vs_ma_20 / realized_vol: mean reversion strength
+    # --- NEW: Gap & Intraday features for HIP-3 & native (Sep 17) ---
+    "feat_gap",             # (open - close_prev)/ATR: overnight gap
+    "feat_intraday_mom",    # (close - open)/(high - low): intraday momentum
+    "feat_hl_range",        # (high - low)/close: high-low range
+    "feat_overnight_ret",   # (open - close_prev)/close_prev: overnight return
+    "feat_vol_of_vol",      # std(realized_vol_20,20): vol of vol
+    "feat_price_accel",     # ret_1 - ret_1_prev: price acceleration
+    "feat_vol_breakout_strength", # vol_sma_ratio * abs(ret_1): volume-confirmed move
 ]
 
 
@@ -321,6 +329,24 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
 
     # Mean reversion strength: -ext_vs_ma_20 / realized_vol
     df["feat_mean_rev_strength"] = (-df["feat_ext_vs_ma_20"]) / df["feat_realized_vol_20"].replace(0, np.nan)
+
+    # --- NEW: Gap & Intraday features for HIP-3 & native (Sep 17) ---
+    open_series = df["open"] if "open" in df.columns else close
+    close_prev = close.shift(1)
+    # Gap: (open - close_prev)/ATR
+    df["feat_gap"] = (open_series - close_prev) / atr.replace(0, np.nan)
+    # Intraday momentum: (close - open)/(high - low)
+    df["feat_intraday_mom"] = (close - open_series) / bar_range
+    # High-low range: (high - low)/close
+    df["feat_hl_range"] = (high - low) / close.replace(0, np.nan)
+    # Overnight return: (open - close_prev)/close_prev
+    df["feat_overnight_ret"] = (open_series - close_prev) / close_prev.replace(0, np.nan)
+    # Vol of vol: std of realized_vol_20 over 20 bars
+    df["feat_vol_of_vol"] = df["feat_realized_vol_20"].rolling(20).std()
+    # Price acceleration: ret_1 - ret_1_prev
+    df["feat_price_accel"] = ret_1 - ret_1.shift(1)
+    # Volume breakout strength: vol_sma_ratio * abs(ret_1)
+    df["feat_vol_breakout_strength"] = df["feat_vol_sma_ratio"].fillna(0) * ret_1.abs().fillna(0)
 
     return df
 
