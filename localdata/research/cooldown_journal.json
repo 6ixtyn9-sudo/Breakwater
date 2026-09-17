@@ -654,5 +654,21 @@
     "signal_id": "41520d370966c451",
     "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
     "stopped_at": "2026-09-17T09:00:33+00:00"
+  },
+  {
+    "pair": "PARA:GLW",
+    "pnl_zar": "-0.9990",
+    "reason": "slice_gap",
+    "signal_id": "4acf0c9fc91c47a3",
+    "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
+    "stopped_at": "2026-09-17T10:00:35+00:00"
+  },
+  {
+    "pair": "PARA:SMCI",
+    "pnl_zar": "-0.7191",
+    "reason": "slice_gap",
+    "signal_id": "ceef8d37b83acdaf",
+    "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
+    "stopped_at": "2026-09-17T10:00:35+00:00"
   }
 ]
