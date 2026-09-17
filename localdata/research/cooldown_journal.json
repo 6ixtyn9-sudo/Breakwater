@@ -630,5 +630,29 @@
     "signal_id": "da659539cc1fdda0",
     "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:PUMPUSDC",
     "stopped_at": "2026-09-17T03:00:29+00:00"
+  },
+  {
+    "pair": "PARA:AVGO",
+    "pnl_zar": "-0.6008",
+    "reason": "stop",
+    "signal_id": "2cf309710f526532",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
+    "stopped_at": "2026-09-17T09:00:33+00:00"
+  },
+  {
+    "pair": "PARA:IREN",
+    "pnl_zar": "-2.8387",
+    "reason": "stop",
+    "signal_id": "18e0dbba97d07c54",
+    "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
+    "stopped_at": "2026-09-17T09:00:33+00:00"
+  },
+  {
+    "pair": "PARA:CRDO",
+    "pnl_zar": "-3.8111",
+    "reason": "stop",
+    "signal_id": "41520d370966c451",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
+    "stopped_at": "2026-09-17T09:00:33+00:00"
   }
 ]
