@@ -47,6 +47,20 @@ FEATURE_COLUMNS = [
     "feat_ret_autocorr",    # return autocorrelation: momentum vs mean-reversion regime
     # Session awareness (time-of-day edge)
     "feat_hour_utc",        # hour of day (0-23): session-specific patterns
+    # --- NEW: Neutral-regime & Asia-session features (Sep 17) ---
+    # Range trading: position in 20-bar high/low range, best for 66% neutral regime
+    "feat_range_pos_20",    # (close - low20)/(high20 - low20): 0=low, 1=high
+    "feat_bb_width_20",     # (BB_upper - BB_lower)/SMA20: bandwidth, low=squeeze
+    "feat_bb_pos_20",       # (close - BB_lower)/(BB_upper - BB_lower): pos in BB
+    "feat_atr_ratio",       # ATR14/ATR50: <1 contraction, >1 expansion
+    "feat_squeeze",         # bb_width * atr_ratio: low=squeeze, breakout imminent
+    "feat_time_since_high_20", # bars since 20-bar high /20: 0=at high
+    "feat_time_since_low_20",  # bars since 20-bar low /20: 0=at low
+    "feat_vol_contraction", # realized_vol20 / realized_vol60: <1 contraction
+    "feat_trend_neutral",   # 1 - abs(slope)/0.001 clipped: 1=neutral, 0=trending
+    "feat_asia_vol",        # vol_regime when Asia (0-7 UTC) else 0: Asia low vol
+    "feat_donchian_break",  # (close - high20_prev)/ATR: breakout strength
+    "feat_mean_rev_strength", # -ext_vs_ma_20 / realized_vol: mean reversion strength
 ]
 
 
@@ -191,6 +205,73 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     # Session awareness: hour of day (for session-specific pattern discovery)
     if "start" in df.columns:
         df["feat_hour_utc"] = pd.to_datetime(df["start"]).dt.hour.astype(float)
+    else:
+        df["feat_hour_utc"] = np.nan
+
+    # --- NEW: Neutral-regime & Asia-session features (Sep 17) ---
+    # Range position: (close - low20)/(high20 - low20), 0=at low, 1=at high
+    high_20 = high.rolling(20).max()
+    low_20 = low.rolling(20).min()
+    range_20 = (high_20 - low_20).replace(0, np.nan)
+    df["feat_range_pos_20"] = (close - low_20) / range_20
+
+    # Bollinger Bands: width and position
+    sma_20 = close.rolling(20).mean()
+    std_20 = close.rolling(20).std()
+    bb_upper = sma_20 + 2.0 * std_20
+    bb_lower = sma_20 - 2.0 * std_20
+    bb_range = (bb_upper - bb_lower).replace(0, np.nan)
+    df["feat_bb_width_20"] = (bb_upper - bb_lower) / sma_20.replace(0, np.nan)
+    df["feat_bb_pos_20"] = (close - bb_lower) / bb_range
+
+    # ATR ratio: ATR14 / ATR50, <1 contraction, >1 expansion
+    atr_50 = true_range.rolling(50).mean()
+    df["feat_atr_ratio"] = atr / atr_50.replace(0, np.nan)
+
+    # Squeeze: bb_width * atr_ratio, low = squeeze
+    df["feat_squeeze"] = df["feat_bb_width_20"].fillna(0) * df["feat_atr_ratio"].fillna(0)
+
+    # Time since high/low
+    def _time_since_high(s: pd.Series) -> float:
+        # s is rolling window of closes, return bars since max
+        vals = s.to_numpy()
+        if len(vals) < 20:
+            return np.nan
+        max_idx = np.argmax(vals)
+        return float(len(vals) - 1 - max_idx)
+
+    def _time_since_low(s: pd.Series) -> float:
+        vals = s.to_numpy()
+        if len(vals) < 20:
+            return np.nan
+        min_idx = np.argmin(vals)
+        return float(len(vals) - 1 - min_idx)
+
+    df["feat_time_since_high_20"] = close.rolling(20).apply(_time_since_high, raw=False) / 20.0
+    df["feat_time_since_low_20"] = close.rolling(20).apply(_time_since_low, raw=False) / 20.0
+
+    # Vol contraction: realized_vol20 / realized_vol60
+    vol_60 = ret_1.rolling(60).std()
+    df["feat_vol_contraction"] = df["feat_realized_vol_20"] / vol_60.replace(0, np.nan)
+
+    # Trend neutral: 1 - abs(slope)/0.001 clipped, 1=neutral, 0=trending
+    slope_abs = df["feat_trend_slope_20"].abs()
+    df["feat_trend_neutral"] = (1.0 - (slope_abs / 0.001).clip(upper=1.0)).fillna(0)
+
+    # Asia vol: vol_regime when Asia (0-7 UTC) else 0
+    # Use hour if available, else 0
+    if "feat_hour_utc" in df.columns:
+        is_asia = df["feat_hour_utc"].between(0, 7)
+        df["feat_asia_vol"] = df["feat_vol_regime"].where(is_asia, 0.0)
+    else:
+        df["feat_asia_vol"] = 0.0
+
+    # Donchian breakout: (close - high20_prev)/ATR
+    high_20_prev = high.shift(1).rolling(20).max()
+    df["feat_donchian_break"] = (close - high_20_prev) / atr.replace(0, np.nan)
+
+    # Mean reversion strength: -ext_vs_ma_20 / realized_vol
+    df["feat_mean_rev_strength"] = (-df["feat_ext_vs_ma_20"]) / df["feat_realized_vol_20"].replace(0, np.nan)
 
     return df
 
