@@ -133,9 +133,17 @@ jobs:
           ls -lh /tmp/shards/
           echo "=== Merging ==="
           PYTHONPATH=src python - <<'PY'
-          import csv, glob
+          import csv, glob, re
           from pathlib import Path
-          def merge_csv(pattern, out_path, headers):
+          def ensure_h_suffix(sid: str, h: str) -> str:
+              if not sid:
+                  return sid
+              if re.search(r":h\d+$", sid):
+                  return sid
+              if h:
+                  return f"{sid}:h{h}"
+              return sid
+          def merge_validated(pattern, out_path, headers):
               files = glob.glob(pattern)
               if not files:
                   print(f"No files for {pattern}")
@@ -153,9 +161,8 @@ jobs:
               for row in rows:
                   sid=row.get("slice_id","")
                   h=row.get("horizon_bars","")
-                  if h and f":h{h}" not in sid:
-                      row["slice_id"]=f"{sid}:h{h}"
-                      sid=row["slice_id"]
+                  row["slice_id"]=ensure_h_suffix(sid, h)
+                  sid=row["slice_id"]
                   prev=by_id.get(sid)
                   if prev is None:
                       by_id[sid]=row
@@ -172,26 +179,44 @@ jobs:
                   w.writerows(by_id.values())
               print(f"Merged {pattern} -> {out_path} {len(by_id)} rows from {len(files)} files (raw {len(rows)})")
               return len(by_id)
-          from breakwater.discovery import DISCOVERY_HEADERS
-          from breakwater.validation import VALIDATED_HEADERS, ASSET_EDGE_HEADERS
-          n_disc = merge_csv("/tmp/shards/discovered_slices_h*.csv", Path("localdata/research/discovered_slices.csv"), DISCOVERY_HEADERS)
-          n_val = merge_csv("/tmp/shards/validated_slices_h*.csv", Path("localdata/research/validated_slices.csv"), VALIDATED_HEADERS)
-          files=glob.glob("/tmp/shards/asset_edges_h*.csv")
-          if files:
+          def merge_asset_edges(pattern, out_path, headers):
+              files = glob.glob(pattern)
+              if not files:
+                  print(f"No asset_edges files for {pattern}")
+                  return 0
               rows=[]
               for fp in files:
                   with open(fp, newline="") as f:
                       r=csv.DictReader(f)
-                      rows.extend(list(r))
-              out=Path("localdata/research/asset_edges.csv")
-              out.parent.mkdir(parents=True, exist_ok=True)
-              with open(out,"w",newline="") as outf:
-                  w=csv.DictWriter(outf, fieldnames=ASSET_EDGE_HEADERS)
+                      for row in r:
+                          h=row.get("horizon_bars","")
+                          sid=row.get("slice_id","")
+                          row["slice_id"]=ensure_h_suffix(sid, h)
+                          rows.append(row)
+              by_key={}
+              for row in rows:
+                  key=(row.get("slice_id",""), row.get("asset","").upper())
+                  prev=by_key.get(key)
+                  if prev is None:
+                      by_key[key]=row
+                  else:
+                      try:
+                          if float(row.get("mean_ret_costadj",0)) > float(prev.get("mean_ret_costadj",0)):
+                              by_key[key]=row
+                      except:
+                          pass
+              out_path.parent.mkdir(parents=True, exist_ok=True)
+              with open(out_path,"w",newline="") as out:
+                  w=csv.DictWriter(out, fieldnames=headers)
                   w.writeheader()
-                  w.writerows(rows)
-              print(f"Merged asset_edges {len(rows)} rows from {len(files)} files")
-          else:
-              print("No asset_edges shards found")
+                  w.writerows(by_key.values())
+              print(f"Merged asset_edges {pattern} -> {out_path} {len(by_key)} rows from {len(files)} files (raw {len(rows)})")
+              return len(by_key)
+          from breakwater.discovery import DISCOVERY_HEADERS
+          from breakwater.validation import VALIDATED_HEADERS, ASSET_EDGE_HEADERS
+          n_disc = merge_validated("/tmp/shards/discovered_slices_h*.csv", Path("localdata/research/discovered_slices.csv"), DISCOVERY_HEADERS)
+          n_val = merge_validated("/tmp/shards/validated_slices_h*.csv", Path("localdata/research/validated_slices.csv"), VALIDATED_HEADERS)
+          n_edges = merge_asset_edges("/tmp/shards/asset_edges_h*.csv", Path("localdata/research/asset_edges.csv"), ASSET_EDGE_HEADERS)
           from breakwater.config import get_settings
           from breakwater.research_lifecycle import sync_book
           from datetime import datetime, timezone
@@ -323,7 +348,7 @@ jobs:
           set -euo pipefail
           if [ ! -f localdata/research/asset_edges.csv ]; then echo "No asset_edges.csv"; exit 0; fi
           PYTHONPATH=src python - <<'PY'
-          import csv
+          import csv, re
           from collections import Counter
           path="localdata/research/asset_edges.csv"
           c=Counter()
@@ -339,6 +364,15 @@ jobs:
           print(f"Asset edges total: {sum(c.values())}")
           print(f"  green: {green} blocked: {blocked} untested: {untested}")
           print(f"  breakdown: {c.most_common()}")
+          with open(path) as f:
+              r=csv.DictReader(f)
+              no_h=0; with_h=0
+              for row in r:
+                  if re.search(r":h\d+$", row.get("slice_id","")):
+                      with_h+=1
+                  else:
+                      no_h+=1
+          print(f"  slice_id with :h suffix: {with_h} without: {no_h}")
           PY
       - name: Run optional weighted deep-history audit
         if: ${{ inputs.deep_audit != '' && inputs.deep_audit != 'none' }}
