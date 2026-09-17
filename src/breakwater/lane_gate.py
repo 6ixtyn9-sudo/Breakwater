@@ -177,15 +177,31 @@ class GreenGate:
     enabled: bool
 
     def green(self, slice_id: str) -> bool:
-        """True when a slice may still open new entries under the gate."""
+        """True when a slice may still open new entries under the gate.
+
+        Fixed Sep 17: engine slices previously traded during warmup even when lane losing
+        (-43 ZAR native). Engine now requires lane to be actually green, not just warmup,
+        and requires its own positive history if lane is frozen. This stops engine feeding
+        a losing lane.
+        """
         if not self.enabled:
             return True
         if str(slice_id) in self.blocked_slices:
             return False
         lane = _lane(slice_id)
+        # Engine slices: require lane to be truly green, not just warmup
+        # Data: engine SELL -37 ZAR over 19 trades, native -43 ZAR — engine fed red lane
+        if str(slice_id).startswith("engine_"):
+            if lane == "native" and not self.native_green:
+                # Allow only if engine itself is proven green island
+                return str(slice_id) in self.green_islands
+            if lane == "hip3" and not self.hip3_green:
+                return str(slice_id) in self.green_islands
+            # Lane green, still check blocked
+            return True
         if lane not in self.frozen_lanes:
             return True
-        if PROBE_UNTESTED and not str(slice_id).startswith("engine_"):
+        if PROBE_UNTESTED:
             stats = self.slices.get(str(slice_id))
             if stats is None or stats.closed < SLICE_MIN_CLOSED:
                 return True

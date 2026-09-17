@@ -1,15 +1,13 @@
-"""Simple Trend Engine — high-frequency signals from basic price action.
+"""Simple Trend Engine — FIXED Sep 17 LONG only.
 
-Designed to always produce signals in any market condition. Uses the most
-basic momentum indicators that fire on virtually every bar:
-
-- 3-bar return direction (very short-term momentum)
-- Price vs SMA10 (micro-trend)
-- Consecutive up/down bars (streak detection)
-
-Low confidence, low edge — but always firing. The meta-ranker decides
-if they're worth trading based on regime fit.
+Data-driven fixes:
+- LONG only: SHORT 0 edge in 7488 discovered, engine SELL -37 ZAR
+- Horizon 20 (was 5): top paper h15-h19, discovery h24 +87 bps
+- Min confidence 0.4 (was 0.15), min edge 20 bps, no fallback noise
+- Uses winning features: ext_vs_ma_20, trend_slope_20, not ret3 which is noise
+- Asia session best, block EU open 08-09
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,7 +23,7 @@ class SimpleTrendSignal:
     entry_price: float
     stop_price: float
     atr: float
-    edge: float  # bps
+    edge: float
     confidence: float
     horizon_bars: int
     signal_type: str
@@ -44,18 +42,17 @@ def scan_simple_trend(
     frames: dict[str, pd.DataFrame],
     *,
     lookback: int = 3,
-    sma_period: int = 10,
-    min_confidence: float = 0.15,
+    sma_period: int = 20,
+    min_confidence: float = 0.4,
 ) -> list[SimpleTrendSignal]:
-    """Scan for basic trend signals that fire frequently.
+    """LONG only simple trend — ext_vs_ma_20 + SMA20.
 
-    This is the 'always-on' engine — designed to produce at least some
-    signals in every market condition. Low confidence, low edge.
+    No fallback, no noise, horizon 20.
     """
     signals: list[SimpleTrendSignal] = []
 
     for symbol, df in frames.items():
-        if df is None or len(df) < max(lookback, sma_period) + 14:
+        if df is None or len(df) < 60:
             continue
 
         close = df["close"].astype(float)
@@ -68,83 +65,61 @@ def scan_simple_trend(
 
         if np.isnan(cur_atr) or cur_atr <= 0:
             continue
-        # ATR floor: prevent tiny ATR from causing max leverage in low-vol periods
         cur_atr = max(cur_atr, cur_close * 0.005)
 
-        sma = close.rolling(sma_period).mean()
-        cur_sma = sma.iloc[-1]
+        sma20 = close.rolling(20).mean()
+        sma50 = close.rolling(50).mean()
+        cur_sma20 = sma20.iloc[-1]
+        cur_sma50 = sma50.iloc[-1]
 
-        # 3-bar return
-        ret = (cur_close - close.iloc[-lookback - 1]) / close.iloc[-lookback - 1]
+        if np.isnan(cur_sma20) or np.isnan(cur_sma50):
+            continue
 
-        # Consecutive direction
-        last3 = close.iloc[-3:].values
-        consecutive_up = all(last3[i] > last3[i - 1] for i in range(1, len(last3)))
-        consecutive_down = all(last3[i] < last3[i - 1] for i in range(1, len(last3)))
-
-        fired = False
-
-        # --- 3-bar momentum ---
-        if abs(ret) > 0.001:  # >0.1% move
-            side = "BUY" if ret > 0 else "SELL"
-            strength = min(1.0, abs(ret) / 0.03)
-            confidence = 0.2 + 0.2 * strength
-            edge_bps = max(1.0, abs(ret) * 10000 * 0.15)
-            stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+        # --- Winning feature: ext_vs_ma_20 LONG when 2% below SMA20 ---
+        # Paper: ext_vs_ma_20 +9.07 (100% win)
+        ext = (cur_close / cur_sma20) - 1.0 if cur_sma20 != 0 else 0
+        if ext <= -0.02 and cur_sma20 > cur_sma50:
+            # Below MA20 but MA20 > MA50 = pullback in uptrend
+            extremity = min(1.0, abs(ext) / 0.05)
+            confidence = 0.5 + 0.3 * extremity
+            edge_bps = max(20.0, abs(ext) * 10000 * 0.6)
+            stop = cur_close - 1.5 * cur_atr
             if confidence >= min_confidence:
                 signals.append(SimpleTrendSignal(
-                    pair=symbol, side=side, entry_price=cur_close,
+                    pair=symbol, side="BUY", entry_price=cur_close,
                     stop_price=stop, atr=cur_atr, edge=edge_bps,
-                    confidence=min(1.0, confidence), horizon_bars=5,
-                    signal_type="ret3", regime_fit=0.5,
+                    confidence=min(1.0, confidence), horizon_bars=20,
+                    signal_type="ext_vs_ma_20_pullback", regime_fit=0.9,
                 ))
-                fired = True
 
-        # --- Price vs SMA10 ---
-        if not np.isnan(cur_sma) and cur_sma > 0:
-            dist = (cur_close - cur_sma) / cur_sma
-            if abs(dist) > 0.001:  # >0.1% from SMA
-                side = "BUY" if dist > 0 else "SELL"
-                strength = min(1.0, abs(dist) / 0.05)
-                confidence = 0.2 + 0.15 * strength
-                edge_bps = max(1.0, abs(dist) * 10000 * 0.2)
-                stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
+        # --- Trend slope LONG: SMA20 > SMA50 and price > SMA20 ---
+        if cur_close > cur_sma20 > cur_sma50:
+            # Distance from SMA20
+            dist = (cur_close - cur_sma20) / cur_atr
+            if 0.2 <= dist <= 2.5:  # not too close, not overextended
+                confidence = 0.4 + min(0.3, dist * 0.1)
+                edge_bps = max(20.0, (cur_close - cur_sma50) / cur_close * 10000 * 0.15)
+                stop = cur_close - 1.5 * cur_atr
                 if confidence >= min_confidence:
                     signals.append(SimpleTrendSignal(
-                        pair=symbol, side=side, entry_price=cur_close,
+                        pair=symbol, side="BUY", entry_price=cur_close,
                         stop_price=stop, atr=cur_atr, edge=edge_bps,
-                        confidence=min(1.0, confidence), horizon_bars=5,
-                        signal_type="sma10_dist", regime_fit=0.5,
+                        confidence=min(1.0, confidence), horizon_bars=20,
+                        signal_type="trend_pullback", regime_fit=0.8,
                     ))
-                    fired = True
 
-        # --- Streak detection ---
-        if consecutive_up or consecutive_down:
-            side = "BUY" if consecutive_up else "SELL"
-            streak_ret = abs((close.iloc[-1] - close.iloc[-3]) / close.iloc[-3])
-            confidence = 0.25 + min(0.2, streak_ret * 10)
-            edge_bps = max(1.0, streak_ret * 10000 * 0.15)
-            stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
-            if confidence >= min_confidence:
-                signals.append(SimpleTrendSignal(
-                    pair=symbol, side=side, entry_price=cur_close,
-                    stop_price=stop, atr=cur_atr, edge=edge_bps,
-                    confidence=min(1.0, confidence), horizon_bars=5,
-                    signal_type="streak", regime_fit=0.5,
-                ))
-                fired = True
-
-        # --- Fallback: SMA direction (always-on guarantee) ---
-        # Ensures at least one signal per pair even in completely flat markets.
-        if not fired and not np.isnan(cur_sma) and cur_sma > 0:
-            side = "BUY" if cur_close >= cur_sma else "SELL"
-            edge_bps = 0.5
-            stop = cur_close - 1.5 * cur_atr if side == "BUY" else cur_close + 2.0 * cur_atr
-            signals.append(SimpleTrendSignal(
-                pair=symbol, side=side, entry_price=cur_close,
-                stop_price=stop, atr=cur_atr, edge=edge_bps,
-                confidence=0.15, horizon_bars=5,
-                signal_type="fallback_sma", regime_fit=0.3,
+    # Boost top pairs
+    top_pairs = {"ARBUSDC", "TAOUSDC", "SUIUSDC", "BNBUSDC", "SOLUSDC"}
+    boosted = []
+    for s in signals:
+        if s.pair in top_pairs:
+            boosted.append(SimpleTrendSignal(
+                pair=s.pair, side=s.side, entry_price=s.entry_price,
+                stop_price=s.stop_price, atr=s.atr, edge=s.edge * 1.2,
+                confidence=min(1.0, s.confidence * 1.1), horizon_bars=s.horizon_bars,
+                signal_type=s.signal_type, regime_fit=s.regime_fit,
             ))
+        else:
+            boosted.append(s)
 
-    return sorted(signals, key=lambda s: -s.confidence)
+    return sorted(boosted, key=lambda s: (-s.confidence, -s.edge))
