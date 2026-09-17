@@ -13,7 +13,7 @@ Engines:
 
 from breakwater.engines.momentum import MomentumSignal, scan_momentum
 from breakwater.engines.mean_reversion import MeanReversionSignal, scan_mean_reversion
-from breakwater.engines.lead_lag import LeadLagSignal, scan_lead_lag, scan_pairs_divergence
+from breakwater.engines.lead_lag import LeadLagSignal, scan_lead_lag
 from breakwater.engines.ranker import RankedSignal, rank_signals
 
 __all__ = [
@@ -24,6 +24,5 @@ __all__ = [
     "scan_momentum",
     "scan_mean_reversion",
     "scan_lead_lag",
-    "scan_pairs_divergence",
     "rank_signals",
 ]
