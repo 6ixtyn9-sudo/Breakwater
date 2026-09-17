@@ -69,6 +69,17 @@ FEATURE_COLUMNS = [
     "feat_vol_of_vol",      # std(realized_vol_20,20): vol of vol
     "feat_price_accel",     # ret_1 - ret_1_prev: price acceleration
     "feat_vol_breakout_strength", # vol_sma_ratio * abs(ret_1): volume-confirmed move
+    # --- NEW: Additional neutral & intraday features (Sep 17) - 10 more for 66% neutral ---
+    "feat_zscore_20",       # (close - SMA20)/std20: z-score mean reversion
+    "feat_stoch_k_14",      # (close - low14)/(high14 - low14): stochastic %K
+    "feat_williams_r_14",   # (high14 - close)/(high14 - low14): Williams %R
+    "feat_rsi_7",           # RSI(7): short-term momentum
+    "feat_vwap_dist",       # (close - VWAP)/VWAP: distance from VWAP
+    "feat_range_expansion", # (high-low)/ATR14: range expansion vs ATR
+    "feat_gap_fill_ratio",  # (close - open)/(open - close_prev): gap fill
+    "feat_keltner_pos",     # (close - KC_lower)/(KC_upper - KC_lower): Keltner pos
+    "feat_cci_20",          # CCI(20): commodity channel index for range
+    "feat_adx_14",          # ADX(14): trend strength, low=neutral regime
 ]
 
 
@@ -347,6 +358,66 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     df["feat_price_accel"] = ret_1 - ret_1.shift(1)
     # Volume breakout strength: vol_sma_ratio * abs(ret_1)
     df["feat_vol_breakout_strength"] = df["feat_vol_sma_ratio"].fillna(0) * ret_1.abs().fillna(0)
+
+    # --- NEW: Additional neutral & intraday features (Sep 17) - 10 more ---
+    # Z-score: (close - SMA20)/std20 - classic mean reversion
+    df["feat_zscore_20"] = (close - sma_20) / std_20.replace(0, np.nan)
+
+    # Stochastic %K: (close - low14)/(high14 - low14)
+    high_14 = high.rolling(14).max()
+    low_14 = low.rolling(14).min()
+    range_14 = (high_14 - low_14).replace(0, np.nan)
+    df["feat_stoch_k_14"] = (close - low_14) / range_14
+
+    # Williams %R: (high14 - close)/(high14 - low14) = 1 - stoch_k
+    df["feat_williams_r_14"] = (high_14 - close) / range_14
+
+    # RSI 7: short-term momentum
+    gain_7 = gain.ewm(span=7, adjust=False).mean()
+    loss_7 = loss.ewm(span=7, adjust=False).mean()
+    rs_7 = gain_7 / loss_7.replace(0, np.nan)
+    df["feat_rsi_7"] = 100.0 - (100.0 / (1.0 + rs_7))
+
+    # VWAP distance: (close - VWAP)/VWAP, VWAP approx = typical price weighted by volume
+    typical = (high + low + close) / 3.0
+    vwap = (typical * vol).rolling(20).sum() / vol.rolling(20).sum().replace(0, np.nan)
+    df["feat_vwap_dist"] = (close - vwap) / vwap.replace(0, np.nan)
+
+    # Range expansion: (high-low)/ATR14 - >1 expansion, <1 contraction
+    df["feat_range_expansion"] = (high - low) / atr.replace(0, np.nan)
+
+    # Gap fill ratio: (close - open)/(open - close_prev) - 1=fully filled, 0=not filled
+    gap = (open_series - close_prev).replace(0, np.nan)
+    df["feat_gap_fill_ratio"] = (close - open_series) / gap
+    # Clip extreme values
+    df["feat_gap_fill_ratio"] = df["feat_gap_fill_ratio"].clip(lower=-3, upper=3)
+
+    # Keltner Channel position: (close - KC_lower)/(KC_upper - KC_lower)
+    # KC = EMA20 ± 1.5*ATR14
+    ema_20 = close.ewm(span=20, adjust=False).mean()
+    kc_upper = ema_20 + 1.5 * atr
+    kc_lower = ema_20 - 1.5 * atr
+    kc_range = (kc_upper - kc_lower).replace(0, np.nan)
+    df["feat_keltner_pos"] = (close - kc_lower) / kc_range
+
+    # CCI 20: (typical - SMA20_typical)/(0.015*mean_dev)
+    typical_sma_20 = typical.rolling(20).mean()
+    mean_dev = (typical - typical_sma_20).abs().rolling(20).mean()
+    df["feat_cci_20"] = (typical - typical_sma_20) / (0.015 * mean_dev.replace(0, np.nan))
+
+    # ADX 14: trend strength, low = neutral regime (66% of time)
+    # Simplified ADX: use high/low/close
+    up_move = high.diff()
+    down_move = -low.diff()
+    plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
+    minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0.0)
+    plus_dm = pd.Series(plus_dm, index=df.index)
+    minus_dm = pd.Series(minus_dm, index=df.index)
+    tr_smooth = true_range.rolling(14).mean()
+    plus_di = 100.0 * (plus_dm.rolling(14).mean() / tr_smooth.replace(0, np.nan))
+    minus_di = 100.0 * (minus_dm.rolling(14).mean() / tr_smooth.replace(0, np.nan))
+    dx = 100.0 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
+    df["feat_adx_14"] = dx.rolling(14).mean()
 
     return df
 
