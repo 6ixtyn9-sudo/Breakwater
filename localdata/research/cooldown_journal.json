@@ -614,5 +614,13 @@
     "signal_id": "8ca44e7e94782484",
     "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
     "stopped_at": "2026-09-17T00:00:33+00:00"
+  },
+  {
+    "pair": "PARA:MELI",
+    "pnl_zar": "-1.7984",
+    "reason": "stop",
+    "signal_id": "b4f8bd4c61e12cae",
+    "slice_id": "hip3_para_equity_c0:feat_ext_vs_ma_10:0:SHORT:h17",
+    "stopped_at": "2026-09-17T01:00:34+00:00"
   }
 ]
