@@ -606,5 +606,13 @@
     "signal_id": "e58546f42afcaae0",
     "slice_id": "engine_momentum:trend_align:2:SELL:h15:FILUSDC",
     "stopped_at": "2026-09-16T19:00:30+00:00"
+  },
+  {
+    "pair": "PARA:COHR",
+    "pnl_zar": "-3.4660",
+    "reason": "stop",
+    "signal_id": "8ca44e7e94782484",
+    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
+    "stopped_at": "2026-09-17T00:00:33+00:00"
   }
 ]

@@ -1,19 +1,19 @@
 {
-  "as_of": "2026-09-16T23:32:35Z",
-  "bear": 18,
+  "as_of": "2026-09-17T00:00:33Z",
+  "bear": 14,
   "breadth": {
-    "bear": 0.6,
-    "bull": 0.1,
-    "neutral": 0.2667
+    "bear": 0.4667,
+    "bull": 0.1333,
+    "neutral": 0.4
   },
-  "bull": 3,
-  "confirmed_bear": true,
+  "bull": 4,
+  "confirmed_bear": false,
   "confirmed_bull": false,
-  "consecutive_bear": 30,
+  "consecutive_bear": 0,
   "consecutive_bull": 0,
-  "flip": true,
+  "flip": false,
   "flipped_from": "bear",
-  "label": "bear",
-  "neutral": 8,
+  "label": "neutral",
+  "neutral": 12,
   "schema": "breakwater.regime_shift.v1"
 }
