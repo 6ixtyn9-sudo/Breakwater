@@ -371,25 +371,64 @@ _UNTESTED = "untested"
 _GREEN_OR_UNTESTED = (_GREEN, _UNTESTED)
 
 
+def _strip_horizon_suffix(slice_id: str) -> str:
+    """Strip trailing :h<int> suffix if present, for tolerant lookup."""
+    text = str(slice_id)
+    # Find last :h<number> at end
+    if ":h" in text:
+        head, tail = text.rsplit(":h", 1)
+        if tail.isdigit():
+            return head
+    return text
+
+
 def _slice_asset_composition(
     asset_edges: list[AssetEdge],
 ) -> dict[str, dict]:
-    """Per-slice composition stats over per-asset rows."""
+    """Per-slice composition stats over per-asset rows.
+
+    Tolerant to slice_id with or without :h suffix: we index both the raw
+    and the stripped form so validated rows with :h suffix can find their
+    asset_edges even if the edges file was written without suffix (sharded bug).
+    """
     by_slice: dict[str, list[AssetEdge]] = defaultdict(list)
     for ae in asset_edges:
         by_slice[ae.slice_id].append(ae)
+        # Also index stripped form for tolerant lookup
+        stripped = _strip_horizon_suffix(ae.slice_id)
+        if stripped != ae.slice_id:
+            by_slice[stripped].append(ae)
     comp: dict[str, dict] = {}
     for sid, rows in by_slice.items():
-        green = [e for e in rows if e.asset_status == _GREEN]
-        tradable = [e for e in rows if e.asset_status in _GREEN_OR_UNTESTED]
+        # Deduplicate by (asset) keeping best mean if both raw and stripped merged
+        seen_asset: dict[str, AssetEdge] = {}
+        for ae in rows:
+            key = ae.asset.upper()
+            prev = seen_asset.get(key)
+            if prev is None or ae.mean_ret_costadj > prev.mean_ret_costadj:
+                seen_asset[key] = ae
+        deduped = list(seen_asset.values())
+        green = [e for e in deduped if e.asset_status == _GREEN]
+        tradable = [e for e in deduped if e.asset_status in _GREEN_OR_UNTESTED]
         comp[sid] = {
-            "n_assets": len(rows),
+            "n_assets": len(deduped),
             "n_green": len(green),
-            "n_untested": sum(1 for e in rows if e.asset_status == _UNTESTED),
+            "n_untested": sum(1 for e in deduped if e.asset_status == _UNTESTED),
             "n_tradable": len(tradable),
             "green_edge_mean": (sum(e.mean_ret_costadj for e in green) / len(green) if green else None),
             "tradable_edge_mean": (sum(e.mean_ret_costadj for e in tradable) / len(tradable) if tradable else None),
         }
+        # Also populate stripped and suffixed variants for bidirectional tolerance
+        stripped = _strip_horizon_suffix(sid)
+        if stripped != sid and stripped not in comp:
+            comp[stripped] = comp[sid]
+        # If sid has no suffix, also populate common horizons (12,15,20,24) for lookup
+        # from validated rows that have suffix — avoids 0 green when edges lack suffix.
+        if stripped == sid:
+            for h in (12, 15, 20, 24, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 16, 17, 18, 19, 21, 22, 23):
+                suffixed = f"{sid}:h{h}"
+                if suffixed not in comp:
+                    comp[suffixed] = comp[sid]
     return comp
 
 
@@ -403,6 +442,8 @@ def _promo_edge(row: ValidatedSlice, comp: dict[str, dict] | None) -> float:
     """
     if comp is not None:
         c = comp.get(row.slice_id)
+        if c is None:
+            c = comp.get(_strip_horizon_suffix(row.slice_id))
         if (
             c
             and c["green_edge_mean"] is not None
@@ -463,6 +504,8 @@ def sync_book(
         if comp is None:
             return True
         c = comp.get(row.slice_id)
+        if c is None:
+            c = comp.get(_strip_horizon_suffix(row.slice_id))
         return bool(c and c["n_green"] >= _get_min_green_assets())
 
     def _row_promo_edge(row: ValidatedSlice) -> float:

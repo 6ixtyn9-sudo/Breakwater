@@ -1439,7 +1439,10 @@ class BreakwaterEngine:
             )
 
         horizons = _parse_horizons_env()
-        multi = len(horizons) > 1
+        # Sharded runs have single horizon per shard but will be merged across horizons,
+        # so we must still tag slice_ids with :h to keep them unique and to match asset_edges.
+        shard_env = os.getenv("BREAKWATER_RESEARCH_SHARD", "").strip()
+        multi = len(horizons) > 1 or bool(shard_env)
 
         discovered = []
         validated = []
