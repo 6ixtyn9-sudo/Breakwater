@@ -17,7 +17,7 @@ defaults:
 jobs:
   guardian:
     runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
