@@ -1,4 +1,4 @@
-name: Breakwater Research Refresh (Sharded)
+name: Breakwater Research Refresh 
 on:
   workflow_dispatch:
     inputs:
