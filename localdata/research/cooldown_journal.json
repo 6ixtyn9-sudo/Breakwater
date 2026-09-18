@@ -709,15 +709,15 @@
     "reason": "slice_gap",
     "signal_id": "e670b7d17de7a235",
     "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
-    "stopped_at": "2026-09-18T12:22:56+00:00"
+    "stopped_at": "2026-09-18T13:00:27+00:00"
   },
   {
     "pair": "PARA:COHR",
-    "pnl_zar": "1.0979",
+    "pnl_zar": "1.5529",
     "reason": "slice_gap",
     "signal_id": "b21e6046b0a69b79",
     "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
-    "stopped_at": "2026-09-18T12:22:56+00:00"
+    "stopped_at": "2026-09-18T13:00:27+00:00"
   },
   {
     "pair": "PARA:NET",
@@ -725,6 +725,6 @@
     "reason": "slice_gap",
     "signal_id": "8847571b77e0d6ec",
     "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
-    "stopped_at": "2026-09-18T12:22:56+00:00"
+    "stopped_at": "2026-09-18T13:00:27+00:00"
   }
 ]
