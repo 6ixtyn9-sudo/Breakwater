@@ -1,4 +1,4 @@
-name: Breakwater HIP-3 Research (Sharded)
+name: Breakwater HIP-3 Research  
 on:
   workflow_dispatch:
 concurrency:
