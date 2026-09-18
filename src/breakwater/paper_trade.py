@@ -62,6 +62,7 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 from pathlib import Path
 
+from breakwater.costs import perp_round_trip_bps, spot_round_trip_decimal
 from breakwater.hip3 import hip3_in_market_session, hip3_slice_market_class
 from breakwater.monitor import SliceSignal, regime_of
 from breakwater.paper_counterfactual import (
@@ -163,16 +164,17 @@ def _env_decimal(name: str, default: str) -> Decimal:
 
 
 # Round-trip execution cost in bps (entry + exit), charged once per closed
-# trade. Fact-based venue schedules (base tier, taker on both sides):
-#   VALR spot fiat-quoted (BTCZAR ...): tier 1 taker 0.350% per side, per
-#     VALR's published "Spot Fiat Quote" fee table (0.180%/0.350% at
-#     zero 30-day volume) -> 70 bps round trip. A paper account has no
-#     live volume, so tier 1 is the honest default. Verify the account
-#     tier with scripts/fee_audit.py and override if it ever upgrades.
-#   Hyperliquid perp (native + HIP-3 builder perps): base tier taker
-#     0.045% per side -> 9 bps round trip.
+# trade. Quote-aware for VALR spot (see breakwater.costs):
+#   Fiat quote (BTCZAR): 70 bps. Crypto quote (BTCUSDT): 20 bps.
+#   Hyperliquid perp: 9 bps.
 SPOT_FEE_BPS = _env_decimal("BREAKWATER_SPOT_FEE_BPS", "70")
 PERP_FEE_BPS = _env_decimal("BREAKWATER_PERP_FEE_BPS", "9")
+
+
+def _position_fee_bps(position: dict) -> Decimal:
+    if str(position.get("kind") or "").upper() == "PERP":
+        return Decimal(str(perp_round_trip_bps()))
+    return spot_round_trip_decimal(str(position.get("pair") or ""))
 
 
 # Trailing feature flags: ON by default. The counterfactual analysis showed
@@ -541,7 +543,7 @@ def _cost_adjusted_risk_zar(positions: list[dict]) -> tuple[Decimal, bool]:
             return total, True
         if stop_risk is None or not notional.is_finite():
             return total, True
-        fee_bps = PERP_FEE_BPS if str(position.get("kind")).upper() == "PERP" else SPOT_FEE_BPS
+        fee_bps = _position_fee_bps(position)
         total += stop_risk + notional * fee_bps / Decimal(10000)
     return total, False
 
@@ -1204,7 +1206,7 @@ def run_paper_cycle(
         if frame is None or frame.empty:
             missing = _coerce_int(position.get("missing_bars"), 0) + 1
             if missing >= missing_bars_exit:
-                fee_bps = PERP_FEE_BPS if position["kind"] == "PERP" else SPOT_FEE_BPS
+                fee_bps = _position_fee_bps(position)
                 fees = notional_zar * fee_bps / Decimal(10000)
                 pnl_zar = -fees
                 outcome = "loss"
@@ -1410,7 +1412,7 @@ def run_paper_cycle(
                 entry = Decimal(str(position["entry_price"]))
                 notional = Decimal(str(position["notional_zar"]))
                 side = str(position["side"])
-                fee_bps = PERP_FEE_BPS if str(position.get("kind")).upper() == "PERP" else SPOT_FEE_BPS
+                fee_bps = _position_fee_bps(position)
                 direction = Decimal(1) if side == "BUY" else Decimal(-1)
                 gross = (close_price - entry) / entry * direction * notional
                 exit_notional = notional * close_price / entry if entry > 0 else notional

@@ -28,7 +28,8 @@ MODELED_SPOT = os.getenv("BREAKWATER_SPOT_FEE_BPS", "70")
 MODELED_PERP = os.getenv("BREAKWATER_PERP_FEE_BPS", "9")
 
 PUBLISHED = (
-    "VALR spot fiat-quoted (BTCZAR ...) tier 1, 0 volume:   taker 35 bps/side  -> 70 bps round trip",
+    "VALR spot fiat-quoted (BTCZAR ...) tier 1:             taker 35 bps/side  -> 70 bps round trip",
+    "VALR spot crypto-quoted (BTCUSDT/USDC) tier 1:         taker 10 bps/side  -> 20 bps round trip",
     "VALR spot fiat-quoted tier 2, 50k USDT 30d:            taker 25 bps/side  -> 50 bps round trip",
     "VALR spot fiat-quoted tier 3, 250k USDT 30d:           taker 13 bps/side  -> 26 bps round trip",
     "Hyperliquid perp base tier:                            taker 4.5 bps/side -> 9 bps round trip",

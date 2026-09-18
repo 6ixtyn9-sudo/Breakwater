@@ -266,15 +266,21 @@ def prepare_pooled(
     feature_columns: list[str],
     cost_bps: float,
     horizon_bars: int = 1,
+    *,
+    cost_bps_for_symbol=None,
 ) -> pd.DataFrame:
-    cost = cost_bps / 10000.0
+    default_cost = cost_bps / 10000.0
     if "symbol" not in frame.columns:
         raise ValueError("pooled frame must carry a symbol column")
 
     from breakwater.features import forward_mae_atr
 
     parts = []
-    for _, group in frame.groupby("symbol", sort=False):
+    for symbol, group in frame.groupby("symbol", sort=False):
+        if cost_bps_for_symbol is not None:
+            cost = float(cost_bps_for_symbol(str(symbol))) / 10000.0
+        else:
+            cost = default_cost
         group = group.sort_values("start").reset_index(drop=True)
         binned = bin_states(group, feature_columns)
 

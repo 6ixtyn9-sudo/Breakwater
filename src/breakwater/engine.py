@@ -1448,13 +1448,13 @@ class BreakwaterEngine:
         validated = []
         asset_edges: list[AssetEdge] = []
 
-        # Round-trip execution cost in bps, shared with the paper engine
-        # (BREAKWATER_SPOT_FEE_BPS / BREAKWATER_PERP_FEE_BPS). Spot is VALR
-        # spot fiat-quoted tier 1 (70 bps); perp is Hyperliquid base tier
-        # (9 bps). See the cost-model comment in paper_trade.py.
-        spot_cost_bps = _fee_bps_env("BREAKWATER_SPOT_FEE_BPS", "70")
-        perp_cost_bps = _fee_bps_env("BREAKWATER_PERP_FEE_BPS", "9")
-        for kind, cost_bps in (("SPOT", spot_cost_bps), ("PERP", perp_cost_bps)):
+        # Round-trip execution cost in bps, shared with the paper engine.
+        # SPOT is quote-aware (ZAR 70 bps, USDT/USDC 20 bps). Fiat-quoted
+        # names are dropped from the research pool: 70 bps kills the edge.
+        from breakwater.costs import is_fiat_quoted, perp_round_trip_bps, spot_round_trip_bps
+
+        perp_cost_bps = perp_round_trip_bps()
+        for kind, cost_bps in (("SPOT", spot_round_trip_bps("BTCUSDT")), ("PERP", perp_cost_bps)):
             # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
             for pair, k in all_targets:
@@ -1463,13 +1463,19 @@ class BreakwaterEngine:
                 frame = frames.get(pair.upper())
                 if frame is None:
                     continue
+                if kind == "SPOT" and is_fiat_quoted(pair):
+                    continue
                 kind_frames[pair.upper()] = frame
 
             pooled = _pool_frames(kind_frames)
 
             for horizon_bars in horizons:
                 prepared = prepare_pooled(
-                    pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars
+                    pooled,
+                    FEATURE_COLUMNS,
+                    cost_bps,
+                    horizon_bars=horizon_bars,
+                    cost_bps_for_symbol=(spot_round_trip_bps if kind == "SPOT" else None),
                 )
                 found = _slice_stats(
                     prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars

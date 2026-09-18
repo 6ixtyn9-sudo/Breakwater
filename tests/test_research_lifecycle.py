@@ -395,10 +395,11 @@ def test_min_net_edge_floor_is_kind_aware(monkeypatch):
 
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
     monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
     monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
-    # Spot: cost term 2 x 70 bps = 140 bps dominates the static 20 bps.
-    assert rl._min_net_edge_floor("SPOT") == 0.014
+    # Spot promotion uses crypto-quoted cost: 2 x 20 bps = 40 bps.
+    assert rl._min_net_edge_floor("SPOT") == 0.004
     # Perp: cost term 2 x 9 bps = 18 bps sits below the static 20 bps.
     assert rl._min_net_edge_floor("PERP") == 0.002
 
@@ -408,10 +409,11 @@ def test_min_net_edge_floor_static_bar_raises_perp(monkeypatch):
 
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.004")
     monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
     monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
     assert rl._min_net_edge_floor("PERP") == 0.004
-    assert rl._min_net_edge_floor("SPOT") == 0.014
+    assert rl._min_net_edge_floor("SPOT") == 0.004
 
 
 def test_min_net_edge_floor_mult_zero_disables_cost_term(monkeypatch):
@@ -502,18 +504,20 @@ def test_autotune_bar_never_stricter_than_static_in_thin_pool(tmp_path, monkeypa
 
 
 def test_concentrated_path_respects_cost_linked_floor(monkeypatch):
-    """The hunt path must not be a backdoor: a spot edge above the static 40
-    bps bar but below the cost-linked 140 bps floor is not promotable."""
+    """The hunt path must not be a backdoor: a spot edge above the static bar
+    but below the crypto-quoted cost-linked floor is not promotable."""
     from breakwater import research_lifecycle as rl
 
     monkeypatch.setenv("BREAKWATER_CONCENTRATED_PROMOTE", "1")
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.004")
     monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
     monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
+    monkeypatch.setenv("BREAKWATER_CONCENTRATED_MIN_MEAN", "0.002")
 
     def row(kind):
-        # 50 bps net: above the static 40 bps bar, below spot's 140 bps.
+        # Perp 50 bps clears 40 bps static. Spot 30 bps fails crypto 40 bps floor.
         return ValidatedSlice(
             slice_id=f"feat:0:LONG:{kind}",
             kind=kind,
@@ -526,7 +530,7 @@ def test_concentrated_path_respects_cost_linked_floor(monkeypatch):
             fold_mean_rets="0.001,0.001,0.001,0.001,0.001",
             fold_sizes="400,400,400,400,400",
             n=5000,
-            mean_ret_costadj=0.005,
+            mean_ret_costadj=0.005 if kind == "PERP" else 0.003,
             p_value=0.001,
             validated=False,
             temporal_pass=True,

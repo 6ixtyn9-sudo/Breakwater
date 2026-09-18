@@ -153,17 +153,13 @@ def _min_net_edge() -> float:
 
 
 def _cost_bps(kind: str) -> float:
-    # Round-trip execution cost per kind. Must stay in sync with the cost
-    # model in paper_trade.py / engine.py (same env vars and defaults).
+    # Promotion floor for SPOT uses crypto-quoted VALR cost (20 bps RT).
+    # Fiat-quoted ZAR (70 bps) is excluded from research; see costs.py.
+    from breakwater.costs import kind_round_trip_bps, spot_round_trip_bps
+
     if str(kind).strip().upper() == "SPOT":
-        name, default = "BREAKWATER_SPOT_FEE_BPS", "70"
-    else:
-        name, default = "BREAKWATER_PERP_FEE_BPS", "9"
-    try:
-        value = float(os.getenv(name, default))
-    except (TypeError, ValueError):
-        value = float(default)
-    return value if math.isfinite(value) and value >= 0 else float(default)
+        return spot_round_trip_bps("BTCUSDT")
+    return kind_round_trip_bps(kind)
 
 
 def _min_net_edge_floor(kind: str) -> float:
@@ -174,10 +170,9 @@ def _min_net_edge_floor(kind: str) -> float:
     The cost term is the margin of safety: at k=2 a slice must still net
     one full round trip even if fees or slippage double. Armed in the
     research workflow (k=2); the code default is 0 (static bar only) so
-    bare local runs keep their legacy behavior. With k=2, spot at tier-1
-    cost (70 bps round trip) carries a 140 bps floor - dead by design,
-    no special-casing. Perp's cost term (18 bps) sits below the static
-    bar, so the static bar remains the perp quality dial.
+    bare local runs keep their legacy behavior. With k=2, crypto-quoted
+    spot (20 bps RT) carries a 40 bps floor. Fiat-quoted ZAR is not
+    researched. Perp's cost term (18 bps) sits below a 40 bps static bar.
     """
     try:
         mult = float(os.getenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0"))
