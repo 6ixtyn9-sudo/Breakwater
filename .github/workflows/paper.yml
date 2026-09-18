@@ -2,7 +2,7 @@ name: Breakwater Paper Trading
 on:
   workflow_dispatch:
 concurrency:
-  group: breakwater-guardian
+  group: breakwater-paper
   cancel-in-progress: false
 permissions:
   contents: write
