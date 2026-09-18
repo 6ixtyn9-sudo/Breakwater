@@ -28,7 +28,7 @@ jobs:
         horizon: [12, 15, 20, 24]
         kind: [SPOT, PERP]
     runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
-    timeout-minutes: 180
+    timeout-minutes: 360
     name: research h${{ matrix.horizon }} ${{ matrix.kind }}
     steps:
       - name: Checkout
