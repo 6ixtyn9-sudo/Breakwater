@@ -121,6 +121,7 @@ jobs:
           BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_TOP_QUANTILE || '0.25' }}
           BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE: ${{ vars.BREAKWATER_MIN_NET_EDGE_KEEP_QUANTILE || '0.40' }}
           BREAKWATER_SPOT_FEE_BPS: ${{ vars.BREAKWATER_SPOT_FEE_BPS || '70' }}
+          BREAKWATER_SPOT_CRYPTO_FEE_BPS: ${{ vars.BREAKWATER_SPOT_CRYPTO_FEE_BPS || '20' }}
           BREAKWATER_PERP_FEE_BPS: ${{ vars.BREAKWATER_PERP_FEE_BPS || '9' }}
           BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES || '2' }}
           BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT: ${{ vars.BREAKWATER_PROMOTION_MULTI_HORIZON_SELECT || 'edge_per_bar' }}
@@ -226,6 +227,8 @@ jobs:
           print(f"=== Book sync summary ===")
           for k,v in summary.items():
               print(f"  {k}: {v}")
+          print(f"  spot_fee_bps: {settings.spot_fee_bps}")
+          print(f"  spot_crypto_fee_bps: {getattr(settings, 'spot_crypto_fee_bps', None)}")
           PY
       - name: Validation diagnostics summary
         if: always()
@@ -245,14 +248,19 @@ jobs:
               if not s: return []
               return [t.strip() for t in s.split(",") if t.strip()]
           total=0; validated_true=0; by_gate_false=Counter(); by_reason=Counter(); near_miss=[]
+          by_kind=Counter(); val_kind=Counter()
           with open(path, newline="") as f:
               r=csv.DictReader(f)
               missing=[c for c in required_cols if c not in (r.fieldnames or [])]
               if missing: raise SystemExit(f"validated_slices.csv missing columns: {missing}")
               for row in r:
                   total+=1
+                  kind=(row.get("kind") or "")
+                  by_kind[kind]+=1
                   ok=(row.get("validated")=="True")
-                  if ok: validated_true+=1
+                  if ok:
+                      validated_true+=1
+                      val_kind[kind]+=1
                   for g in ["temporal_pass","direction_ok","breadth_ok","recency_ok","mean_positive"]:
                       if row.get(g)=="False": by_gate_false[g]+=1
                   if row.get("regime_confounded")=="True": by_gate_false["regime_confounded"]+=1
@@ -264,6 +272,8 @@ jobs:
                       near_miss.append((mean,row.get("slice_id",""),reasons[0]))
           print(f"Rows: {total}")
           print(f"Validated True: {validated_true}")
+          print(f"By kind: {by_kind}")
+          print(f"Validated True by kind: {val_kind}")
           print("")
           print("Gate failures (count of rows where gate is False / confounded True):")
           for k,v in by_gate_false.most_common(): print(f"  {k:18s} {v}")
