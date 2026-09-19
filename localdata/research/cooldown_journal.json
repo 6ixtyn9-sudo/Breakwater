@@ -750,5 +750,29 @@
     "signal_id": "1cf653a3545da0af",
     "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
     "stopped_at": "2026-09-19T10:00:28+00:00"
+  },
+  {
+    "pair": "PARA:AVGO",
+    "pnl_zar": "1.4188",
+    "reason": "slice_gap",
+    "signal_id": "ede0534511bcbe27",
+    "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
+    "stopped_at": "2026-09-19T13:00:29+00:00"
+  },
+  {
+    "pair": "PARA:COHR",
+    "pnl_zar": "-3.0243",
+    "reason": "slice_gap",
+    "signal_id": "e44adf581abff0cb",
+    "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
+    "stopped_at": "2026-09-19T13:00:29+00:00"
+  },
+  {
+    "pair": "PARA:CRDO",
+    "pnl_zar": "1.0012",
+    "reason": "slice_gap",
+    "signal_id": "6f592cb65c430047",
+    "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
+    "stopped_at": "2026-09-19T13:00:29+00:00"
   }
 ]
