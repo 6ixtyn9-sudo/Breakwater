@@ -1,4 +1,4 @@
-name: Breakwater Research Refresh 
+name: Breakwater Research Refresh  
 on:
   workflow_dispatch:
     inputs:
@@ -95,7 +95,7 @@ jobs:
   merge:
     needs: research-shard
     runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
-    timeout-minutes: 360
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -375,16 +375,51 @@ jobs:
                       no_h+=1
           print(f"  slice_id with :h suffix: {with_h} without: {no_h}")
           PY
-      - name: Run optional weighted deep-history audit
-        if: ${{ inputs.deep_audit != '' && inputs.deep_audit != 'none' }}
-        env:
-          BREAKWATER_MODE: readonly
-          BREAKWATER_DATA_DIR: localdata
-          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: "0.05"
-        run: |
-          PYTHONPATH=src python scripts/breakwater.py deep-research-audit --lane "${{ inputs.deep_audit }}" --max-pairs 40 --candle-count 5000
       - name: Persist research inputs and status
         if: always()
         env:
           BREAKWATER_HEARTBEAT_URL: ${{ secrets.BREAKWATER_HEARTBEAT_URL }}
         run: bash scripts/commit_state.sh research
+  deep-audit:
+    needs: merge
+    if: ${{ inputs.deep_audit != '' && inputs.deep_audit != 'none' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: ${{ inputs.deep_audit == 'all' && fromJSON('["native","hip3"]') || fromJSON(format('["{0}"]', inputs.deep_audit)) }}
+    runs-on: ${{ vars.BREAKWATER_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 330
+    name: deep-audit ${{ matrix.lane }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install dependencies
+        run: python -m pip install --require-hashes -r requirements.lock
+      - name: Weighted deep-history audit ${{ matrix.lane }}
+        env:
+          BREAKWATER_MODE: readonly
+          BREAKWATER_DATA_DIR: localdata
+          BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS: "0.05"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          echo "deep-audit lane=${{ matrix.lane }} start $(date -u +%H:%M:%S)"
+          PYTHONPATH=src python -u scripts/breakwater.py deep-research-audit \
+            --lane "${{ matrix.lane }}" --max-pairs 40 --candle-count 5000 \
+            --output-dir "localdata/deep_audit/${{ matrix.lane }}"
+          echo "deep-audit lane=${{ matrix.lane }} done $(date -u +%H:%M:%S)"
+          ls -lh localdata/deep_audit/${{ matrix.lane }}/ || true
+      - name: Upload deep-audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-audit-${{ matrix.lane }}
+          path: localdata/deep_audit/${{ matrix.lane }}/
+          if-no-files-found: warn
+          retention-days: 14
