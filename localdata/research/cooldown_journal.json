@@ -726,5 +726,21 @@
     "signal_id": "8847571b77e0d6ec",
     "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
     "stopped_at": "2026-09-18T13:00:27+00:00"
+  },
+  {
+    "pair": "PARA:CRWD",
+    "pnl_zar": "0.4206",
+    "reason": "slice_gap",
+    "signal_id": "e1eea4063abea730",
+    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11",
+    "stopped_at": "2026-09-19T08:00:27+00:00"
+  },
+  {
+    "pair": "PARA:TTWO",
+    "pnl_zar": "0.7679",
+    "reason": "slice_gap",
+    "signal_id": "9ebe41375f6277b2",
+    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11",
+    "stopped_at": "2026-09-19T08:00:27+00:00"
   }
 ]
