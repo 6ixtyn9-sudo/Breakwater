@@ -838,5 +838,21 @@
     "signal_id": "b03ac802ea1d61e8",
     "slice_id": "feat_range_expansion:0:LONG:h24",
     "stopped_at": "2026-09-20T14:00:25+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "2.3586",
+    "reason": "slice_gap",
+    "signal_id": "7f31426d01823d2e",
+    "slice_id": "feat_hour_utc:0:LONG:h24",
+    "stopped_at": "2026-09-20T20:00:26+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "2.6035",
+    "reason": "slice_gap",
+    "signal_id": "f3eb1b67b6619fb0",
+    "slice_id": "feat_hour_utc:0:LONG:h24",
+    "stopped_at": "2026-09-20T20:00:26+00:00"
   }
 ]
