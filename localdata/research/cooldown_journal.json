@@ -774,5 +774,53 @@
     "signal_id": "6f592cb65c430047",
     "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
     "stopped_at": "2026-09-19T13:00:29+00:00"
+  },
+  {
+    "pair": "SOLZAR",
+    "pnl_zar": "-5.9524",
+    "reason": "stop",
+    "signal_id": "25bd5958de0ce525",
+    "slice_id": "feat_close_pos_ma:1:LONG:h24",
+    "stopped_at": "2026-09-20T03:00:22+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "-3.9565",
+    "reason": "stop",
+    "signal_id": "afbc842838dccd99",
+    "slice_id": "feat_vol_breakout:2:LONG:h15",
+    "stopped_at": "2026-09-20T03:00:22+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-3.7188",
+    "reason": "stop",
+    "signal_id": "02db46e665e66b5d",
+    "slice_id": "feat_close_pos_ma:2:LONG:h20",
+    "stopped_at": "2026-09-20T03:00:22+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-2.3328",
+    "reason": "stop",
+    "signal_id": "0a1cdacfbc58c60c",
+    "slice_id": "feat_ext_strength:2:LONG:h12",
+    "stopped_at": "2026-09-20T03:00:22+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-2.6732",
+    "reason": "stop",
+    "signal_id": "6b4fcc071edd518c",
+    "slice_id": "feat_ext_vs_ma_50:2:LONG:h12",
+    "stopped_at": "2026-09-20T03:00:22+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-2.1354",
+    "reason": "stop",
+    "signal_id": "c3330a748afb830a",
+    "slice_id": "feat_range_expansion:0:LONG:h24",
+    "stopped_at": "2026-09-20T03:00:22+00:00"
   }
 ]
