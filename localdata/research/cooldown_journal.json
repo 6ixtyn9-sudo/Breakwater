@@ -822,5 +822,21 @@
     "signal_id": "c3330a748afb830a",
     "slice_id": "feat_range_expansion:0:LONG:h24",
     "stopped_at": "2026-09-20T03:00:22+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-2.5737",
+    "reason": "slice_gap",
+    "signal_id": "a0d658aca775e862",
+    "slice_id": "feat_range_expansion:0:LONG:h24",
+    "stopped_at": "2026-09-20T14:00:25+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-1.1328",
+    "reason": "slice_gap",
+    "signal_id": "b03ac802ea1d61e8",
+    "slice_id": "feat_range_expansion:0:LONG:h24",
+    "stopped_at": "2026-09-20T14:00:25+00:00"
   }
 ]
