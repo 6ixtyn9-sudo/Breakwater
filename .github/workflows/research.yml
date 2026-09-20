@@ -227,8 +227,6 @@ jobs:
           print(f"=== Book sync summary ===")
           for k,v in summary.items():
               print(f"  {k}: {v}")
-          print(f"  spot_fee_bps: {settings.spot_fee_bps}")
-          print(f"  spot_crypto_fee_bps: {getattr(settings, 'spot_crypto_fee_bps', None)}")
           PY
       - name: Validation diagnostics summary
         if: always()
