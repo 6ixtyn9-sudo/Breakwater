@@ -854,5 +854,21 @@
     "signal_id": "f3eb1b67b6619fb0",
     "slice_id": "feat_hour_utc:0:LONG:h24",
     "stopped_at": "2026-09-20T20:00:26+00:00"
+  },
+  {
+    "pair": "PARA:AVGO",
+    "pnl_zar": "-7.1256",
+    "reason": "stop",
+    "signal_id": "3639dbde09614a13",
+    "slice_id": "hip3_para_equity_c0:feat_vol_trend:2:SHORT:h20",
+    "stopped_at": "2026-09-22T01:00:31+00:00"
+  },
+  {
+    "pair": "PARA:CRDO",
+    "pnl_zar": "-3.7769",
+    "reason": "stop",
+    "signal_id": "4f2a52c55caab2ad",
+    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11",
+    "stopped_at": "2026-09-22T01:00:31+00:00"
   }
 ]
