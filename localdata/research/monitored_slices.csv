@@ -228,7 +228,7 @@ feat_rsi_divergence:2:LONG:h20,PERP,feat_rsi_divergence,2,LONG,monitored,2026-09
 feat_buy_vol_ratio:1:LONG:h24,PERP,feat_buy_vol_ratio,1,LONG,monitored,2026-09-20T00:54:37.126742+00:00,,0,0,0,0,,0.004878,10023,0.000075,24,3.500,validated_walk_forward,False,True,34,0.654
 feat_close_position:1:LONG:h24,PERP,feat_close_position,1,LONG,monitored,2026-09-20T00:54:37.126742+00:00,,0,0,0,0,,0.004878,10023,0.000075,24,3.500,validated_walk_forward,False,True,34,0.654
 feat_ext_vs_ma_50:0:LONG:h24,PERP,feat_ext_vs_ma_50,0,LONG,monitored,2026-09-20T00:54:37.126742+00:00,,0,0,0,0,,0.004521,10012,0.005436,24,3.500,validated_walk_forward,False,True,41,0.661
-feat_close_pos_ma:2:LONG:h20,PERP,feat_close_pos_ma,2,LONG,monitored,2026-09-20T00:54:37.126742+00:00,1790024400,2,1,1,5.0751,,0.009715,10051,0.000021,20,3.500,validated_walk_forward,False,True,34,0.810
+feat_close_pos_ma:2:LONG:h20,PERP,feat_close_pos_ma,2,LONG,monitored,2026-09-20T00:54:37.126742+00:00,1790060400,3,1,2,5.0107,,0.009715,10051,0.000021,20,3.500,validated_walk_forward,False,True,34,0.810
 feat_session_mom:2:LONG:h24,PERP,feat_session_mom,2,LONG,monitored,2026-09-20T00:54:37.126742+00:00,,0,0,0,0,,0.007347,10905,0.000000,24,3.500,validated_walk_forward,False,True,47,0.746
 feat_ret_1:2:LONG:h24,PERP,feat_ret_1,2,LONG,monitored,2026-09-20T00:54:37.126742+00:00,,0,0,0,0,,0.006569,10676,0.000000,24,3.500,validated_walk_forward,False,True,47,0.746
 feat_intraday_mom:2:LONG:h24,PERP,feat_intraday_mom,2,LONG,monitored,2026-09-20T00:54:37.126742+00:00,,0,0,0,0,,0.006177,9611,0.000000,24,3.500,validated_walk_forward,False,True,38,0.745
