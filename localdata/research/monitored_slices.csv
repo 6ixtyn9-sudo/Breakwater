@@ -14,7 +14,7 @@ feat_ret_5:2:LONG:h15,SPOT,feat_ret_5,2,LONG,monitored,2026-09-23T00:46:33.54551
 feat_price_roc_5:2:LONG:h15,SPOT,feat_price_roc_5,2,LONG,monitored,2026-09-23T00:46:33.545510+00:00,,0,0,0,0,,0.002291,6028,0.003597,15,3.500,validated_walk_forward,False,True,15,0.250
 feat_squeeze:2:LONG:h12,PERP,feat_squeeze,2,LONG,monitored,2026-09-23T00:46:33.545510+00:00,,0,0,0,0,,0.003996,12110,0.003921,12,3.500,validated_walk_forward,False,True,20,0.333
 feat_ext_vs_ma_10:2:LONG:h15,SPOT,feat_ext_vs_ma_10,2,LONG,monitored,2026-09-23T00:46:33.545510+00:00,,1,1,0,2.4946,,0.002127,6393,0.009084,15,3.500,validated_walk_forward,False,True,16,0.267
-feat_close_pos_ma:2:LONG:h12,PERP,feat_close_pos_ma,2,LONG,monitored,2026-09-23T00:46:33.545510+00:00,1790154000,28,19,9,124.9505,,0.002749,9186,0.044970,12,3.500,validated_walk_forward,False,True,12,0.300
+feat_close_pos_ma:2:LONG:h12,PERP,feat_close_pos_ma,2,LONG,monitored,2026-09-23T00:46:33.545510+00:00,1790161200,29,19,10,121.9281,,0.002749,9186,0.044970,12,3.500,validated_walk_forward,False,True,12,0.300
 feat_trend_neutral:0:LONG:h15,PERP,feat_trend_neutral,0,LONG,monitored,2026-09-23T00:46:33.545510+00:00,,0,0,0,0,,0.003309,18125,0.000614,15,3.500,validated_walk_forward,False,True,24,0.400
 feat_hour_utc:1:LONG:h12,PERP,feat_hour_utc,1,LONG,monitored,2026-09-23T00:46:33.545510+00:00,,0,0,0,0,,0.002051,9768,0.015253,12,3.500,validated_walk_forward,False,True,29,0.483
 feat_vol_breakout_strength:2:LONG:h12,PERP,feat_vol_breakout_strength,2,LONG,monitored,2026-09-23T00:46:33.545510+00:00,,0,0,0,0,,0.002266,11032,0.031672,12,3.500,validated_walk_forward,False,True,15,0.250
