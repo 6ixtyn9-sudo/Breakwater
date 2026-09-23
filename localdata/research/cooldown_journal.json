@@ -902,5 +902,45 @@
     "signal_id": "c4926c3c5d0fbd16",
     "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
     "stopped_at": "2026-09-23T11:00:29+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-3.7056",
+    "reason": "stop",
+    "signal_id": "0ad9158e6a489d75",
+    "slice_id": "feat_time_since_high_20:0:LONG:h12",
+    "stopped_at": "2026-09-23T15:00:33+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-2.6210",
+    "reason": "stop",
+    "signal_id": "1d7144eebe2ab305",
+    "slice_id": "feat_cci_20:2:LONG:h15",
+    "stopped_at": "2026-09-23T15:00:33+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-4.2440",
+    "reason": "stop",
+    "signal_id": "cb9e6e935aad9547",
+    "slice_id": "feat_vol_sma_ratio:0:LONG:h24",
+    "stopped_at": "2026-09-23T15:00:33+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-2.3600",
+    "reason": "stop",
+    "signal_id": "75a3f9cdddf53947",
+    "slice_id": "feat_buy_vol_ratio:2:LONG:h24",
+    "stopped_at": "2026-09-23T15:00:33+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-3.1381",
+    "reason": "stop",
+    "signal_id": "e524a089b28be29c",
+    "slice_id": "feat_buy_vol_ratio:2:LONG:h24",
+    "stopped_at": "2026-09-23T15:00:33+00:00"
   }
 ]
