@@ -57,6 +57,7 @@ def test_fit_detail_bounds_big_payload_and_names_its_loss():
     assert "pair_errors" not in parsed
     assert parsed["_truncated"] == {
         "dropped_keys": ["green_gate", "pair_errors"],
+        "dropped_count": 2,
         "original_length": len(original),
     }
 
@@ -68,15 +69,36 @@ def test_fit_detail_stays_valid_json_for_pathological_payloads():
     assert parsed["paper"] == {"closed": 1}
     assert parsed["_truncated"] == {
         "dropped_keys": ["blob"],
+        "dropped_count": 1,
         "original_length": len(text),
     }
     # Even when every payload key must go, the column is valid JSON that
     # names its own loss.
     text = json.dumps({"only": "z" * 200_000})
     parsed = json.loads(_fit_detail(text))
-    assert parsed == {"_truncated": {"dropped_keys": ["only"], "original_length": len(text)}}
+    assert parsed == {
+        "_truncated": {"dropped_keys": ["only"], "dropped_count": 1, "original_length": len(text)}
+    }
     # Oversized non-JSON strings can only be hard-bounded at the limit.
     assert len(_fit_detail("y" * 200_000)) == DETAIL_CHAR_LIMIT
+
+
+def test_fit_detail_never_cuts_json_at_the_bounded_summary(monkeypatch):
+    # ~2 500 top-level keys once made the terminal fallback slice the JSON
+    # (valid at 2 000 keys, invalid at 2 500). The _truncated summary is now
+    # bounded (DROPPED_KEYS_SHOWN names plus a dropped_count), so even a tiny
+    # bound yields whole, parseable JSON - the column never cuts mid-string.
+    monkeypatch.setattr("breakwater.status.DETAIL_CHAR_LIMIT", 500)
+    payload = {f"key_{i:04d}": i for i in range(3000)}
+    original = json.dumps(payload, sort_keys=True)
+    fitted = _fit_detail(original)
+    assert len(fitted) <= 500
+    parsed = json.loads(fitted)  # valid JSON, never cut mid-string
+    summary = parsed["_truncated"]
+    assert len(summary["dropped_keys"]) == 20  # bounded names, not 3 000
+    retained = len(parsed) - 1  # minus the _truncated entry itself
+    assert summary["dropped_count"] == 3000 - retained
+    assert summary["original_length"] == len(original)
 
 
 def test_append_status_stores_bounded_valid_json(tmp_path):
@@ -97,5 +119,6 @@ def test_append_status_stores_bounded_valid_json(tmp_path):
     assert detail["signals"] == 3
     assert detail["_truncated"] == {
         "dropped_keys": ["green_gate"],
+        "dropped_count": 1,
         "original_length": len(original),
     }

@@ -15,6 +15,7 @@ HEADERS = ["timestamp_utc", "stage", "mode", "detail"]
 # (the green-gate blocked-slice map alone is thousands of characters). 64 000
 # chars holds every real payload whole; past that the bulkiest keys go, named.
 DETAIL_CHAR_LIMIT = 64_000
+DROPPED_KEYS_SHOWN = 20
 
 
 def _fit_detail(detail: object) -> str:
@@ -22,9 +23,10 @@ def _fit_detail(detail: object) -> str:
 
     A payload that fits is stored verbatim. One that does not is stored with
     its bulkiest keys dropped, largest first, and a ``_truncated`` block
-    recording the dropped keys and the original length - so the column is
-    always valid JSON that says what it left out, never text cut mid-value.
-    Oversized non-JSON strings can only be hard-bounded at the limit.
+    recording the dropped keys (bounded at DROPPED_KEYS_SHOWN names), the
+    dropped count and the original length - so the column is always valid
+    JSON that says what it left out, never text cut mid-value. Oversized
+    non-JSON strings can only be hard-bounded at the limit.
     """
     if isinstance(detail, str):
         text = detail
@@ -40,23 +42,45 @@ def _fit_detail(detail: object) -> str:
         return text[:DETAIL_CHAR_LIMIT]
     original_length = len(text)
 
-    def bulk(key: str) -> tuple[int, str]:
-        return (len(json.dumps(payload[key], sort_keys=True, default=str)), key)
+    def pair_len(key: object) -> int:
+        # Exact rendered length of one "<key>": <value> pair (": " included),
+        # so the fit loop can measure without re-rendering the payload.
+        return (
+            len(json.dumps(str(key)))
+            + 2
+            + len(json.dumps(payload[key], sort_keys=True, default=str))
+        )
 
-    keys = sorted(payload, key=bulk)
+    sizes = {key: pair_len(key) for key in payload}
+    keys = sorted(payload, key=lambda key: (sizes[key], str(key)))
+    total_parts = sum(sizes.values())
     dropped: list[str] = []
     while True:
-        fitted = {key: payload[key] for key in keys}
-        fitted["_truncated"] = {
-            "dropped_keys": sorted(dropped),
+        summary = {
+            "dropped_keys": sorted(dropped)[:DROPPED_KEYS_SHOWN],
+            "dropped_count": len(dropped),
             "original_length": original_length,
         }
-        rendered = json.dumps(fitted, sort_keys=True, default=str)
-        if len(rendered) <= DETAIL_CHAR_LIMIT:
-            return rendered
+        summary_part = (
+            len(json.dumps("_truncated"))
+            + 2
+            + len(json.dumps(summary, sort_keys=True, default=str))
+        )
+        # braces + every pair + ", " between the pairs (kept keys + summary).
+        if 2 + total_parts + summary_part + 2 * len(keys) <= DETAIL_CHAR_LIMIT:
+            fitted = {key: payload[key] for key in keys}
+            fitted["_truncated"] = summary
+            rendered = json.dumps(fitted, sort_keys=True, default=str)
+            if len(rendered) <= DETAIL_CHAR_LIMIT:
+                return rendered
         if not keys:
-            return rendered[:DETAIL_CHAR_LIMIT]
-        dropped.append(keys.pop())  # bulkiest remaining key goes first
+            # Summary alone always fits: it is a fixed, tiny shape.
+            return json.dumps({"_truncated": summary}, sort_keys=True, default=str)[
+                :DETAIL_CHAR_LIMIT
+            ]
+        dropped_key = keys.pop()  # bulkiest remaining key goes first
+        dropped.append(dropped_key)
+        total_parts -= sizes[dropped_key]
 
 
 def append_status(path: Path, stage: str, mode: str, detail: str = "", keep: int = 500) -> None:

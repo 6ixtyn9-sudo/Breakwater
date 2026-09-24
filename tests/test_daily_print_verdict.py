@@ -329,13 +329,30 @@ def test_resolve_shadow_scan_skips_unreadable_newest():
 
 def test_resolve_shadow_scan_prefers_newest_whole_scan_and_none_when_all_unreadable():
     rows = [
-        {"timestamp_utc": "2026-09-22T00:00:00+00:00", "detail": json.dumps({"signals": 1})},
+        {
+            "timestamp_utc": "2026-09-22T00:00:00+00:00",
+            "detail": json.dumps({"signals": 1, "paper": {"closed": 1}}),
+        },
         {"timestamp_utc": "2026-09-23T00:00:00+00:00", "detail": '{"signals": 3'},
-        {"timestamp_utc": "2026-09-24T00:00:00+00:00", "detail": json.dumps({"signals": 2})},
+        {
+            "timestamp_utc": "2026-09-24T00:00:00+00:00",
+            "detail": json.dumps({"signals": 2, "paper": {"closed": 2}}),
+        },
     ]
     row, detail = dp._resolve_shadow_scan(rows)
     assert row is rows[2]
-    assert detail == {"signals": 2}
+    assert detail == {"signals": 2, "paper": {"closed": 2}}
+    # A whole row without a paper block is NOT usable: section 5 would render
+    # it as fabricated zeros. Skip it, and report (None, {}) when it is all
+    # the history there is.
+    paperless = {
+        "timestamp_utc": "2026-09-25T00:00:00+00:00",
+        "detail": json.dumps({"signals": 5}),
+    }
+    row, detail = dp._resolve_shadow_scan(rows + [paperless])
+    assert row is rows[2]
+    assert detail == {"signals": 2, "paper": {"closed": 2}}
+    assert dp._resolve_shadow_scan([paperless]) == (None, {})
     assert dp._resolve_shadow_scan([rows[1]]) == (None, {})
     assert dp._resolve_shadow_scan([]) == (None, {})
 
@@ -391,3 +408,171 @@ def test_report_reuses_whole_scan_for_sections_5_and_13(tmp_path, monkeypatch):
     # The report names the scan it used and admits the newest is unreadable.
     assert "2026-09-24T00:00:00" in text and "unreadable" in text
     assert "Resolved scan 2026-09-23T00:00:00" in text
+
+
+def test_report_never_prints_zeros_from_a_paperless_scan(tmp_path, monkeypatch):
+    # A whole row without a usable paper block (or without the aggregate-leash
+    # keys) must never render the fabricated '0.00 / 0.00 ZAR | 0.0% | None'
+    # ledger line - whether it sits older or newer than a paper-bearing row.
+    data = tmp_path / "localdata"
+    _write_minimal_state(data)
+    monkeypatch.setattr(dp, "DATA", data)
+    good = {
+        "signals": 3,
+        "errors": 0,
+        "paper": {
+            "aggregate_risk_cap_zar": "100.0",
+            "aggregate_open_risk_zar": "12.5",
+            "aggregate_risk_utilization": "0.125",
+            "aggregate_risk_status": "ok",
+            "closed": 7,
+            "new_signals": 2,
+            "skipped": 1,
+        },
+    }
+    paperless = {"signals": 9}
+    old_style_paper = {"signals": 7, "paper": {"closed": 3}}
+
+    def write(rows):
+        with (data / "status.csv").open("w", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["timestamp_utc", "stage", "mode", "detail"])
+            for stamp, detail in rows:
+                writer.writerow([stamp, "shadow_scan_done", "shadow", detail])
+
+    # Paperless row older than the good row: the good row is resolved.
+    write([
+        ("2026-09-23T00:00:00+00:00", json.dumps(paperless)),
+        ("2026-09-24T00:00:00+00:00", json.dumps(good, sort_keys=True)),
+    ])
+    text = dp._report_text()
+    assert "12.50 / 100.00 ZAR | 12.5% | ok" in text
+    assert "0.00 / 0.00 ZAR" not in text
+
+    # Paperless row newer than the good row: still the good row, never zeros.
+    write([
+        ("2026-09-24T00:00:00+00:00", json.dumps(good, sort_keys=True)),
+        ("2026-09-25T00:00:00+00:00", json.dumps(paperless)),
+    ])
+    text = dp._report_text()
+    assert "12.50 / 100.00 ZAR | 12.5% | ok" in text
+    assert "0.00 / 0.00 ZAR" not in text
+    assert "signals=3" in text and "signals=None" not in text
+    assert "closed=7" in text and "new_signals=2" in text
+
+    # A resolved scan whose paper predates the aggregate-leash keys: the
+    # explicit no-numbers line, never the zeros line.
+    write([("2026-09-24T00:00:00+00:00", json.dumps(old_style_paper, sort_keys=True))])
+    text = dp._report_text()
+    assert "carries no aggregate-risk numbers" in text
+    assert "0.00 / 0.00 ZAR" not in text
+
+
+def test_report_picks_newest_rows_by_timestamp_not_file_position(tmp_path, monkeypatch):
+    # status.csv is not chronological: workflow merges interleave rows, so a
+    # stale guardian_ok row can sit last and a stale scan anywhere. The report
+    # must pick rows by timestamp, never by file position.
+    data = tmp_path / "localdata"
+    _write_minimal_state(data)
+    guardian_new = {
+        "mode": "shadow",
+        "equity_zar": "700.55",
+        "high_water_zar": "701.00",
+        "key_permissions": [],
+        "risk_allowed": True,
+        "risk_reasons": [],
+    }
+    guardian_stale = dict(guardian_new, equity_zar="557.83")
+    scan_old = {
+        "signals": 1,
+        "paper": {
+            "aggregate_risk_cap_zar": "100.0",
+            "aggregate_open_risk_zar": "12.5",
+            "aggregate_risk_utilization": "0.125",
+            "aggregate_risk_status": "ok",
+        },
+    }
+    scan_new = {
+        "signals": 4,
+        "paper": {
+            "aggregate_risk_cap_zar": "200.0",
+            "aggregate_open_risk_zar": "34.5",
+            "aggregate_risk_utilization": "0.1725",
+            "aggregate_risk_status": "tight",
+        },
+    }
+    with (data / "status.csv").open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["timestamp_utc", "stage", "mode", "detail"])
+        # Deliberately out of order: newest scan in the middle, stale
+        # guardian row last.
+        writer.writerow([
+            "2026-09-24T09:00:00+00:00", "shadow_scan_done", "shadow",
+            json.dumps(scan_old, sort_keys=True),
+        ])
+        writer.writerow([
+            "2026-09-24T10:00:00+00:00", "guardian_ok", "shadow",
+            json.dumps(guardian_new, sort_keys=True),
+        ])
+        writer.writerow([
+            "2026-09-24T11:00:00+00:00", "shadow_scan_done", "shadow",
+            json.dumps(scan_new, sort_keys=True),
+        ])
+        writer.writerow([
+            "2026-09-13T09:00:00+00:00", "guardian_ok", "shadow",
+            json.dumps(guardian_stale, sort_keys=True),
+        ])
+    monkeypatch.setattr(dp, "DATA", data)
+    text = dp._report_text()
+
+    # Newest guardian equity, never the stale row that happens to sit last.
+    assert "700.55" in text
+    assert "557.83" not in text
+    # Newest scan's leash numbers, not the older scan's.
+    assert "34.50 / 200.00 ZAR | 17.2% | tight" in text
+    assert "12.50 / 100.00 ZAR | 12.5% | ok" not in text
+    assert "Latest scan 2026-09-24T11:00:00" in text
+
+
+def test_resolve_shadow_scan_orders_by_timestamp_not_file_position():
+    # The usable scan with the newest timestamp sits in the middle of the
+    # file; position must never be read as 'latest'.
+    rows = [
+        {
+            "timestamp_utc": "2026-09-24T09:00:00+00:00",
+            "detail": json.dumps({"signals": 1, "paper": {"closed": 1}}),
+        },
+        {
+            "timestamp_utc": "2026-09-25T08:00:00+00:00",
+            "detail": json.dumps({"signals": 3, "paper": {"closed": 3}}),
+        },
+        {
+            "timestamp_utc": "2026-09-23T00:00:00+00:00",
+            "detail": json.dumps({"signals": 2, "paper": {"closed": 2}}),
+        },
+    ]
+    row, detail = dp._resolve_shadow_scan(rows)
+    assert row is rows[1]
+    assert detail == {"signals": 3, "paper": {"closed": 3}}
+
+
+def test_report_prints_unreadable_line_for_unparseable_guardian_row(tmp_path, monkeypatch):
+    # Salvage used to patch up cut rows and present the partial dict as the
+    # live reading. A guardian_ok row that does not parse whole must instead
+    # be named unreadable - never patched into an equity figure.
+    data = tmp_path / "localdata"
+    _write_minimal_state(data)
+    with (data / "status.csv").open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["timestamp_utc", "stage", "mode", "detail"])
+        writer.writerow([
+            "2026-09-24T12:00:00+00:00",
+            "guardian_ok",
+            "shadow",
+            '{"mode": "shadow", "equity_zar": "557.83", "high',  # cut mid-string
+        ])
+    monkeypatch.setattr(dp, "DATA", data)
+    text = dp._report_text()
+    assert "guardian_ok row 2026-09-24T12:00:00 is unreadable" in text
+    assert "VALR equity" not in text
+    assert "557.83" not in text

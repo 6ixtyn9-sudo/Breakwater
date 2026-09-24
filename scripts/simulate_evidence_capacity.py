@@ -118,6 +118,12 @@ def load_data(data_dir: Path) -> dict:
             i = j
         else:
             i += 1
+    MIN_CYCLES = 20
+    if len(cycles) < MIN_CYCLES:
+        raise RuntimeError(
+            f"only {len(cycles)} readable scan cycles in status.csv; refusing to fit a "
+            "process on a nearly-empty history"
+        )
     if not episodes:
         raise RuntimeError("no signal episodes found in status history")
     last = episodes[-1]

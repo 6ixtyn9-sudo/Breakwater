@@ -93,64 +93,44 @@ def _read_json(path: Path, default=None):
         return default
 
 
-def _load_detail(text):
-    """Parse a status.csv ``detail`` blob without ever raising.
+def _parse_whole(text):
+    """Strict parse of a status.csv ``detail`` blob: whole JSON object, or None.
 
     Historic rows predate the 64 000-char bound in status.py: their details
-    were hard-capped at 4000 characters, so a long shadow-scan payload (the
-    green-gate blocked-slice map is thousands of characters on its own) is
-    stored truncated and is not valid JSON. A bare ``json.loads`` here is what
-    killed the daily digest: the runner kept reporting "operational" while the
-    one artifact that would have shown a frozen, liquidating book crashed on
-    every run. Parse what survives, never raise - and never trust a salvaged
-    dict to still have its trailing keys.
+    were hard-capped at 4000 characters and cut mid-string. Never salvage such
+    a row (patching closed containers can silently lose trailing keys - that is
+    how the daily print reported '0.00 / 0.00 ZAR | 0.0% | None' out of half a
+    JSON row): a row that does not parse whole is reported unreadable.
     """
-    if not text:
-        return {}
     try:
-        parsed = json.loads(text)
-        return parsed if isinstance(parsed, dict) else {}
+        detail = json.loads(text or "")
     except (TypeError, ValueError):
-        pass
-    # Salvage: re-close whatever containers were left open by the truncation.
-    for tail in ("", '"', "]", "}", '"]', '"}', "]}", '"]}', '"}]', '"}]}'):
-        try:
-            parsed = json.loads(text + tail)
-            if isinstance(parsed, dict):
-                return parsed
-        except (TypeError, ValueError):
-            continue
-    # Last resort: cut back to the last complete top-level pair and close it.
-    cut = text.rfind(",")
-    while cut > 0:
-        for tail in ("}", "]}", '"]}'):
-            try:
-                parsed = json.loads(text[:cut] + tail)
-                if isinstance(parsed, dict):
-                    return parsed
-            except (TypeError, ValueError):
-                pass
-        cut = text.rfind(",", 0, cut)
-    return {}
+        return None
+    return detail if isinstance(detail, dict) else None
+
+
+def _newest(rows):
+    """Newest row by timestamp - file order is not chronological (workflow merges
+    interleave rows), so position must never be used to mean 'latest'."""
+    return max(rows, key=lambda r: str(r.get("timestamp_utc") or "")) if rows else None
 
 
 def _resolve_shadow_scan(shadow_rows):
-    """Newest shadow-scan row whose detail is whole, valid JSON, plus its payload.
+    """Newest usable shadow-scan row and its payload: whole JSON with a paper block.
 
-    Rows written before the 64 000-char bound are cut mid-string. Salvaging
-    such a row can hand back a dict with the trailing ``paper`` block missing
-    - which is how the daily print came to report '0.00 / 0.00 ZAR | 0.0% |
-    None' and signals=None out of half a JSON row. Never salvage here: walk
-    back to the newest scan that parses whole, and let the caller print which
-    scan it used. Returns ``(row, detail)``, or ``(None, {})`` when history
-    holds no whole scan.
+    Rows written before the 64 000-char bound are cut mid-string, and a whole
+    row without ``paper`` would still render as fabricated zeros in section 5
+    ('0.00 / 0.00 ZAR | 0.0% | None'). Return the newest scan that is whole
+    JSON AND carries a usable ``paper`` block, ordered by timestamp (file order
+    is not chronological), and let the caller print which scan it used.
+    ``(None, {})`` when history holds no usable scan - section 5 then prints
+    "No whole scan in status.csv history; sections 5 and 13 have nothing
+    readable to report."
     """
-    for row in reversed(shadow_rows):
-        try:
-            detail = json.loads(row.get("detail") or "")
-        except (TypeError, ValueError):
-            continue
-        if isinstance(detail, dict):
+    ordered = sorted(shadow_rows, key=lambda r: str(r.get("timestamp_utc") or ""), reverse=True)
+    for row in ordered:
+        detail = _parse_whole(row.get("detail"))
+        if detail and detail.get("paper"):
             return row, detail
     return None, {}
 
@@ -678,8 +658,9 @@ def _report_text() -> str:
     # ---- account / mode ----
     add("## 1. Posture\n")
     mode_rows = [r for r in _read_csv(DATA / "status.csv") if r.get("stage") == "guardian_ok"]
-    if mode_rows:
-        last = _load_detail(mode_rows[-1]["detail"])
+    newest_mode = _newest(mode_rows)
+    last = _parse_whole(newest_mode.get("detail")) if newest_mode is not None else None
+    if last is not None:
         add(
             f"- Mode: **{last.get('mode')}** | VALR equity: **{last.get('equity_zar')} ZAR** | "
             f"high-water: **{last.get('high_water_zar')} ZAR**"
@@ -702,6 +683,11 @@ def _report_text() -> str:
                 f"{last.get('perps_api')} {('(' + str(last.get('perp_state_error')) + ')') if last.get('perp_state_error') else ''}"
             )
         add(f"- risk_allowed: **{last.get('risk_allowed')}** reasons={last.get('risk_reasons')}\n")
+    elif newest_mode is not None:
+        add(
+            f"- Newest guardian_ok row {str(newest_mode.get('timestamp_utc') or '?')[:19]} "
+            "is unreadable; no current posture to report.\n"
+        )
     else:
         add("- No guardian_ok row found.\n")
 
@@ -804,19 +790,16 @@ def _report_text() -> str:
         if r.get("stage") == "shadow_scan_done" and r.get("mode") == "shadow"
     ]
     scan_row, scan_detail = _resolve_shadow_scan(shadow_rows)
+    newest_row = _newest(shadow_rows)
     last_scan_ts = scan_row.get("timestamp_utc", "")[:19] if scan_row else ""
-    if scan_row is not None and scan_row is not shadow_rows[-1]:
+    if scan_row is not None and newest_row is not None and scan_row is not newest_row:
         add(
-            f"- Newest scan {str(shadow_rows[-1].get('timestamp_utc') or '?')[:19]} is unreadable "
-            f"(detail truncated before the 64 000-char bound existed); sections 5 and 13 use "
-            f"scan {last_scan_ts}, the newest whole one."
+            f"- Newest scan {str(newest_row.get('timestamp_utc') or '?')[:19]} is unreadable "
+            f"(truncated detail) or unusable (no paper block); sections 5 and 13 use "
+            f"scan {last_scan_ts}, the newest usable one."
         )
     if scan_row is not None:
         paper = scan_detail.get("paper") or {}
-        cap = _num(paper.get("aggregate_risk_cap_zar"))
-        oc = _num(paper.get("aggregate_open_risk_zar"))
-        util = _num(paper.get("aggregate_risk_utilization"))
-        status = paper.get("aggregate_risk_status")
         add(
             "- Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any "
             "live position (there is no live executor); the computed open stop-risk "
@@ -826,10 +809,20 @@ def _report_text() -> str:
             f"- Computed open stop-risk (section 4): **{total_open_risk:.2f} ZAR** "
             f"(informational only, no cap applied)"
         )
-        add(
-            f"- Paper shadow ledger (gates paper entries only, nothing live): "
-            f"**{oc:.2f} / {cap:.2f} ZAR | {100 * util:.1f}% | {status}**"
-        )
+        if "aggregate_risk_cap_zar" in paper and "aggregate_open_risk_zar" in paper:
+            cap = _num(paper.get("aggregate_risk_cap_zar"))
+            oc = _num(paper.get("aggregate_open_risk_zar"))
+            util = _num(paper.get("aggregate_risk_utilization"))
+            status = paper.get("aggregate_risk_status")
+            add(
+                f"- Paper shadow ledger (gates paper entries only, nothing live): "
+                f"**{oc:.2f} / {cap:.2f} ZAR | {100 * util:.1f}% | {status}**"
+            )
+        else:
+            add(
+                f"- Resolved scan {last_scan_ts} carries no aggregate-risk numbers "
+                "(no readable paper block); nothing to report for the leash."
+            )
         add(
             f"- Remaining: {paper.get('aggregate_risk_remaining_zar')} | "
             f"cap skips: {paper.get('aggregate_risk_cap_skips')} | unknown skips: {paper.get('aggregate_risk_unknown_skips')}"
@@ -900,8 +893,9 @@ def _report_text() -> str:
     # ---- research health ----
     add("## 8. Research / honesty checks\n")
     research_rows = [r for r in _read_csv(DATA / "status.csv") if r.get("stage") == "research_done"]
-    if research_rows:
-        last = _load_detail(research_rows[-1]["detail"])
+    newest_research = _newest(research_rows)
+    last = _parse_whole(newest_research.get("detail")) if newest_research is not None else None
+    if last is not None:
         add(
             f"- Latest research: {last.get('server_time')} | discovered {last.get('discovered_slices')} | "
             f"validated {last.get('validated_slices')} | reg-confounded {last.get('regime_confounded_slices')} | "
@@ -920,6 +914,11 @@ def _report_text() -> str:
                 f"best_fail={short_audit.get('best_failing_short_fail_reasons')}"
             )
         add(f"- pair_errors: {json.dumps(last.get('pair_errors'))}")
+    elif newest_research is not None:
+        add(
+            f"- Newest research_done row {str(newest_research.get('timestamp_utc') or '?')[:19]} "
+            "is unreadable; no research reading to report.\n"
+        )
     deep = _read_json(DATA / "deep_audit" / "summary.json", {})
     if deep:
         audit_rows = _read_csv(DATA / "deep_audit" / "candidates.csv")
@@ -1068,7 +1067,7 @@ def _report_text() -> str:
     add("## 13. Signal activity\n")
     if scan_row is not None:
         d = scan_detail
-        scan_label = "Latest scan" if scan_row is shadow_rows[-1] else "Resolved scan"
+        scan_label = "Latest scan" if scan_row is newest_row else "Resolved scan"
         add(
             f"- {scan_label} {last_scan_ts or '?'}: errors={d.get('errors')} signals={d.get('signals')} "
             f"regime_blocked={d.get('regime_blocked')}"
