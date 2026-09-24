@@ -11,9 +11,9 @@ Engines:
   5-8. TODO: Funding Rate, Liquidation, On-Chain, Sentiment
 """
 
-from breakwater.engines.momentum import MomentumSignal, scan_momentum
-from breakwater.engines.mean_reversion import MeanReversionSignal, scan_mean_reversion
 from breakwater.engines.lead_lag import LeadLagSignal, scan_lead_lag
+from breakwater.engines.mean_reversion import MeanReversionSignal, scan_mean_reversion
+from breakwater.engines.momentum import MomentumSignal, scan_momentum
 from breakwater.engines.ranker import RankedSignal, rank_signals
 
 __all__ = [

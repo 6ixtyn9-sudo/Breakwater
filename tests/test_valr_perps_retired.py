@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from breakwater.config import Settings
-from breakwater.engine import BreakwaterEngine, GuardianHalt, VALR_PERPS_RETIRED
+from breakwater.engine import VALR_PERPS_RETIRED, BreakwaterEngine, GuardianHalt
 from breakwater.models import PairType
 from breakwater.valr import ValrError
 

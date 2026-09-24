@@ -1240,11 +1240,11 @@ class BreakwaterEngine:
                     if not (sess == "us" and 18 <= hour_utc <= 21):
                         return []
 
-        from breakwater.engines.momentum import scan_momentum
-        from breakwater.engines.mean_reversion import scan_mean_reversion
         from breakwater.engines.lead_lag import scan_lead_lag
-        from breakwater.engines.simple_trend import scan_simple_trend
+        from breakwater.engines.mean_reversion import scan_mean_reversion
+        from breakwater.engines.momentum import scan_momentum
         from breakwater.engines.ranker import rank_signals
+        from breakwater.engines.simple_trend import scan_simple_trend
 
         engine_frames: dict[str, pd.DataFrame] = {}
         pair_kind: dict[str, str] = {}
@@ -1262,10 +1262,12 @@ class BreakwaterEngine:
             regime = getattr(regime_shift, "label", "unknown")
 
         # Profitable pairs from paper: ARB +7.76, TAO +5.69, SUI +5.47
-        # Focus engine on top 15 pairs by paper PnL, not all 30
-        # Env: BREAKWATER_ENGINE_TOP_PAIRS=15
-        top_pairs_env = int(os.getenv("BREAKWATER_ENGINE_TOP_PAIRS", "15"))
-        # If we have paper log, we could rank, but for now keep all and filter later by edge
+        # Ranking the engine universe by paper PnL was intended here and never
+        # implemented: a BREAKWATER_ENGINE_TOP_PAIRS read used to sit on this
+        # line, unused. It was removed rather than left as a knob that looks
+        # load-bearing but is not (a malformed value would also have raised
+        # inside the engine loop). Engines still scan every pair and rely on
+        # edge filtering downstream.
 
         engine_results: dict[str, list] = {}
         for engine_name, scan_fn in [

@@ -173,7 +173,6 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
         sum_y = np.sum(y)
         sum_xy = np.dot(x, y)
         sum_x = 190.0
-        sum_x2 = 2470.0
         n = 20.0
         # slope
         numerator = n * sum_xy - sum_x * sum_y
@@ -290,8 +289,6 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     # Time since high/low — OPTIMIZED O(n) instead of rolling apply O(n*window)
     # Previous version used rolling(20).apply(argmax) which is very slow for 38 features.
     # New: vectorized loop tracking last high/low occurrence.
-    high_20_for_time = high_20  # from above
-    low_20_for_time = low_20
     # is_new_high when close == high_20 (within tolerance)
     # Use close values, not high, for time since close high
     close_high_20 = close.rolling(20).max()
@@ -306,7 +303,6 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     time_low = np.full(n, np.nan)
     last_high_idx = -1000
     last_low_idx = -1000
-    close_vals = close.to_numpy()
     is_high_vals = is_close_high.to_numpy()
     is_low_vals = is_close_low.to_numpy()
     for i in range(n):

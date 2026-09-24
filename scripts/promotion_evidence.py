@@ -15,7 +15,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 from collections import Counter
@@ -25,15 +24,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from breakwater.config import LIVE_ACKNOWLEDGEMENT  # noqa: E402
-from breakwater.models import Lifecycle  # noqa: E402
 from breakwater.promotion import PromotionRegistry  # noqa: E402
 from breakwater.promotion_evidence import (  # noqa: E402
     ResearchEvidence,
     build_evidence,
-    load_research_evidence,
     dedupe_by_signal,
     drops_for_lane,
     evaluate,
+    load_research_evidence,
     read_ledger,
     real_closes,
     summarise,
