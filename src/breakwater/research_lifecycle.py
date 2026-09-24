@@ -153,12 +153,23 @@ def _min_net_edge() -> float:
 
 
 def _cost_bps(kind: str) -> float:
-    # Promotion floor for SPOT uses crypto-quoted VALR cost (20 bps RT).
-    # Fiat-quoted ZAR (70 bps) is excluded from research; see costs.py.
+    """Cost basis for a kind's promotion floor.
+
+    SPOT is costed at the FIAT rate (70 bps RT), not the crypto-quoted rate
+    (20 bps). A slice is a pooled construct: the same slice_id fires on every
+    pair in its kind's universe, so a "SPOT" slice can and does fire on ZAR
+    pairs. Costing it at the cheaper quote class let
+    `feat_close_pos_ma:1:LONG:h24` (edge 21 bps, cleared on a 40 bps crypto
+    floor) open LINKZAR and LTCZAR trades whose real round trip was 70 bps -
+    the mean capture never covered the fee. The floor follows the most
+    expensive venue the slice can reach, so a slice that only ever fires on
+    crypto-quoted pairs still clears the same bar: cost the pair, and where a
+    slice spans pairs, cost the worst one.
+    """
     from breakwater.costs import kind_round_trip_bps, spot_round_trip_bps
 
     if str(kind).strip().upper() == "SPOT":
-        return spot_round_trip_bps("BTCUSDT")
+        return spot_round_trip_bps()
     return kind_round_trip_bps(kind)
 
 
@@ -170,9 +181,10 @@ def _min_net_edge_floor(kind: str) -> float:
     The cost term is the margin of safety: at k=2 a slice must still net
     one full round trip even if fees or slippage double. Armed in the
     research workflow (k=2); the code default is 0 (static bar only) so
-    bare local runs keep their legacy behavior. With k=2, crypto-quoted
-    spot (20 bps RT) carries a 40 bps floor. Fiat-quoted ZAR is not
-    researched. Perp's cost term (18 bps) sits below a 40 bps static bar.
+    bare local runs keep their legacy behavior. With k=2, spot carries a
+    140 bps floor (70 bps fiat round trip, the worst venue a pooled SPOT
+    slice can reach) and perp a 18 bps term, which sits below the static
+    bar. See ``_cost_bps`` for why SPOT is costed at the fiat rate.
     """
     try:
         mult = float(os.getenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "0"))
@@ -793,10 +805,20 @@ def reconcile_paper_stats_from_log(book_path: Path, log_path: Path) -> None:
 
     Paper persist used to omit the book, so git showed paper_trades=0 while
     the log was green. Idempotent: counts and pnl are recomputed from fills.
+
+    Attribution is keyed by ``(slice_id, kind)``, not ``slice_id`` alone. Slice
+    ids are shared between venues - the same pooled slice_id exists as both a
+    SPOT row and a PERP row - so a slice_id-only join let the PERP row inherit
+    every SPOT fill's count and P&L. Measured on committed state:
+    `feat_close_pos_ma:1:LONG:h24` is a PERP-labelled row whose 37 recorded
+    trades and +283.35 ZAR are entirely VALR ZAR spot fills (LINKZAR, BNBZAR,
+    BTCUSDC). That phantom record is what made it a green island propping up a
+    frozen lane, and what made the paper book's biggest winners look like they
+    belonged to the perp lane.
     """
     if not book_path.exists() or not log_path.exists():
         return
-    totals: dict[str, dict] = {}
+    totals: dict[tuple[str, str], dict] = {}
     try:
         with log_path.open(newline="") as handle:
             reader = csv.DictReader(handle)
@@ -808,7 +830,9 @@ def reconcile_paper_stats_from_log(book_path: Path, log_path: Path) -> None:
                 sid = str(row.get("slice_id") or "")
                 if not sid:
                     continue
-                bucket = totals.setdefault(sid, {"trades": 0, "wins": 0, "losses": 0, "pnl": 0.0})
+                kind = str(row.get("kind") or "").strip().upper()
+                key = (sid, kind)
+                bucket = totals.setdefault(key, {"trades": 0, "wins": 0, "losses": 0, "pnl": 0.0})
                 bucket["trades"] += 1
                 try:
                     pnl = float(row.get("pnl_zar") or 0.0)
@@ -825,7 +849,8 @@ def reconcile_paper_stats_from_log(book_path: Path, log_path: Path) -> None:
     changed = False
     for row in rows:
         sid = str(row.get("slice_id") or "")
-        stats = totals.get(sid)
+        row_kind = str(row.get("kind") or "").strip().upper()
+        stats = totals.get((sid, row_kind))
         if not stats:
             continue
         new_trades = str(stats["trades"])

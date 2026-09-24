@@ -154,3 +154,72 @@ def test_monitor_reports_blocked_short_in_confirmed_bull():
     assert any(
         entry["side"] == "SELL" and entry["regime"] == "bull" for entry in blocked
     )
+
+
+def test_spot_slice_cannot_fill_on_a_zar_pair_it_cannot_pay_for(monkeypatch):
+    """The venue re-basis: cost the pair, not the kind.
+
+    `feat_close_pos_ma:1:LONG:h24` was promoted with a 21 bps edge and every
+    one of its paper fills was a VALR ZAR spot round trip at 70 bps. A pooled
+    SPOT slice can fire on ZAR pairs, so on those pairs its edge must clear the
+    fiat bar (70 bps x 2 = 140 bps) - not the crypto bar it was measured on.
+    """
+    from breakwater.monitor import venue_cost_floor
+
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
+    monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
+    monkeypatch.setenv("BREAKWATER_VENUE_COST_MULT", "2")
+    assert venue_cost_floor("SPOT", "LINKZAR") == 0.014
+    assert venue_cost_floor("SPOT", "BTCUSDC") == 0.004
+    # The perp book is not re-tuned by this gate; its cost is uniform.
+    assert venue_cost_floor("PERP", "BTCUSDC") == 0.0
+    assert venue_cost_floor("PERP", "LINKZAR") == 0.0
+
+
+def test_spot_signal_on_zar_pair_is_blocked_by_venue_cost(monkeypatch):
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
+    monkeypatch.setenv("BREAKWATER_VENUE_COST_MULT", "2")
+    frame = trending_frame(drift=0.02, seed=1)
+    row = book_row(2, feature="feat_ret_20", kind="SPOT")
+
+    signals, blocked = monitor_book(
+        [row],
+        frames_by_kind(SPOT={"LINKZAR": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
+    assert signals == []
+    assert any(entry["guard"] == "venue_cost_blocked" for entry in blocked)
+    assert any("140bps" in entry["reason"] for entry in blocked)
+
+
+def test_spot_signal_on_a_crypto_quoted_pair_still_fires(monkeypatch):
+    """The same row on a USDC-quoted pair clears the cheaper but real cost."""
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
+    monkeypatch.setenv("BREAKWATER_VENUE_COST_MULT", "2")
+    frame = trending_frame(drift=0.02, seed=1)
+    row = book_row(2, feature="feat_ret_20", kind="SPOT")
+    row["mean_ret_costadj"] = "0.005"
+
+    signals, blocked = monitor_book(
+        [row],
+        frames_by_kind(SPOT={"BTCUSDC": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
+    assert signals
+    assert all(signal.kind == "SPOT" for signal in signals)
+    assert not any(entry.get("guard") == "venue_cost_blocked" for entry in blocked)
+
+
+def test_venue_cost_gate_can_be_disabled(monkeypatch):
+    monkeypatch.setenv("BREAKWATER_VENUE_COST_MULT", "0")
+    frame = trending_frame(drift=0.02, seed=1)
+    row = book_row(2, feature="feat_ret_20", kind="SPOT")
+    signals, _ = monitor_book(
+        [row],
+        frames_by_kind(SPOT={"LINKZAR": frame}),
+        server_time=datetime.now(timezone.utc),
+    )
+    assert signals

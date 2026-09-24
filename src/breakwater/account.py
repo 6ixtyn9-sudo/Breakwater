@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from breakwater.costs import quote_of
 from breakwater.decimal_utils import D
 from breakwater.models import PairSpec, Position, Side
 from breakwater.valr import ValrClient
@@ -125,3 +126,92 @@ def unprotected_positions(
         if not protected:
             missing.append(position)
     return missing
+
+
+def _stop_trigger_price(row: dict) -> Decimal | None:
+    """The stop trigger price on a conditional/stop order row, if present."""
+    for key in ("stopPrice", "stop_price", "triggerPrice", "trigger_price"):
+        value = row.get(key)
+        if value in (None, ""):
+            continue
+        try:
+            price = D(value, field=key)
+        except Exception:
+            continue
+        if price > 0:
+            return price
+    return None
+
+
+def aggregate_open_stop_risk_zar(
+    positions: list[Position],
+    open_orders: list[dict],
+    conditionals: list[dict],
+    *,
+    last_price,
+    quote_to_zar=None,
+) -> tuple[Decimal, list[str]]:
+    """Open stop-risk in ZAR, from the LIVE book.
+
+    Each protected position contributes the distance from the current price to
+    its resting stop, times quantity: the money genuinely at risk if the stop
+    is the next thing that happens. A stop already through the market (a long
+    whose stop sits above the last price) contributes zero - that is locked
+    gain, not risk - but it must be a stop we could actually find, otherwise
+    the position is reported as unpriceable instead of counted as flat.
+
+    Returns ``(risk, unknown_reasons)``. ``unknown_reasons`` being non-empty
+    means the number is not trustworthy, and callers must fail closed rather
+    than treat it as zero. The guardian already halts on positions with no
+    confirmed protection at all; this covers the narrower case of a protected
+    position whose stop cannot be priced or converted.
+    """
+    rows = list(open_orders) + list(conditionals)
+    total = Decimal(0)
+    unknown: list[str] = []
+    for position in positions:
+        closing_side = Side.SELL if position.side is Side.BUY else Side.BUY
+        stop_price = None
+        for row in rows:
+            if (
+                _conditional_pair(row) == position.pair
+                and _conditional_side(row) == closing_side.value
+                and _looks_like_stop(row)
+            ):
+                stop_price = _stop_trigger_price(row)
+                if stop_price is not None:
+                    break
+        if stop_price is None:
+            unknown.append(f"{position.pair}: stop price unavailable")
+            continue
+        try:
+            price = D(last_price(position.pair), field=f"{position.pair} last price")
+        except Exception:
+            unknown.append(f"{position.pair}: last price unavailable")
+            continue
+        if price <= 0:
+            unknown.append(f"{position.pair}: last price is not positive")
+            continue
+        if position.side is Side.BUY:
+            distance = price - stop_price
+        else:
+            distance = stop_price - price
+        if distance <= 0:
+            continue
+        risk = distance * position.quantity
+        if quote_to_zar is not None:
+            quote = quote_of(position.pair)
+            if not quote:
+                unknown.append(f"{position.pair}: quote currency is unknown")
+                continue
+            try:
+                rate = Decimal(str(quote_to_zar(quote)))
+            except Exception:
+                unknown.append(f"{position.pair}: no conversion path from {quote}")
+                continue
+            if rate <= 0:
+                unknown.append(f"{position.pair}: conversion rate is not positive")
+                continue
+            risk *= rate
+        total += risk
+    return total, unknown

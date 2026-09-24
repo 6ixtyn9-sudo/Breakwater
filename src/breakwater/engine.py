@@ -23,6 +23,7 @@ import pandas as pd
 
 from breakwater.account import (
     EquityValuator,
+    aggregate_open_stop_risk_zar,
     unprotected_positions,
     validate_api_key_permissions,
 )
@@ -82,6 +83,37 @@ from breakwater.valr import ValrClient
 
 class GuardianHalt(RuntimeError):
     pass
+
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    value = str(os.getenv(name, default)).strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
+# VALR Perps are retired as a venue (2026-09-24).
+#
+# The account cannot reach them: every authenticated /simple-futures endpoint
+# answers HTTP 401 (code -93). ``scripts/perps_canary.py`` exists to prove
+# exactly that, and it used to end with "will detect automatically when this
+# changes". That assumption is dead - the choke is at the venue, not in this
+# code, and it is not going to clear.
+#
+# Why the halt had to go: ``guardian()`` raised GuardianHalt whenever perp state
+# was unverifiable **in live mode**. An endpoint that can never answer therefore
+# made live mode impossible to start - a permanent, silent block on the entire
+# live path, including the spot path, which needs nothing from VALR Perps.
+#
+# The halt existed so live trading would not run blind on perp exposure. That
+# concern does not reach here: the executor refuses VALR futures unconditionally
+# (``execution.TradeExecutor`` -> ``PerpetualActivationBlocked``), so this system
+# cannot open a VALR perp position to be blind to. Hyperliquid is the
+# authoritative perp venue and carries its own read-only position state.
+#
+# Residual risk, stated plainly: a position opened by hand in the VALR web app
+# would not be visible on this path. That is why the retirement is a named,
+# visible switch instead of a deleted check -
+# ``BREAKWATER_VALR_PERPS_RETIRED=0`` restores the old halt exactly.
+VALR_PERPS_RETIRED = _env_bool("BREAKWATER_VALR_PERPS_RETIRED", "1")
 
 
 def _coerce_int(value, default: int) -> int:
@@ -469,9 +501,18 @@ class BreakwaterEngine:
             perp_positions = self.client.perps_positions()
         except Exception as exc:
             perp_error = f"{type(exc).__name__}: {exc}"
-            if self.settings.mode == "live":
+            # Retired venue: the choke is permanent, so an unreachable perps API
+            # is an expected state, not a risk condition. See VALR_PERPS_RETIRED
+            # above for why this no longer blocks live mode - and for the
+            # residual risk that switch exists to make visible.
+            if self.settings.mode == "live" and not VALR_PERPS_RETIRED:
                 raise GuardianHalt(f"perp position state is unverifiable: {exc}") from exc
-        perps_api = "available" if perp_error is None else "unavailable"
+        if perp_error is None:
+            perps_api = "available"
+        elif VALR_PERPS_RETIRED:
+            perps_api = "retired"
+        else:
+            perps_api = "unavailable"
         valuator = EquityValuator(self.client, specs)
         equity_zar = valuator.equity_zar(balances, positions)
         if perp_positions:
@@ -488,13 +529,40 @@ class BreakwaterEngine:
             for row in open_orders
             if row.get("currencyPair") or row.get("pair")
         )
+        # Aggregate risk leash. This used to pass a hard-coded Decimal(0),
+        # which reads as "nothing at risk" and means the policy's
+        # max_aggregate_open_risk_zar check could never fire - the limit was
+        # configured, printed, and inert. It is now measured from the live book:
+        # the distance from each position to its own resting stop. Anything the
+        # guardian cannot measure (a protected position whose stop price or FX
+        # rate will not resolve) is reported as unknown and fails closed.
+        try:
+            valuator = EquityValuator(self.client, specs)
+            open_stop_risk_zar, risk_unknown = aggregate_open_stop_risk_zar(
+                positions,
+                open_orders,
+                conditionals,
+                last_price=lambda pair: self.client.market_summary(pair).last,
+                quote_to_zar=valuator.rate_to_zar,
+            )
+        except Exception as exc:  # noqa: BLE001 - any failure means "unknown"
+            open_stop_risk_zar = Decimal(0)
+            risk_unknown = [f"aggregate open risk unavailable: {type(exc).__name__}"]
+        if risk_unknown:
+            append_status(
+                self.settings.status_path,
+                "aggregate_risk_unknown",
+                self.settings.mode,
+                "; ".join(risk_unknown)[:240],
+            )
         risk_state = self.risk.check_account(
             equity_zar=equity_zar,
             high_water_zar=high_water,
             daily_pnl_zar=self.risk_state.daily_pnl(server_time),
             seven_day_pnl_zar=self.risk_state.seven_day_pnl(server_time),
             open_positions=len(exposure_symbols),
-            aggregate_open_risk_zar=Decimal(0),
+            aggregate_open_risk_zar=open_stop_risk_zar,
+            aggregate_open_risk_unknown=bool(risk_unknown),
         )
         result.update(
             {
@@ -504,10 +572,18 @@ class BreakwaterEngine:
                 "perp_positions": len(perp_positions),
                 "perps_api": perps_api,
                 "perp_state_error": perp_error,
+                "valr_perps_retired": VALR_PERPS_RETIRED,
                 "open_orders": len(open_orders),
                 "exposure_slots": len(exposure_symbols),
                 "risk_allowed": risk_state.allowed,
                 "risk_reasons": list(risk_state.reasons),
+                "aggregate_open_risk_zar": str(
+                    open_stop_risk_zar.quantize(Decimal("0.01"))
+                ),
+                "aggregate_open_risk_unknown": risk_unknown,
+                "max_aggregate_open_risk_zar": str(
+                    self.risk.policy.max_aggregate_open_risk_zar
+                ),
                 "key_permissions": sorted(permissions),
                 "key_ip_restricted": bool(key_info.get("allowedIpAddressCidr")),
                 "mandate_configured": self.risk is not None,
@@ -1449,12 +1525,21 @@ class BreakwaterEngine:
         asset_edges: list[AssetEdge] = []
 
         # Round-trip execution cost in bps, shared with the paper engine.
-        # SPOT is quote-aware (ZAR 70 bps, USDT/USDC 20 bps). Fiat-quoted
-        # names are dropped from the research pool: 70 bps kills the edge.
-        from breakwater.costs import is_fiat_quoted, perp_round_trip_bps, spot_round_trip_bps
+        # Cost the PAIR, not the kind: VALR spot is 70 bps RT on ZAR quotes and
+        # 20 bps on USDC/USDT, Hyperliquid perp is 9 bps. The pool default is
+        # the fiat rate (the most expensive venue a pooled SPOT slice can
+        # reach) and ``cost_bps_for_symbol`` applies each pair's own rate on top.
+        #
+        # Fiat-quoted spot used to be dropped from the research pool outright.
+        # That did not stop it being traded: the paper engine was still filling
+        # LINKZAR and LTCZAR at a real 70 bps round trip off rows promoted on a
+        # cheaper ladder. Excluding a venue from research does not exclude it
+        # from fills, it only hides its cost. Fiat pairs are now researched at
+        # their true cost and must clear the same floor as everything else.
+        from breakwater.costs import perp_round_trip_bps, spot_round_trip_bps
 
         perp_cost_bps = perp_round_trip_bps()
-        for kind, cost_bps in (("SPOT", spot_round_trip_bps("BTCUSDT")), ("PERP", perp_cost_bps)):
+        for kind, cost_bps in (("SPOT", spot_round_trip_bps()), ("PERP", perp_cost_bps)):
             # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
             for pair, k in all_targets:
@@ -1462,8 +1547,6 @@ class BreakwaterEngine:
                     continue
                 frame = frames.get(pair.upper())
                 if frame is None:
-                    continue
-                if kind == "SPOT" and is_fiat_quoted(pair):
                     continue
                 kind_frames[pair.upper()] = frame
 

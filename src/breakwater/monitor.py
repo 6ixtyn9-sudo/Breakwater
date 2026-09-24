@@ -112,6 +112,41 @@ def _edge_is_directional_net(row: dict) -> bool:
     return False
 
 
+def venue_cost_floor(kind: str, pair: str) -> float:
+    """The net-edge bar a SPOT slice must clear on THIS pair, in fractional terms.
+
+    A slice is a pooled construct validated across a kind's whole universe, and
+    the book row carries one edge (`mean_ret_costadj`) for all of it. Spot is
+    the only kind whose cost varies by pair - 70 bps round trip on a VALR ZAR
+    quote, 20 bps on USDC/USDT (``costs.py``) - so it is the only kind where a
+    row's edge can be valid for the venue it was validated on and invalid for
+    the venue it fills on. A perp's cost is uniform at 9 bps and is already
+    governed by the research floor, so this gate deliberately does not re-tune
+    the perp book.
+
+    Measured on committed state: `feat_close_pos_ma:1:LONG:h24` was promoted on
+    a cheaper ladder with edge 21 bps, yet every one of its paper fills was a
+    SPOT fill on VALR ZAR pairs at a real 70 bps round trip - the mean capture
+    never covered the fee.
+
+    Multiplier `BREAKWATER_VENUE_COST_MULT` (default 2) is the same margin of
+    safety the research floor uses (one full round trip of headroom). Set it to
+    0 to disable the gate.
+    """
+    if str(kind).strip().upper() != "SPOT":
+        return 0.0
+    multiplier_text = str(os.getenv("BREAKWATER_VENUE_COST_MULT", "2")).strip()
+    try:
+        multiplier = float(multiplier_text)
+    except ValueError:
+        multiplier = 2.0
+    if not np.isfinite(multiplier) or multiplier <= 0:
+        return 0.0
+    from breakwater.costs import spot_round_trip_bps
+
+    return float(spot_round_trip_bps(pair)) * multiplier / 10000.0
+
+
 def regime_of(frame: pd.DataFrame) -> str:
     """Bull / bear / neutral / unknown from the SMA-50/200 crossover prior."""
     if frame is None or len(frame) < REGIME_MIN_BARS:
@@ -323,6 +358,27 @@ def monitor_book(
                     }
                 )
                 continue
+            # Venue cost gate: the row's edge must clear this pair's own
+            # round-trip cost with headroom. A slice cannot inherit a cheaper
+            # venue's label and then fill somewhere more expensive.
+            edge_value = float(row.get("mean_ret_costadj") or 0.0)
+            cost_floor = venue_cost_floor(kind, pair)
+            if cost_floor > 0 and edge_value < cost_floor:
+                blocked.append(
+                    {
+                        "pair": pair.upper(),
+                        "kind": kind,
+                        "slice_id": slice_id,
+                        "side": side.value,
+                        "regime": regime,
+                        "hostile_unproven": hostile_unproven,
+                        "reason": f"venue_cost_floor({cost_floor * 10000:.0f}bps)",
+                        "guard": "venue_cost_blocked",
+                        "edge": edge_value,
+                    }
+                )
+                continue
+
             close = Decimal(str(latest_row["close"]))
             atr_raw = _atr(featured)
             if close <= 0 or atr_raw <= 0:
