@@ -390,7 +390,7 @@ def test_sync_book_never_wipes_on_empty_validated(tmp_path):
 
 
 def test_min_net_edge_floor_is_kind_aware(monkeypatch):
-    """Spot's floor is driven by its (much higher) cost; perp's by the static bar."""
+    """Spot's floor is driven by its (much higher) fiat cost; perp's by the static bar."""
     from breakwater import research_lifecycle as rl
 
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
@@ -398,10 +398,37 @@ def test_min_net_edge_floor_is_kind_aware(monkeypatch):
     monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
     monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
-    # Spot promotion uses crypto-quoted cost: 2 x 20 bps = 40 bps.
-    assert rl._min_net_edge_floor("SPOT") == 0.004
+    # Spot promotion uses the FIAT round trip: 2 x 70 bps = 140 bps. A pooled
+    # SPOT slice can fire on ZAR pairs, so its floor follows the dearest venue.
+    assert rl._min_net_edge_floor("SPOT") == 0.014
     # Perp: cost term 2 x 9 bps = 18 bps sits below the static 20 bps.
     assert rl._min_net_edge_floor("PERP") == 0.002
+
+
+def test_spot_floor_follows_the_fiat_rate_not_the_crypto_rate(monkeypatch):
+    """The bug this pins: a ZAR-filling slice clearing a crypto-quoted bar.
+
+    `feat_close_pos_ma:1:LONG:h24` carried a 21 bps edge and every one of its
+    fills was a VALR ZAR spot round trip at 70 bps. A 40 bps crypto-quoted bar
+    would not have stopped it either - only the fiat bar does. Costs belong to
+    the pair, and for a pooled slice the pair that matters is the dearest one
+    it can reach.
+    """
+    from breakwater import research_lifecycle as rl
+
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0.002")
+    monkeypatch.setenv("BREAKWATER_SPOT_FEE_BPS", "70")
+    monkeypatch.setenv("BREAKWATER_SPOT_CRYPTO_FEE_BPS", "20")
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
+    # The basis itself is the fiat round trip, not the crypto one.
+    assert rl._cost_bps("SPOT") == 70.0
+    assert rl._cost_bps("PERP") == 9.0
+    # At mult 2 that is a 140 bps bar, and the real promoted value (21 bps)
+    # sits far below it. Costing spot at 20 bps would have put the base bar at
+    # 40 bps and still admitted it on a "cheaper" ladder than the one it filled on.
+    fiat_floor = rl._min_net_edge_floor("SPOT")
+    assert fiat_floor == 0.014
+    assert 0.0021 < fiat_floor
 
 
 def test_min_net_edge_floor_static_bar_raises_perp(monkeypatch):
@@ -413,7 +440,8 @@ def test_min_net_edge_floor_static_bar_raises_perp(monkeypatch):
     monkeypatch.setenv("BREAKWATER_PERP_FEE_BPS", "9")
     monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE_COST_MULT", "2")
     assert rl._min_net_edge_floor("PERP") == 0.004
-    assert rl._min_net_edge_floor("SPOT") == 0.004
+    # The static bar still governs perp; spot is already above it on cost alone.
+    assert rl._min_net_edge_floor("SPOT") == 0.014
 
 
 def test_min_net_edge_floor_mult_zero_disables_cost_term(monkeypatch):
@@ -737,3 +765,67 @@ def test_stopout_cools_a_slice_that_is_exactly_flat(tmp_path):
     rows = read_book(book_path)
     assert float(rows[0]["paper_pnl_zar"]) == 0.0
     assert rows[0]["status"] == "cooldown"
+
+
+def test_paper_stats_attribution_is_per_venue(tmp_path):
+    """A PERP row must not inherit a SPOT row's fills.
+
+    The same pooled slice_id exists as both a SPOT row and a PERP row. Joining
+    the ledger on slice_id alone let the PERP row `feat_close_pos_ma:1:LONG:h24`
+    claim 37 trades and +283.35 ZAR that were entirely VALR ZAR spot fills -
+    which is what made it a green island inside a frozen lane. Attribution is
+    keyed by (slice_id, kind) so each row only counts its own venue's fills.
+    """
+    from breakwater.research_lifecycle import (
+        _write_book,
+        read_book,
+        reconcile_paper_stats_from_log,
+    )
+
+    book_path = tmp_path / "book.csv"
+    log_path = tmp_path / "log.csv"
+    base = {
+        "slice_id": "feat_close_pos_ma:1:LONG:h24",
+        "feature": "feat_close_pos_ma",
+        "state": "1",
+        "side": "LONG",
+        "status": "monitored",
+        "validated_at": "",
+        "last_signal_bar": "",
+        "paper_trades": "0",
+        "paper_wins": "0",
+        "paper_losses": "0",
+        "paper_pnl_zar": "0",
+        "cooldown_until": "",
+        "mean_ret_costadj": "0.002122",
+        "n": "100",
+        "p_value": "0.01",
+        "horizon_bars": "24",
+        "stop_atr_mult": "3.500",
+        "source": "validated_walk_forward",
+        "hostile_unproven": "False",
+    }
+    _write_book(
+        book_path,
+        [{**base, "kind": "PERP"}, {**base, "kind": "SPOT"}],
+    )
+    log_path.write_text(
+        "closed_at,signal_id,pair,kind,slice_id,side,pnl_zar,outcome,pnl_outcome,exit_reason\n"
+        "2026-09-19T06:00:00+00:00,sig1,LINKZAR,SPOT,feat_close_pos_ma:1:LONG:h24,LONG,"
+        "12.50,win,win,target\n"
+        "2026-09-20T06:00:00+00:00,sig2,LINKZAR,SPOT,feat_close_pos_ma:1:LONG:h24,LONG,"
+        "-2.50,loss,loss,stop\n"
+    )
+    reconcile_paper_stats_from_log(book_path, log_path)
+
+    rows = {row["kind"]: row for row in read_book(book_path)}
+    spot = rows["SPOT"]
+    perp = rows["PERP"]
+    assert spot["paper_trades"] == "2"
+    assert spot["paper_wins"] == "1"
+    assert spot["paper_losses"] == "1"
+    assert float(spot["paper_pnl_zar"]) == 10.0
+    # The perp row has never filled: it must stay empty rather than wear the
+    # spot lane's record.
+    assert perp["paper_trades"] == "0"
+    assert float(perp["paper_pnl_zar"]) == 0.0

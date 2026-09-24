@@ -108,9 +108,12 @@ def main() -> int:
     print("---")
     print(
         "Verdict: if the account routes above return 401 code -93 with a valid "
-        "key, VALR Perps trading is currently web-session-only and is not yet "
-        "available to API keys. Breakwater records perps_api on every guardian "
-        "run and will detect automatically when this changes."
+        "key, VALR Perps is web-session-only and is not available to API keys. "
+        "That is a venue choke, not a local misconfiguration, and it does not "
+        "resolve: VALR Perps is RETIRED as a venue in Breakwater "
+        "(BREAKWATER_VALR_PERPS_RETIRED=1). Hyperliquid is the authoritative "
+        "perp venue. This script stays as the evidence for that call - re-run it "
+        "if you ever want to test the assumption."
     )
     print("No account writes were performed.")
     return 0

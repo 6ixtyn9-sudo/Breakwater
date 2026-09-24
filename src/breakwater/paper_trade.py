@@ -18,8 +18,15 @@ Entry-side guards inherited from the predecessor system's lessons:
 - winner-capture premium: the reference entry is raised by
   min(0.25 ATR, 1 percent) for longs (lowered for shorts) so modest
   follow-through can fill instead of only adverse moves;
+- through-target guard: the mirror of the falling-knife guard — a signal
+  whose +2R target has already printed is not an entry, because the move
+  it was trying to capture is already gone (see "Re-entry accounting"
+  below the guards);
+- one entry per signal: a signal_id may open at most one position, so a
+  re-emitted signal cannot pay the same trade out repeatedly;
 - fail-open visibility: every skipped entry is journaled with its reason
-  (adverse / no_price / regime / not_book) instead of vanishing silently;
+  (adverse / no_price / regime / not_book / reentry / through_target)
+  instead of vanishing silently;
 - immortal-trade guard: positions whose pair data has gone missing for
   more than 24 consecutive bars are closed at entry with fees, so no
   paper position lives forever on vanished data.
@@ -134,6 +141,32 @@ ADVERSE_CAP_BPS = Decimal("200")
 PREMIUM_ATR_MULT = Decimal("0.25")
 PREMIUM_CAP_BPS = Decimal("100")
 
+# ── Re-entry accounting ────────────────────────────────────────────────────
+# A signal is one decision, not a recurring coupon, and the ledger was treating
+# it as one. Measured on committed state (2026-09-24): 251 counted closes came
+# from only 208 distinct signal_ids, and the 43 duplicate closes carried
+# +387.65 of the +474.64 lifetime P&L. The worst case was LINKZAR
+# `feat_close_pos_ma:1:LONG:h24`, whose signal `0be56cd44780fb6e` closed 28
+# times over three days — every one entered at 160.39, every one an exact +2R
+# target at 166.003650, every one "held" for a single bar — while the market
+# was already trading ~3.5 percent above that entry. Deduplicated to one close
+# per signal the spot lane is +13.50 ZAR, not +398.78.
+#
+# Two guards, because there are two distinct lies in that record:
+#   ONE_ENTRY_PER_SIGNAL  the same signal_id must not open a second position
+#                         after the first one closed (the 28x LINKZAR coupon);
+#   THROUGH_TARGET_GUARD  an entry whose +2R target has already printed is not
+#                         an entry, it is a filled trade booked at a price the
+#                         market left hours ago. This is the exact mirror of the
+#                         inherited falling-knife guard: that one refuses to buy
+#                         after an adverse move, this one refuses to buy after
+#                         the move the trade was trying to capture.
+#
+# Resolved below ``_env_bool`` rather than here so a bare import cannot trip on
+# definition order.
+ONE_ENTRY_PER_SIGNAL_DEFAULT = "1"
+THROUGH_TARGET_GUARD_DEFAULT = "1"
+
 # Per-slice gap monitor: if an open position's slice has not produced a signal
 # in this many bars of price data, the thesis is dead and the position is
 # force-closed at the latest close.  This catches "silent death" where a
@@ -153,6 +186,15 @@ MAX_BOOK_SLICES = int(os.getenv("BREAKWATER_PAPER_MAX_BOOK_SLICES", "20"))
 def _env_bool(name: str, default: str = "0") -> bool:
     value = str(os.getenv(name, default)).strip().lower()
     return value in {"1", "true", "yes", "y", "on"}
+
+
+# Re-entry accounting switches (see "Re-entry accounting" above).
+ONE_ENTRY_PER_SIGNAL = _env_bool(
+    "BREAKWATER_PAPER_ONE_ENTRY_PER_SIGNAL", ONE_ENTRY_PER_SIGNAL_DEFAULT
+)
+THROUGH_TARGET_GUARD = _env_bool(
+    "BREAKWATER_PAPER_THROUGH_TARGET_GUARD", THROUGH_TARGET_GUARD_DEFAULT
+)
 
 
 def _env_decimal(name: str, default: str) -> Decimal:
@@ -699,6 +741,33 @@ def _latest_close(frame):
     if frame is None or frame.empty:
         return None
     return Decimal(str(frame.iloc[-1]["close"]))
+
+
+def _traded_signal_ids(log_path: Path) -> set[str]:
+    """signal_ids that already opened a position in the committed ledger.
+
+    Only rows that actually traded (``win``/``loss``) count. A guard row is not
+    an entry: a signal the falling-knife or regime guard turned away must stay
+    eligible next cycle, or a guard that fires once would permanently retire it
+    and quietly shrink the book.
+    """
+    out: set[str] = set()
+    if not log_path.exists():
+        return out
+    try:
+        with log_path.open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                if str(row.get("outcome") or "") not in {"win", "loss"}:
+                    continue
+                signal_id = str(row.get("signal_id") or "").strip()
+                if signal_id:
+                    out.add(signal_id)
+    except OSError:
+        # Fail open on an unreadable ledger: the per-cycle view of open
+        # positions still applies, and a missing duplicate guard is less
+        # damaging than refusing every entry.
+        return set()
+    return out
 
 
 def _paper_entry_mode() -> str:
@@ -1502,6 +1571,8 @@ def run_paper_cycle(
     slot_full = 0
     slice_full = 0
     pair_held = 0
+    reentry_blocked = 0
+    through_target_blocked = 0
     aggregate_risk_cap_skips = 0
     aggregate_risk_unknown_skips = 0
     aggregate_open_risk_zar, aggregate_position_risk_unknown = _aggregate_stop_risk_zar(
@@ -1526,6 +1597,13 @@ def run_paper_cycle(
     )
 
     open_pairs = {(str(position["pair"]).upper(), str(position.get("kind") or "").upper()) for position in surviving}
+    open_signal_ids: set[str] = {
+        str(position.get("signal_id") or "").strip() for position in surviving
+    } - {""}
+    # Signals that have already taken a position at some point in the ledger.
+    # See "Re-entry accounting" at the top of this module: this is the guard
+    # that stops one signal from paying out 28 times.
+    traded_signal_ids = _traded_signal_ids(log_path) if ONE_ENTRY_PER_SIGNAL else set()
     open_slice_counts: dict[str, int] = {}
     for position in surviving:
         sid = str(position.get("slice_id") or "")
@@ -1709,6 +1787,42 @@ def run_paper_cycle(
         if (signal.pair.upper(), signal.kind.upper()) in open_pairs:
             pair_held += 1
             _deny(signal, "pair_held")
+            continue
+
+        # Re-entry accounting: one signal, one position. A signal that is still
+        # open, or that has already opened and closed a position, must not open
+        # another. See "Re-entry accounting" at the top of this module.
+        if ONE_ENTRY_PER_SIGNAL and (
+            signal.signal_id in open_signal_ids or signal.signal_id in traded_signal_ids
+        ):
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "reentry",
+                    "entry_guard": "reentry_blocked",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
+            reentry_blocked += 1
+            skipped += 1
+            _deny(signal, "skipped")
             continue
 
         if _is_rotated_sibling(signal.slice_id, book_slice_ids):
@@ -1911,6 +2025,56 @@ def run_paper_cycle(
         initial_risk_distance = abs(reference - initial_stop_price)
         risk_fraction = (initial_risk_distance / reference) if reference > 0 else Decimal(0)
         stop_atr_mult = (initial_risk_distance / signal.atr) if signal.atr > 0 else Decimal(0)
+
+        # Through-target guard: the mirror of the inherited falling-knife guard.
+        # A trade whose +2R target is already at or beyond the latest price is
+        # not an entry — the move the slice was trying to capture has already
+        # happened, so filling at the signal close would book a profit the
+        # market never offered. Refuse, and journal the refusal so a guard that
+        # cannot see a price never silently pretends it blocked anything.
+        if THROUGH_TARGET_GUARD and initial_risk_distance > 0:
+            latest = _latest_close(frame)
+            if latest is not None:
+                target = (
+                    reference + initial_risk_distance * TARGET_R_MULTIPLE
+                    if signal.side.value == "BUY"
+                    else reference - initial_risk_distance * TARGET_R_MULTIPLE
+                )
+                through = (
+                    latest >= target if signal.side.value == "BUY" else latest <= target
+                )
+                if through:
+                    append_log(
+                        log_path,
+                        {
+                            "closed_at": server_time.isoformat(),
+                            "signal_id": signal.signal_id,
+                            "pair": signal.pair,
+                            "kind": signal.kind,
+                            "slice_id": signal.slice_id,
+                            "side": signal.side.value,
+                            "entry_price": str(reference),
+                            "exit_price": "",
+                            "stop_price": str(initial_stop_price),
+                            "notional_zar": "0",
+                            "pnl_zar": "0",
+                            "outcome": "skipped",
+                            "bars_held": "0",
+                            "exit_reason": "through_target",
+                            "entry_guard": "through_target_blocked",
+                            "regime": str(getattr(signal, "regime", "") or ""),
+                            "pnl_outcome": "",
+                            "atr": str(signal.atr),
+                            "stop_atr_mult": (
+                                f"{stop_atr_mult:.6f}" if signal.atr > 0 else ""
+                            ),
+                            "risk_fraction": f"{risk_fraction:.8f}",
+                        },
+                    )
+                    through_target_blocked += 1
+                    skipped += 1
+                    _deny(signal, "skipped")
+                    continue
         # Risk cap: env var but hard-capped at 4% to prevent 5-6% risk trades
         # that were 47% of book in Sep 14 audit. Workflow currently sets 0.06,
         # but we enforce max 0.04 regardless to protect R2000 book.
@@ -2119,6 +2283,10 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "reentry_blocked": reentry_blocked,
+        "through_target_blocked": through_target_blocked,
+        "one_entry_per_signal": ONE_ENTRY_PER_SIGNAL,
+        "through_target_guard": THROUGH_TARGET_GUARD,
         "replayed_bars": replayed_bars,
         "positions_without_new_bars": positions_without_new_bars,
         "paper_equity_zar": f"{paper_equity_zar:.4f}",

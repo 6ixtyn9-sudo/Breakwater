@@ -661,10 +661,23 @@ def _report_text() -> str:
             f"- Mode: **{last.get('mode')}** | VALR equity: **{last.get('equity_zar')} ZAR** | "
             f"high-water: **{last.get('high_water_zar')} ZAR**"
         )
-        add(
-            f"- Key perms: {', '.join(last.get('key_permissions') or [])} | perps API: "
-            f"{last.get('perps_api')} {('(' + str(last.get('perp_state_error')) + ')') if last.get('perp_state_error') else ''}"
-        )
+        # VALR Perps are a retired venue (web-session-only; every authenticated
+        # /simple-futures call answers 401). Printed as a decision, not a
+        # failure: the error text is kept one level down so a reader can see
+        # both the verdict and the evidence for it.
+        if last.get("valr_perps_retired") or str(last.get("perps_api")) == "retired":
+            add(
+                f"- Key perms: {', '.join(last.get('key_permissions') or [])} | "
+                f"VALR perps: **retired** (venue choke, not used; Hyperliquid is the "
+                f"perp venue)"
+            )
+            if last.get("perp_state_error"):
+                add(f"  - last perps probe: {last.get('perp_state_error')}")
+        else:
+            add(
+                f"- Key perms: {', '.join(last.get('key_permissions') or [])} | perps API: "
+                f"{last.get('perps_api')} {('(' + str(last.get('perp_state_error')) + ')') if last.get('perp_state_error') else ''}"
+            )
         add(f"- risk_allowed: **{last.get('risk_allowed')}** reasons={last.get('risk_reasons')}\n")
     else:
         add("- No guardian_ok row found.\n")

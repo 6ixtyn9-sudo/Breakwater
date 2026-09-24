@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -410,6 +411,147 @@ def test_falling_knife_entry_is_blocked_and_visible(tmp_path):
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["entry_guard"] == "adverse_blocked"
+
+
+def test_entry_through_target_is_blocked_and_visible(tmp_path):
+    """Mirror of the falling-knife guard: the move already happened.
+
+    entry 100 / stop 95 -> +2R target is 110. A latest price of 111 means the
+    thesis already paid out; filling at the signal close would book a profit
+    the market never offered. This is the shape of the 28x LINKZAR artifact.
+    """
+    result = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": spot_frame(close=111)},
+    )
+    assert result["open"] == 0
+    assert result["through_target_blocked"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["outcome"] == "skipped"
+    assert log.iloc[0]["entry_guard"] == "through_target_blocked"
+    assert log.iloc[0]["exit_reason"] == "through_target"
+
+
+def test_short_entry_through_its_target_is_blocked(tmp_path):
+    """The guard is symmetric: a short whose -2R target has printed is spent."""
+    result = cycle(
+        tmp_path,
+        signals=[signal(side=Side.SELL, entry="100", stop="105", atr="1")],
+        frames={"BTCZAR": spot_frame(close=89)},
+    )
+    assert result["open"] == 0
+    assert result["through_target_blocked"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["entry_guard"] == "through_target_blocked"
+
+
+def test_normal_follow_through_still_enters(tmp_path):
+    """The guard must not eat ordinary entries: a price short of target enters."""
+    result = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": spot_frame(close=104)},
+    )
+    assert result["open"] == 1
+    assert result["through_target_blocked"] == 0
+
+
+def test_signal_does_not_reenter_after_its_position_closed(tmp_path):
+    """One signal, one position.
+
+    Pinned against the 28x LINKZAR artifact: signal 0be56cd44780fb6e closed 28
+    times over three days, every one an exact +2R target. A signal that has
+    already traded must not open again, while a *fresh* signal on a new bar
+    still must - otherwise the guard would silently retire the whole book.
+    """
+    bar_one = frame_with_bars([("2026-08-14T10:00:00Z", 100, 100, 100)])
+    bar_two = frame_with_bars(
+        [
+            ("2026-08-14T10:00:00Z", 100, 100, 100),
+            ("2026-08-14T11:00:00Z", 111, 111, 111),
+        ]
+    )
+
+    result = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": bar_one},
+    )
+    assert result["open"] == 1
+
+    # Close it: the next bar reaches the +2R target (110).
+    cycle(tmp_path, signals=[], frames={"BTCZAR": bar_two})
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert (log["outcome"] == "win").any()
+
+    # Same signal again: refused, and the refusal is visible.
+    again = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": bar_one},
+    )
+    assert again["open"] == 0
+    assert again["reentry_blocked"] == 1
+    assert again["one_entry_per_signal"] is True
+    log = pd.read_csv(tmp_path / "log.csv")
+    last = log.iloc[-1]
+    assert last["outcome"] == "skipped"
+    assert last["entry_guard"] == "reentry_blocked"
+    assert last["exit_reason"] == "reentry"
+
+    # A different signal (new bar -> new digest) is still allowed to trade.
+    fresh = dataclasses.replace(signal(entry="100", stop="95", atr="1"), signal_id="sig-fresh-bar")
+    after = cycle(
+        tmp_path,
+        signals=[fresh],
+        frames={"BTCZAR": bar_one},
+    )
+    assert after["open"] == 1
+
+
+def test_falling_knife_block_does_not_retire_the_signal(tmp_path):
+    """A guard row is not an entry.
+
+    Only fills make a signal spent. If a skipped row counted, one adverse tick
+    would permanently retire a signal and quietly shrink the book - a guard
+    that stops entries by accident is not a guard.
+    """
+    blocked = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": spot_frame(close=95)},
+    )
+    assert blocked["open"] == 0
+    later = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert later["open"] == 1
+    assert later["reentry_blocked"] == 0
+
+
+def test_one_entry_per_signal_can_be_disabled(tmp_path, monkeypatch):
+    import breakwater.paper_trade as paper_trade
+
+    monkeypatch.setattr(paper_trade, "ONE_ENTRY_PER_SIGNAL", False)
+    cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCZAR": spot_frame(close=111, high=111)},
+    )
+    again = cycle(
+        tmp_path,
+        signals=[signal(entry="100", stop="95", atr="1")],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert again["open"] == 1
 
 
 def test_missing_price_fails_open_with_visible_guard(tmp_path):

@@ -1,14 +1,14 @@
 """Tests for the multi-engine signal generation."""
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from breakwater.engines.common import Signal
-from breakwater.engines.engine_momentum import generate as momentum_generate
-from breakwater.engines.engine_mean_reversion import generate as mr_generate
 from breakwater.engines.engine_cross_asset import generate as cross_generate
+from breakwater.engines.engine_mean_reversion import generate as mr_generate
+from breakwater.engines.engine_momentum import generate as momentum_generate
 from breakwater.engines.meta_ranker import rank_signals, score_summary
 
 

@@ -71,6 +71,7 @@ class RiskManager:
         seven_day_pnl_zar: Decimal,
         open_positions: int,
         aggregate_open_risk_zar: Decimal,
+        aggregate_open_risk_unknown: bool = False,
     ) -> RiskState:
         p = self.policy
         reasons = []
@@ -90,6 +91,11 @@ class RiskManager:
             reasons.append("maximum position count reached")
         if aggregate_open_risk_zar > p.max_aggregate_open_risk_zar:
             reasons.append("aggregate open risk exceeds limit")
+        # Fail closed: a leash you cannot measure is not a leash. Reporting 0
+        # for "we could not price the stop" reads as "no risk on the book",
+        # which is the one answer that is certainly not substantiated.
+        if aggregate_open_risk_unknown:
+            reasons.append("aggregate open risk is unknown")
         return RiskState(
             allowed=not reasons,
             reasons=tuple(reasons),
