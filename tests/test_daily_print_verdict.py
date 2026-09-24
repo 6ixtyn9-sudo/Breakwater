@@ -311,3 +311,83 @@ def test_full_report_renders_section_2b_and_unwired_leash(tmp_path, monkeypatch)
     assert "12.50 / 100.00 ZAR | 12.5% | ok" in text
     # The old bare line that implied enforcement is gone.
     assert "- Aggregate: **12.50 / 100.00 ZAR" not in text
+
+
+def test_resolve_shadow_scan_skips_unreadable_newest():
+    # Rows written before the 64 000-char bound end mid-string. The resolver
+    # must never salvage one (a salvaged dict can silently lose its trailing
+    # paper block): it walks back to the newest scan that parses whole.
+    whole = json.dumps({"signals": 3, "paper": {"closed": 7}}, sort_keys=True)
+    rows = [
+        {"timestamp_utc": "2026-09-23T00:00:00+00:00", "detail": whole},
+        {"timestamp_utc": "2026-09-24T00:00:00+00:00", "detail": whole[:-2]},
+    ]
+    row, detail = dp._resolve_shadow_scan(rows)
+    assert row is rows[0]
+    assert detail == {"signals": 3, "paper": {"closed": 7}}
+
+
+def test_resolve_shadow_scan_prefers_newest_whole_scan_and_none_when_all_unreadable():
+    rows = [
+        {"timestamp_utc": "2026-09-22T00:00:00+00:00", "detail": json.dumps({"signals": 1})},
+        {"timestamp_utc": "2026-09-23T00:00:00+00:00", "detail": '{"signals": 3'},
+        {"timestamp_utc": "2026-09-24T00:00:00+00:00", "detail": json.dumps({"signals": 2})},
+    ]
+    row, detail = dp._resolve_shadow_scan(rows)
+    assert row is rows[2]
+    assert detail == {"signals": 2}
+    assert dp._resolve_shadow_scan([rows[1]]) == (None, {})
+    assert dp._resolve_shadow_scan([]) == (None, {})
+
+
+def test_report_reuses_whole_scan_for_sections_5_and_13(tmp_path, monkeypatch):
+    data = tmp_path / "localdata"
+    _write_minimal_state(data)
+    whole = {
+        "signals": 3,
+        "errors": 0,
+        "regime_blocked": 1,
+        "lane_gate_blocked": 2,
+        "pair_errors": [],
+        "paper": {
+            "aggregate_risk_cap_zar": "100.0",
+            "aggregate_open_risk_zar": "12.5",
+            "aggregate_risk_utilization": "0.125",
+            "aggregate_risk_status": "ok",
+            "aggregate_risk_remaining_zar": "87.5",
+            "aggregate_risk_cap_skips": 0,
+            "aggregate_risk_unknown_skips": 0,
+            "book_stats": {},
+            "closed": 7,
+            "new_signals": 2,
+            "skipped": 1,
+            "slot_full": 0,
+            "slice_full": 0,
+            "pair_held": 0,
+            "positions_without_new_bars": 0,
+            "replayed_bars": 0,
+            "invalid_positions_quarantined": 0,
+        },
+    }
+    # A newer row cut mid-string, exactly as the old 4000-char cap left them.
+    cut = json.dumps(whole | {"signals": 999})[:300]
+    with (data / "status.csv").open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["timestamp_utc", "stage", "mode", "detail"])
+        writer.writerow(
+            ["2026-09-23T00:00:00+00:00", "shadow_scan_done", "shadow",
+             json.dumps(whole, sort_keys=True)]
+        )
+        writer.writerow(["2026-09-24T00:00:00+00:00", "shadow_scan_done", "shadow", cut])
+    monkeypatch.setattr(dp, "DATA", data)
+    text = dp._report_text()
+
+    # Sections 5 and 13 share the newest whole scan: real numbers, never the
+    # fabricated zeros / Nones a salvaged half-row used to produce.
+    assert "12.50 / 100.00 ZAR | 12.5% | ok" in text
+    assert "0.00 / 0.00 ZAR" not in text
+    assert "signals=3" in text and "signals=None" not in text and "signals=999" not in text
+    assert "closed=7" in text and "new_signals=2" in text
+    # The report names the scan it used and admits the newest is unreadable.
+    assert "2026-09-24T00:00:00" in text and "unreadable" in text
+    assert "Resolved scan 2026-09-23T00:00:00" in text

@@ -1654,7 +1654,9 @@ class BreakwaterEngine:
             "book": book_summary,
         }
 
-        # status.csv detail is capped (4000 chars); keep knobs early.
+        # status.csv detail is bounded at 64 000 chars; a payload that ever
+        # exceeds it drops its bulkiest keys under a _truncated block that names
+        # the dropped keys and the original length.
         status_detail = {
             "server_time": server_time.isoformat(),
             "pairs_researched": len(frames),

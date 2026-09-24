@@ -96,12 +96,14 @@ def _read_json(path: Path, default=None):
 def _load_detail(text):
     """Parse a status.csv ``detail`` blob without ever raising.
 
-    status.py caps every detail at 4000 characters, so a long shadow-scan
-    payload (the green-gate blocked-slice map is thousands of characters on its
-    own) is stored truncated and is not valid JSON. A bare ``json.loads`` here
-    is what killed the daily digest: the runner kept reporting "operational"
-    while the one artifact that would have shown a frozen, liquidating book
-    crashed on every run. Parse what survives, never raise.
+    Historic rows predate the 64 000-char bound in status.py: their details
+    were hard-capped at 4000 characters, so a long shadow-scan payload (the
+    green-gate blocked-slice map is thousands of characters on its own) is
+    stored truncated and is not valid JSON. A bare ``json.loads`` here is what
+    killed the daily digest: the runner kept reporting "operational" while the
+    one artifact that would have shown a frozen, liquidating book crashed on
+    every run. Parse what survives, never raise - and never trust a salvaged
+    dict to still have its trailing keys.
     """
     if not text:
         return {}
@@ -130,6 +132,27 @@ def _load_detail(text):
                 pass
         cut = text.rfind(",", 0, cut)
     return {}
+
+
+def _resolve_shadow_scan(shadow_rows):
+    """Newest shadow-scan row whose detail is whole, valid JSON, plus its payload.
+
+    Rows written before the 64 000-char bound are cut mid-string. Salvaging
+    such a row can hand back a dict with the trailing ``paper`` block missing
+    - which is how the daily print came to report '0.00 / 0.00 ZAR | 0.0% |
+    None' and signals=None out of half a JSON row. Never salvage here: walk
+    back to the newest scan that parses whole, and let the caller print which
+    scan it used. Returns ``(row, detail)``, or ``(None, {})`` when history
+    holds no whole scan.
+    """
+    for row in reversed(shadow_rows):
+        try:
+            detail = json.loads(row.get("detail") or "")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(detail, dict):
+            return row, detail
+    return None, {}
 
 
 def _lane(slice_id: str) -> str:
@@ -780,11 +803,16 @@ def _report_text() -> str:
         for r in _read_csv(DATA / "status.csv")
         if r.get("stage") == "shadow_scan_done" and r.get("mode") == "shadow"
     ]
-    last_scan_ts = ""
-    if shadow_rows:
-        last = _load_detail(shadow_rows[-1]["detail"])
-        last_scan_ts = shadow_rows[-1].get("timestamp_utc", "")[:19]
-        paper = last.get("paper") or {}
+    scan_row, scan_detail = _resolve_shadow_scan(shadow_rows)
+    last_scan_ts = scan_row.get("timestamp_utc", "")[:19] if scan_row else ""
+    if scan_row is not None and scan_row is not shadow_rows[-1]:
+        add(
+            f"- Newest scan {str(shadow_rows[-1].get('timestamp_utc') or '?')[:19]} is unreadable "
+            f"(detail truncated before the 64 000-char bound existed); sections 5 and 13 use "
+            f"scan {last_scan_ts}, the newest whole one."
+        )
+    if scan_row is not None:
+        paper = scan_detail.get("paper") or {}
         cap = _num(paper.get("aggregate_risk_cap_zar"))
         oc = _num(paper.get("aggregate_open_risk_zar"))
         util = _num(paper.get("aggregate_risk_utilization"))
@@ -815,6 +843,11 @@ def _report_text() -> str:
             f"replayed: {paper.get('replayed_bars')} | invalid: {paper.get('invalid_positions_quarantined')}"
         )
         add("")
+    elif shadow_rows:
+        add(
+            "- No whole scan in status.csv history; sections 5 and 13 have "
+            "nothing readable to report.\n"
+        )
 
     # ---- books (loaded once above for section 2b) ----
     add("## 6. Monitored books\n")
@@ -1033,11 +1066,11 @@ def _report_text() -> str:
     add("")
 
     add("## 13. Signal activity\n")
-    last_scan = shadow_rows[-1] if shadow_rows else None
-    if last_scan:
-        d = _load_detail(last_scan["detail"])
+    if scan_row is not None:
+        d = scan_detail
+        scan_label = "Latest scan" if scan_row is shadow_rows[-1] else "Resolved scan"
         add(
-            f"- Latest scan {last_scan_ts or '?'}: errors={d.get('errors')} signals={d.get('signals')} "
+            f"- {scan_label} {last_scan_ts or '?'}: errors={d.get('errors')} signals={d.get('signals')} "
             f"regime_blocked={d.get('regime_blocked')}"
         )
         paper = d.get("paper") or {}
