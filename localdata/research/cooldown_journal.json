@@ -966,5 +966,13 @@
     "signal_id": "6b17a09cab6cb8fe",
     "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
     "stopped_at": "2026-09-24T07:00:35+00:00"
+  },
+  {
+    "pair": "PARA:COHR",
+    "pnl_zar": "-9.2450",
+    "reason": "stop",
+    "signal_id": "6efbd0a7e8e01c50",
+    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
+    "stopped_at": "2026-09-25T17:00:36+00:00"
   }
 ]
