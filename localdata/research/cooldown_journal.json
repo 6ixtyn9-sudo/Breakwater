@@ -1006,5 +1006,21 @@
     "signal_id": "7e4e7e2a424c8dd0",
     "slice_id": "feat_ret_1:2:LONG:h24",
     "stopped_at": "2026-09-26T21:00:30+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-2.8280",
+    "reason": "stop",
+    "signal_id": "114af1942eb677a6",
+    "slice_id": "feat_rsi_divergence:2:LONG:h20",
+    "stopped_at": "2026-09-27T15:00:33+00:00"
+  },
+  {
+    "pair": "ZECUSDC",
+    "pnl_zar": "-4.3553",
+    "reason": "stop",
+    "signal_id": "2abac604ef5aed30",
+    "slice_id": "feat_bb_width_20:2:LONG:h15",
+    "stopped_at": "2026-09-27T15:00:33+00:00"
   }
 ]
