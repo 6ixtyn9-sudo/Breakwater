@@ -1030,5 +1030,29 @@
     "signal_id": "4370a0af523c42f8",
     "slice_id": "feat_price_accel:2:LONG:h24",
     "stopped_at": "2026-09-28T04:00:30+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-3.2972",
+    "reason": "stop",
+    "signal_id": "a6f52fa06cc9cd9f",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h24",
+    "stopped_at": "2026-09-28T06:00:28+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.6045",
+    "reason": "stop",
+    "signal_id": "0a72309bdc700fac",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h24",
+    "stopped_at": "2026-09-28T06:00:28+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-2.3219",
+    "reason": "stop",
+    "signal_id": "3987018dc50d47b1",
+    "slice_id": "feat_close_position:2:LONG:h24",
+    "stopped_at": "2026-09-28T06:00:28+00:00"
   }
 ]
