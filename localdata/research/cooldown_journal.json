@@ -1102,5 +1102,21 @@
     "signal_id": "51c7efcf6b37044a",
     "slice_id": "feat_ext_vs_ma_50:0:LONG:h24",
     "stopped_at": "2026-09-28T18:00:27+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "0.2264",
+    "reason": "slice_gap",
+    "signal_id": "79e770adbdb31c59",
+    "slice_id": "feat_squeeze:2:LONG:h20",
+    "stopped_at": "2026-09-28T20:00:34+00:00"
+  },
+  {
+    "pair": "BNBUSDC",
+    "pnl_zar": "-0.1125",
+    "reason": "slice_gap",
+    "signal_id": "4df949d15458b273",
+    "slice_id": "feat_vol_contraction:2:LONG:h12",
+    "stopped_at": "2026-09-28T20:00:34+00:00"
   }
 ]
