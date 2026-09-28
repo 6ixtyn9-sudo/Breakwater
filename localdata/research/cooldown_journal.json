@@ -1054,5 +1054,13 @@
     "signal_id": "3987018dc50d47b1",
     "slice_id": "feat_close_position:2:LONG:h24",
     "stopped_at": "2026-09-28T06:00:28+00:00"
+  },
+  {
+    "pair": "ZECUSDC",
+    "pnl_zar": "-5.1404",
+    "reason": "stop",
+    "signal_id": "11d664a8fe67fcff",
+    "slice_id": "feat_bb_squeeze_20:2:LONG:h20",
+    "stopped_at": "2026-09-28T07:00:29+00:00"
   }
 ]
