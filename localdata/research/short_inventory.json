@@ -2,11 +2,72 @@
   "armable": 0,
   "armable_pairs": [],
   "armable_slices": [],
-  "as_of": "2026-09-28T00:43:31+00:00",
+  "as_of": "2026-09-28T01:28:31+00:00",
   "candidates": 832,
-  "candidates_sample": [],
+  "candidates_sample": [
+    {
+      "armable": [
+        false,
+        "too_few_rows"
+      ],
+      "breadth": 1,
+      "edge_bps": 84.3,
+      "fail_reasons": "temporal_pass,breadth_ok",
+      "kind": "PERP",
+      "n": 172,
+      "provisional": false,
+      "regime_confounded": false,
+      "slice_id": "feat_time_since_low_20:2:SHORT:h15",
+      "validated": false
+    },
+    {
+      "armable": [
+        false,
+        "too_few_rows"
+      ],
+      "breadth": 1,
+      "edge_bps": 76.9,
+      "fail_reasons": "temporal_pass,breadth_ok",
+      "kind": "PERP",
+      "n": 172,
+      "provisional": false,
+      "regime_confounded": false,
+      "slice_id": "feat_time_since_low_20:2:SHORT:h20",
+      "validated": false
+    },
+    {
+      "armable": [
+        false,
+        "regime_confounded"
+      ],
+      "breadth": 1,
+      "edge_bps": 65.6,
+      "fail_reasons": "temporal_pass,breadth_ok",
+      "kind": "PERP",
+      "n": 172,
+      "provisional": false,
+      "regime_confounded": true,
+      "slice_id": "feat_time_since_low_20:2:SHORT:h24",
+      "validated": false
+    },
+    {
+      "armable": [
+        false,
+        "too_few_rows"
+      ],
+      "breadth": 1,
+      "edge_bps": 64.9,
+      "fail_reasons": "temporal_pass,breadth_ok",
+      "kind": "PERP",
+      "n": 172,
+      "provisional": false,
+      "regime_confounded": false,
+      "slice_id": "feat_time_since_low_20:2:SHORT:h12",
+      "validated": false
+    }
+  ],
   "confirmed_bear": false,
-  "eligible": 0,
+  "eligible": 4,
   "enabled": true,
   "observations": 0,
   "observations_sample": [],
