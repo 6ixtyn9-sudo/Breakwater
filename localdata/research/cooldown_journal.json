@@ -1078,5 +1078,13 @@
     "signal_id": "6f893391ad1d4a40",
     "slice_id": "feat_vol_contraction:2:LONG:h12",
     "stopped_at": "2026-09-28T08:00:32+00:00"
+  },
+  {
+    "pair": "LTCUSDC",
+    "pnl_zar": "-3.3931",
+    "reason": "stop",
+    "signal_id": "d0cdb6000bff6c01",
+    "slice_id": "feat_price_roc_5:2:LONG:h20",
+    "stopped_at": "2026-09-28T15:00:28+00:00"
   }
 ]
