@@ -47,6 +47,7 @@ ACTUAL_EXITS = {
     "time_stop",
     "regime_shift",
     "lane_gate",
+    "max_bars",
 }
 SKIP_REASONS = {
     "regime",

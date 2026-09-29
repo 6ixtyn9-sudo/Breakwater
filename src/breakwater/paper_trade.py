@@ -1,10 +1,17 @@
 """Paper trading over monitored-slice signals.
 
 Open paper positions persist between runs. Each run marks positions against
-the latest completed bar: an MAE-calibrated ATR stop, a two-to-one target or
-a time-stop closes the position, and the realised result is logged,
-journaled and fed back into the slice book so decay gates see honest paper
-results.
+the latest completed bar: an MAE-calibrated ATR stop, a trailing stop, a
+horizon/time stop or a hard age cap closes the position, and the realised
+result is logged, journaled and fed back into the slice book so decay gates
+see honest paper results.
+
+Exit policy (changed 2026-09-29): the fixed +2R target is RETIRED by
+default. The prospective counterfactual ledger measured five alternative
+exit policies over 303 comparisons and all five beat the live 2R policy;
+the best, `no_target_trail_1r`, by +145.94 ZAR. See the TARGET_ENABLE /
+PAPER_MAX_BARS / SLICE_GAP_RESPECT_R_GATE block below for the numbers and
+the reasoning. Set BREAKWATER_PAPER_TARGET_ENABLE=1 to restore the target.
 
 Paper is simulation only: it holds at most one position per kind (SPOT,
 PERP) so evidence accumulates in both markets. The live-account mandate
@@ -41,8 +48,10 @@ Horizon alignment (IMPORTANT):
 If a position carries `horizon_bars` (>0), a thesis that never reached +1R
 exits at the bar close once that many bars have elapsed (stop still wins
 intrabar). A trade that has already made +1R (R-gate) is NOT horizon-cut:
-the 2R target may fire, and the existing trail ratchets the stop. Horizon
-is a loser timer, not a winner cap. Disable with BREAKWATER_PAPER_R_GATE=0.
+the trail ratchets the stop and decides the exit, bounded only by
+PAPER_MAX_BARS. Horizon is a loser timer, not a winner cap. The same
+applies to the per-slice gap monitor (SLICE_GAP_RESPECT_R_GATE). Disable
+the whole R-gate with BREAKWATER_PAPER_R_GATE=0.
 
 Migration (IMPORTANT):
 Legacy open positions may predate `horizon_bars`/`regime` persistence. Each
@@ -122,6 +131,10 @@ PAPER_LOG_HEADERS = [
     "exit_bar_start",
 ]
 
+# Retained even though target exits are OFF by default (see TARGET_ENABLE):
+# the through-target ENTRY guard is keyed off this multiple, and refusing to
+# chase a move that has already run +2R is a "don't buy what's gone" guard
+# in its own right, independent of where the trade is exited.
 TARGET_R_MULTIPLE = Decimal("2")
 TIME_STOP_BARS = int(os.getenv("BREAKWATER_PAPER_TIME_STOP_BARS", "20"))
 MISSING_BARS_EXIT = 24
@@ -219,10 +232,54 @@ def _position_fee_bps(position: dict) -> Decimal:
     return spot_round_trip_decimal(str(position.get("pair") or ""))
 
 
-# Trailing feature flags: ON by default. The counterfactual analysis showed
-# no_target_trail_1r would be +12.85 ZAR vs actual -218 ZAR (+231 ZAR swing).
-# Activate at +0.75R (faster breakeven ratchet) and trail at 1.0R distance.
-# This converts many stop-losses into small wins or breakeven exits.
+# ── Exit policy: no_target_trail_1r (adopted 2026-09-29) ──────────────────
+# The paper engine used to exit every winner at a fixed +2R target. The
+# prospective counterfactual ledger (localdata/research/paper_counterfactuals
+# .json, tracked bar-by-bar by breakwater.paper_counterfactual, never
+# retrofitted) measured five alternative exit policies against that actual
+# over 303 comparisons:
+#
+#   no_target_trail_1r   +192.50 ZAR   delta vs actual  +145.94   <- adopted
+#   target_3r_trail_1r   +126.00 ZAR   delta vs actual   +89.27
+#   target_4r_trail_1r   +105.66 ZAR   delta vs actual   +68.93
+#   target_2r_trail_1r    +94.40 ZAR   delta vs actual   +61.75
+#   no_target_trail_2r   +113.85 ZAR   delta vs actual   +28.90
+#
+# Every alternative beat the live policy. The fixed 2R target was capping
+# winners while the MAE stop ran losers to the full stop distance: lifetime
+# the stop bucket was -214.05 ZAR over 56 trades with ZERO wins, against
+# +561.30 over 65 targets. Capping the right tail while leaving the left
+# tail uncapped is the shape the counterfactual priced.
+#
+# The adopted policy is exactly the measured one:
+#   - no fixed profit target (TARGET_ENABLE=0);
+#   - keep the MAE-calibrated initial stop;
+#   - once the trade banks +1R (the R-gate), trail the stop TRAIL_DISTANCE_R
+#     behind the best price seen and suppress the horizon/time exit, so the
+#     trail — not a timer and not a fixed cap — decides where a winner ends;
+#   - a hard PAPER_MAX_BARS cap so a trailing winner cannot become immortal
+#     (the counterfactual applied the same 120-bar cap).
+#
+# TARGET_ENABLE=1 restores the old +2R exit. The `target_2r_trail_1r` shadow
+# policy stays in paper_counterfactual.POLICIES, so the retired policy keeps
+# being measured against the new default and the comparison simply runs in
+# the opposite direction from here on.
+TARGET_ENABLE = _env_bool("BREAKWATER_PAPER_TARGET_ENABLE", "0")
+
+# Hard cap on how long any paper position may live. Without a target, an
+# R-gated winner rides the trail with its horizon suppressed; this bounds
+# that. Matches paper_counterfactual.advance_counterfactuals(max_bars=120).
+# 0 disables the cap.
+PAPER_MAX_BARS = int(os.getenv("BREAKWATER_PAPER_MAX_BARS", "120"))
+
+# Trailing feature flags: ON by default. Activate at +0.75R (faster breakeven
+# ratchet) and trail at 1.0R distance. This converts many stop-losses into
+# small wins or breakeven exits. NOTE: for a position carrying horizon_bars>0
+# (every book slice) the trail only engages once the R-gate is on, so the
+# effective activation there is +1R and TRAIL_ACTIVATE_R only governs
+# horizon-less positions. That is deliberate: it keeps the live policy
+# identical to the measured no_target_trail_1r shadow, which ratchets only
+# after mfe >= 1R.
 TRAIL_ENABLE = _env_bool("BREAKWATER_TRAIL_ENABLE", "1")
 TRAIL_ACTIVATE_R = _env_decimal("BREAKWATER_TRAIL_ACTIVATE_R", "0.75")
 TRAIL_DISTANCE_R = _env_decimal("BREAKWATER_TRAIL_DISTANCE_R", "1.0")
@@ -231,6 +288,14 @@ TRAIL_IGNORE_TIME_STOP = _env_bool("BREAKWATER_TRAIL_IGNORE_TIME_STOP", "1")
 # Let winners win: horizon is a loser timer. Default ON.
 R_GATE_ENABLE = _env_bool("BREAKWATER_PAPER_R_GATE", "1")
 R_GATE_SUPPRESS_R = _env_decimal("BREAKWATER_PAPER_R_GATE_R", "1.0")
+
+# The per-slice gap monitor force-closes a position whose slice has gone
+# quiet. Without a profit target that timer would become the de-facto winner
+# cap — the exact failure the counterfactual just priced out — and the
+# shadow policies never modelled a slice_gap exit at all. So a position that
+# has already banked the R-gate is left to its stop/trail, consistent with
+# "planned exits are loser timers". 0 restores unconditional gap closure.
+SLICE_GAP_RESPECT_R_GATE = _env_bool("BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE", "1")
 
 
 def _read_positions_with_error(path: Path) -> tuple[list, str | None]:
@@ -511,6 +576,32 @@ def _trade_excursion_diagnostics(
         "net_r": f"{net_r:.6f}",
         "excursion_ordering": "ohlc_upper_bound_stop_first_exit",
     }
+
+
+def _position_mfe_r(position: dict) -> Decimal:
+    """Maximum favourable excursion so far, in R, from persisted state.
+
+    Reads the same ``peak_price``/``trough_price`` the bar marker maintains,
+    so it is only meaningful now that those are persisted on every bar (see
+    the excursion-state note in ``_mark_position_bar``). Returns 0 for any
+    position whose state cannot be parsed, which keeps every caller's
+    r-gate check fail-closed: an unreadable position is not a banked winner.
+    """
+    try:
+        entry = Decimal(str(position["entry_price"]))
+        initial_stop = Decimal(
+            str(position.get("initial_stop_price") or position["stop_price"])
+        )
+        peak = Decimal(str(position.get("peak_price") or entry))
+        trough = Decimal(str(position.get("trough_price") or entry))
+    except (InvalidOperation, KeyError, TypeError, ValueError):
+        return Decimal(0)
+    r_dist = abs(entry - initial_stop)
+    if r_dist <= 0:
+        return Decimal(0)
+    if str(position.get("side") or "").upper() == "BUY":
+        return (peak - entry) / r_dist
+    return (entry - trough) / r_dist
 
 
 def _active_stop_risk_zar(position: dict) -> Decimal | None:
@@ -1035,7 +1126,9 @@ def _mark_position_bar(
         else entry - (initial_stop_price - entry) * TARGET_R_MULTIPLE
     )
     exit_price = exit_reason = outcome = None
-    allow_target = horizon_bars == 0 or R_GATE_ENABLE
+    # Target exits are OFF by default (see TARGET_ENABLE): winners run on the
+    # trail instead of being capped at +2R.
+    allow_target = TARGET_ENABLE and (horizon_bars == 0 or R_GATE_ENABLE)
     if side == "BUY":
         if low <= stop:
             exit_price, outcome = stop, ("win" if stop >= entry else "loss")
@@ -1133,8 +1226,23 @@ def _mark_position_bar(
     ):
         exit_price, exit_reason = close, "time_stop"
         outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
+    # Hard age cap. With no profit target an R-gated winner has both its
+    # horizon and its time stop suppressed and rides the trail, so this is
+    # the only thing standing between a drifting position and immortality.
+    # Deliberately NOT r-gate suppressed - that is the whole point of a cap.
+    if (
+        exit_price is None
+        and PAPER_MAX_BARS > 0
+        and bars_held >= PAPER_MAX_BARS
+        and planned_exit_allowed
+    ):
+        exit_price, exit_reason = close, "max_bars"
+        outcome = "win" if (close > entry if side == "BUY" else close < entry) else "loss"
     if exit_price is None:
-        if ((TRAIL_ENABLE and horizon_bars == 0) or r_gate_on) and r_dist > 0:
+        # TRAIL_ENABLE is the master switch: it used to be bypassed entirely
+        # whenever the R-gate was on, so BREAKWATER_TRAIL_ENABLE=0 did not
+        # actually disable trailing for the positions that trail the most.
+        if TRAIL_ENABLE and (horizon_bars == 0 or r_gate_on) and r_dist > 0:
             if not trail_active:
                 trail_active = (
                     peak_seen >= entry + TRAIL_ACTIVATE_R * r_dist
@@ -1149,20 +1257,45 @@ def _mark_position_bar(
                 )
                 stop = new_stop
                 position["stop_price"] = str(stop)
-                # Re-check: if the new trailed stop would be hit by this
-                # same bar, exit now. Without this, a bar that activates
-                # trail (high >= entry+0.75R) then retraces below the new
-                # trailed stop would survive and exit next bar instead.
-                if side == "BUY" and low <= stop:
-                    exit_price, outcome = stop, ("win" if stop >= entry else "loss")
-                    exit_reason = "trail_stop"
-                elif side == "SELL" and high >= stop:
-                    exit_price, outcome = stop, ("win" if stop <= entry else "loss")
-                    exit_reason = "trail_stop"
-            position["initial_stop_price"] = str(initial_stop_price)
-            position["peak_price"] = str(peak_seen)
-            position["trough_price"] = str(trough_seen)
-            position["trail_active"] = "1" if trail_active else "0"
+                # The ratchet takes effect from the NEXT bar; it is not
+                # re-tested against the bar that produced the new peak.
+                # A same-bar re-check used to sit here, but it was dead code
+                # (it set exit_price inside a branch that then returned None
+                # unconditionally, so the exit always landed on the next bar
+                # anyway) and its comment claimed the opposite.
+                #
+                # Keeping ratchet-at-bar-end is also the correct call on the
+                # merits: within one OHLC bar the path is unknown, so a stop
+                # derived from that same bar's high cannot be shown to have
+                # been touched after the high was made. This is exactly what
+                # paper_counterfactual.advance_counterfactuals does, which
+                # keeps the live engine and the measured shadow policy on
+                # identical mechanics rather than merely similar ones.
+        # ── Excursion state is persisted on EVERY marked bar ──────────────
+        # This used to live inside the trailing branch above, which made the
+        # trail unreachable for the entire real book. A book position carries
+        # horizon_bars>0, so it can only trail once r_gate_on; r_gate_on needs
+        # prev_mfe_r >= 1R; prev_mfe_r is computed from position["peak_price"]
+        # — which was only ever written inside the branch that required
+        # r_gate_on. Peak stayed pinned at the entry price forever, mfe_r
+        # stayed 0, the gate never opened and the trail never armed.
+        #
+        # Measured on committed state before this fix: all 7 open positions
+        # had peak_price == trough_price == entry_price (one of them 21 bars
+        # old), 126 of the 244 closes held >=10 bars logged mfe_r == 0.000000
+        # exactly, and the lifetime ledger contains 56 "stop" exits with zero
+        # wins against exactly ONE "trail_stop".
+        #
+        # The corruption was not confined to the trail. mfe_r/mae_r in the
+        # trade log are derived from this same peak/trough state, so every
+        # excursion diagnostic only ever saw the final bar — and the
+        # MAE-calibrated per-slice stop distance is the 90th percentile of
+        # that understated adverse excursion, i.e. stops were being sized off
+        # a single bar of damage instead of the trade's worst point.
+        position["initial_stop_price"] = str(initial_stop_price)
+        position["peak_price"] = str(peak_seen)
+        position["trough_price"] = str(trough_seen)
+        position["trail_active"] = "1" if trail_active else "0"
         position["bars_held"] = str(bars_held)
         position["missing_bars"] = "0"
         position["last_processed_bar_start"] = _bar_start_iso(last["start"])
@@ -1472,6 +1605,19 @@ def run_paper_cycle(
             cycle_bars = max(1, replayed_bars // max(1, len(open_positions))) if replayed_bars else 0
             new_gap = prev_gap + cycle_bars
             position["slice_gap_bars"] = str(new_gap)
+            if (
+                new_gap >= SLICE_GAP_BARS
+                and SLICE_GAP_RESPECT_R_GATE
+                and R_GATE_ENABLE
+                and _position_mfe_r(position) >= R_GATE_SUPPRESS_R
+            ):
+                # Banked winner: the slice going quiet is not a reason to
+                # hand back an open profit. With target exits retired this
+                # timer would otherwise become the winner cap the
+                # counterfactual just priced out, and no shadow policy ever
+                # modelled a slice_gap exit. Let the stop/trail finish it.
+                gap_surviving.append(position)
+                continue
             if new_gap >= SLICE_GAP_BARS:
                 # Force-close at the latest known price.
                 pair_frame = frames.get(str(position["pair"]).upper())

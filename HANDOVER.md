@@ -214,3 +214,108 @@ See `.github/workflows/paper.yml` for full list. Key ones:
 - [ ] Fix stop exits (-22.42 ZAR, biggest drain)
 - [ ] Build Meta-Ranker
 - [ ] Investigate regime_shift churning (-4.08 ZAR, 26 trades)
+
+## Session 3 (2026-09-29) — exit policy: no_target_trail_1r
+
+### What changed and why
+
+The fixed +2R profit target is **retired by default**. The prospective
+counterfactual ledger (`localdata/research/paper_counterfactuals.json`,
+tracked bar-by-bar, never retrofitted) measured five shadow exit policies
+against the live one over 303 comparisons. **All five beat it:**
+
+| policy | shadow P&L | delta vs actual |
+|---|---|---|
+| `no_target_trail_1r` | +192.50 | **+145.94** ← adopted |
+| `target_3r_trail_1r` | +126.00 | +89.27 |
+| `target_4r_trail_1r` | +105.66 | +68.93 |
+| `target_2r_trail_1r` | +94.40 | +61.75 |
+| `no_target_trail_2r` | +113.85 | +28.90 |
+
+The 2R target capped the right tail while the MAE stop let the left tail run
+the full distance. Lifetime that shape produced **56 `stop` exits with zero
+wins, -214.05 ZAR**, against +561.30 over 65 targets.
+
+### The bug underneath it (this is the important part)
+
+The counterfactual did not beat the live engine only on policy — it beat it
+because **the live trailing stop had never once armed for a real book slice.**
+
+`_mark_position_bar` persisted `peak_price` / `trough_price` *inside* the
+trailing branch. For a book position (`horizon_bars > 0`) that branch required
+`r_gate_on`; `r_gate_on` required `prev_mfe_r >= 1R`; `prev_mfe_r` was computed
+from `peak_price` — which only that same branch ever wrote. A closed loop:
+peak stayed pinned at the entry price forever, so the gate never opened.
+
+Evidence on committed state before the fix:
+- all 7 open positions had `peak_price == trough_price == entry_price`, one of them 21 bars old;
+- **126 of the 244 closes held >= 10 bars logged `mfe_r == 0.000000` exactly**;
+- the lifetime ledger holds **one** `trail_stop` against 56 `stop`s.
+
+It was not just the trail. `mfe_r`/`mae_r` in the trade log derive from the same
+state, so **every excursion diagnostic only ever saw the final bar** — and the
+MAE-calibrated per-slice stop distance is the 90th percentile of that
+understated adverse excursion. Stops have been sized off one bar of damage
+instead of each trade's worst point. Expect stop distances to widen as honest
+MAE data accumulates; that is the fix working, not a regression.
+
+Two smaller defects fixed alongside:
+- `TRAIL_ENABLE=0` did not disable trailing for r-gated positions (the flag was
+  bypassed by `or r_gate_on`). It is now a true master switch.
+- The "exit on the same bar the trail ratchets" re-check was dead code — it set
+  `exit_price` inside a branch that then returned `None` unconditionally, and its
+  comment claimed the opposite. Removed. Ratchet-at-bar-end is both what the
+  engine actually did and what the counterfactual does, so live and shadow now
+  run identical mechanics rather than similar ones.
+
+### New knobs
+
+| var | default | meaning |
+|---|---|---|
+| `BREAKWATER_PAPER_TARGET_ENABLE` | `0` | `1` restores the +2R target exit |
+| `BREAKWATER_PAPER_MAX_BARS` | `120` | hard age cap; matches the counterfactual's cap |
+| `BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE` | `1` | don't gap-close a position that banked +1R |
+
+`paper.yml` does **not** pin these, so the code defaults above are what runs —
+the new policy is live on the next paper cycle with no workflow change. The
+trade-off is that reverting currently needs a code change. To make revert a
+repo-variable flip instead, paste this into the `env:` block of
+`.github/workflows/paper.yml` next to the `BREAKWATER_TRAIL_*` lines (this
+edit needs `workflows` scope, which the automation token does not have):
+
+```yaml
+          BREAKWATER_PAPER_TARGET_ENABLE: ${{ vars.BREAKWATER_PAPER_TARGET_ENABLE || '0' }}
+          BREAKWATER_PAPER_MAX_BARS: ${{ vars.BREAKWATER_PAPER_MAX_BARS || '120' }}
+          BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE: ${{ vars.BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE || '1' }}
+```
+
+Guardian runs its shadow scan on code defaults and pins none of the trailing
+knobs, so it already follows the new policy either way.
+
+`TARGET_R_MULTIPLE` is retained: the through-target **entry** guard still uses
+it, and refusing to chase a move that already ran +2R stands on its own.
+
+The slice-gap change is the one judgement call not directly measured: no shadow
+policy modelled a `slice_gap` exit, and with the target gone that 12-bar timer
+would have become the winner cap the counterfactual just priced out.
+
+### How this gets judged
+
+`target_2r_trail_1r` stays in `paper_counterfactual.POLICIES`, so the retired
+policy keeps being measured against the new default — the same comparison now
+runs in the opposite direction. If `target_2r_trail_1r` starts printing a
+positive `delta_vs_actual_zar` over a comparable sample, the change was wrong.
+
+Caveats to hold: the +145.94 is 303 comparisons in a mostly bull/neutral window;
+the shadows model neither funding nor slippage nor intrabar path; and the 7
+currently-open positions carry corrupted peak state that rebuilds from the next
+bar onward, so their first trail will arm later than it should.
+
+### Updated Open Items
+- [ ] Watch `delta_vs_actual_zar` for `target_2r_trail_1r` — that is now the control
+- [ ] Re-check per-slice stop distances once honest MAE data accumulates (they were calibrated on one-bar excursions)
+- [ ] ~~Fix stop exits (biggest drain)~~ — addressed here; verify on the next 50 closes
+- [ ] Build Meta-Ranker
+- [ ] Investigate regime_shift churning
+- [ ] No `cron:` in any workflow — the hourly cadence comes from an external trigger
+- [ ] HIP-3 Discovery last ran 2026-08-23
