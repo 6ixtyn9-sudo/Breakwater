@@ -108,6 +108,11 @@ ACTUAL_EXITS = {
     "time_stop",
     "regime_shift",
     "lane_gate",
+    # Hard age cap (paper_trade.PAPER_MAX_BARS). Since target exits were
+    # retired an R-gated winner rides the trail with horizon and time stop
+    # both suppressed, so this is a real, money-bearing exit and has to count
+    # toward the lane verdict like any other.
+    "max_bars",
 }
 _MISSING = object()
 

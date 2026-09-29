@@ -1,6 +1,15 @@
 name: Breakwater Guardian
 on:
   workflow_dispatch:
+    inputs:
+      canary_pair:
+        description: "Run the VALR order-path canary on this pair instead of the operational pass (blank = normal run)"
+        required: false
+        default: ""
+      canary_ack:
+        description: "Type I_ACCEPT_BREAKWATER_CANARY_ORDERS to actually place the two no-fill orders (blank = dry run)"
+        required: false
+        default: ""
 concurrency:
   group: breakwater-guardian
   cancel-in-progress: false
@@ -31,7 +40,23 @@ jobs:
           key: breakwater-ledger-${{ github.run_id }}
           restore-keys: |
             breakwater-ledger-
+      - name: VALR order-path canary
+        if: inputs.canary_pair != ''
+        env:
+          VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
+          VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
+          # Not BREAKWATER_MODE/LIVE_ACK: proving the order path must not
+          # require arming the strategy.
+          BREAKWATER_CANARY_ACK: ${{ inputs.canary_ack }}
+          # Via env, not interpolated into the script: a dispatch input
+          # spliced straight into run: is a shell-injection vector.
+          CANARY_PAIR: ${{ inputs.canary_pair }}
+          CANARY_ARM: ${{ inputs.canary_ack != '' && '--arm' || '' }}
+        run: |
+          PYTHONPATH=src python scripts/valr_canary.py --pair "$CANARY_PAIR" $CANARY_ARM 2>&1 | tee /tmp/canary.txt
+          { echo '```'; cat /tmp/canary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Run guarded operational pass
+        if: inputs.canary_pair == ''
         env:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}

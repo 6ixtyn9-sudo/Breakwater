@@ -555,6 +555,34 @@ class BreakwaterEngine:
                 self.settings.mode,
                 "; ".join(risk_unknown)[:240],
             )
+        # Realized-P&L reconciliation. The daily and seven-day loss limits
+        # below read risk_state, and nothing ever wrote to it: outside the
+        # tests, append_realized_pnl had no call sites, so realized_pnl_events
+        # stayed empty, both figures were permanently 0 and neither limit
+        # could fire. Same shape of bug as the aggregate leash above.
+        # No-op until something trades live (no live_entry events to resolve).
+        reconciliation = None
+        try:
+            from breakwater.reconcile import reconcile_realized_pnl
+
+            valuator = EquityValuator(self.client, specs)
+            reconciliation = reconcile_realized_pnl(
+                client=self.client,
+                ledger=self.ledger,
+                risk_state=self.risk_state,
+                server_time=server_time,
+                quote_to_zar=valuator.rate_to_zar,
+            ).as_dict()
+        except Exception as exc:  # noqa: BLE001 - never break the guardian
+            reconciliation = {"errors": [f"{type(exc).__name__}: {exc}"[:200]]}
+        if reconciliation.get("errors") or reconciliation.get("unprotected"):
+            append_status(
+                self.settings.status_path,
+                "reconcile_attention",
+                self.settings.mode,
+                json.dumps(reconciliation, sort_keys=True)[:900],
+            )
+
         risk_state = self.risk.check_account(
             equity_zar=equity_zar,
             high_water_zar=high_water,
@@ -587,6 +615,9 @@ class BreakwaterEngine:
                 "key_permissions": sorted(permissions),
                 "key_ip_restricted": bool(key_info.get("allowedIpAddressCidr")),
                 "mandate_configured": self.risk is not None,
+                "reconciliation": reconciliation,
+                "daily_pnl_zar": str(self.risk_state.daily_pnl(server_time)),
+                "seven_day_pnl_zar": str(self.risk_state.seven_day_pnl(server_time)),
             }
         )
         event_id = hashlib.sha256(
@@ -1475,6 +1506,11 @@ class BreakwaterEngine:
                 "protection_order_id": receipt.protection_order_id,
                 "filled_quantity": str(receipt.filled_quantity),
                 "average_price": str(receipt.average_price),
+                # Required by breakwater.reconcile to price the close. Without
+                # the side it cannot sign the P&L and refuses to guess; without
+                # the quote currency it cannot convert to ZAR.
+                "side": str(signal.side.value),
+                "quote_currency": str(spec.quote_currency).upper(),
             }
             self.ledger.append(
                 event_id=f"entry-{receipt.entry_order_id}",

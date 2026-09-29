@@ -314,6 +314,174 @@ def test_horizon_does_not_cut_a_plus_one_r_winner(tmp_path):
     assert held[0]["trail_active"] == "1"
 
 
+def test_peak_and_trough_are_recorded_on_every_bar(tmp_path):
+    """Regression: excursion state must be persisted whether or not trailing ran.
+
+    It used to be written only inside the trailing branch, which for a book
+    position (horizon_bars > 0) required the R-gate, which required a peak
+    that only that same branch ever wrote. Peak stayed pinned at the entry
+    price forever, so the R-gate could never open and the trail could never
+    arm. Measured on committed state before the fix: all 7 open positions had
+    peak_price == trough_price == entry_price, 126 of the 244 closes held
+    >= 10 bars logged mfe_r == 0.000000, and the ledger held 56 "stop" exits
+    with zero wins against exactly one "trail_stop".
+
+    This bar is deliberately below +1R, so nothing trails and the only thing
+    under test is that the excursion was written down at all.
+    """
+    position = open_position(entry="100", stop="95", bars="1")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=102, high=104, low=98)},
+        positions=position,
+    )
+    assert result["closed"] == 0
+    held = read_positions(tmp_path / "positions.json")
+    assert Decimal(held[0]["peak_price"]) == Decimal("104")
+    assert Decimal(held[0]["trough_price"]) == Decimal("98")
+    assert held[0]["trail_active"] == "0"
+    assert Decimal(held[0]["stop_price"]) == Decimal("95")
+
+
+def test_recorded_peak_arms_the_r_gate_on_the_next_bar(tmp_path):
+    """The two halves together: bar one records the peak, bar two trails on it.
+
+    Before the persistence fix this sequence was unreachable for any book
+    slice — which is why the lifetime ledger contains exactly one trail_stop.
+    """
+    position = open_position(entry="100", stop="95", bars="1")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    position[0]["last_processed_bar_start"] = "2026-08-14T08:00:00+00:00"
+    first = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=106, high=106, low=100,
+                                          start="2026-08-14T09:00:00Z")},
+        positions=position,
+    )
+    assert first["closed"] == 0
+    held = read_positions(tmp_path / "positions.json")
+    assert Decimal(held[0]["peak_price"]) == Decimal("106")
+
+    second = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=108, high=109, low=107,
+                                          start="2026-08-14T10:00:00Z")},
+    )
+    assert second["closed"] == 0
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["trail_active"] == "1"
+    # prior peak 106 >= +1R armed the gate; new peak 109 - 1R = 104.
+    assert Decimal(held[0]["stop_price"]) == Decimal("104")
+
+
+def test_trail_enable_off_really_disables_trailing_for_an_r_gated_position(tmp_path, monkeypatch):
+    """TRAIL_ENABLE is the master switch.
+
+    It used to be bypassed entirely whenever the R-gate was on
+    (`(TRAIL_ENABLE and horizon_bars == 0) or r_gate_on`), so the kill switch
+    did nothing for exactly the positions that trail the most.
+    """
+    from breakwater import paper_trade
+
+    monkeypatch.setattr(paper_trade, "TRAIL_ENABLE", False)
+    position = open_position(entry="100", stop="95", bars="5")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    position[0]["peak_price"] = "106"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=108, high=109, low=107)},
+        positions=position,
+    )
+    assert result["closed"] == 0
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["trail_active"] == "0"
+    assert Decimal(held[0]["stop_price"]) == Decimal("95")
+    # Excursion tracking is independent of the trail and must keep running.
+    assert Decimal(held[0]["peak_price"]) == Decimal("109")
+
+
+def test_max_bars_caps_a_trailing_winner(tmp_path):
+    """Without a target, an R-gated winner has horizon and time stop both
+    suppressed and rides the trail. PAPER_MAX_BARS is what stops that from
+    becoming an immortal position."""
+    from breakwater import paper_trade
+
+    position = open_position(entry="100", stop="145", bars=str(paper_trade.PAPER_MAX_BARS - 1))
+    position[0]["side"] = "BUY"
+    position[0]["stop_price"] = "145"
+    position[0]["initial_stop_price"] = "95"
+    position[0]["horizon_bars"] = "24"
+    position[0]["peak_price"] = "200"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=150, high=150, low=149)},
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "max_bars"
+    assert log.iloc[0]["outcome"] == "win"
+
+
+def test_max_bars_counts_as_a_real_close_for_the_lane_verdict(tmp_path):
+    """A money-bearing exit that lane_gate did not recognise would be spent
+    P&L the green gate never sees."""
+    from breakwater import lane_gate
+
+    assert "max_bars" in lane_gate.ACTUAL_EXITS
+    assert lane_gate._is_real_close({"outcome": "win", "exit_reason": "max_bars"})
+
+
+def test_slice_gap_does_not_close_a_banked_winner(tmp_path):
+    """With target exits retired, the slice-gap timer would otherwise become
+    the winner cap the counterfactual just priced out — and no shadow policy
+    ever modelled a slice_gap exit."""
+    position = open_position(entry="100", stop="95", bars="5")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    position[0]["peak_price"] = "106"
+    position[0]["slice_gap_bars"] = "11"
+    position[0]["last_processed_bar_start"] = "2026-08-14T08:00:00+00:00"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=106, high=106, low=105,
+                                          start="2026-08-14T09:00:00Z")},
+        positions=position,
+    )
+    assert result["closed"] == 0
+    assert result["open"] == 1
+
+
+def test_slice_gap_still_closes_a_thesis_that_never_banked(tmp_path):
+    """The gap monitor is unchanged for everything that has not made +1R."""
+    position = open_position(entry="100", stop="95", bars="5")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    position[0]["peak_price"] = "102"
+    position[0]["slice_gap_bars"] = "11"
+    position[0]["last_processed_bar_start"] = "2026-08-14T08:00:00+00:00"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=101, high=102, low=100,
+                                          start="2026-08-14T09:00:00Z")},
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_reason"] == "slice_gap"
+
+
 def test_horizon_still_cuts_a_thesis_that_never_confirmed(tmp_path):
     position = open_position(entry="100", stop="95", bars="5")
     position[0]["horizon_bars"] = "6"
@@ -329,7 +497,36 @@ def test_horizon_still_cuts_a_thesis_that_never_confirmed(tmp_path):
     assert log.iloc[0]["exit_reason"] == "horizon"
 
 
-def test_two_r_target_fires_even_with_horizon(tmp_path):
+def test_target_is_retired_by_default_so_the_winner_keeps_running(tmp_path):
+    """The fixed +2R target is OFF by default (no_target_trail_1r).
+
+    This is the exact bar that used to book an exact +2R exit. The position
+    must now survive it, and the bar's high must be recorded as the peak so
+    the R-gate can arm on a later bar.
+    """
+    position = open_position(entry="100", stop="95", bars="1")
+    position[0]["horizon_bars"] = "24"
+    position[0]["initial_stop_price"] = "95"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=110, high=111, low=109)},
+        positions=position,
+    )
+    assert result["closed"] == 0
+    assert result["open"] == 1
+    held = read_positions(tmp_path / "positions.json")
+    assert Decimal(held[0]["peak_price"]) == Decimal("111")
+    # R-gate reads the PRIOR peak, so the trail cannot arm on the same bar
+    # that made the peak: the stop is still the untouched MAE stop.
+    assert Decimal(held[0]["stop_price"]) == Decimal("95")
+
+
+def test_two_r_target_fires_when_explicitly_re_enabled(tmp_path, monkeypatch):
+    """BREAKWATER_PAPER_TARGET_ENABLE=1 restores the retired 2R exit."""
+    from breakwater import paper_trade
+
+    monkeypatch.setattr(paper_trade, "TARGET_ENABLE", True)
     position = open_position(entry="100", stop="95", bars="1")
     position[0]["horizon_bars"] = "24"
     position[0]["initial_stop_price"] = "95"
@@ -357,7 +554,10 @@ def test_two_r_target_fires_even_with_horizon(tmp_path):
     assert counterfactual_log.iloc[0]["actual_exit_reason"] == "target"
 
 
-def test_open_position_hits_target_and_wins(tmp_path):
+def test_open_position_hits_target_and_wins(tmp_path, monkeypatch):
+    from breakwater import paper_trade
+
+    monkeypatch.setattr(paper_trade, "TARGET_ENABLE", True)
     result = cycle(
         tmp_path,
         signals=[],
@@ -369,6 +569,28 @@ def test_open_position_hits_target_and_wins(tmp_path):
     assert log.iloc[0]["outcome"] == "win"
     assert log.iloc[0]["exit_reason"] == "target"
     assert float(log.iloc[0]["pnl_zar"]) > 0
+
+
+def test_without_a_target_the_trail_ratchets_instead_of_booking(tmp_path):
+    """Same +2R bar, default policy: no exit, the stop ratchets to peak-1R.
+
+    This is the whole point of no_target_trail_1r — the winner is handed to
+    the trail rather than capped, so the exit price is discovered by the
+    market instead of fixed in advance.
+    """
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=111, high=111)},
+        positions=open_position(),
+    )
+    assert result["closed"] == 0
+    assert result["open"] == 1
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["trail_active"] == "1"
+    # peak 111, 1R = 5 -> trailed stop 106, locking in a profit the old
+    # policy would have booked at exactly 110 and never above.
+    assert Decimal(held[0]["stop_price"]) == Decimal("106")
 
 
 def test_new_book_signal_opens_position_when_slot_free(tmp_path):
@@ -469,7 +691,7 @@ def test_signal_does_not_reenter_after_its_position_closed(tmp_path):
     bar_two = frame_with_bars(
         [
             ("2026-08-14T10:00:00Z", 100, 100, 100),
-            ("2026-08-14T11:00:00Z", 111, 111, 111),
+            ("2026-08-14T11:00:00Z", 94, 94, 93),
         ]
     )
 
@@ -480,10 +702,12 @@ def test_signal_does_not_reenter_after_its_position_closed(tmp_path):
     )
     assert result["open"] == 1
 
-    # Close it: the next bar reaches the +2R target (110).
+    # Close it. The 2R target that produced the original artifact is retired,
+    # so the position is closed here by its stop instead; the re-entry guard
+    # under test cares that the signal has traded, not how it ended.
     cycle(tmp_path, signals=[], frames={"BTCZAR": bar_two})
     log = pd.read_csv(tmp_path / "log.csv")
-    assert (log["outcome"] == "win").any()
+    assert (log["exit_reason"] == "stop").any()
 
     # Same signal again: refused, and the refusal is visible.
     again = cycle(
@@ -1656,3 +1880,62 @@ def test_frozen_lane_still_protects_via_stop(tmp_path):
     assert result["closed"] == 1
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["exit_reason"] == "stop"
+
+
+# ── Exit-policy stamping ───────────────────────────────────────────────────
+# Evidence gathered under one set of exit mechanics must be separable from
+# evidence gathered under another, or the promotion gate's ">= 10 shadow
+# trades over >= 14 shadow days" is satisfied by trades from a policy that
+# no longer exists.
+
+
+def test_exit_policy_id_tracks_the_live_knobs(monkeypatch):
+    """The stamp is derived, not hard-coded, so it cannot describe mechanics
+    that are no longer in force."""
+    from breakwater import paper_trade
+
+    assert paper_trade.exit_policy_id() == "notarget_trail1r"
+
+    monkeypatch.setattr(paper_trade, "TARGET_ENABLE", True)
+    assert paper_trade.exit_policy_id() == "target2r_trail1r"
+
+    monkeypatch.setattr(paper_trade, "TRAIL_ENABLE", False)
+    assert paper_trade.exit_policy_id() == "target2r_notrail"
+
+
+def test_a_new_position_is_stamped_with_the_active_policy(tmp_path):
+    result = cycle(
+        tmp_path,
+        signals=[signal()],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 1
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["exit_policy"] == "notarget_trail1r"
+
+
+def test_the_close_row_carries_the_entry_policy_stamp(tmp_path):
+    position = open_position(entry="100", stop="95", bars="3")
+    position[0]["exit_policy"] = "notarget_trail1r"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=94, low=93)},
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_policy"] == "notarget_trail1r"
+
+
+def test_a_legacy_position_closes_with_a_blank_stamp(tmp_path):
+    """Positions opened before the stamp existed must not inherit it."""
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=94, low=93)},
+        positions=open_position(),
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert pd.isna(log.iloc[0]["exit_policy"]) or log.iloc[0]["exit_policy"] == ""

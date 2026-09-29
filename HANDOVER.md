@@ -214,3 +214,228 @@ See `.github/workflows/paper.yml` for full list. Key ones:
 - [ ] Fix stop exits (-22.42 ZAR, biggest drain)
 - [ ] Build Meta-Ranker
 - [ ] Investigate regime_shift churning (-4.08 ZAR, 26 trades)
+
+## Session 3 (2026-09-29) — exit policy: no_target_trail_1r
+
+### What changed and why
+
+The fixed +2R profit target is **retired by default**. The prospective
+counterfactual ledger (`localdata/research/paper_counterfactuals.json`,
+tracked bar-by-bar, never retrofitted) measured five shadow exit policies
+against the live one over 303 comparisons. **All five beat it:**
+
+| policy | shadow P&L | delta vs actual |
+|---|---|---|
+| `no_target_trail_1r` | +192.50 | **+145.94** ← adopted |
+| `target_3r_trail_1r` | +126.00 | +89.27 |
+| `target_4r_trail_1r` | +105.66 | +68.93 |
+| `target_2r_trail_1r` | +94.40 | +61.75 |
+| `no_target_trail_2r` | +113.85 | +28.90 |
+
+The 2R target capped the right tail while the MAE stop let the left tail run
+the full distance. Lifetime that shape produced **56 `stop` exits with zero
+wins, -214.05 ZAR**, against +561.30 over 65 targets.
+
+### The bug underneath it (this is the important part)
+
+The counterfactual did not beat the live engine only on policy — it beat it
+because **the live trailing stop had never once armed for a real book slice.**
+
+`_mark_position_bar` persisted `peak_price` / `trough_price` *inside* the
+trailing branch. For a book position (`horizon_bars > 0`) that branch required
+`r_gate_on`; `r_gate_on` required `prev_mfe_r >= 1R`; `prev_mfe_r` was computed
+from `peak_price` — which only that same branch ever wrote. A closed loop:
+peak stayed pinned at the entry price forever, so the gate never opened.
+
+Evidence on committed state before the fix:
+- all 7 open positions had `peak_price == trough_price == entry_price`, one of them 21 bars old;
+- **126 of the 244 closes held >= 10 bars logged `mfe_r == 0.000000` exactly**;
+- the lifetime ledger holds **one** `trail_stop` against 56 `stop`s.
+
+It was not just the trail. `mfe_r`/`mae_r` in the trade log derive from the same
+state, so **every excursion diagnostic only ever saw the final bar** — and the
+MAE-calibrated per-slice stop distance is the 90th percentile of that
+understated adverse excursion. Stops have been sized off one bar of damage
+instead of each trade's worst point. Expect stop distances to widen as honest
+MAE data accumulates; that is the fix working, not a regression.
+
+Two smaller defects fixed alongside:
+- `TRAIL_ENABLE=0` did not disable trailing for r-gated positions (the flag was
+  bypassed by `or r_gate_on`). It is now a true master switch.
+- The "exit on the same bar the trail ratchets" re-check was dead code — it set
+  `exit_price` inside a branch that then returned `None` unconditionally, and its
+  comment claimed the opposite. Removed. Ratchet-at-bar-end is both what the
+  engine actually did and what the counterfactual does, so live and shadow now
+  run identical mechanics rather than similar ones.
+
+### New knobs
+
+| var | default | meaning |
+|---|---|---|
+| `BREAKWATER_PAPER_TARGET_ENABLE` | `0` | `1` restores the +2R target exit |
+| `BREAKWATER_PAPER_MAX_BARS` | `120` | hard age cap; matches the counterfactual's cap |
+| `BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE` | `1` | don't gap-close a position that banked +1R |
+
+`paper.yml` does **not** pin these, so the code defaults above are what runs —
+the new policy is live on the next paper cycle with no workflow change. The
+trade-off is that reverting currently needs a code change. To make revert a
+repo-variable flip instead, paste this into the `env:` block of
+`.github/workflows/paper.yml` next to the `BREAKWATER_TRAIL_*` lines (this
+edit needs `workflows` scope, which the automation token does not have):
+
+```yaml
+          BREAKWATER_PAPER_TARGET_ENABLE: ${{ vars.BREAKWATER_PAPER_TARGET_ENABLE || '0' }}
+          BREAKWATER_PAPER_MAX_BARS: ${{ vars.BREAKWATER_PAPER_MAX_BARS || '120' }}
+          BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE: ${{ vars.BREAKWATER_PAPER_SLICE_GAP_RESPECT_R_GATE || '1' }}
+```
+
+Guardian runs its shadow scan on code defaults and pins none of the trailing
+knobs, so it already follows the new policy either way.
+
+`TARGET_R_MULTIPLE` is retained: the through-target **entry** guard still uses
+it, and refusing to chase a move that already ran +2R stands on its own.
+
+The slice-gap change is the one judgement call not directly measured: no shadow
+policy modelled a `slice_gap` exit, and with the target gone that 12-bar timer
+would have become the winner cap the counterfactual just priced out.
+
+### How this gets judged
+
+`target_2r_trail_1r` stays in `paper_counterfactual.POLICIES`, so the retired
+policy keeps being measured against the new default — the same comparison now
+runs in the opposite direction. If `target_2r_trail_1r` starts printing a
+positive `delta_vs_actual_zar` over a comparable sample, the change was wrong.
+
+Caveats to hold: the +145.94 is 303 comparisons in a mostly bull/neutral window;
+the shadows model neither funding nor slippage nor intrabar path; and the 7
+currently-open positions carry corrupted peak state that rebuilds from the next
+bar onward, so their first trail will arm later than it should.
+
+### Updated Open Items
+- [ ] Watch `delta_vs_actual_zar` for `target_2r_trail_1r` — that is now the control
+- [ ] Re-check per-slice stop distances once honest MAE data accumulates (they were calibrated on one-bar excursions)
+- [ ] ~~Fix stop exits (biggest drain)~~ — addressed here; verify on the next 50 closes
+- [ ] Build Meta-Ranker
+- [ ] Investigate regime_shift churning
+- [ ] No `cron:` in any workflow — the hourly cadence comes from an external trigger
+- [ ] HIP-3 Discovery last ran 2026-08-23
+
+## Session 4 (2026-09-29) — evidence scoping for the new exit policy
+
+Decision: **gather evidence under `no_target_trail_1r` before going live**,
+target venue **VALR spot**.
+
+### The trap this closes
+
+The promotion gate wants `shadow_trades >= 10` over `shadow_days >= 14`. The
+paper ledger already holds 382 closes that satisfy both — all of them
+produced by the retired +2R target, by an engine whose trailing stop never
+armed and whose MAE/MFE diagnostics only saw the final bar. Left alone,
+`scripts/promotion_evidence.py --write-registry --live-armed` could have
+promoted a slice to `LIVE_CAPPED` **today**, on the strength of mechanics
+that no longer exist.
+
+That is the most expensive kind of number in the system: true, and about
+something else.
+
+### What changed
+
+Every paper trade is now stamped with the exit policy that governed it.
+
+- `paper_trade.exit_policy_id()` derives the stamp from the live knobs
+  (`notarget_trail1r`, `target2r_trail1r`, `target2r_notrail`, ...) rather
+  than hard-coding it, so flipping `TARGET_ENABLE` back changes the stamp by
+  itself and two policies' trades can never pool into one evidence set.
+- Stamped on the position at **entry**; carried onto every close row
+  (normal, `stale_data`, `slice_gap`) via a new `exit_policy` log column.
+- Legacy rows migrate blank and are **excluded**, not charitably assumed.
+  Verified on the real 29 MB / 189,065-row ledger: 1.6 s one-time rewrite,
+  no row loss, idempotent.
+- `promotion_evidence.filter_by_exit_policy` / `filter_by_kind` do the
+  scoping. `kind` matters because `native` is a venue-separation label that
+  pools VALR spot with Hyperliquid perps — a VALR question is not answered
+  by Hyperliquid fills.
+
+**This was time-critical.** Every hour of unstamped trading would have been
+evidence we could not attribute to a policy.
+
+### `scripts/live_readiness.py`
+
+One command answers "can we go live on VALR spot yet", splitting the two
+questions that usually get answered as one:
+
+- **EARNED** — closes, shadow days, expectancy, PF, drawdown. Accrues by waiting.
+- **BUILT** — live executor, canary, registry row, global arm. Waiting produces none of these.
+
+Per-slice verdicts come from running the *real* `PromotionGate`, not a
+restatement of its thresholds, so the report cannot drift into being more
+generous than the gate.
+
+Current output: **0 / 10 trades, 0 / 14 days** under `notarget_trail1r`, and
+four missing mechanisms. Zero is the correct reading, not a bug.
+
+### What is still BUILT-missing (in the order it should be done)
+
+1. **Live executor that reaches the book.** `engine.operational_pass` filters
+   to `slice_id == "big-wave"`; the monitored book has no live path at all.
+2. **Canary.** `TradeExecutor.execute` has never run against the real VALR
+   API. First contact should be a minimum-size place-and-cancel, not a
+   signal-driven entry.
+3. **Registry row.** Needs 1 and 2 plus the evidence.
+4. **Global arm.** `BREAKWATER_MODE=live` + `BREAKWATER_LIVE_ACK`. Human, last.
+
+### Watch while the evidence accrues
+
+- `delta_vs_actual_zar` for `target_2r_trail_1r` — the retired policy is now
+  the control; if it turns positive over a comparable sample, the change was wrong.
+- Per-slice stop distances, which were calibrated on one-bar excursions and
+  should widen as honest MAE data arrives.
+- Both lanes are frozen red, so entries are throttled to green islands —
+  evidence will accrue slower than the raw signal count suggests.
+
+### VALR order-path canary (`scripts/valr_canary.py`)
+
+`TradeExecutor.execute` had never run against the real VALR API. Signing,
+the `/v2/orders/limit` body shape, order-id parsing, the `_completed`
+polling loop, the status vocabulary, `active_order`, `cancel_order` — all
+believed-correct, none known-correct. Without a canary the first test of
+that code is a signal-driven entry whose timing we did not choose.
+
+**Two orders, neither able to fill.**
+
+1. `fok_kill` — a **FOK** limit BUY at ~50% below the best bid. It cannot
+   cross the spread, so it cannot fill; fill-or-kill means it cannot rest
+   either. Exercises placement, id parsing, the real `_completed` loop
+   (called directly, not reimplemented) and terminal-status parsing.
+2. `rest_confirm_cancel` — a **post-only GTC** BUY at the same deep price.
+   Post-only makes VALR reject it outright rather than let it take
+   liquidity. It rests, is confirmed via `active_order` (the same call that
+   verifies a protective stop went live), then cancelled in a `finally`.
+
+Plus a `no_residual` sweep of `open_orders()` filtered to the `bw-canary`
+tag, so it recognises only its own litter. An unreadable order book raises
+rather than reporting a confident empty list.
+
+`build_plan` refuses on: unlisted pair, non-SPOT, inactive, non-ZAR quote,
+crossed/one-sided book, tick rounding the price to zero, minimum size above
+the 30 ZAR notional cap, and — re-checked after tick rounding — any price at
+or above the best bid.
+
+**Dry run is the default** and touches no write endpoint; the test fake
+raises if it does. Arming needs `--arm` *and*
+`BREAKWATER_CANARY_ACK=I_ACCEPT_BREAKWATER_CANARY_ORDERS`, and deliberately
+**not** `BREAKWATER_MODE=live`: making the only way to test the plumbing be
+to arm the strategy is backwards. Different decisions, different keys.
+
+Still unproven after a green canary, and the receipt says so rather than
+implying coverage: a real fill (`averagePrice`, `totalExecutedQuantity`),
+`place_spot_stop_limit` (needs base currency, so needs a fill), and the
+`place_market` emergency close.
+
+Receipt at `localdata/valr_spot_canary.json`, added to `commit_state.sh` so
+it survives the ephemeral runner. `live_readiness.py` requires `armed AND
+ok` — a dry-run receipt does not count as proof.
+
+**Naming:** `breakwater.order_canary` is this. `breakwater.canary` is the
+pre-existing capped *risk mandate* preset. "How much may we lose" vs "does
+placing an order work at all" — independent gates, both required.
