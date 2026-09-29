@@ -95,6 +95,38 @@ def dedupe_by_signal(closes: list[dict]) -> list[dict]:
     return out
 
 
+def filter_by_exit_policy(closes: list[dict], policy_id: str | None) -> list[dict]:
+    """Keep only trades governed by one exit policy.
+
+    The ledger spans more than one set of exit mechanics. On 2026-09-29 the
+    fixed +2R target was retired for `no_target_trail_1r`, and the same file
+    holds 382 closes from before that change. The promotion gate asks for
+    >= 10 shadow trades over >= 14 shadow days - thresholds the *old* trades
+    satisfy on their own. Without this filter a slice could be promoted to
+    live on evidence produced by mechanics that no longer exist, which is the
+    most expensive kind of true-but-irrelevant number in the system.
+
+    Rows predating the stamp carry an empty `exit_policy` and are therefore
+    excluded from any policy-specific view rather than charitably assumed.
+    """
+    if not policy_id:
+        return closes
+    return [row for row in closes if str(row.get("exit_policy") or "") == policy_id]
+
+
+def filter_by_kind(closes: list[dict], kind: str | None) -> list[dict]:
+    """Keep only one instrument kind (SPOT = VALR spot, PERP = Hyperliquid).
+
+    The `native` lane is a venue-separation label, not a venue: it pools VALR
+    ZAR spot with Hyperliquid native-crypto perps. A question about going
+    live on VALR spot is answered by SPOT rows only.
+    """
+    if not kind:
+        return closes
+    wanted = kind.strip().upper()
+    return [row for row in closes if str(row.get("kind") or "").upper() == wanted]
+
+
 def drops_for_lane(closes: list[dict], lane: str | None) -> list[dict]:
     if lane is None:
         return closes

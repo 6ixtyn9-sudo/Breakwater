@@ -1880,3 +1880,62 @@ def test_frozen_lane_still_protects_via_stop(tmp_path):
     assert result["closed"] == 1
     log = pd.read_csv(tmp_path / "log.csv")
     assert log.iloc[0]["exit_reason"] == "stop"
+
+
+# ── Exit-policy stamping ───────────────────────────────────────────────────
+# Evidence gathered under one set of exit mechanics must be separable from
+# evidence gathered under another, or the promotion gate's ">= 10 shadow
+# trades over >= 14 shadow days" is satisfied by trades from a policy that
+# no longer exists.
+
+
+def test_exit_policy_id_tracks_the_live_knobs(monkeypatch):
+    """The stamp is derived, not hard-coded, so it cannot describe mechanics
+    that are no longer in force."""
+    from breakwater import paper_trade
+
+    assert paper_trade.exit_policy_id() == "notarget_trail1r"
+
+    monkeypatch.setattr(paper_trade, "TARGET_ENABLE", True)
+    assert paper_trade.exit_policy_id() == "target2r_trail1r"
+
+    monkeypatch.setattr(paper_trade, "TRAIL_ENABLE", False)
+    assert paper_trade.exit_policy_id() == "target2r_notrail"
+
+
+def test_a_new_position_is_stamped_with_the_active_policy(tmp_path):
+    result = cycle(
+        tmp_path,
+        signals=[signal()],
+        frames={"BTCZAR": spot_frame(close=100)},
+    )
+    assert result["open"] == 1
+    held = read_positions(tmp_path / "positions.json")
+    assert held[0]["exit_policy"] == "notarget_trail1r"
+
+
+def test_the_close_row_carries_the_entry_policy_stamp(tmp_path):
+    position = open_position(entry="100", stop="95", bars="3")
+    position[0]["exit_policy"] = "notarget_trail1r"
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=94, low=93)},
+        positions=position,
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert log.iloc[0]["exit_policy"] == "notarget_trail1r"
+
+
+def test_a_legacy_position_closes_with_a_blank_stamp(tmp_path):
+    """Positions opened before the stamp existed must not inherit it."""
+    result = cycle(
+        tmp_path,
+        signals=[],
+        frames={"BTCUSDC": frame_with_bar(close=94, low=93)},
+        positions=open_position(),
+    )
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert pd.isna(log.iloc[0]["exit_policy"]) or log.iloc[0]["exit_policy"] == ""

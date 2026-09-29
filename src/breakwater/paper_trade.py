@@ -129,6 +129,11 @@ PAPER_LOG_HEADERS = [
     "net_r",
     "excursion_ordering",
     "exit_bar_start",
+    # Which exit policy governed this trade (see exit_policy_id). Legacy rows
+    # migrate blank, which is what makes them excludable: evidence gathered
+    # under the retired 2R target must not be counted toward a gate decision
+    # about the policy that replaced it.
+    "exit_policy",
 ]
 
 # Retained even though target exits are OFF by default (see TARGET_ENABLE):
@@ -576,6 +581,29 @@ def _trade_excursion_diagnostics(
         "net_r": f"{net_r:.6f}",
         "excursion_ordering": "ohlc_upper_bound_stop_first_exit",
     }
+
+
+def exit_policy_id() -> str:
+    """Stable identifier for the exit policy currently in force.
+
+    Derived from the live knobs rather than hard-coded, so it cannot drift
+    away from the behaviour it claims to describe: flip TARGET_ENABLE back on
+    and the stamp changes by itself, which keeps two policies' trades from
+    silently pooling into one evidence set.
+
+    Names match paper_counterfactual.POLICIES so a live record and its shadow
+    can be compared without a translation table:
+        notarget_trail1r  <- the adopted policy
+        target2r_trail1r  <- the retired one
+    """
+    if TARGET_ENABLE:
+        multiple = TARGET_R_MULTIPLE.normalize()
+        target = f"target{multiple}r"
+    else:
+        target = "notarget"
+    if not TRAIL_ENABLE:
+        return f"{target}_notrail"
+    return f"{target}_trail{TRAIL_DISTANCE_R.normalize()}r"
 
 
 def _position_mfe_r(position: dict) -> Decimal:
@@ -1443,6 +1471,7 @@ def run_paper_cycle(
                         "outcome": outcome,
                         "bars_held": str(position.get("bars_held") or 0),
                         "exit_reason": "stale_data",
+                        "exit_policy": str(position.get("exit_policy") or ""),
                         "entry_guard": str(position.get("entry_guard") or ""),
                         "regime": position_regime,
                         "pnl_outcome": pnl_outcome,
@@ -1552,6 +1581,7 @@ def run_paper_cycle(
                 "outcome": outcome,
                 "bars_held": str(bars_held),
                 "exit_reason": exit_reason,
+                "exit_policy": str(position.get("exit_policy") or ""),
                 "entry_guard": str(position.get("entry_guard") or ""),
                 "regime": position_regime,
                 "pnl_outcome": pnl_outcome,
@@ -1658,6 +1688,7 @@ def run_paper_cycle(
                         "outcome": pnl_outcome,
                         "bars_held": str(held),
                         "exit_reason": "slice_gap",
+                        "exit_policy": str(position.get("exit_policy") or ""),
                         "entry_guard": str(position.get("entry_guard") or ""),
                         "regime": str(position.get("regime") or ""),
                         "pnl_outcome": pnl_outcome,
@@ -2328,6 +2359,11 @@ def run_paper_cycle(
                 "peak_price": str(reference),
                 "trough_price": str(reference),
                 "trail_active": "0",
+                # Stamped at ENTRY: a trade is evidence for the policy it was
+                # opened under. A mid-flight policy flip leaves this row
+                # describing the entry regime only, which is why the readiness
+                # tooling also requires a close inside the policy's window.
+                "exit_policy": exit_policy_id(),
                 "notional_zar": str(notional_zar),
                 "bars_held": "0",
                 "missing_bars": "0",

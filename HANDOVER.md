@@ -319,3 +319,76 @@ bar onward, so their first trail will arm later than it should.
 - [ ] Investigate regime_shift churning
 - [ ] No `cron:` in any workflow — the hourly cadence comes from an external trigger
 - [ ] HIP-3 Discovery last ran 2026-08-23
+
+## Session 4 (2026-09-29) — evidence scoping for the new exit policy
+
+Decision: **gather evidence under `no_target_trail_1r` before going live**,
+target venue **VALR spot**.
+
+### The trap this closes
+
+The promotion gate wants `shadow_trades >= 10` over `shadow_days >= 14`. The
+paper ledger already holds 382 closes that satisfy both — all of them
+produced by the retired +2R target, by an engine whose trailing stop never
+armed and whose MAE/MFE diagnostics only saw the final bar. Left alone,
+`scripts/promotion_evidence.py --write-registry --live-armed` could have
+promoted a slice to `LIVE_CAPPED` **today**, on the strength of mechanics
+that no longer exist.
+
+That is the most expensive kind of number in the system: true, and about
+something else.
+
+### What changed
+
+Every paper trade is now stamped with the exit policy that governed it.
+
+- `paper_trade.exit_policy_id()` derives the stamp from the live knobs
+  (`notarget_trail1r`, `target2r_trail1r`, `target2r_notrail`, ...) rather
+  than hard-coding it, so flipping `TARGET_ENABLE` back changes the stamp by
+  itself and two policies' trades can never pool into one evidence set.
+- Stamped on the position at **entry**; carried onto every close row
+  (normal, `stale_data`, `slice_gap`) via a new `exit_policy` log column.
+- Legacy rows migrate blank and are **excluded**, not charitably assumed.
+  Verified on the real 29 MB / 189,065-row ledger: 1.6 s one-time rewrite,
+  no row loss, idempotent.
+- `promotion_evidence.filter_by_exit_policy` / `filter_by_kind` do the
+  scoping. `kind` matters because `native` is a venue-separation label that
+  pools VALR spot with Hyperliquid perps — a VALR question is not answered
+  by Hyperliquid fills.
+
+**This was time-critical.** Every hour of unstamped trading would have been
+evidence we could not attribute to a policy.
+
+### `scripts/live_readiness.py`
+
+One command answers "can we go live on VALR spot yet", splitting the two
+questions that usually get answered as one:
+
+- **EARNED** — closes, shadow days, expectancy, PF, drawdown. Accrues by waiting.
+- **BUILT** — live executor, canary, registry row, global arm. Waiting produces none of these.
+
+Per-slice verdicts come from running the *real* `PromotionGate`, not a
+restatement of its thresholds, so the report cannot drift into being more
+generous than the gate.
+
+Current output: **0 / 10 trades, 0 / 14 days** under `notarget_trail1r`, and
+four missing mechanisms. Zero is the correct reading, not a bug.
+
+### What is still BUILT-missing (in the order it should be done)
+
+1. **Live executor that reaches the book.** `engine.operational_pass` filters
+   to `slice_id == "big-wave"`; the monitored book has no live path at all.
+2. **Canary.** `TradeExecutor.execute` has never run against the real VALR
+   API. First contact should be a minimum-size place-and-cancel, not a
+   signal-driven entry.
+3. **Registry row.** Needs 1 and 2 plus the evidence.
+4. **Global arm.** `BREAKWATER_MODE=live` + `BREAKWATER_LIVE_ACK`. Human, last.
+
+### Watch while the evidence accrues
+
+- `delta_vs_actual_zar` for `target_2r_trail_1r` — the retired policy is now
+  the control; if it turns positive over a comparable sample, the change was wrong.
+- Per-slice stop distances, which were calibrated on one-bar excursions and
+  should widen as honest MAE data arrives.
+- Both lanes are frozen red, so entries are throttled to green islands —
+  evidence will accrue slower than the raw signal count suggests.

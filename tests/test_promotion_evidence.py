@@ -219,3 +219,59 @@ def test_registry_writer_records_the_verdict_without_arming_live(tmp_path):
         for entry in payload["strategies"].values()
     )
     assert registry.lifecycle("paper:feat:0:LONG") is Lifecycle.SHADOW_VALIDATED
+
+
+# ── Exit-policy scoping ────────────────────────────────────────────────────
+# The ledger spans more than one set of exit mechanics. The promotion gate
+# asks for >= 10 shadow trades over >= 14 shadow days, thresholds the retired
+# +2R target's 382 closes already satisfy on their own. Counting them toward
+# a verdict about the policy that replaced them is the most expensive kind of
+# true-but-irrelevant number in the system.
+
+
+def _close(policy="", kind="SPOT", signal_id="s1"):
+    return {
+        "signal_id": signal_id,
+        "kind": kind,
+        "exit_policy": policy,
+        "outcome": "win",
+        "exit_reason": "target",
+        "pnl_zar": "1",
+        "closed_at": "2026-09-29T10:00:00+00:00",
+        "slice_id": "feat:0:LONG",
+    }
+
+
+def test_filter_by_exit_policy_keeps_only_the_named_policy():
+    from breakwater.promotion_evidence import filter_by_exit_policy
+
+    rows = [
+        _close(policy="notarget_trail1r", signal_id="new"),
+        _close(policy="target2r_trail1r", signal_id="old"),
+    ]
+    kept = filter_by_exit_policy(rows, "notarget_trail1r")
+    assert [row["signal_id"] for row in kept] == ["new"]
+
+
+def test_unstamped_legacy_rows_are_excluded_not_assumed():
+    """Rows predating the stamp must not be charitably counted."""
+    from breakwater.promotion_evidence import filter_by_exit_policy
+
+    rows = [_close(policy="", signal_id="legacy")]
+    assert filter_by_exit_policy(rows, "notarget_trail1r") == []
+
+
+def test_no_policy_filter_is_a_passthrough():
+    from breakwater.promotion_evidence import filter_by_exit_policy
+
+    rows = [_close(policy=""), _close(policy="x")]
+    assert filter_by_exit_policy(rows, None) == rows
+
+
+def test_filter_by_kind_separates_valr_spot_from_hyperliquid_perps():
+    """`native` pools both venues; a VALR question needs SPOT only."""
+    from breakwater.promotion_evidence import filter_by_kind
+
+    rows = [_close(kind="SPOT", signal_id="valr"), _close(kind="PERP", signal_id="hl")]
+    assert [row["signal_id"] for row in filter_by_kind(rows, "SPOT")] == ["valr"]
+    assert [row["signal_id"] for row in filter_by_kind(rows, "perp")] == ["hl"]
