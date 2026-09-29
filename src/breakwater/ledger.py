@@ -133,6 +133,35 @@ class Ledger:
             )
         return high_water
 
+    def events_of_kind(self, kind: str) -> list[dict]:
+        """Every event of one kind, oldest first.
+
+        Used by realized-P&L reconciliation, which has to see all live
+        entries rather than a recent window: an unresolved position can be
+        older than any sensible ``recent_events`` limit.
+        """
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT event_id, occurred_at_utc, kind, strategy_id,
+                       pair, amount_zar, payload_json
+                FROM events WHERE kind = ? ORDER BY occurred_at_utc ASC
+                """,
+                (kind,),
+            ).fetchall()
+        return [
+            {
+                "event_id": row[0],
+                "occurred_at_utc": row[1],
+                "kind": row[2],
+                "strategy_id": row[3],
+                "pair": row[4],
+                "amount_zar": row[5],
+                "payload": json.loads(row[6]),
+            }
+            for row in rows
+        ]
+
     def recent_events(self, limit: int = 100) -> list[dict]:
         with self._connect() as connection:
             rows = connection.execute(

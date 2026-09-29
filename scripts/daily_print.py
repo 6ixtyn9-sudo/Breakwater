@@ -942,10 +942,28 @@ def _report_text() -> str:
         f"- Promotion registry strategies: **{len(strategies)}** | "
         f"live_capped: {sum(1 for v in strategies.values() if v.get('lifecycle') == 'live_capped')}"
     )
+    # Check 3 used to be a hard-coded string asserting two separate failures.
+    # Both have since been fixed in code (the aggregate leash is measured from
+    # the live book; realized P&L is reconciled into risk_state by
+    # breakwater.reconcile), so a static "NOT WIRED" was itself now a lie.
+    # Report the live count instead: wiring is proven by events existing, and
+    # zero events is the honest state until something actually trades.
+    risk_state_payload = _read_json(DATA / "risk_state.json", {})
+    pnl_events = (risk_state_payload or {}).get("realized_pnl_events") or []
+    if pnl_events:
+        loss_limit_state = (
+            f"WIRED - {len(pnl_events)} realized-P&L event(s) feeding the daily/7d limits"
+        )
+    else:
+        loss_limit_state = (
+            "WIRED, UNEXERCISED - reconciliation is in the guardian but no live "
+            "position has closed yet, so the daily/7d limits have never had a "
+            "non-zero input"
+        )
     live = {
         "1 live HL executor": "NOT PRESENT - hyperliquid.py is read-only; no mainnet signer",
         "2 mechanism canary": "NOT RUN - no testnet agent key / no signed action",
-        "3 live aggregate risk in guardian": "NOT WIRED - guardian passes aggregate_open_risk_zar=0, loss-limit events never appended",
+        "3 live loss limits": loss_limit_state,
         "4 promotion registry valr_native": "NOT APPLICABLE TO HL - gate requires valr_native=True",
         "5 big-wave-only live path": "NOT YOUR BOOK - engine executes slice_id=='big-wave' only",
         "6 deep audit passes": f"{_int(deep.get('preliminary_passes'))} preliminary / {_int(deep.get('audit_pass'))} audit",
