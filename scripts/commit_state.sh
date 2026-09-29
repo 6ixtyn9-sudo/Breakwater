@@ -78,6 +78,9 @@ paper_files=(
 guardian_files=(
   localdata/promotion_registry.json
   localdata/risk_state.json
+  # Proof the live order path works. Must survive the ephemeral runner, or
+  # every CI run would look like the canary had never been done.
+  localdata/valr_spot_canary.json
 )
 
 hip3_files=(

@@ -103,7 +103,28 @@ def built_blockers() -> list[tuple[str, bool, str]]:
             risk_state = {}
     pnl_events = len(risk_state.get("realized_pnl_events") or [])
 
-    canary_marker = DATA / ".valr_spot_canary.json"
+    # Existence is not enough: a dry run writes a receipt too, and a failed
+    # armed run writes one saying so. Only a green ARMED run counts.
+    canary_receipt = DATA / "valr_spot_canary.json"
+    canary_ok = False
+    canary_detail = "TradeExecutor.execute has never run against the real VALR API"
+    if canary_receipt.exists():
+        try:
+            receipt = json.loads(canary_receipt.read_text())
+        except (OSError, json.JSONDecodeError):
+            receipt = {}
+        canary_ok = bool(receipt.get("ok")) and bool(receipt.get("armed"))
+        if canary_ok:
+            canary_detail = (
+                f"green armed run on {receipt.get('pair')} at {receipt.get('ran_at')}"
+            )
+        elif not receipt.get("armed"):
+            canary_detail = "only a dry run has been done; re-run with --arm"
+        else:
+            failed = [
+                s.get("name") for s in receipt.get("steps", []) if not s.get("ok")
+            ]
+            canary_detail = f"armed run FAILED at {failed or 'unknown step'}"
 
     return [
         (
@@ -116,10 +137,8 @@ def built_blockers() -> list[tuple[str, bool, str]]:
         ),
         (
             "order path proven by canary",
-            canary_marker.exists(),
-            "TradeExecutor.execute has never run against the real VALR API"
-            if not canary_marker.exists()
-            else f"canary receipt at {canary_marker.name}",
+            canary_ok,
+            canary_detail,
         ),
         (
             "realized-P&L loss limits wired",

@@ -392,3 +392,50 @@ four missing mechanisms. Zero is the correct reading, not a bug.
   should widen as honest MAE data arrives.
 - Both lanes are frozen red, so entries are throttled to green islands —
   evidence will accrue slower than the raw signal count suggests.
+
+### VALR order-path canary (`scripts/valr_canary.py`)
+
+`TradeExecutor.execute` had never run against the real VALR API. Signing,
+the `/v2/orders/limit` body shape, order-id parsing, the `_completed`
+polling loop, the status vocabulary, `active_order`, `cancel_order` — all
+believed-correct, none known-correct. Without a canary the first test of
+that code is a signal-driven entry whose timing we did not choose.
+
+**Two orders, neither able to fill.**
+
+1. `fok_kill` — a **FOK** limit BUY at ~50% below the best bid. It cannot
+   cross the spread, so it cannot fill; fill-or-kill means it cannot rest
+   either. Exercises placement, id parsing, the real `_completed` loop
+   (called directly, not reimplemented) and terminal-status parsing.
+2. `rest_confirm_cancel` — a **post-only GTC** BUY at the same deep price.
+   Post-only makes VALR reject it outright rather than let it take
+   liquidity. It rests, is confirmed via `active_order` (the same call that
+   verifies a protective stop went live), then cancelled in a `finally`.
+
+Plus a `no_residual` sweep of `open_orders()` filtered to the `bw-canary`
+tag, so it recognises only its own litter. An unreadable order book raises
+rather than reporting a confident empty list.
+
+`build_plan` refuses on: unlisted pair, non-SPOT, inactive, non-ZAR quote,
+crossed/one-sided book, tick rounding the price to zero, minimum size above
+the 30 ZAR notional cap, and — re-checked after tick rounding — any price at
+or above the best bid.
+
+**Dry run is the default** and touches no write endpoint; the test fake
+raises if it does. Arming needs `--arm` *and*
+`BREAKWATER_CANARY_ACK=I_ACCEPT_BREAKWATER_CANARY_ORDERS`, and deliberately
+**not** `BREAKWATER_MODE=live`: making the only way to test the plumbing be
+to arm the strategy is backwards. Different decisions, different keys.
+
+Still unproven after a green canary, and the receipt says so rather than
+implying coverage: a real fill (`averagePrice`, `totalExecutedQuantity`),
+`place_spot_stop_limit` (needs base currency, so needs a fill), and the
+`place_market` emergency close.
+
+Receipt at `localdata/valr_spot_canary.json`, added to `commit_state.sh` so
+it survives the ephemeral runner. `live_readiness.py` requires `armed AND
+ok` — a dry-run receipt does not count as proof.
+
+**Naming:** `breakwater.order_canary` is this. `breakwater.canary` is the
+pre-existing capped *risk mandate* preset. "How much may we lose" vs "does
+placing an order work at all" — independent gates, both required.
