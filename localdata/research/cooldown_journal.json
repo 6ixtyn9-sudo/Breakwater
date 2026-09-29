@@ -1118,5 +1118,21 @@
     "signal_id": "4df949d15458b273",
     "slice_id": "feat_vol_contraction:2:LONG:h12",
     "stopped_at": "2026-09-28T20:00:34+00:00"
+  },
+  {
+    "pair": "PARA:CRWD",
+    "pnl_zar": "-13.6066",
+    "reason": "stop",
+    "signal_id": "816d18f3a54fb65b",
+    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
+    "stopped_at": "2026-09-29T14:00:33+00:00"
+  },
+  {
+    "pair": "PARA:LRCX",
+    "pnl_zar": "-11.1935",
+    "reason": "stop",
+    "signal_id": "4e10d8dafeca4950",
+    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
+    "stopped_at": "2026-09-29T14:00:33+00:00"
   }
 ]
