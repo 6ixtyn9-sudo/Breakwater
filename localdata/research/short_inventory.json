@@ -2,7 +2,7 @@
   "armable": 0,
   "armable_pairs": [],
   "armable_slices": [],
-  "as_of": "2026-09-29T00:00:28+00:00",
+  "as_of": "2026-09-29T01:00:31+00:00",
   "candidates": 832,
   "candidates_sample": [
     {
@@ -10,11 +10,11 @@
         false,
         "too_few_rows"
       ],
-      "breadth": 1,
-      "edge_bps": 84.3,
+      "breadth": 2,
+      "edge_bps": 44.1,
       "fail_reasons": "temporal_pass,breadth_ok",
       "kind": "PERP",
-      "n": 172,
+      "n": 170,
       "provisional": false,
       "regime_confounded": false,
       "slice_id": "feat_time_since_low_20:2:SHORT:h15",
@@ -25,11 +25,26 @@
         false,
         "too_few_rows"
       ],
-      "breadth": 1,
-      "edge_bps": 76.9,
+      "breadth": 2,
+      "edge_bps": 36.6,
       "fail_reasons": "temporal_pass,breadth_ok",
       "kind": "PERP",
-      "n": 172,
+      "n": 170,
+      "provisional": false,
+      "regime_confounded": false,
+      "slice_id": "feat_time_since_low_20:2:SHORT:h12",
+      "validated": false
+    },
+    {
+      "armable": [
+        false,
+        "too_few_rows"
+      ],
+      "breadth": 2,
+      "edge_bps": 34.4,
+      "fail_reasons": "temporal_pass,breadth_ok",
+      "kind": "PERP",
+      "n": 170,
       "provisional": false,
       "regime_confounded": false,
       "slice_id": "feat_time_since_low_20:2:SHORT:h20",
@@ -40,29 +55,14 @@
         false,
         "regime_confounded"
       ],
-      "breadth": 1,
-      "edge_bps": 65.6,
+      "breadth": 2,
+      "edge_bps": 31.5,
       "fail_reasons": "temporal_pass,breadth_ok",
       "kind": "PERP",
-      "n": 172,
+      "n": 170,
       "provisional": false,
       "regime_confounded": true,
       "slice_id": "feat_time_since_low_20:2:SHORT:h24",
-      "validated": false
-    },
-    {
-      "armable": [
-        false,
-        "too_few_rows"
-      ],
-      "breadth": 1,
-      "edge_bps": 64.9,
-      "fail_reasons": "temporal_pass,breadth_ok",
-      "kind": "PERP",
-      "n": 172,
-      "provisional": false,
-      "regime_confounded": false,
-      "slice_id": "feat_time_since_low_20:2:SHORT:h12",
       "validated": false
     }
   ],
