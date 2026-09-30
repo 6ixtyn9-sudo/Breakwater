@@ -1142,5 +1142,13 @@
     "signal_id": "982bc349ef4cce1c",
     "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
     "stopped_at": "2026-09-30T01:00:26+00:00"
+  },
+  {
+    "pair": "PARA:AVGO",
+    "pnl_zar": "3.6545",
+    "reason": "slice_gap",
+    "signal_id": "4d794c5f66fc8f40",
+    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
+    "stopped_at": "2026-09-30T02:00:23+00:00"
   }
 ]
