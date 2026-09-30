@@ -1134,5 +1134,13 @@
     "signal_id": "4e10d8dafeca4950",
     "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
     "stopped_at": "2026-09-29T14:00:33+00:00"
+  },
+  {
+    "pair": "PARA:CIEN",
+    "pnl_zar": "-9.1141",
+    "reason": "stop",
+    "signal_id": "982bc349ef4cce1c",
+    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
+    "stopped_at": "2026-09-30T01:00:26+00:00"
   }
 ]
