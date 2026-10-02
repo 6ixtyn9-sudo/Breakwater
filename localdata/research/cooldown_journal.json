@@ -1150,5 +1150,29 @@
     "signal_id": "4d794c5f66fc8f40",
     "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20",
     "stopped_at": "2026-09-30T02:00:23+00:00"
+  },
+  {
+    "pair": "LINKUSDC",
+    "pnl_zar": "-4.9465",
+    "reason": "stop",
+    "signal_id": "f968a00043cca1bf",
+    "slice_id": "feat_vol_of_vol:1:LONG:h24",
+    "stopped_at": "2026-10-02T19:00:32+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-4.3651",
+    "reason": "stop",
+    "signal_id": "685258692b39a3af",
+    "slice_id": "feat_adx_14:2:LONG:h15",
+    "stopped_at": "2026-10-02T19:00:32+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-4.9148",
+    "reason": "stop",
+    "signal_id": "8c3c21fece2aa784",
+    "slice_id": "feat_vol_regime:1:LONG:h24",
+    "stopped_at": "2026-10-02T19:00:32+00:00"
   }
 ]
