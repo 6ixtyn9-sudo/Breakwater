@@ -49,7 +49,7 @@ feat_vol_breakout_strength:0:LONG:h12,PERP,feat_vol_breakout_strength,0,LONG,mon
 feat_session_mom:0:LONG:h12,PERP,feat_session_mom,0,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.003034,11766,0.000004,12,3.500,validated_walk_forward,False,True,27,0.355
 feat_vol_breakout:2:LONG:h15,PERP,feat_vol_breakout,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,3,0,3,-6.3918,,0.003901,10821,0.001589,15,3.500,validated_walk_forward,False,True,28,0.368
 feat_ret_vol:2:LONG:h12,PERP,feat_ret_vol,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.002898,13127,0.001343,12,3.500,validated_walk_forward,False,True,25,0.329
-feat_squeeze:2:LONG:h20,PERP,feat_squeeze,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,2,1,1,-3.9448,,0.007604,12208,0.000033,20,3.500,validated_walk_forward,False,True,27,0.355
+feat_squeeze:2:LONG:h20,PERP,feat_squeeze,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,1791021600,3,1,2,-5.3167,,0.007604,12208,0.000033,20,3.500,validated_walk_forward,False,True,27,0.355
 feat_ret_sign_streak:0:LONG:h12,PERP,feat_ret_sign_streak,0,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.002514,14835,0.000030,12,3.500,validated_walk_forward,False,True,30,0.395
 feat_vol_roc_20:2:LONG:h15,PERP,feat_vol_roc_20,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.002069,10497,0.007074,15,3.500,validated_walk_forward,False,True,29,0.460
 feat_williams_r_14:1:LONG:h15,PERP,feat_williams_r_14,1,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.003037,9559,0.000368,15,3.500,validated_walk_forward,False,True,30,0.395
