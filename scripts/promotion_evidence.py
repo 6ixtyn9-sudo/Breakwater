@@ -8,6 +8,7 @@ itself refuses to promote without the global arm.
 Usage:
     PYTHONPATH=src python3 scripts/promotion_evidence.py
     PYTHONPATH=src python3 scripts/promotion_evidence.py --lane native
+    PYTHONPATH=src python3 scripts/promotion_evidence.py --kind SPOT
     PYTHONPATH=src python3 scripts/promotion_evidence.py --slice feat_close_pos_ma:1:LONG:h24
     PYTHONPATH=src python3 scripts/promotion_evidence.py --write-registry
 """
@@ -31,6 +32,7 @@ from breakwater.promotion_evidence import (  # noqa: E402
     dedupe_by_signal,
     drops_for_lane,
     evaluate,
+    filter_by_kind,
     load_research_evidence,
     read_ledger,
     real_closes,
@@ -63,6 +65,12 @@ def _live_armed(requested: bool) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lane", choices=["native", "hip3"], default=None)
+    parser.add_argument(
+        "--kind",
+        choices=["SPOT", "PERP"],
+        default=None,
+        help="score only one venue kind (SPOT=VALR spot, PERP=Hyperliquid)",
+    )
     parser.add_argument("--slice", dest="slice_id", default=None)
     parser.add_argument("--seed", type=float, default=None)
     parser.add_argument("--write-registry", action="store_true")
@@ -87,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     every_fill = drops_for_lane(
         [r for r in rows if str(r.get("outcome") or "") in {"win", "loss"}], args.lane
     )
+    gate_rows = filter_by_kind(gate_rows, args.kind)
+    every_fill = filter_by_kind(every_fill, args.kind)
     if args.slice_id:
         gate_rows = [r for r in gate_rows if str(r.get("slice_id")) == args.slice_id]
         every_fill = [r for r in every_fill if str(r.get("slice_id")) == args.slice_id]
