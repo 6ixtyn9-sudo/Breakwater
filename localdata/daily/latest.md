@@ -4,7 +4,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **540.75 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **538.06 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -134,7 +134,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.0556 bull=0.3889 neutral=0.5556 | symbols=18
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-10-05T01:00:32Z
+- as_of: 2026-10-05T02:44:14Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
