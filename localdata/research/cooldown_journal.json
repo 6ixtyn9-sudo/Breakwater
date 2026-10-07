@@ -1294,5 +1294,13 @@
     "signal_id": "b6d5324b6d68b7ab",
     "slice_id": "feat_cci_20:0:LONG:h24",
     "stopped_at": "2026-10-07T14:00:32+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.5543",
+    "reason": "stop",
+    "signal_id": "77ea308c73c4b9a2",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stopped_at": "2026-10-07T18:00:28+00:00"
   }
 ]
