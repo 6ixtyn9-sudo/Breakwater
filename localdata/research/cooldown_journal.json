@@ -1198,5 +1198,29 @@
     "signal_id": "fe4958119671b7f0",
     "slice_id": "feat_range_pos_50:0:LONG:h24",
     "stopped_at": "2026-10-06T22:00:28+00:00"
+  },
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "-9.9476",
+    "reason": "stop",
+    "signal_id": "9da99627b43a01f9",
+    "slice_id": "feat_range_pos_50:0:LONG:h24",
+    "stopped_at": "2026-10-07T02:00:27+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-3.6218",
+    "reason": "stop",
+    "signal_id": "a3153812e3b258bd",
+    "slice_id": "feat_vol_contraction:1:LONG:h24",
+    "stopped_at": "2026-10-07T02:00:27+00:00"
+  },
+  {
+    "pair": "UNIUSDC",
+    "pnl_zar": "-4.7121",
+    "reason": "stop",
+    "signal_id": "68ca3fbec600f5e3",
+    "slice_id": "feat_cci_20:0:LONG:h24",
+    "stopped_at": "2026-10-07T02:00:27+00:00"
   }
 ]
