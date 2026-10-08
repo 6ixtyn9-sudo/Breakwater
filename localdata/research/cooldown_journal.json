@@ -1302,5 +1302,21 @@
     "signal_id": "77ea308c73c4b9a2",
     "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
     "stopped_at": "2026-10-07T18:00:28+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-1.1937",
+    "reason": "slice_gap",
+    "signal_id": "9931d53c61ea5242",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stopped_at": "2026-10-08T02:00:28+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-2.3936",
+    "reason": "slice_gap",
+    "signal_id": "5c6d646f4dc93a9d",
+    "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
+    "stopped_at": "2026-10-08T02:00:28+00:00"
   }
 ]
