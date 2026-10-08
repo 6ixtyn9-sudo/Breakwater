@@ -1326,5 +1326,45 @@
     "signal_id": "40d5423dc8e01376",
     "slice_id": "feat_ret_vol:0:LONG:h24",
     "stopped_at": "2026-10-08T05:00:25+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-8.9843",
+    "reason": "stop",
+    "signal_id": "a99938eadcf156e6",
+    "slice_id": "feat_ret_vol:0:LONG:h24",
+    "stopped_at": "2026-10-08T12:00:37+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-3.0506",
+    "reason": "stop",
+    "signal_id": "b2b321ac6f3c6472",
+    "slice_id": "feat_ext_strength:0:LONG:h24",
+    "stopped_at": "2026-10-08T12:00:37+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-2.4479",
+    "reason": "stop",
+    "signal_id": "94ef6cc6e3b42d9c",
+    "slice_id": "feat_rsi_21:0:LONG:h24",
+    "stopped_at": "2026-10-08T12:00:37+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-1.9517",
+    "reason": "slice_gap",
+    "signal_id": "5be340c2030a3109",
+    "slice_id": "feat_bb_width_20:2:LONG:h20",
+    "stopped_at": "2026-10-08T12:00:37+00:00"
+  },
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "-0.5194",
+    "reason": "slice_gap",
+    "signal_id": "724bba51efef4741",
+    "slice_id": "feat_ret_5:1:LONG:h24",
+    "stopped_at": "2026-10-08T12:00:37+00:00"
   }
 ]
