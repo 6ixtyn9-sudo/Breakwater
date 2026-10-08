@@ -1318,5 +1318,13 @@
     "signal_id": "5c6d646f4dc93a9d",
     "slice_id": "feat_ext_vs_ma_20:0:LONG:h24",
     "stopped_at": "2026-10-08T02:00:28+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-6.5485",
+    "reason": "stop",
+    "signal_id": "40d5423dc8e01376",
+    "slice_id": "feat_ret_vol:0:LONG:h24",
+    "stopped_at": "2026-10-08T05:00:25+00:00"
   }
 ]

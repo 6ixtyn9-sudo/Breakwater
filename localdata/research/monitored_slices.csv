@@ -38,7 +38,7 @@ feat_ret_vol:2:LONG:h12,PERP,feat_ret_vol,2,LONG,decayed,2026-09-20T00:54:37.126
 feat_squeeze:2:LONG:h15,PERP,feat_squeeze,2,LONG,decayed,2026-09-20T00:54:37.126742+00:00,1789923600,1,1,0,2.2538,,0.007059,13876,0.004294,15,3.500,validated_walk_forward,False,True,33,0.524
 feat_keltner_pos:0:LONG:h24,PERP,feat_keltner_pos,0,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.006366,9791,0.000000,24,3.500,validated_walk_forward,False,True,35,0.461
 feat_bb_squeeze_20:2:LONG:h20,PERP,feat_bb_squeeze_20,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,2,1,1,-4.5948,,0.006145,10519,0.000010,20,3.500,validated_walk_forward,False,True,26,0.342
-feat_ret_vol:0:LONG:h24,PERP,feat_ret_vol,0,LONG,decayed,2026-10-01T00:42:55.169357+00:00,1791162000,5,5,0,10.8382,,0.008517,10329,0.000000,24,3.500,validated_walk_forward,False,True,37,0.487
+feat_ret_vol:0:LONG:h24,PERP,feat_ret_vol,0,LONG,decayed,2026-10-01T00:42:55.169357+00:00,1791432000,6,5,1,4.2897,,0.008517,10329,0.000000,24,3.500,validated_walk_forward,False,True,37,0.487
 feat_ext_vs_ma_50:2:LONG:h12,PERP,feat_ext_vs_ma_50,2,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,1,0,1,-2.6732,,0.003263,11092,0.044644,12,3.500,validated_walk_forward,False,True,23,0.303
 feat_rsi_21:0:LONG:h24,PERP,feat_rsi_21,0,LONG,monitored,2026-10-01T00:42:55.169357+00:00,,0,0,0,0,,0.006850,9994,0.000000,24,3.500,validated_walk_forward,False,True,37,0.487
 feat_ret_20:0:LONG:h24,PERP,feat_ret_20,0,LONG,decayed,2026-10-01T00:42:55.169357+00:00,1790262000,1,1,0,0.5053,,0.008707,9213,0.000000,24,3.500,validated_walk_forward,False,True,36,0.474
