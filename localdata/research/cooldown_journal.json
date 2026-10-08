@@ -1366,5 +1366,29 @@
     "signal_id": "724bba51efef4741",
     "slice_id": "feat_ret_5:1:LONG:h24",
     "stopped_at": "2026-10-08T12:00:37+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-2.2214",
+    "reason": "stop",
+    "signal_id": "7215e95736389da7",
+    "slice_id": "feat_time_since_low_20:0:LONG:h24",
+    "stopped_at": "2026-10-08T16:00:22+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-2.6837",
+    "reason": "stop",
+    "signal_id": "b07575bb84e3b416",
+    "slice_id": "feat_vwap_lower_dist:0:LONG:h24",
+    "stopped_at": "2026-10-08T16:00:22+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-3.1886",
+    "reason": "stop",
+    "signal_id": "f006447779db7920",
+    "slice_id": "feat_vwap_lower_dist:0:LONG:h24",
+    "stopped_at": "2026-10-08T16:00:22+00:00"
   }
 ]
