@@ -1406,5 +1406,13 @@
     "signal_id": "9b465b418dc95c5c",
     "slice_id": "feat_time_since_low_20:0:LONG:h24",
     "stopped_at": "2026-10-09T04:00:23+00:00"
+  },
+  {
+    "pair": "VVVUSDC",
+    "pnl_zar": "-4.7877",
+    "reason": "stop",
+    "signal_id": "3c34509ab7f82086",
+    "slice_id": "feat_bb_squeeze_20:2:LONG:h20",
+    "stopped_at": "2026-10-09T18:00:21+00:00"
   }
 ]
