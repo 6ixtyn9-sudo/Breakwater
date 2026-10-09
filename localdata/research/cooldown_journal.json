@@ -1390,5 +1390,21 @@
     "signal_id": "f006447779db7920",
     "slice_id": "feat_vwap_lower_dist:0:LONG:h24",
     "stopped_at": "2026-10-08T16:00:22+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "2.7514",
+    "reason": "slice_gap",
+    "signal_id": "e74e6ab970c7b97b",
+    "slice_id": "feat_vwap_lower_dist:0:LONG:h24",
+    "stopped_at": "2026-10-09T04:00:23+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "1.9253",
+    "reason": "slice_gap",
+    "signal_id": "9b465b418dc95c5c",
+    "slice_id": "feat_time_since_low_20:0:LONG:h24",
+    "stopped_at": "2026-10-09T04:00:23+00:00"
   }
 ]
