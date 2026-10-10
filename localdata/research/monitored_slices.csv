@@ -1,8 +1,8 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
 feat_vol_of_vol:2:LONG:h12,PERP,feat_vol_of_vol,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,0,0,0,0,,0.002277,9750,0.177664,12,3.500,validated_walk_forward,False,True,24,0.316
-feat_realized_vol_20:2:LONG:h12,PERP,feat_realized_vol_20,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,0,0,0,0,,0.004368,11304,0.129863,12,3.500,validated_walk_forward,False,True,30,0.395
+feat_realized_vol_20:2:LONG:h12,PERP,feat_realized_vol_20,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,2,1,1,0.6445,,0.004368,11304,0.129863,12,3.500,validated_walk_forward,False,True,30,0.395
 feat_atr_percent:2:LONG:h12,PERP,feat_atr_percent,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,1791421200,1,1,0,0.2446,,0.004943,12021,0.000149,12,3.500,validated_walk_forward,False,True,30,0.395
-feat_kc_width:2:LONG:h12,PERP,feat_kc_width,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,0,0,0,0,,0.005032,11925,0.000004,12,3.500,validated_walk_forward,False,True,29,0.382
+feat_kc_width:2:LONG:h12,PERP,feat_kc_width,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,1,1,0,0.7040,,0.005032,11925,0.000004,12,3.500,validated_walk_forward,False,True,29,0.382
 feat_bb_width_20:2:LONG:h20,PERP,feat_bb_width_20,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,2,0,2,-3.8459,,0.007234,11178,0.000849,20,3.500,validated_walk_forward,False,True,27,0.355
 feat_hour_utc:2:LONG:h15,PERP,feat_hour_utc,2,LONG,monitored,2026-10-10T00:45:30.301160+00:00,,0,0,0,0,,0.004024,10225,0.000000,15,3.500,validated_walk_forward,False,True,29,0.382
 feat_realized_vol_20:2:LONG:h20,PERP,feat_realized_vol_20,2,LONG,monitored,2026-10-08T00:55:31.680372+00:00,1791586800,9,7,2,-2.1474,,0.006062,11077,0.007509,20,3.500,validated_walk_forward,False,True,32,0.432
