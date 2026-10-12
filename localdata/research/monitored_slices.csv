@@ -1,6 +1,6 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
 feat_vol_of_vol:2:LONG:h12,PERP,feat_vol_of_vol,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,1791806400,3,2,1,-1.4899,,0.005821,10336,0.000791,12,3.500,validated_walk_forward,False,True,26,0.347
-feat_atr_ratio:2:LONG:h12,PERP,feat_atr_ratio,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,,0,0,0,0,,0.005408,9471,0.000059,12,3.500,validated_walk_forward,False,True,24,0.320
+feat_atr_ratio:2:LONG:h12,PERP,feat_atr_ratio,2,LONG,cooldown,2026-10-12T00:33:47.155127+00:00,1791813600,1,0,1,-2.8757,1791900000,0.005408,9471,0.000059,12,3.500,validated_walk_forward,False,True,24,0.320
 feat_vol_regime:2:LONG:h12,PERP,feat_vol_regime,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,,6,4,2,6.6837,,0.007002,9423,0.000013,12,3.500,validated_walk_forward,False,True,31,0.413
 feat_vol_contraction:2:LONG:h12,PERP,feat_vol_contraction,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,,2,0,2,-2.5201,,0.007002,9423,0.000013,12,3.500,validated_walk_forward,False,True,31,0.413
 feat_realized_vol_20:2:LONG:h12,PERP,feat_realized_vol_20,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,1791680400,3,1,2,0.6143,,0.007332,10478,0.004933,12,3.500,validated_walk_forward,False,True,25,0.333
