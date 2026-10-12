@@ -2,14 +2,14 @@
   {
     "asset_status": "green",
     "atr": "419.6600",
-    "bars_held": "10",
+    "bars_held": "11",
     "entry_guard": "passed",
     "entry_price": "83932.0",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "12",
     "initial_stop_price": "82463.19000",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-12T10:00:00+00:00",
+    "last_processed_bar_start": "2026-10-12T11:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "119.67825000",
     "opened_at": "2026-10-12T01:00:31+00:00",
@@ -19,24 +19,24 @@
     "risk_fraction": "0.01750000",
     "side": "BUY",
     "signal_id": "32660fa0a69de654",
-    "slice_gap_bars": "1",
+    "slice_gap_bars": "2",
     "slice_id": "feat_adx_14:1:LONG:h12",
     "stop_atr_mult": "3.500000",
     "stop_price": "82463.19000",
     "trail_active": "0",
-    "trough_price": "83271.0"
+    "trough_price": "83262.0"
   },
   {
     "asset_status": "green",
     "atr": "0.8099999999999972",
-    "bars_held": "10",
+    "bars_held": "11",
     "entry_guard": "passed",
     "entry_price": "111.6",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "12",
     "initial_stop_price": "108.76500000000000980",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-12T10:00:00+00:00",
+    "last_processed_bar_start": "2026-10-12T11:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "119.67825000",
     "opened_at": "2026-10-12T01:00:31+00:00",
@@ -51,19 +51,19 @@
     "stop_atr_mult": "3.500000",
     "stop_price": "108.76500000000000980",
     "trail_active": "0",
-    "trough_price": "110.84"
+    "trough_price": "110.63"
   },
   {
     "asset_status": "green",
     "atr": "0.00927857142857147",
-    "bars_held": "1",
+    "bars_held": "2",
     "entry_guard": "passed",
     "entry_price": "1.4053",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "12",
     "initial_stop_price": "1.372824999999999855",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-12T10:00:00+00:00",
+    "last_processed_bar_start": "2026-10-12T11:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "119.82672500",
     "opened_at": "2026-10-12T10:00:31+00:00",
@@ -78,6 +78,6 @@
     "stop_atr_mult": "3.500000",
     "stop_price": "1.372824999999999855",
     "trail_active": "0",
-    "trough_price": "1.4006"
+    "trough_price": "1.3946"
   }
 ]
