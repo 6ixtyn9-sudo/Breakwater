@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-12 00:33 UTC
+# Breakwater daily print — 2026-10-12 00:44 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -125,18 +125,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.0 bull=0.2667 neutral=0.7333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-10-12T00:00:29Z
+- as_of: 2026-10-12T00:35:30Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 832 | eligible: 4 | observations: 0 | armable: **0**
+- candidates: 832 | eligible: 0 | observations: 0 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
-  - `feat_gap_fill_ratio:2:SHORT:h20` edge=140.3b n=43 breadth=3 validated=False prov=False armable=False (too_few_rows)
-  - `feat_gap_fill_ratio:2:SHORT:h24` edge=116.7b n=43 breadth=3 validated=False prov=False armable=False (too_few_rows)
-  - `feat_gap_fill_ratio:2:SHORT:h12` edge=88.2b n=43 breadth=3 validated=False prov=False armable=False (too_few_rows)
-  - `feat_gap_fill_ratio:2:SHORT:h15` edge=84.9b n=43 breadth=3 validated=False prov=False armable=False (too_few_rows)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
