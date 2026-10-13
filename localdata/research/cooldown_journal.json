@@ -1438,5 +1438,29 @@
     "signal_id": "ec6d9d9b4b4b761f",
     "slice_id": "feat_kc_width:2:LONG:h12",
     "stopped_at": "2026-10-13T00:00:25+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-4.0621",
+    "reason": "stop",
+    "signal_id": "38a146d55a7e8a5a",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
+    "stopped_at": "2026-10-13T01:00:29+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.6068",
+    "reason": "stop",
+    "signal_id": "b9efc74b035959b4",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
+    "stopped_at": "2026-10-13T01:00:29+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-4.5114",
+    "reason": "stop",
+    "signal_id": "5fc8c6ef14ce4d7b",
+    "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
+    "stopped_at": "2026-10-13T01:00:29+00:00"
   }
 ]
