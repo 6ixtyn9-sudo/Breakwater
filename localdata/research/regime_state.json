@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-13T22:00:31Z",
+  "as_of": "2026-10-13T23:30:13Z",
   "bear": 9,
   "breadth": {
     "bear": 0.6,
@@ -9,7 +9,7 @@
   "bull": 0,
   "confirmed_bear": true,
   "confirmed_bull": false,
-  "consecutive_bear": 30,
+  "consecutive_bear": 31,
   "consecutive_bull": 0,
   "flip": true,
   "flipped_from": "bear",
