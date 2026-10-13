@@ -1430,5 +1430,13 @@
     "signal_id": "b528bf817a920626",
     "slice_id": "feat_atr_ratio:2:LONG:h12",
     "stopped_at": "2026-10-12T15:00:31+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-3.2082",
+    "reason": "stop",
+    "signal_id": "ec6d9d9b4b4b761f",
+    "slice_id": "feat_kc_width:2:LONG:h12",
+    "stopped_at": "2026-10-13T00:00:25+00:00"
   }
 ]
