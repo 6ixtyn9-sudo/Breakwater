@@ -1462,5 +1462,13 @@
     "signal_id": "5fc8c6ef14ce4d7b",
     "slice_id": "feat_ext_vs_ma_50:0:LONG:h20",
     "stopped_at": "2026-10-13T01:00:29+00:00"
+  },
+  {
+    "pair": "ENAUSDC",
+    "pnl_zar": "-4.7745",
+    "reason": "stop",
+    "signal_id": "2514f3ac7ab459cb",
+    "slice_id": "feat_ret_autocorr:0:LONG:h20",
+    "stopped_at": "2026-10-14T13:00:35+00:00"
   }
 ]
