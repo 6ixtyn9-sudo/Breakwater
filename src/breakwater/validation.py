@@ -732,12 +732,20 @@ def _compute_asset_edges_for_slice(
     return out
 
 
-def _market_series(rows: pd.DataFrame) -> np.ndarray:
-    """Per-row cross-sectional benchmark forward return (0 when unavailable)."""
-    if "fwd_ret_market" not in rows.columns:
-        return np.zeros(len(rows), dtype=float)
-    market = rows["fwd_ret_market"].astype(float).to_numpy()
-    return np.nan_to_num(market, nan=0.0)
+def _residualize(subset: pd.DataFrame, values: np.ndarray) -> np.ndarray:
+    """Subtract the leave-one-out peer mean of the SAME trade rule per bar.
+
+    ``values`` are already directional, stop/trail-aware and cost-adjusted for
+    one side, so benchmarking against peers' values of the same series cancels
+    the stop mechanics (a stop beats buy-and-hold in every crash) and isolates
+    relative selection skill.  Rows without peers keep their raw value.
+    """
+    from breakwater.discovery import loo_cross_sectional_mean
+
+    if "start" not in subset.columns or len(values) == 0:
+        return np.asarray(values, dtype=float)
+    bench, _ = loo_cross_sectional_mean(subset["start"].to_numpy(), values)
+    return np.asarray(values, dtype=float) - bench
 
 
 def _regime_block(
@@ -787,10 +795,6 @@ def validate_slices(
     cost = float(rows["cost"].iloc[0]) if "cost" in rows.columns and len(rows) else 0.0
 
     residual_mode = bool(RESIDUAL_VALIDATION)
-    if residual_mode and "fwd_ret_market" not in rows.columns:
-        from breakwater.discovery import attach_market_benchmark
-
-        rows = attach_market_benchmark(rows)
 
     validated: list[ValidatedSlice] = []
 
@@ -829,16 +833,17 @@ def validate_slices(
             val_long = net_long
             val_short = net_short
 
-        # Benchmark-relative (alpha) returns.  LONG beats holding the universe;
-        # SHORT beats shorting the universe.  Under pure beta both are ~0.
+        # Benchmark-relative (alpha) returns: this symbol's trade minus the
+        # same trade on the peers at the same bar.  Under pure beta both are
+        # ~0 -- including in crashes, because the peers' stops fire too.
         if residual_mode:
-            market = _market_series(subset)
+            gate_long = _residualize(subset, val_long)
+            gate_short = _residualize(subset, val_short)
+            resid_net_long = _residualize(subset, net_long)
+            resid_net_short = _residualize(subset, net_short)
         else:
-            market = np.zeros(len(subset), dtype=float)
-        gate_long = val_long - market
-        gate_short = val_short + market
-        resid_net_long = net_long - market
-        resid_net_short = net_short + market
+            gate_long, gate_short = val_long, val_short
+            resid_net_long, resid_net_short = net_long, net_short
 
         # Slice mask and validity
         slice_mask = (subset[state_column].to_numpy() == candidate.state)

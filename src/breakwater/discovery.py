@@ -23,7 +23,9 @@ Upgrade (alpha vs beta):
   like a validated edge and made SHORT candidates structurally unable to pass.
   ``mean_ret_costadj`` stays the raw cost-adjusted trade return (what you would
   actually earn); ``mean_resid_costadj`` / ``alpha_t_stat`` / ``alpha_p_value``
-  carry the benchmark-relative evidence.
+  carry the benchmark-relative evidence.  The benchmark is the SAME trade rule
+  on the peers (not buy-and-hold) so stop mechanics cancel instead of posing
+  as alpha in crashes.
 - Set BREAKWATER_DISCOVERY_RESIDUALIZE=0 to restore raw-return scoring.
 
 Env knobs (existing):
@@ -282,46 +284,72 @@ def _trade_net_cols(
     return out
 
 
+def loo_cross_sectional_mean(
+    keys: pd.Series | np.ndarray,
+    values: np.ndarray,
+    *,
+    min_peers: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Leave-one-out mean of ``values`` across rows sharing the same key.
+
+    Returns ``(benchmark, peers)``.  Rows with fewer than ``min_peers`` finite
+    peers get benchmark 0 (no cross-section to residualize against) so a
+    single-symbol universe degrades to raw scoring instead of to NaN.
+    """
+    if min_peers is None:
+        min_peers = MARKET_MIN_PEERS
+    vals = pd.Series(np.asarray(values, dtype=float))
+    finite = vals.where(np.isfinite(vals))
+    group = finite.groupby(np.asarray(keys))
+    total = group.transform("sum").to_numpy()
+    count = group.transform("count").to_numpy()
+    own = finite.notna().to_numpy()
+    peers = np.clip(count - own.astype(int), 0, None)
+    loo_sum = total - np.nan_to_num(finite.to_numpy(), nan=0.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        bench = np.where(peers >= min_peers, loo_sum / np.where(peers > 0, peers, np.nan), 0.0)
+    return np.nan_to_num(np.asarray(bench, dtype=float), nan=0.0), peers.astype(int)
+
+
 def attach_market_benchmark(prepared: pd.DataFrame) -> pd.DataFrame:
-    """Attach an equal-weight, leave-one-out cross-sectional benchmark.
+    """Attach equal-weight, leave-one-out cross-sectional benchmarks.
 
-    For every bar ``start`` the benchmark is the mean raw forward return of the
-    *other* symbols in the pooled universe at that bar.  Leave-one-out keeps a
-    symbol's own idiosyncratic move out of its benchmark so thin universes do
-    not mechanically shrink every residual toward zero.
+    Two benchmarks are attached per bar ``start``:
 
-    Columns added:
-    - ``market_peers``             number of peer symbols used
-    - ``fwd_ret_market``           benchmark forward return (0 when no peers)
-    - ``fwd_ret_resid``            fwd_ret_raw - fwd_ret_market
-    - ``fwd_trade_net_long_resid`` fwd_trade_net_long - fwd_ret_market
-    - ``fwd_trade_net_short_resid`` fwd_trade_net_short + fwd_ret_market
+    - ``fwd_ret_market``: mean raw (buy-and-hold) forward return of the *other*
+      symbols.  Diagnostic only -- it tells you how much of a slice's raw mean
+      was just the market moving.
+    - ``fwd_trade_net_{long,short}_resid``: the trade's net return minus the
+      mean net return of the **same trade rule** (same side, same stop, same
+      cost model) on the other symbols.
 
-    A LONG residual is "did this trade beat holding the universe"; a SHORT
-    residual is "did shorting this beat shorting the universe".  Both are
-    zero-mean under pure beta, which is exactly the property discovery needs.
+    The residual MUST be against the same trade rule, not against buy-and-hold.
+    A stop-truncated long beats buy-and-hold in every crash by construction;
+    residualizing against raw returns would therefore manufacture "alpha" for
+    longs in bear regimes with zero cross-sectional information -- the exact
+    artefact this module exists to remove.  Residualizing trade-vs-same-trade
+    cancels the stop mechanics and leaves only relative selection skill.
+
+    Leave-one-out keeps a symbol's own move out of its benchmark so thin
+    universes do not mechanically shrink every residual toward zero.
     """
     if prepared.empty or "fwd_ret_raw" not in prepared.columns or "start" not in prepared.columns:
         return prepared
     out = prepared.copy()
-    raw = out["fwd_ret_raw"].astype(float)
-    finite = raw.where(np.isfinite(raw))
-    key = out["start"]
-    group = finite.groupby(key)
-    total = group.transform("sum")
-    count = group.transform("count")
-    own_finite = finite.notna()
-    peers = (count - own_finite.astype(int)).clip(lower=0)
-    loo_sum = total - finite.fillna(0.0)
-    market = np.where(peers >= MARKET_MIN_PEERS, loo_sum / peers.replace(0, np.nan), 0.0)
-    market = np.nan_to_num(np.asarray(market, dtype=float), nan=0.0)
-    out["market_peers"] = peers.astype(int).to_numpy()
+    keys = out["start"].to_numpy()
+    raw = out["fwd_ret_raw"].astype(float).to_numpy()
+    market, peers = loo_cross_sectional_mean(keys, raw)
+    out["market_peers"] = peers
     out["fwd_ret_market"] = market
-    out["fwd_ret_resid"] = raw.to_numpy() - market
-    if "fwd_trade_net_long" in out.columns:
-        out["fwd_trade_net_long_resid"] = out["fwd_trade_net_long"].astype(float).to_numpy() - market
-    if "fwd_trade_net_short" in out.columns:
-        out["fwd_trade_net_short_resid"] = out["fwd_trade_net_short"].astype(float).to_numpy() + market
+    out["fwd_ret_resid"] = raw - market
+    for side in ("long", "short"):
+        col = f"fwd_trade_net_{side}"
+        if col not in out.columns:
+            continue
+        net = out[col].astype(float).to_numpy()
+        bench, _ = loo_cross_sectional_mean(keys, net)
+        out[f"fwd_trade_bench_{side}"] = bench
+        out[f"{col}_resid"] = net - bench
     return out
 
 

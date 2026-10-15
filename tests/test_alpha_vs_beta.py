@@ -75,6 +75,18 @@ def alpha_universe(n_symbols=8, n=900, seed=11, alpha=0.004) -> pd.DataFrame:
     return pd.concat(parts, ignore_index=True)
 
 
+def crash_universe(n_symbols=8, n=900, seed=1) -> pd.DataFrame:
+    """Flat first half, then a hard universe-wide crash. No cross-sectional info."""
+    rng = np.random.default_rng(seed)
+    market = np.r_[rng.normal(0, 0.002, n // 2), np.full(n - n // 2, -0.004) + rng.normal(0, 0.006, n - n // 2)]
+    parts = []
+    for i in range(n_symbols):
+        rets = market + rng.normal(0, 0.002, n)
+        close = 100.0 * np.cumprod(1.0 + rets)
+        parts.append(_frame(f"C{i}", close, rng.normal(0, 1, n), rng))
+    return pd.concat(parts, ignore_index=True)
+
+
 def _passes(slices, side):
     return [s for s in slices if s.bonferroni_pass and s.side == side]
 
@@ -89,8 +101,11 @@ def test_market_benchmark_is_leave_one_out_and_zero_without_peers():
         peers = np.delete(raw, k).mean()
         assert one["fwd_ret_market"].iloc[k] == pytest.approx(peers)
         assert one["fwd_ret_resid"].iloc[k] == pytest.approx(raw[k] - peers)
-    # Residuals sum to ~0 across the cross-section only in the LOO-scaled sense;
-    # what matters is the mean residual over the sample is ~0 under pure beta.
+    # Trade residual is against the SAME trade on peers, not buy-and-hold.
+    net = one["fwd_trade_net_long"].to_numpy()
+    for k in range(3):
+        assert one["fwd_trade_bench_long"].iloc[k] == pytest.approx(np.delete(net, k).mean())
+        assert one["fwd_trade_net_long_resid"].iloc[k] == pytest.approx(net[k] - np.delete(net, k).mean())
     assert abs(prepared["fwd_ret_resid"].mean()) < abs(prepared["fwd_ret_raw"].mean()) / 5
 
     single = prepare_pooled(frame[frame["symbol"] == "B0"], ["sig"], cost_bps=0.0, horizon_bars=1)
@@ -99,6 +114,31 @@ def test_market_benchmark_is_leave_one_out_and_zero_without_peers():
     np.testing.assert_allclose(
         single["fwd_trade_net_long_resid"].to_numpy(), single["fwd_trade_net_long"].to_numpy(), equal_nan=True
     )
+
+
+def test_stop_truncation_does_not_manufacture_alpha_in_crash(monkeypatch):
+    """Regression: residualizing against buy-and-hold made stopped-out longs
+    look like +50bps / t~37 alpha in a crash with zero cross-sectional
+    information.  The benchmark must be the same trade rule on the peers."""
+    frame = crash_universe()
+    prepared = prepare_pooled(frame, ["sig"], cost_bps=0.0, horizon_bars=6)
+    d = prepared.dropna(subset=["fwd_trade_net_long_resid"])
+    assert d["fwd_trade_net_long"].mean() < -0.003  # raw longs lose: it is a crash
+    resid = d["fwd_trade_net_long_resid"]
+    t = resid.mean() / (resid.std() / np.sqrt(len(resid)))
+    assert abs(resid.mean()) < 0.0003
+    assert abs(t) < 3.0
+
+    slices = discover_slices(frame, kind="SPOT", feature_columns=["sig"], cost_bps=0.0, horizon_bars=6)
+    assert not [s for s in slices if s.bonferroni_pass]
+
+    monkeypatch.setattr(validation, "RESIDUAL_VALIDATION", True)
+    rows = validate_slices(prepared, [_cand(s, "LONG") for s in (0, 1, 2)])
+    # Bear-regime residual alpha for longs must be ~0, not positive.
+    for r in rows:
+        if r.regime_bear_n >= 50:
+            assert abs(r.regime_bear_mean_resid) < 0.001
+    assert not any(r.validated for r in rows)
 
 
 def test_raw_scoring_flags_beta_but_residualized_does_not(monkeypatch):

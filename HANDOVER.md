@@ -461,10 +461,18 @@ entries −63.8 ZAR. The common cause was in research, not execution:
 ### What changed
 
 `discovery.prepare_pooled` now attaches an equal-weight, leave-one-out
-cross-sectional benchmark per bar (`fwd_ret_market`, `market_peers`) and
-benchmark-relative returns (`fwd_ret_resid`, `fwd_trade_net_long_resid`,
-`fwd_trade_net_short_resid`). LONG residual = "beat holding the universe",
-SHORT residual = "beat shorting the universe"; both are ~0 under pure beta.
+cross-sectional benchmark per bar and benchmark-relative returns
+(`fwd_trade_net_long_resid`, `fwd_trade_net_short_resid`). The benchmark is
+**the same trade rule on the peers** (`fwd_trade_bench_{long,short}`: same
+side, same stop, same cost), *not* buy-and-hold of the peers. The first cut
+of this session used buy-and-hold and it manufactured +52 bps / t=37 of
+"alpha" for longs in a uniform crash with zero cross-sectional information,
+because a 1.5-ATR stop beats buy-and-hold in every crash. Trade-vs-same-trade
+cancels the stop mechanics; `tests/test_alpha_vs_beta.py::
+test_stop_truncation_does_not_manufacture_alpha_in_crash` pins it. The raw
+buy-and-hold benchmark survives only as the diagnostic `fwd_ret_market`.
+Validation and the deep audit residualize their own (calibrated-stop,
+trailing) series the same way via `discovery.loo_cross_sectional_mean`.
 
 - **Discovery**: `t_stat`/`p_value`/`mean_ret_costadj` stay raw (what you
   would earn). New `alpha_t_stat`/`alpha_p_value`/`mean_resid_costadj`

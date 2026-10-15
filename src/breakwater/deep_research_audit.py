@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from breakwater.discovery import RESIDUALIZE as _RESIDUALIZE
-from breakwater.discovery import _slice_stats, prepare_pooled
+from breakwater.discovery import _slice_stats, loo_cross_sectional_mean, prepare_pooled
 from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_features
 from breakwater.hip3 import read_hip3_universe
 from breakwater.hip3_research import _candidate_rows, _stratified_select
@@ -196,12 +196,13 @@ def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> di
     )
     is_long = str(candidate.side).upper() == "LONG"
     values = long_net if is_long else short_net
-    # Benchmark-relative (alpha) returns: strip the equal-weight universe move
-    # so a trending sample cannot pass beta off as edge (see discovery module).
-    residualized = bool(_RESIDUALIZE and "fwd_ret_market" in subset.columns)
+    # Benchmark-relative (alpha) returns: this symbol's trade minus the same
+    # trade on the peers at the same bar, so a trending (or crashing) sample
+    # cannot pass beta or stop mechanics off as edge (see discovery module).
+    residualized = bool(_RESIDUALIZE and "start" in subset.columns)
     if residualized:
-        market = np.nan_to_num(subset["fwd_ret_market"].to_numpy(dtype=float), nan=0.0)
-        resid_values = values - market if is_long else values + market
+        bench, _ = loo_cross_sectional_mean(subset["start"].to_numpy(), values)
+        resid_values = values - bench
     else:
         resid_values = values
     mask = (subset[state_column].to_numpy() == candidate.state) & np.isfinite(values)
