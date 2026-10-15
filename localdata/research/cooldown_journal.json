@@ -1502,5 +1502,21 @@
     "signal_id": "93dcd5f52171cdab",
     "slice_id": "feat_vol_sma_ratio:0:LONG:h24",
     "stopped_at": "2026-10-14T15:00:31+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.9341",
+    "reason": "stop",
+    "signal_id": "3294c5f0ea869444",
+    "slice_id": "feat_macd_12_26:0:LONG:h20",
+    "stopped_at": "2026-10-15T03:00:36+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-4.1542",
+    "reason": "stop",
+    "signal_id": "1821bf35d984d7f3",
+    "slice_id": "feat_macd_12_26:0:LONG:h20",
+    "stopped_at": "2026-10-15T03:00:36+00:00"
   }
 ]
