@@ -14,6 +14,20 @@ Notes:
   using fwd_mae_atr distribution and re-scores there.
 - Schema stays the same.
 
+Upgrade (alpha vs beta):
+- Discovery now residualizes forward trade returns against an equal-weight,
+  leave-one-out cross-sectional benchmark built from the pooled universe at
+  each bar.  Significance (t/p, Bonferroni) is computed on the *residual*
+  (alpha) return, not the raw directional return.  Raw ``fwd_ret_raw`` on a
+  LONG candidate in a bull period is mostly market beta, which made beta look
+  like a validated edge and made SHORT candidates structurally unable to pass.
+  ``mean_ret_costadj`` stays the raw cost-adjusted trade return (what you would
+  actually earn); ``mean_resid_costadj`` / ``alpha_t_stat`` / ``alpha_p_value``
+  carry the benchmark-relative evidence.  The benchmark is the SAME trade rule
+  on the peers (not buy-and-hold) so stop mechanics cancel instead of posing
+  as alpha in crashes.
+- Set BREAKWATER_DISCOVERY_RESIDUALIZE=0 to restore raw-return scoring.
+
 Env knobs (existing):
 - BREAKWATER_DISCOVERY_MIN_SLICE_ROWS (default 30)
 - BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS (default 200)
@@ -55,6 +69,12 @@ DISCOVERY_HEADERS = [
     "session_us_n",
     "session_us_mean_ret_costadj",
     "session_us_hit_rate",
+    # Benchmark-relative (alpha) evidence; append-only
+    "mean_resid_costadj",
+    "alpha_t_stat",
+    "alpha_p_value",
+    "market_mean_ret",
+    "residualized",
 ]
 
 SESSION_ASIA = "asia"  # 00-07 UTC
@@ -103,7 +123,18 @@ def _parse_two_quantiles(text: str, default: tuple[float, float]) -> tuple[float
     return float(q0), float(q1)
 
 
+def _env_bool(name: str, default: str = "0") -> bool:
+    return str(os.getenv(name, default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
 MIN_SLICE_ROWS = _env_int("BREAKWATER_DISCOVERY_MIN_SLICE_ROWS", 30)
+# Score candidates on benchmark-residualized (alpha) returns rather than raw
+# directional returns.  Raw returns reward market beta in trending periods.
+RESIDUALIZE = _env_bool("BREAKWATER_DISCOVERY_RESIDUALIZE", "1")
+# Minimum number of peers at a bar before a cross-sectional benchmark is
+# trusted.  Below this the benchmark is 0 (residual == raw) because there is
+# no cross-section to residualize against.
+MARKET_MIN_PEERS = max(1, _env_int("BREAKWATER_DISCOVERY_MARKET_MIN_PEERS", 2))
 ROLLING_MIN_PERIODS = _env_int("BREAKWATER_DISCOVERY_ROLLING_MIN_PERIODS", 200)
 ALPHA = _env_decimal("BREAKWATER_DISCOVERY_ALPHA", Decimal("0.05"))
 STATE_Q0, STATE_Q1 = _parse_two_quantiles(
@@ -137,6 +168,12 @@ class SliceStat:
     session_us_n: int = 0
     session_us_mean_ret_costadj: float = 0.0
     session_us_hit_rate: float = 0.0
+    # Benchmark-relative (alpha) evidence
+    mean_resid_costadj: float = 0.0
+    alpha_t_stat: float = 0.0
+    alpha_p_value: float = 1.0
+    market_mean_ret: float = 0.0
+    residualized: bool = False
 
 
 def _normal_p(t_stat: float) -> float:
@@ -247,6 +284,75 @@ def _trade_net_cols(
     return out
 
 
+def loo_cross_sectional_mean(
+    keys: pd.Series | np.ndarray,
+    values: np.ndarray,
+    *,
+    min_peers: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Leave-one-out mean of ``values`` across rows sharing the same key.
+
+    Returns ``(benchmark, peers)``.  Rows with fewer than ``min_peers`` finite
+    peers get benchmark 0 (no cross-section to residualize against) so a
+    single-symbol universe degrades to raw scoring instead of to NaN.
+    """
+    if min_peers is None:
+        min_peers = MARKET_MIN_PEERS
+    vals = pd.Series(np.asarray(values, dtype=float))
+    finite = vals.where(np.isfinite(vals))
+    group = finite.groupby(np.asarray(keys))
+    total = group.transform("sum").to_numpy()
+    count = group.transform("count").to_numpy()
+    own = finite.notna().to_numpy()
+    peers = np.clip(count - own.astype(int), 0, None)
+    loo_sum = total - np.nan_to_num(finite.to_numpy(), nan=0.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        bench = np.where(peers >= min_peers, loo_sum / np.where(peers > 0, peers, np.nan), 0.0)
+    return np.nan_to_num(np.asarray(bench, dtype=float), nan=0.0), peers.astype(int)
+
+
+def attach_market_benchmark(prepared: pd.DataFrame) -> pd.DataFrame:
+    """Attach equal-weight, leave-one-out cross-sectional benchmarks.
+
+    Two benchmarks are attached per bar ``start``:
+
+    - ``fwd_ret_market``: mean raw (buy-and-hold) forward return of the *other*
+      symbols.  Diagnostic only -- it tells you how much of a slice's raw mean
+      was just the market moving.
+    - ``fwd_trade_net_{long,short}_resid``: the trade's net return minus the
+      mean net return of the **same trade rule** (same side, same stop, same
+      cost model) on the other symbols.
+
+    The residual MUST be against the same trade rule, not against buy-and-hold.
+    A stop-truncated long beats buy-and-hold in every crash by construction;
+    residualizing against raw returns would therefore manufacture "alpha" for
+    longs in bear regimes with zero cross-sectional information -- the exact
+    artefact this module exists to remove.  Residualizing trade-vs-same-trade
+    cancels the stop mechanics and leaves only relative selection skill.
+
+    Leave-one-out keeps a symbol's own move out of its benchmark so thin
+    universes do not mechanically shrink every residual toward zero.
+    """
+    if prepared.empty or "fwd_ret_raw" not in prepared.columns or "start" not in prepared.columns:
+        return prepared
+    out = prepared.copy()
+    keys = out["start"].to_numpy()
+    raw = out["fwd_ret_raw"].astype(float).to_numpy()
+    market, peers = loo_cross_sectional_mean(keys, raw)
+    out["market_peers"] = peers
+    out["fwd_ret_market"] = market
+    out["fwd_ret_resid"] = raw - market
+    for side in ("long", "short"):
+        col = f"fwd_trade_net_{side}"
+        if col not in out.columns:
+            continue
+        net = out[col].astype(float).to_numpy()
+        bench, _ = loo_cross_sectional_mean(keys, net)
+        out[f"fwd_trade_bench_{side}"] = bench
+        out[f"{col}_resid"] = net - bench
+    return out
+
+
 def discover_slices(
     frame: pd.DataFrame,
     *,
@@ -312,7 +418,9 @@ def prepare_pooled(
 
     if not parts:
         return frame.iloc[0:0].copy()
-    return pd.concat(parts, ignore_index=True)
+    pooled = pd.concat(parts, ignore_index=True)
+    # Cross-sectional benchmark needs the whole universe at once.
+    return attach_market_benchmark(pooled)
 
 
 def _session_stats_from_col(
@@ -353,6 +461,12 @@ def _slice_stats(
     candidates: list[SliceStat] = []
     effective_tests = 0
 
+    use_resid = bool(
+        RESIDUALIZE
+        and "fwd_trade_net_long_resid" in prepared.columns
+        and "fwd_trade_net_short_resid" in prepared.columns
+    )
+
     for feature in feature_columns:
         state_column = f"state_{feature}"
         for state in (0, 1, 2):
@@ -368,13 +482,26 @@ def _slice_stats(
             long_mean, long_median, long_hit, long_t, long_p = _stat_block(long_net)
             short_mean, short_median, short_hit, short_t, short_p = _stat_block(short_net)
 
+            if use_resid:
+                long_resid = subset.loc[mask, "fwd_trade_net_long_resid"].to_numpy()
+                short_resid = subset.loc[mask, "fwd_trade_net_short_resid"].to_numpy()
+                market_vals = subset.loc[mask, "fwd_ret_market"].to_numpy()
+                market_vals = market_vals[np.isfinite(market_vals)]
+                market_mean = float(np.mean(market_vals)) if len(market_vals) else 0.0
+                long_rmean, _, _, long_rt, long_rp = _stat_block(long_resid)
+                short_rmean, _, _, short_rt, short_rp = _stat_block(short_resid)
+            else:
+                market_mean = 0.0
+                long_rmean, long_rt, long_rp = long_mean, long_t, long_p
+                short_rmean, short_rt, short_rp = short_mean, short_t, short_p
+
             # Emit each direction independently — a state with enough
             # LONG rows but not enough SHORT rows should still produce a
             # LONG candidate.  Requiring both sides to meet the floor
             # halves yield for asymmetric features.
-            for side, n, mean, median, hit_rate, t_stat, p_value, ret_col in (
-                ("LONG", n_long, long_mean, long_median, long_hit, long_t, long_p, "fwd_trade_net_long"),
-                ("SHORT", n_short, short_mean, short_median, short_hit, short_t, short_p, "fwd_trade_net_short"),
+            for side, n, mean, median, hit_rate, t_stat, p_value, ret_col, rmean, rt, rp in (
+                ("LONG", n_long, long_mean, long_median, long_hit, long_t, long_p, "fwd_trade_net_long", long_rmean, long_rt, long_rp),
+                ("SHORT", n_short, short_mean, short_median, short_hit, short_t, short_p, "fwd_trade_net_short", short_rmean, short_rt, short_rp),
             ):
                 if n < MIN_SLICE_ROWS:
                     continue
@@ -413,6 +540,11 @@ def _slice_stats(
                         session_us_n=us_n,
                         session_us_mean_ret_costadj=us_mean,
                         session_us_hit_rate=us_hit,
+                        mean_resid_costadj=rmean,
+                        alpha_t_stat=rt,
+                        alpha_p_value=rp,
+                        market_mean_ret=market_mean,
+                        residualized=use_resid,
                     )
                 )
             effective_tests += 2
@@ -421,13 +553,25 @@ def _slice_stats(
         threshold = float(ALPHA) / max(1, effective_tests)
         flagged = []
         for stat in candidates:
-            passed = (stat.p_value < threshold) and (stat.n >= MIN_SLICE_ROWS) and (stat.mean_ret_costadj > 0)
+            # Significance is judged on the benchmark-relative (alpha) return so
+            # that a state which merely coincides with a trending market cannot
+            # pass.  The raw trade return must still be positive: relative
+            # outperformance that loses money outright is not tradeable.
+            passed = (
+                (stat.alpha_p_value < threshold)
+                and (stat.n >= MIN_SLICE_ROWS)
+                and (stat.mean_resid_costadj > 0)
+                and (stat.mean_ret_costadj > 0)
+            )
             row = asdict(stat)
             row["bonferroni_pass"] = bool(passed)
             flagged.append(row)
         candidates = [SliceStat(**row) for row in flagged]
 
-    return sorted(candidates, key=lambda stat: (not stat.bonferroni_pass, -stat.mean_ret_costadj))
+    return sorted(
+        candidates,
+        key=lambda stat: (not stat.bonferroni_pass, -stat.mean_resid_costadj, -stat.mean_ret_costadj),
+    )
 
 
 def write_discovered(path, slices: list[SliceStat]) -> None:
