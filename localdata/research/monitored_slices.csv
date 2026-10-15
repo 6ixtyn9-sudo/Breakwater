@@ -1,7 +1,7 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
 feat_vol_of_vol:2:LONG:h15,PERP,feat_vol_of_vol,2,LONG,monitored,2026-10-15T00:37:19.769227+00:00,1791986400,3,0,3,-10.8158,,0.004631,9682,0.008427,15,3.500,validated_walk_forward,False,True,26,0.347
 feat_kc_width:2:LONG:h12,PERP,feat_kc_width,2,LONG,monitored,2026-10-15T00:37:19.769227+00:00,1792026000,5,1,4,-6.6008,,0.007567,9997,0.000013,12,3.500,validated_walk_forward,False,True,31,0.413
-feat_atr_percent:2:LONG:h12,PERP,feat_atr_percent,2,LONG,cooldown,2026-10-15T00:37:19.769227+00:00,1792069200,3,2,1,-2.0574,1792155600,0.007691,10061,0.000001,12,3.500,validated_walk_forward,False,True,34,0.453
+feat_atr_percent:2:LONG:h12,PERP,feat_atr_percent,2,LONG,monitored,2026-10-15T00:37:19.769227+00:00,1792072800,4,3,1,-1.4421,,0.007691,10061,0.000001,12,3.500,validated_walk_forward,False,True,34,0.453
 feat_williams_r_14:1:LONG:h12,PERP,feat_williams_r_14,1,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.001398,9806,0.075214,12,3.500,validated_walk_forward,False,True,20,0.267
 feat_stoch_k_14:1:LONG:h12,PERP,feat_stoch_k_14,1,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.001366,9808,0.082518,12,3.500,validated_walk_forward,False,True,19,0.253
 feat_hour_utc:2:LONG:h12,PERP,feat_hour_utc,2,LONG,decayed,2026-10-15T00:37:19.769227+00:00,1791795600,2,1,1,0.6562,,0.003721,10240,0.000007,12,3.500,validated_walk_forward,False,True,29,0.387
@@ -20,10 +20,10 @@ feat_ret_10:1:LONG:h20,PERP,feat_ret_10,1,LONG,monitored,2026-10-15T00:37:19.769
 feat_ext_vs_ma_20:1:LONG:h24,PERP,feat_ext_vs_ma_20,1,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.000364,9709,0.451379,24,3.500,validated_walk_forward,False,True,22,0.297
 feat_vol_of_vol:2:LONG:h12,PERP,feat_vol_of_vol,2,LONG,decayed,2026-10-12T00:33:47.155127+00:00,1791806400,3,2,1,-1.4899,,0.005821,10336,0.000791,12,3.500,validated_walk_forward,False,True,26,0.347
 feat_kc_width:2:LONG:h12,PERP,feat_kc_width,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,1792026000,5,1,4,-6.6008,,0.007359,11046,0.000000,12,3.500,validated_walk_forward,False,True,30,0.400
-feat_atr_percent:2:LONG:h12,PERP,feat_atr_percent,2,LONG,cooldown,2026-10-14T00:46:46.956938+00:00,1792069200,3,2,1,-2.0574,1792155600,0.006865,11149,0.000000,12,3.500,validated_walk_forward,False,True,34,0.453
+feat_atr_percent:2:LONG:h12,PERP,feat_atr_percent,2,LONG,monitored,2026-10-14T00:46:46.956938+00:00,1792072800,4,3,1,-1.4421,,0.006865,11149,0.000000,12,3.500,validated_walk_forward,False,True,34,0.453
 feat_range_pos_50:1:LONG:h24,PERP,feat_range_pos_50,1,LONG,monitored,2026-10-13T00:30:25.857505+00:00,,0,0,0,0,,0.003767,10031,0.011830,24,3.500,validated_walk_forward,False,True,26,0.347
 feat_atr_ratio:0:LONG:h24,PERP,feat_atr_ratio,0,LONG,monitored,2026-10-14T00:46:46.956938+00:00,,0,0,0,0,,0.005594,9387,0.000103,24,3.500,validated_walk_forward,False,True,33,0.446
-feat_macd_12_26:0:LONG:h20,PERP,feat_macd_12_26,0,LONG,cooldown,2026-10-14T00:46:46.956938+00:00,1792029600,2,0,2,-8.0883,1792116000,0.006383,10705,0.000000,20,3.500,validated_walk_forward,False,True,38,0.507
+feat_macd_12_26:0:LONG:h20,PERP,feat_macd_12_26,0,LONG,monitored,2026-10-14T00:46:46.956938+00:00,1792076425,3,1,2,-7.2783,,0.006383,10705,0.000000,20,3.500,validated_walk_forward,False,True,38,0.507
 feat_donchian_width_20:1:LONG:h24,PERP,feat_donchian_width_20,1,LONG,monitored,2026-10-14T00:46:46.956938+00:00,,0,0,0,0,,0.003444,9672,0.026479,24,3.500,validated_walk_forward,False,True,21,0.280
 feat_adx_14:1:LONG:h24,PERP,feat_adx_14,1,LONG,monitored,2026-10-14T00:46:46.956938+00:00,,0,0,0,0,,0.004119,9856,0.012984,24,3.500,validated_walk_forward,False,True,28,0.378
 feat_hour_utc:2:LONG:h12,PERP,feat_hour_utc,2,LONG,decayed,2026-10-13T00:30:25.857505+00:00,1791795600,2,1,1,0.6562,,0.005016,10240,0.000000,12,3.500,validated_walk_forward,False,True,27,0.360

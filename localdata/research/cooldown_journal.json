@@ -1526,5 +1526,13 @@
     "signal_id": "c0efc62ad6f8f573",
     "slice_id": "feat_atr_percent:2:LONG:h12",
     "stopped_at": "2026-10-15T14:00:28+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "0.8100",
+    "reason": "slice_gap",
+    "signal_id": "2b1050bf8332ec7d",
+    "slice_id": "feat_macd_12_26:0:LONG:h20",
+    "stopped_at": "2026-10-15T15:00:25+00:00"
   }
 ]
