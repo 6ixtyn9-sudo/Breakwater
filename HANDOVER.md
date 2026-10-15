@@ -439,3 +439,71 @@ ok` — a dry-run receipt does not count as proof.
 **Naming:** `breakwater.order_canary` is this. `breakwater.canary` is the
 pre-existing capped *risk mandate* preset. "How much may we lose" vs "does
 placing an order work at all" — independent gates, both required.
+
+## Session 5 (2026-10-15) — research scores alpha, not beta
+
+### The problem
+
+Paper equity was +301 ZAR lifetime but negative over 7 days, both lanes
+frozen, deep audit 0/74,880 passes, zero armable shorts, native bear-regime
+entries −63.8 ZAR. The common cause was in research, not execution:
+
+- Discovery scored each `feature:state` on the **raw** forward trade return.
+  In a trending universe every LONG state has a positive mean because the
+  *market* went up, so Bonferroni flagged market beta as edge.
+- Chronological walk-forward on raw returns then made that beta look
+  temporally stable (bull folds pass, bull folds pass, bull folds pass).
+- `side_train` compared raw LONG vs raw SHORT training means, so SHORT could
+  never win the direction gate while the unconditional mean was positive.
+  That is why the short inventory was empty.
+- Long-only beta then paid the bill in bear regimes.
+
+### What changed
+
+`discovery.prepare_pooled` now attaches an equal-weight, leave-one-out
+cross-sectional benchmark per bar (`fwd_ret_market`, `market_peers`) and
+benchmark-relative returns (`fwd_ret_resid`, `fwd_trade_net_long_resid`,
+`fwd_trade_net_short_resid`). LONG residual = "beat holding the universe",
+SHORT residual = "beat shorting the universe"; both are ~0 under pure beta.
+
+- **Discovery**: `t_stat`/`p_value`/`mean_ret_costadj` stay raw (what you
+  would earn). New `alpha_t_stat`/`alpha_p_value`/`mean_resid_costadj`
+  carry the alpha evidence. `bonferroni_pass` now needs alpha significance
+  AND `mean_resid > 0` AND raw `mean > 0`.
+- **Validation**: direction (`side_train`), fold passes, recency, breadth,
+  symbol-level p-value and per-asset edges are judged on residual returns.
+  `mean_positive` stays on raw returns — relative outperformance that loses
+  money outright is not tradeable. `regime_confounded` is now computed on
+  residual returns and is a **hard gate** (`regime_gate_ok`): if the alpha
+  disappears in the hostile regime it was beta in a costume. Unproven
+  (too few hostile rows) still passes. New regime-stratified columns:
+  `regime_{bull,neutral,bear}_{n,mean_ret,mean_resid}`.
+- **Deep audit**: preliminary pass additionally needs recent and weighted
+  residual means > 0; new columns `*_mean_resid`, `residualized`.
+- Universes with < 2 peers at a bar get benchmark 0 (residual == raw), so
+  single-symbol groups behave exactly as before.
+
+### Knobs
+
+- `BREAKWATER_DISCOVERY_RESIDUALIZE` (default 1) — raw scoring if 0.
+- `BREAKWATER_DISCOVERY_MARKET_MIN_PEERS` (default 2).
+- `BREAKWATER_VALIDATION_RESIDUAL` (default 1).
+- `BREAKWATER_VALIDATION_REGIME_GATE` (default 1).
+
+### Expect on the next research cycle
+
+Fewer validated slices (most of the 51 native monitored slices are ≤ 81 bps
+raw edge against a 70 bps ZAR-spot round trip and will not carry alpha), and
+SHORT candidates appearing for the first time. That is the intended result:
+the book should shrink to things that beat the universe, and the short
+inventory should stop being structurally empty. `tests/test_alpha_vs_beta.py`
+pins the behaviour on synthetic beta-only and alpha universes.
+
+### Still open (not done here)
+
+- Cross-sectional *state* binning (rank the feature across symbols per bar
+  instead of per-symbol expanding terciles) — needs engine-side state
+  computation at trade time, so left as a follow-up.
+- Venue routing: ZAR spot at 70 bps round trip needs ≥ 100 bps raw edge to
+  be worth trading; USDC spot (20 bps) / perps (9 bps) do not.
+- Features beyond OHLCV (funding, basis, OI, order-book imbalance).

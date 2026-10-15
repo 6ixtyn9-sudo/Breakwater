@@ -91,6 +91,19 @@ VALIDATED_HEADERS = [
     "session_us_n",
     "session_us_mean_ret_costadj",
     "session_us_hit_rate",
+    # --- Benchmark-relative (alpha) + regime-stratified evidence; append-only ---
+    "residual_mode",
+    "mean_resid_ret",
+    "regime_gate_ok",
+    "regime_bull_n",
+    "regime_bull_mean_ret",
+    "regime_bull_mean_resid",
+    "regime_neutral_n",
+    "regime_neutral_mean_ret",
+    "regime_neutral_mean_resid",
+    "regime_bear_n",
+    "regime_bear_mean_ret",
+    "regime_bear_mean_resid",
 ]
 
 # Per-asset edge research. The pooled slice proves a *market* edge exists; the
@@ -162,6 +175,15 @@ FOLD_COUNT = max(3, min(10, _coerce_int(os.getenv("BREAKWATER_VALIDATION_FOLD_CO
 # proxy is a reasonable approximation; the key improvements (3 folds, no
 # confound blocking, adaptive breadth, composites) matter more.
 TRAILING_VALIDATION = _env_bool("BREAKWATER_TRAILING_VALIDATION", "1")
+# Judge direction, fold stability, breadth, recency and symbol-level p-value on
+# benchmark-residualized (alpha) returns instead of raw directional returns.
+# Raw returns in a trending market make every LONG look stable and every SHORT
+# look broken; that is beta, not edge.  mean_positive stays on raw returns.
+RESIDUAL_VALIDATION = _env_bool("BREAKWATER_VALIDATION_RESIDUAL", "1")
+# Hard gate: alpha must not vanish in the hostile regime (bear for LONG, bull
+# for SHORT) when there is enough hostile evidence.  Only meaningful in residual
+# mode; raw returns in a hostile regime are negative by construction.
+REGIME_GATE = _env_bool("BREAKWATER_VALIDATION_REGIME_GATE", "1")
 
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(
@@ -251,6 +273,20 @@ class ValidatedSlice:
     session_us_n: int = 0
     session_us_mean_ret_costadj: float = 0.0
     session_us_hit_rate: float = 0.0
+
+    # Benchmark-relative (alpha) + regime-stratified evidence
+    residual_mode: bool = False
+    mean_resid_ret: float = 0.0
+    regime_gate_ok: bool = True
+    regime_bull_n: int = 0
+    regime_bull_mean_ret: float = 0.0
+    regime_bull_mean_resid: float = 0.0
+    regime_neutral_n: int = 0
+    regime_neutral_mean_ret: float = 0.0
+    regime_neutral_mean_resid: float = 0.0
+    regime_bear_n: int = 0
+    regime_bear_mean_ret: float = 0.0
+    regime_bear_mean_resid: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -696,6 +732,36 @@ def _compute_asset_edges_for_slice(
     return out
 
 
+def _market_series(rows: pd.DataFrame) -> np.ndarray:
+    """Per-row cross-sectional benchmark forward return (0 when unavailable)."""
+    if "fwd_ret_market" not in rows.columns:
+        return np.zeros(len(rows), dtype=float)
+    market = rows["fwd_ret_market"].astype(float).to_numpy()
+    return np.nan_to_num(market, nan=0.0)
+
+
+def _regime_block(
+    subset: pd.DataFrame,
+    slice_mask: np.ndarray,
+    label: str,
+    raw_values: np.ndarray,
+    resid_values: np.ndarray,
+) -> tuple[int, float, float]:
+    if "regime_row" not in subset.columns:
+        return 0, 0.0, 0.0
+    mask = slice_mask & (subset["regime_row"].to_numpy() == label)
+    raw = raw_values[mask]
+    raw = raw[np.isfinite(raw)]
+    resid = resid_values[mask]
+    resid = resid[np.isfinite(resid)]
+    n = int(len(raw))
+    return (
+        n,
+        float(np.mean(raw)) if n else 0.0,
+        float(np.mean(resid)) if len(resid) else 0.0,
+    )
+
+
 def validate_slices(
     prepared: pd.DataFrame,
     candidates,
@@ -719,6 +785,12 @@ def validate_slices(
     )
 
     cost = float(rows["cost"].iloc[0]) if "cost" in rows.columns and len(rows) else 0.0
+
+    residual_mode = bool(RESIDUAL_VALIDATION)
+    if residual_mode and "fwd_ret_market" not in rows.columns:
+        from breakwater.discovery import attach_market_benchmark
+
+        rows = attach_market_benchmark(rows)
 
     validated: list[ValidatedSlice] = []
 
@@ -757,6 +829,17 @@ def validate_slices(
             val_long = net_long
             val_short = net_short
 
+        # Benchmark-relative (alpha) returns.  LONG beats holding the universe;
+        # SHORT beats shorting the universe.  Under pure beta both are ~0.
+        if residual_mode:
+            market = _market_series(subset)
+        else:
+            market = np.zeros(len(subset), dtype=float)
+        gate_long = val_long - market
+        gate_short = val_short + market
+        resid_net_long = net_long - market
+        resid_net_short = net_short + market
+
         # Slice mask and validity
         slice_mask = (subset[state_column].to_numpy() == candidate.state)
         valid_long = np.isfinite(net_long)
@@ -769,8 +852,8 @@ def validate_slices(
         train_end = int(max(1, round(TRAIN_FRACTION * n_total)))
         train_mask = np.zeros(n_total, dtype=bool)
         train_mask[:train_end] = True
-        long_train = net_long[slice_mask_long & train_mask]
-        short_train = net_short[slice_mask_short & train_mask]
+        long_train = resid_net_long[slice_mask_long & train_mask]
+        short_train = resid_net_short[slice_mask_short & train_mask]
         mean_long_train = float(np.mean(long_train)) if len(long_train) else -1e9
         mean_short_train = float(np.mean(short_train)) if len(short_train) else -1e9
         side_train = "LONG" if mean_long_train >= mean_short_train else "SHORT"
@@ -783,41 +866,48 @@ def validate_slices(
         direction_ok = (str(candidate.side).upper() == side_train)
 
         # Candidate-side net series — use trailing-aware for validation gates
-        net_values = net_long if str(candidate.side).upper() == "LONG" else net_short
-        val_values = val_long if str(candidate.side).upper() == "LONG" else val_short
+        is_long = str(candidate.side).upper() == "LONG"
+        net_values = net_long if is_long else net_short
+        val_values = val_long if is_long else val_short
+        # gate_values drive the stability gates (folds/breadth/recency/p-value);
+        # val_values (raw) still decide mean_positive.
+        gate_values = gate_long if is_long else gate_short
+        resid_net_values = resid_net_long if is_long else resid_net_short
         # valid MUST be based on val_values (the returns actually being
         # evaluated), not net_values.  When TRAILING_VALIDATION is ON,
         # val_values (trailing) has more NaN entries than net_values
         # (fixed-stop) because the per-bar trailing loop skips ATR-warmup
         # rows.  Using net_values for the mask lets NaN slip into fold
         # means, which np.mean propagates as NaN.
-        valid = np.isfinite(val_values)
+        valid = np.isfinite(val_values) & np.isfinite(gate_values)
         slice_mask = slice_mask & valid
 
         slice_net = val_values[slice_mask]
         n_slice = int(len(slice_net))
         mean_net = float(np.mean(slice_net)) if n_slice else 0.0
         mean_positive = mean_net > 0.0
+        slice_resid = gate_values[slice_mask]
+        mean_resid = float(np.mean(slice_resid)) if len(slice_resid) else 0.0
 
         # Symbol-breadth check (pooled illusion fix)
         # Adaptive breadth: longer horizons have fewer independent observations
         # per symbol, so the breadth requirement scales down.  Min 4 symbols.
         horizon_breadth_min = max(4, BREADTH_MIN_SYMBOLS - max(0, (horizon_bars - 10) // 5))
         breadth_ok, breadth_symbols_used, breadth_positive_fraction = _symbol_breadth_stats(
-            subset, slice_mask, val_values
+            subset, slice_mask, gate_values
         )
         # Override breadth_ok with adaptive threshold
         if not breadth_ok and breadth_symbols_used > 0:
             pos_frac_check = breadth_positive_fraction >= BREADTH_MIN_POSITIVE_FRACTION
             breadth_ok = (breadth_symbols_used >= horizon_breadth_min) and pos_frac_check
         # Recency check (latest-fold brittleness fix)
-        recency_ok = _recency_ok(subset, slice_mask, val_values)
+        recency_ok = _recency_ok(subset, slice_mask, gate_values)
 
         # Symbol-level p-value (more conservative than pooled rows)
         symbol_means = []
         if "symbol" in subset.columns and n_slice:
             df_sym = subset.loc[slice_mask, ["symbol"]].copy()
-            df_sym["net"] = val_values[slice_mask]
+            df_sym["net"] = gate_values[slice_mask]
             for sym, g in df_sym.groupby("symbol"):
                 if len(g) >= BREADTH_MIN_ROWS_PER_SYMBOL:
                     symbol_means.append(float(g["net"].mean()))
@@ -846,7 +936,7 @@ def validate_slices(
                 purge_start = max(start, end - purge)
                 fold_mask[purge_start:end] = False
 
-            fold_returns = val_values[slice_mask & fold_mask]
+            fold_returns = gate_values[slice_mask & fold_mask]
             passed = _fold_pass(fold_returns)
             fold_results.append("1" if passed else "0")
             fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
@@ -881,8 +971,23 @@ def validate_slices(
         # Hostile regime check using the same stop-aware net returns
         hostile_label = "bear" if str(candidate.side).upper() == "LONG" else "bull"
         hostile_mask = slice_mask & (subset["regime_row"].to_numpy() == hostile_label)
-        hostile_net = net_values[hostile_mask]
+        hostile_net = (resid_net_values if residual_mode else net_values)[hostile_mask]
         hostile_n, hostile_mean, confounded, hostile_unproven = _hostile_regime_check(hostile_net)
+
+        # Regime-stratified evidence (raw and benchmark-relative) so operators
+        # can see whether an edge is alpha or just the regime it was found in.
+        bull_n, bull_mean, bull_resid = _regime_block(subset, slice_mask, "bull", net_values, resid_net_values)
+        neutral_n, neutral_mean, neutral_resid = _regime_block(
+            subset, slice_mask, "neutral", net_values, resid_net_values
+        )
+        bear_n, bear_mean, bear_resid = _regime_block(subset, slice_mask, "bear", net_values, resid_net_values)
+
+        # In residual mode "confounded" means the alpha disappears in the
+        # hostile regime -- that is beta wearing an edge costume, so gate it.
+        # Unproven (too few hostile rows) is not a failure.
+        regime_gate_ok = True
+        if residual_mode and REGIME_GATE:
+            regime_gate_ok = not confounded
 
         asia_n, asia_mean, asia_hit = _session_stats_from_net(
             subset, slice_mask, SESSION_ASIA, net_values
@@ -899,6 +1004,7 @@ def validate_slices(
             and direction_ok
             and breadth_ok
             and mean_positive
+            and regime_gate_ok
         )
         # NOTE: regime_confounded is intentionally NOT part of is_validated.
         # A slice positive in neutral/bull but negative in bear is a valid
@@ -918,6 +1024,8 @@ def validate_slices(
             reasons.append("breadth_ok")
         if not mean_positive:
             reasons.append("mean_net<=0")
+        if not regime_gate_ok:
+            reasons.append("regime_confounded")
         fail_reasons = ",".join(reasons)
 
         if asset_edges is not None:
@@ -925,7 +1033,7 @@ def validate_slices(
                 _compute_asset_edges_for_slice(
                     subset=subset,
                     slice_mask=slice_mask,
-                    net_values=net_values,
+                    net_values=resid_net_values,
                     fold_ids=fold_ids,
                     horizon_bars=horizon_bars,
                     candidate=candidate,
@@ -976,6 +1084,18 @@ def validate_slices(
                 session_us_n=int(us_n),
                 session_us_mean_ret_costadj=float(us_mean),
                 session_us_hit_rate=float(us_hit),
+                residual_mode=bool(residual_mode),
+                mean_resid_ret=float(mean_resid),
+                regime_gate_ok=bool(regime_gate_ok),
+                regime_bull_n=int(bull_n),
+                regime_bull_mean_ret=float(bull_mean),
+                regime_bull_mean_resid=float(bull_resid),
+                regime_neutral_n=int(neutral_n),
+                regime_neutral_mean_ret=float(neutral_mean),
+                regime_neutral_mean_resid=float(neutral_resid),
+                regime_bear_n=int(bear_n),
+                regime_bear_mean_ret=float(bear_mean),
+                regime_bear_mean_resid=float(bear_resid),
             )
         )
 
@@ -1018,6 +1138,19 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
             "mean_positive",
             "side_train",
             "fail_reasons",
+            # Alpha / regime (append-only)
+            "residual_mode",
+            "mean_resid_ret",
+            "regime_gate_ok",
+            "regime_bull_n",
+            "regime_bull_mean_ret",
+            "regime_bull_mean_resid",
+            "regime_neutral_n",
+            "regime_neutral_mean_ret",
+            "regime_neutral_mean_resid",
+            "regime_bear_n",
+            "regime_bear_mean_ret",
+            "regime_bear_mean_resid",
         }
 
         required = set(VALIDATED_HEADERS) - optional
@@ -1111,6 +1244,18 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     session_us_hit_rate=float(row["session_us_hit_rate"])
                     if has_session and row.get("session_us_hit_rate")
                     else 0.0,
+                    residual_mode=(row.get("residual_mode") == "True"),
+                    mean_resid_ret=_coerce_float(row.get("mean_resid_ret"), 0.0),
+                    regime_gate_ok=(row.get("regime_gate_ok", "True") != "False"),
+                    regime_bull_n=_coerce_int(row.get("regime_bull_n"), 0),
+                    regime_bull_mean_ret=_coerce_float(row.get("regime_bull_mean_ret"), 0.0),
+                    regime_bull_mean_resid=_coerce_float(row.get("regime_bull_mean_resid"), 0.0),
+                    regime_neutral_n=_coerce_int(row.get("regime_neutral_n"), 0),
+                    regime_neutral_mean_ret=_coerce_float(row.get("regime_neutral_mean_ret"), 0.0),
+                    regime_neutral_mean_resid=_coerce_float(row.get("regime_neutral_mean_resid"), 0.0),
+                    regime_bear_n=_coerce_int(row.get("regime_bear_n"), 0),
+                    regime_bear_mean_ret=_coerce_float(row.get("regime_bear_mean_ret"), 0.0),
+                    regime_bear_mean_resid=_coerce_float(row.get("regime_bear_mean_resid"), 0.0),
                 )
             )
         return out

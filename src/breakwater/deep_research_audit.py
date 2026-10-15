@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from breakwater.discovery import RESIDUALIZE as _RESIDUALIZE
 from breakwater.discovery import _slice_stats, prepare_pooled
 from breakwater.features import FEATURE_COLUMNS, candle_frame, compute_price_features
 from breakwater.hip3 import read_hip3_universe
@@ -36,6 +37,8 @@ AUDIT_HEADERS = [
     "positive_symbol_fraction", "cluster_count", "positive_cluster_fraction",
     "stop_atr_mult", "preliminary_pass", "plateau_start", "plateau_end",
     "plateau_width", "audit_pass", "blockers",
+    # Benchmark-relative (alpha) evidence; append-only
+    "recent_1000_mean_resid", "weighted_5000_mean_resid", "residualized",
 ]
 
 
@@ -191,10 +194,20 @@ def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> di
     long_net, short_net = _net_returns_from_prepared(
         subset, stop_atr_mult=stop, cost=cost
     )
-    values = long_net if str(candidate.side).upper() == "LONG" else short_net
+    is_long = str(candidate.side).upper() == "LONG"
+    values = long_net if is_long else short_net
+    # Benchmark-relative (alpha) returns: strip the equal-weight universe move
+    # so a trending sample cannot pass beta off as edge (see discovery module).
+    residualized = bool(_RESIDUALIZE and "fwd_ret_market" in subset.columns)
+    if residualized:
+        market = np.nan_to_num(subset["fwd_ret_market"].to_numpy(dtype=float), nan=0.0)
+        resid_values = values - market if is_long else values + market
+    else:
+        resid_values = values
     mask = (subset[state_column].to_numpy() == candidate.state) & np.isfinite(values)
     selected = subset.loc[mask, ["start", "symbol", "bar_age"]].copy()
     selected["net"] = values[mask]
+    selected["resid"] = resid_values[mask]
     selected["weight"] = _weights(selected["bar_age"].to_numpy(dtype=float))
     n = len(selected)
     recent = selected[selected["bar_age"] < 1000]
@@ -204,6 +217,10 @@ def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> di
     weighted_mean = (
         float((selected["net"] * selected["weight"]).sum() / weight_sum) if weight_sum else 0.0
     )
+    recent_mean_resid = float(recent["resid"].mean()) if len(recent) else 0.0
+    weighted_mean_resid = (
+        float((selected["resid"] * selected["weight"]).sum() / weight_sum) if weight_sum else 0.0
+    )
     weight_sq = float((selected["weight"] ** 2).sum())
     effective_n = weight_sum * weight_sum / weight_sq if weight_sq else 0.0
     symbol_means = selected.groupby("symbol")["net"].mean() if n else pd.Series(dtype=float)
@@ -212,6 +229,8 @@ def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> di
         len(recent) >= 60
         and recent_mean > 0
         and weighted_mean > 0
+        and recent_mean_resid > 0
+        and weighted_mean_resid > 0
         and full_mean > -0.001
         and effective_n >= 200
         and len(symbol_means) >= 6
@@ -258,6 +277,9 @@ def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> di
         "cluster_count": cluster_count,
         "positive_cluster_fraction": f"{positive_cluster_fraction:.6f}",
         "stop_atr_mult": f"{stop:.6f}",
+        "recent_1000_mean_resid": f"{recent_mean_resid:.10f}",
+        "weighted_5000_mean_resid": f"{weighted_mean_resid:.10f}",
+        "residualized": residualized,
         "preliminary_pass": preliminary,
         "plateau_start": "",
         "plateau_end": "",
