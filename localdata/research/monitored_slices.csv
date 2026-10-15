@@ -7,7 +7,7 @@ feat_stoch_k_14:1:LONG:h12,PERP,feat_stoch_k_14,1,LONG,monitored,2026-10-15T00:3
 feat_hour_utc:2:LONG:h12,PERP,feat_hour_utc,2,LONG,decayed,2026-10-15T00:37:19.769227+00:00,1791795600,2,1,1,0.6562,,0.003721,10240,0.000007,12,3.500,validated_walk_forward,False,True,29,0.387
 feat_stoch_d_14:1:LONG:h12,PERP,feat_stoch_d_14,1,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.001244,9777,0.099403,12,3.500,validated_walk_forward,False,True,18,0.240
 feat_gap:2:LONG:h24,PERP,feat_gap,2,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.002892,9500,0.003138,24,3.500,validated_walk_forward,False,True,25,0.333
-feat_ret_autocorr:0:LONG:h20,PERP,feat_ret_autocorr,0,LONG,cooldown,2026-10-15T00:37:19.769227+00:00,1791979200,1,0,1,-4.7745,1792065600,0.002904,8638,0.044036,20,3.500,validated_walk_forward,False,True,23,0.307
+feat_ret_autocorr:0:LONG:h20,PERP,feat_ret_autocorr,0,LONG,monitored,2026-10-15T00:37:19.769227+00:00,1791979200,1,0,1,-4.7745,,0.002904,8638,0.044036,20,3.500,validated_walk_forward,False,True,23,0.307
 feat_gap_fill_ratio:0:LONG:h24,PERP,feat_gap_fill_ratio,0,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.003691,10933,0.002889,24,3.500,validated_walk_forward,False,True,22,0.355
 feat_adx_14:2:LONG:h20,PERP,feat_adx_14,2,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,1,1,0,0.0326,,0.007806,10231,0.000004,20,3.500,validated_walk_forward,False,True,30,0.405
 feat_vol_regime:0:LONG:h24,PERP,feat_vol_regime,0,LONG,monitored,2026-10-15T00:37:19.769227+00:00,,0,0,0,0,,0.001267,9150,0.451341,24,3.500,validated_walk_forward,False,True,22,0.297
@@ -28,7 +28,7 @@ feat_donchian_width_20:1:LONG:h24,PERP,feat_donchian_width_20,1,LONG,monitored,2
 feat_adx_14:1:LONG:h24,PERP,feat_adx_14,1,LONG,monitored,2026-10-14T00:46:46.956938+00:00,,0,0,0,0,,0.004119,9856,0.012984,24,3.500,validated_walk_forward,False,True,28,0.378
 feat_hour_utc:2:LONG:h12,PERP,feat_hour_utc,2,LONG,decayed,2026-10-13T00:30:25.857505+00:00,1791795600,2,1,1,0.6562,,0.005016,10240,0.000000,12,3.500,validated_walk_forward,False,True,27,0.360
 feat_overnight_ret:2:LONG:h15,PERP,feat_overnight_ret,2,LONG,monitored,2026-10-14T00:46:46.956938+00:00,,0,0,0,0,,0.003293,9903,0.000527,15,3.500,validated_walk_forward,False,True,20,0.267
-feat_ret_autocorr:0:LONG:h20,PERP,feat_ret_autocorr,0,LONG,cooldown,2026-10-13T00:30:25.857505+00:00,1791979200,1,0,1,-4.7745,1792065600,0.006149,8227,0.001491,20,3.500,validated_walk_forward,False,True,27,0.360
+feat_ret_autocorr:0:LONG:h20,PERP,feat_ret_autocorr,0,LONG,monitored,2026-10-13T00:30:25.857505+00:00,1791979200,1,0,1,-4.7745,,0.006149,8227,0.001491,20,3.500,validated_walk_forward,False,True,27,0.360
 feat_bb_width_20:2:LONG:h15,PERP,feat_bb_width_20,2,LONG,monitored,2026-10-12T00:33:47.155127+00:00,,3,0,3,-6.6240,,0.007529,11160,0.000007,15,3.500,validated_walk_forward,False,True,25,0.333
 feat_vol_sma_ratio:0:LONG:h24,PERP,feat_vol_sma_ratio,0,LONG,cooldown,2026-10-14T00:46:46.956938+00:00,1791986400,4,2,2,-2.1968,1792072800,0.006217,9648,0.000001,24,3.500,validated_walk_forward,False,True,32,0.427
 feat_vwap_lower_dist:0:LONG:h20,PERP,feat_vwap_lower_dist,0,LONG,monitored,2026-10-14T00:46:46.956938+00:00,,0,0,0,0,,0.005213,9916,0.000247,20,3.500,validated_walk_forward,False,True,23,0.307
