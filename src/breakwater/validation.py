@@ -95,6 +95,7 @@ VALIDATED_HEADERS = [
     "residual_mode",
     "mean_resid_ret",
     "regime_gate_ok",
+    "alpha_positive",
     "regime_bull_n",
     "regime_bull_mean_ret",
     "regime_bull_mean_resid",
@@ -184,6 +185,18 @@ RESIDUAL_VALIDATION = _env_bool("BREAKWATER_VALIDATION_RESIDUAL", "1")
 # for SHORT) when there is enough hostile evidence.  Only meaningful in residual
 # mode; raw returns in a hostile regime are negative by construction.
 REGIME_GATE = _env_bool("BREAKWATER_VALIDATION_REGIME_GATE", "1")
+# Minimum benchmark-relative edge (in return units) a slice must show over the
+# whole sample and inside each passing fold.  The default is a pure
+# floating-point guard: slices whose state is identical across the whole
+# cross-section at every bar (hour-of-day, session features) have LOO
+# residuals that cancel to ~1e-19, and "> 0.0" let that noise pass 3 folds
+# out of 5.  Raise via BREAKWATER_VALIDATION_MIN_ALPHA_BPS to demand real
+# relative edge; production runs with REQUIRE_BONFERRONI=0 so this is the
+# only alpha floor validation applies.
+MIN_ALPHA = max(
+    1e-9,
+    _coerce_float(os.getenv("BREAKWATER_VALIDATION_MIN_ALPHA_BPS", "0"), 0.0) / 10000.0,
+)
 
 REQUIRE_BONFERRONI = _env_bool("BREAKWATER_VALIDATION_REQUIRE_BONFERRONI", "1")
 RELAXED_MIN_PASSES = _coerce_int(
@@ -278,6 +291,7 @@ class ValidatedSlice:
     residual_mode: bool = False
     mean_resid_ret: float = 0.0
     regime_gate_ok: bool = True
+    alpha_positive: bool = True
     regime_bull_n: int = 0
     regime_bull_mean_ret: float = 0.0
     regime_bull_mean_resid: float = 0.0
@@ -324,10 +338,10 @@ def _normal_p(t_stat: float) -> float:
     return 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(t_stat) / math.sqrt(2.0))))
 
 
-def _fold_pass(net_returns: np.ndarray) -> bool:
+def _fold_pass(net_returns: np.ndarray, floor: float = 0.0) -> bool:
     if len(net_returns) < MIN_ROWS_PER_FOLD:
         return False
-    return float(np.mean(net_returns)) > 0.0
+    return float(np.mean(net_returns)) > floor
 
 
 def _regime_series(frame: pd.DataFrame) -> pd.Series:
@@ -946,7 +960,7 @@ def validate_slices(
                 fold_mask[purge_start:end] = False
 
             fold_returns = gate_values[slice_mask & fold_mask]
-            passed = _fold_pass(fold_returns)
+            passed = _fold_pass(fold_returns, MIN_ALPHA if residual_mode else 0.0)
             fold_results.append("1" if passed else "0")
             fold_means.append(float(np.mean(fold_returns)) if len(fold_returns) else 0.0)
             fold_sizes.append(int(len(fold_returns)))
@@ -998,6 +1012,12 @@ def validate_slices(
         if residual_mode and REGIME_GATE:
             regime_gate_ok = not confounded
 
+        # Whole-sample relative edge must clear the floor.  Without this a
+        # slice with no cross-sectional content (residuals cancel exactly) or
+        # with negative overall alpha could still collect enough noisy fold
+        # passes to validate.
+        alpha_positive = (mean_resid > MIN_ALPHA) if residual_mode else True
+
         asia_n, asia_mean, asia_hit = _session_stats_from_net(
             subset, slice_mask, SESSION_ASIA, net_values
         )
@@ -1014,6 +1034,7 @@ def validate_slices(
             and breadth_ok
             and mean_positive
             and regime_gate_ok
+            and alpha_positive
         )
         # NOTE: regime_confounded is intentionally NOT part of is_validated.
         # A slice positive in neutral/bull but negative in bear is a valid
@@ -1035,6 +1056,8 @@ def validate_slices(
             reasons.append("mean_net<=0")
         if not regime_gate_ok:
             reasons.append("regime_confounded")
+        if not alpha_positive:
+            reasons.append("alpha<=0")
         fail_reasons = ",".join(reasons)
 
         if asset_edges is not None:
@@ -1096,6 +1119,7 @@ def validate_slices(
                 residual_mode=bool(residual_mode),
                 mean_resid_ret=float(mean_resid),
                 regime_gate_ok=bool(regime_gate_ok),
+                alpha_positive=bool(alpha_positive),
                 regime_bull_n=int(bull_n),
                 regime_bull_mean_ret=float(bull_mean),
                 regime_bull_mean_resid=float(bull_resid),
@@ -1151,6 +1175,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
             "residual_mode",
             "mean_resid_ret",
             "regime_gate_ok",
+            "alpha_positive",
             "regime_bull_n",
             "regime_bull_mean_ret",
             "regime_bull_mean_resid",
@@ -1256,6 +1281,7 @@ def read_validated(path: Path) -> list[ValidatedSlice]:
                     residual_mode=(row.get("residual_mode") == "True"),
                     mean_resid_ret=_coerce_float(row.get("mean_resid_ret"), 0.0),
                     regime_gate_ok=(row.get("regime_gate_ok", "True") != "False"),
+                    alpha_positive=(row.get("alpha_positive", "True") != "False"),
                     regime_bull_n=_coerce_int(row.get("regime_bull_n"), 0),
                     regime_bull_mean_ret=_coerce_float(row.get("regime_bull_mean_ret"), 0.0),
                     regime_bull_mean_resid=_coerce_float(row.get("regime_bull_mean_resid"), 0.0),

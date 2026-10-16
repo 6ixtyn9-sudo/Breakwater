@@ -507,6 +507,33 @@ the book should shrink to things that beat the universe, and the short
 inventory should stop being structurally empty. `tests/test_alpha_vs_beta.py`
 pins the behaviour on synthetic beta-only and alpha universes.
 
+### First real run (2026-10-16, run 38827908376)
+
+Discovery+validation finished in < 1 h and committed. The deep audit ran
+into its 330-min limit: the LOO benchmark grouped on an object array of
+tz-aware Timestamps (~142 ms × 74,880 candidates ≈ 3 h). Fixed by
+factorizing the int64 view + `np.bincount` (now ~3–10 ms/call).
+
+Book turnover was large, not small: 69 → 89 validated, kept 9 / dropped 60 /
+added 80, all PERP, **3 SHORT rows for the first time** (`feat_adx_14:0:SHORT`
+h15/h20/h24). The new set is dominated by `state 0 LONG` on momentum-type
+features (`feat_ret_1/3`, `feat_intraday_mom`, `feat_session_mom`,
+`feat_close_position`, `feat_vwap_*`, `feat_cci_20`) — i.e. cross-sectional
+short-term reversal at 12–24 h, a coherent and well-documented crypto effect
+rather than a grab-bag. Median residual edge 7 bps vs 9 bps perp round trip
+(the residual cancels cost, so raw `mean_ret_costadj` is the money number).
+
+Bug found in that output: `feat_hour_utc`, `feat_asia_vol`, `feat_asia_range`
+validated with `mean_resid_ret` ≈ 1e-19. Time-of-day states are identical
+across the cross-section, so LOO residuals cancel exactly and `> 0.0` let
+floating-point noise pass 3/5 folds; two `feat_rsi_divergence:2:LONG` rows
+validated with *negative* overall alpha. Production runs with
+`REQUIRE_BONFERRONI=0`, so discovery's alpha-significance test was bypassed
+and validation had no alpha floor. Added `alpha_positive` gate (`MIN_ALPHA`,
+env `BREAKWATER_VALIDATION_MIN_ALPHA_BPS`, default = float guard) applied to
+the whole-sample residual and to each fold. Default floor is deliberately ~0;
+raise it once there is a paper-trade read on the reversal cluster.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
