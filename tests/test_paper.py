@@ -19,6 +19,31 @@ from breakwater.risk import RiskPolicy
 BOOK = {"feat:0:LONG", "feat:0:SHORT"}
 
 
+
+def _decision_log(tmp_path):
+    """Full decision journal: ledger (trades) followed by the skip sidecar.
+
+    Skip/guard rows no longer live in the ledger file (they were 99.85% of a
+    file heading for GitHub's blob limit); they are journaled beside it.  The
+    visibility contract -- every denied entry is written down with its
+    reason -- is what these tests check, so read both.
+    """
+    import csv
+    import io
+
+    from breakwater.paper_trade import PAPER_LOG_HEADERS, iter_paper_log
+
+    rows = list(iter_paper_log(tmp_path / "log.csv", include_skips=True))
+    if not rows:
+        raise FileNotFoundError(tmp_path / "log.csv")
+    # Round-trip through CSV so dtype inference matches pd.read_csv exactly.
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=PAPER_LOG_HEADERS, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    buffer.seek(0)
+    return pd.read_csv(buffer)
+
 def policy():
     return RiskPolicy(
         initial_equity_zar=Decimal("331.45"),
@@ -227,7 +252,7 @@ def test_paper_fee_uses_configured_bps(tmp_path, monkeypatch):
         positions=open_position(),
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert Decimal(str(log.iloc[0]["fee_zar"])) == Decimal("1.4625")
 
 
@@ -249,7 +274,7 @@ def test_replays_unseen_bars_stop_first_after_runner_delay(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "stop"
     assert log.iloc[0]["bars_held"] == 1
     assert str(log.iloc[0]["exit_bar_start"]).startswith("2026-08-14T09:00:00")
@@ -288,7 +313,7 @@ def test_replay_ratchets_then_hits_trail_on_next_unseen_bar(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "trail_stop"
     assert float(log.iloc[0]["exit_price"]) == 101.0
     assert log.iloc[0]["bars_held"] == 2
@@ -427,7 +452,7 @@ def test_max_bars_caps_a_trailing_winner(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "max_bars"
     assert log.iloc[0]["outcome"] == "win"
 
@@ -478,7 +503,7 @@ def test_slice_gap_still_closes_a_thesis_that_never_banked(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "slice_gap"
 
 
@@ -493,7 +518,7 @@ def test_horizon_still_cuts_a_thesis_that_never_confirmed(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "horizon"
 
 
@@ -537,7 +562,7 @@ def test_two_r_target_fires_when_explicitly_re_enabled(tmp_path, monkeypatch):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "target"
     assert float(log.iloc[0]["pnl_zar"]) > 0
     assert float(log.iloc[0]["mfe_r"]) == 2.2
@@ -565,7 +590,7 @@ def test_open_position_hits_target_and_wins(tmp_path, monkeypatch):
         positions=open_position(),
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["outcome"] == "win"
     assert log.iloc[0]["exit_reason"] == "target"
     assert float(log.iloc[0]["pnl_zar"]) > 0
@@ -630,7 +655,7 @@ def test_falling_knife_entry_is_blocked_and_visible(tmp_path):
     )
     assert result["open"] == 0
     assert result["skipped"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["entry_guard"] == "adverse_blocked"
 
@@ -649,7 +674,7 @@ def test_entry_through_target_is_blocked_and_visible(tmp_path):
     )
     assert result["open"] == 0
     assert result["through_target_blocked"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["entry_guard"] == "through_target_blocked"
     assert log.iloc[0]["exit_reason"] == "through_target"
@@ -664,7 +689,7 @@ def test_short_entry_through_its_target_is_blocked(tmp_path):
     )
     assert result["open"] == 0
     assert result["through_target_blocked"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["entry_guard"] == "through_target_blocked"
 
 
@@ -706,7 +731,7 @@ def test_signal_does_not_reenter_after_its_position_closed(tmp_path):
     # so the position is closed here by its stop instead; the re-entry guard
     # under test cares that the signal has traded, not how it ended.
     cycle(tmp_path, signals=[], frames={"BTCZAR": bar_two})
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert (log["exit_reason"] == "stop").any()
 
     # Same signal again: refused, and the refusal is visible.
@@ -718,7 +743,7 @@ def test_signal_does_not_reenter_after_its_position_closed(tmp_path):
     assert again["open"] == 0
     assert again["reentry_blocked"] == 1
     assert again["one_entry_per_signal"] is True
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     last = log.iloc[-1]
     assert last["outcome"] == "skipped"
     assert last["entry_guard"] == "reentry_blocked"
@@ -786,7 +811,7 @@ def test_missing_price_fails_open_with_visible_guard(tmp_path):
     )
     assert result["open"] == 0
     assert result["skipped"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["entry_guard"] == "no_price"
     assert log.iloc[0]["exit_reason"] == "no_price"
@@ -799,7 +824,7 @@ def test_unvalidated_signal_is_not_paper_traded(tmp_path):
         frames={"BTCZAR": spot_frame(close=100)},
     )
     assert result["open"] == 0
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["exit_reason"] == "not_book"
 
@@ -813,7 +838,7 @@ def test_hostile_regime_entry_is_blocked_and_visible(tmp_path):
         frames={"BTCZAR": spot_frame(close=100)},
     )
     assert result["open"] == 0
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert str(log.iloc[0]["entry_guard"]).startswith("regime_blocked")
 
 
@@ -827,7 +852,7 @@ def test_stale_data_exits_instead_of_living_forever(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "stale_data"
     assert float(log.iloc[0]["pnl_zar"]) < 0
 
@@ -841,7 +866,7 @@ def test_perp_signal_below_minimum_notional_is_skipped(tmp_path):
     )
     assert result["open"] == 0
     assert result["skipped"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["outcome"] == "skipped"
     assert log.iloc[0]["exit_reason"] == "below_perp_min_notional"
 
@@ -1065,7 +1090,7 @@ def test_log_header_migration_preserves_audit_columns(tmp_path):
             "stop_price": "",
             "notional_zar": "0",
             "pnl_zar": "0",
-            "outcome": "skipped",
+            "outcome": "loss",
             "bars_held": "0",
             "exit_reason": "regime",
             "entry_guard": "regime_blocked",
@@ -1105,7 +1130,7 @@ def test_log_header_migration_is_idempotent(tmp_path):
             "stop_price": "",
             "notional_zar": "0",
             "pnl_zar": "0",
-            "outcome": "skipped",
+            "outcome": "loss",
             "bars_held": "0",
             "exit_reason": "",
             "entry_guard": "",
@@ -1134,7 +1159,7 @@ def test_log_header_migration_is_idempotent(tmp_path):
             "stop_price": "",
             "notional_zar": "0",
             "pnl_zar": "0",
-            "outcome": "skipped",
+            "outcome": "loss",
             "bars_held": "0",
             "exit_reason": "",
             "entry_guard": "",
@@ -1156,7 +1181,7 @@ def test_risk_cap_skips_wide_stop(tmp_path, monkeypatch):
         frames={"BTCZAR": spot_frame(close=100)},
     )
     assert result["open"] == 0
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "risk_cap"
 
 
@@ -1174,7 +1199,7 @@ def test_aggregate_risk_cap_blocks_new_position(tmp_path, monkeypatch):
     assert result["open"] == 1
     assert result["aggregate_open_risk_zar"] == "7.5000"
     assert result["aggregate_risk_cap_skips"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "aggregate_risk_cap"
 
 
@@ -1218,7 +1243,7 @@ def test_invalid_position_is_quarantined_and_cycle_fails_closed(tmp_path, monkey
     quarantine = json.loads((tmp_path / "paper_position_quarantine.json").read_text())
     assert quarantine[0]["reason"] == "invalid_side"
     assert quarantine[0]["position"]["signal_id"] == "sig1"
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "aggregate_risk_unknown"
 
 
@@ -1232,7 +1257,7 @@ def test_aggregate_stress_buffer_can_block_entry(tmp_path, monkeypatch):
     )
     assert result["open"] == 0
     assert result["aggregate_risk_cap_skips"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "aggregate_risk_cap"
 
 
@@ -1265,7 +1290,7 @@ def test_rotated_sibling_exits_at_close(tmp_path, monkeypatch):
         book={"feat_ret_10:2:LONG:h15"},
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "rotated"
 
 
@@ -1432,7 +1457,7 @@ def test_hip3_position_exits_on_hip3_book_horizon(tmp_path):
         server_time=datetime(2026, 8, 14, 14, 0, 30, tzinfo=timezone.utc),
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "horizon"
     # Feedback landed in the HIP-3 book, not the (absent) native book.
     rows = read_book_rows(hip3_book)
@@ -1637,7 +1662,7 @@ def test_hip3_planned_exit_defers_to_market_session(tmp_path):
         server_time=datetime(2026, 8, 25, 14, 0, 30, tzinfo=timezone.utc),
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "horizon"
     assert log.iloc[0]["exit_bar_start"].startswith("2026-08-25T13:00")
 
@@ -1673,7 +1698,7 @@ def test_hip3_stop_still_fires_outside_session(tmp_path):
         positions=[_hip3_position(horizon_bars="6")],
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "stop"
 
 
@@ -1717,7 +1742,7 @@ def test_native_planned_exit_unaffected_by_session(tmp_path):
         positions=[position],
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "horizon"
     # Native exits on the FIRST bar that reaches the horizon (the 08:00
     # bar, whose close at 09:00Z is outside US market hours) - no deferral,
@@ -1806,7 +1831,7 @@ def test_asset_not_green_reaching_paper_is_denied(tmp_path):
                  entry="1500", stop="1485", atr="3", asset_status="blocked")
     result = cycle(tmp_path, signals=[sig], frames={"BTCUSDC": frame_with_bar(close=1500)})
     assert result["open"] == 0
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "asset_not_green"
     assert log.iloc[0]["entry_guard"] == "asset_not_green"
 
@@ -1878,7 +1903,7 @@ def test_frozen_lane_still_protects_via_stop(tmp_path):
         green_gate=gate,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_reason"] == "stop"
 
 
@@ -1924,7 +1949,7 @@ def test_the_close_row_carries_the_entry_policy_stamp(tmp_path):
         positions=position,
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert log.iloc[0]["exit_policy"] == "notarget_trail1r"
 
 
@@ -1937,5 +1962,5 @@ def test_a_legacy_position_closes_with_a_blank_stamp(tmp_path):
         positions=open_position(),
     )
     assert result["closed"] == 1
-    log = pd.read_csv(tmp_path / "log.csv")
+    log = _decision_log(tmp_path)
     assert pd.isna(log.iloc[0]["exit_policy"]) or log.iloc[0]["exit_policy"] == ""

@@ -534,6 +534,24 @@ env `BREAKWATER_VALIDATION_MIN_ALPHA_BPS`, default = float guard) applied to
 the whole-sample residual and to each fold. Default floor is deliberately ~0;
 raise it once there is a paper-trade read on the reversal cluster.
 
+### Ledger rotation (same session)
+
+`localdata/research/paper_trade_log.csv` was 54 MB in git and growing
+~1 MB/day toward GitHub's 100 MB blob limit, which would have broken
+`commit_state.sh` for the paper role. 99.85% of it was skip/guard rows
+(349,759 skipped vs 536 closes); nothing reads those for a decision — every
+consumer filters to `win`/`loss` first. `append_log` now routes skipped rows
+to `paper_skip_log/YYYY-Www.csv` (ISO week); on week rollover older weeks are
+gzipped in place (~12x). The open week stays plain CSV deliberately: git
+delta-compresses appended text, a gzip that changes hourly would store a
+fresh blob per commit. `rotate_skips_out_of_log` runs at the top of every
+paper cycle: a one-time 3 s split of the legacy ledger on the runner (so the
+PR did not have to touch the hourly-updated file), then a no-op read of a
+~200 KB file. Lossless and idempotent; realised PnL unchanged.
+`iter_paper_log(include_skips=True)` gives the full decision journal.
+Old 54 MB blobs remain in git *history*, which is fine — the limit is per
+pushed blob, not per repo.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
