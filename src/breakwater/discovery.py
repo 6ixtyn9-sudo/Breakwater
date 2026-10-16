@@ -284,28 +284,63 @@ def _trade_net_cols(
     return out
 
 
+def _group_codes(keys) -> tuple[np.ndarray, int]:
+    """Dense integer group ids for ``keys`` without object hashing.
+
+    tz-aware ``start`` columns materialise as object arrays of Timestamps,
+    and a pandas groupby over those costs ~140 ms per 200k rows.  The deep
+    audit calls this ~75k times, which turned a 3 h job into a 6 h timeout.
+    Factorizing on the int64 view is ~100x cheaper.
+    """
+    # Never call .to_numpy() on a tz-aware Series here: that materialises
+    # Python Timestamp objects (30 ms per 200k rows).  Read the int64 view.
+    if isinstance(keys, (pd.Series, pd.Index)):
+        try:
+            arr = pd.DatetimeIndex(keys).asi8
+        except (TypeError, ValueError):
+            arr = keys.to_numpy()
+    else:
+        arr = np.asarray(keys)
+        if arr.dtype == object and len(arr):
+            try:
+                arr = pd.DatetimeIndex(arr).asi8
+            except (TypeError, ValueError):
+                pass
+        elif np.issubdtype(arr.dtype, np.datetime64):
+            arr = arr.astype("datetime64[ns]").view("int64")
+    codes, uniques = pd.factorize(arr, sort=False)
+    return codes.astype(np.intp, copy=False), int(len(uniques))
+
+
 def loo_cross_sectional_mean(
     keys: pd.Series | np.ndarray,
     values: np.ndarray,
     *,
     min_peers: int | None = None,
+    codes: tuple[np.ndarray, int] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Leave-one-out mean of ``values`` across rows sharing the same key.
 
     Returns ``(benchmark, peers)``.  Rows with fewer than ``min_peers`` finite
     peers get benchmark 0 (no cross-section to residualize against) so a
     single-symbol universe degrades to raw scoring instead of to NaN.
+
+    ``codes`` may carry a precomputed ``_group_codes(keys)`` result so callers
+    that residualize several series over the same rows pay for factorization
+    once.
     """
     if min_peers is None:
         min_peers = MARKET_MIN_PEERS
-    vals = pd.Series(np.asarray(values, dtype=float))
-    finite = vals.where(np.isfinite(vals))
-    group = finite.groupby(np.asarray(keys))
-    total = group.transform("sum").to_numpy()
-    count = group.transform("count").to_numpy()
-    own = finite.notna().to_numpy()
-    peers = np.clip(count - own.astype(int), 0, None)
-    loo_sum = total - np.nan_to_num(finite.to_numpy(), nan=0.0)
+    vals = np.asarray(values, dtype=float)
+    if len(vals) == 0:
+        return np.zeros(0, dtype=float), np.zeros(0, dtype=int)
+    group_codes, n_groups = codes if codes is not None else _group_codes(keys)
+    finite = np.isfinite(vals)
+    filled = np.where(finite, vals, 0.0)
+    total = np.bincount(group_codes, weights=filled, minlength=n_groups)[group_codes]
+    count = np.bincount(group_codes, weights=finite.astype(float), minlength=n_groups)[group_codes]
+    peers = np.clip(count - finite.astype(float), 0, None)
+    loo_sum = total - filled
     with np.errstate(divide="ignore", invalid="ignore"):
         bench = np.where(peers >= min_peers, loo_sum / np.where(peers > 0, peers, np.nan), 0.0)
     return np.nan_to_num(np.asarray(bench, dtype=float), nan=0.0), peers.astype(int)
@@ -336,9 +371,10 @@ def attach_market_benchmark(prepared: pd.DataFrame) -> pd.DataFrame:
     if prepared.empty or "fwd_ret_raw" not in prepared.columns or "start" not in prepared.columns:
         return prepared
     out = prepared.copy()
-    keys = out["start"].to_numpy()
+    keys = out["start"]
+    codes = _group_codes(keys)
     raw = out["fwd_ret_raw"].astype(float).to_numpy()
-    market, peers = loo_cross_sectional_mean(keys, raw)
+    market, peers = loo_cross_sectional_mean(keys, raw, codes=codes)
     out["market_peers"] = peers
     out["fwd_ret_market"] = market
     out["fwd_ret_resid"] = raw - market
@@ -347,7 +383,7 @@ def attach_market_benchmark(prepared: pd.DataFrame) -> pd.DataFrame:
         if col not in out.columns:
             continue
         net = out[col].astype(float).to_numpy()
-        bench, _ = loo_cross_sectional_mean(keys, net)
+        bench, _ = loo_cross_sectional_mean(keys, net, codes=codes)
         out[f"fwd_trade_bench_{side}"] = bench
         out[f"{col}_resid"] = net - bench
     return out

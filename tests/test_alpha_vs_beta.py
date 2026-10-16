@@ -26,6 +26,7 @@ from breakwater.discovery import (
     SliceStat,
     attach_market_benchmark,
     discover_slices,
+    loo_cross_sectional_mean,
     prepare_pooled,
 )
 from breakwater.validation import validate_slices
@@ -233,3 +234,24 @@ def test_validated_schema_roundtrip_with_alpha_fields(tmp_path):
 def test_attach_market_benchmark_noop_without_required_columns():
     df = pd.DataFrame({"x": [1, 2]})
     assert attach_market_benchmark(df) is df
+
+
+def test_group_codes_avoid_object_path_and_agree_across_inputs():
+    """tz-aware keys must factorize via the int64 view (the object path cost
+    ~140 ms per call and pushed the deep audit past its 6 h limit)."""
+    from breakwater.discovery import _group_codes
+
+    starts = pd.date_range("2026-01-01", periods=5, freq="h", tz="UTC")
+    ser = pd.Series(np.tile(starts, 3))
+    codes_series, n_series = _group_codes(ser)
+    codes_obj, n_obj = _group_codes(ser.to_numpy())
+    codes_int, n_int = _group_codes(np.tile(np.arange(5), 3))
+    assert n_series == n_obj == n_int == 5
+    np.testing.assert_array_equal(codes_series, codes_obj)
+    np.testing.assert_array_equal(codes_series, codes_int)
+
+    vals = np.arange(15, dtype=float)
+    bench, peers = loo_cross_sectional_mean(ser, vals)
+    assert (peers == 2).all()
+    # row 0 (t0, sym0) peers are rows 5 and 10 -> mean 7.5
+    assert bench[0] == pytest.approx(7.5)

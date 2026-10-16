@@ -732,19 +732,20 @@ def _compute_asset_edges_for_slice(
     return out
 
 
-def _residualize(subset: pd.DataFrame, values: np.ndarray) -> np.ndarray:
+def _residualize(subset: pd.DataFrame, values: np.ndarray, codes=None) -> np.ndarray:
     """Subtract the leave-one-out peer mean of the SAME trade rule per bar.
 
     ``values`` are already directional, stop/trail-aware and cost-adjusted for
     one side, so benchmarking against peers' values of the same series cancels
     the stop mechanics (a stop beats buy-and-hold in every crash) and isolates
     relative selection skill.  Rows without peers keep their raw value.
+    ``codes`` is an optional precomputed ``_group_codes`` for ``subset``.
     """
     from breakwater.discovery import loo_cross_sectional_mean
 
     if "start" not in subset.columns or len(values) == 0:
         return np.asarray(values, dtype=float)
-    bench, _ = loo_cross_sectional_mean(subset["start"].to_numpy(), values)
+    bench, _ = loo_cross_sectional_mean(subset["start"], values, codes=codes)
     return np.asarray(values, dtype=float) - bench
 
 
@@ -837,10 +838,13 @@ def validate_slices(
         # same trade on the peers at the same bar.  Under pure beta both are
         # ~0 -- including in crashes, because the peers' stops fire too.
         if residual_mode:
-            gate_long = _residualize(subset, val_long)
-            gate_short = _residualize(subset, val_short)
-            resid_net_long = _residualize(subset, net_long)
-            resid_net_short = _residualize(subset, net_short)
+            from breakwater.discovery import _group_codes
+
+            codes = _group_codes(subset["start"]) if "start" in subset.columns else None
+            gate_long = _residualize(subset, val_long, codes)
+            gate_short = _residualize(subset, val_short, codes)
+            resid_net_long = _residualize(subset, net_long, codes)
+            resid_net_short = _residualize(subset, net_short, codes)
         else:
             gate_long, gate_short = val_long, val_short
             resid_net_long, resid_net_short = net_long, net_short
