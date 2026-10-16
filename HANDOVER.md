@@ -507,6 +507,51 @@ the book should shrink to things that beat the universe, and the short
 inventory should stop being structurally empty. `tests/test_alpha_vs_beta.py`
 pins the behaviour on synthetic beta-only and alpha universes.
 
+### First real run (2026-10-16, run 38827908376)
+
+Discovery+validation finished in < 1 h and committed. The deep audit ran
+into its 330-min limit: the LOO benchmark grouped on an object array of
+tz-aware Timestamps (~142 ms × 74,880 candidates ≈ 3 h). Fixed by
+factorizing the int64 view + `np.bincount` (now ~3–10 ms/call).
+
+Book turnover was large, not small: 69 → 89 validated, kept 9 / dropped 60 /
+added 80, all PERP, **3 SHORT rows for the first time** (`feat_adx_14:0:SHORT`
+h15/h20/h24). The new set is dominated by `state 0 LONG` on momentum-type
+features (`feat_ret_1/3`, `feat_intraday_mom`, `feat_session_mom`,
+`feat_close_position`, `feat_vwap_*`, `feat_cci_20`) — i.e. cross-sectional
+short-term reversal at 12–24 h, a coherent and well-documented crypto effect
+rather than a grab-bag. Median residual edge 7 bps vs 9 bps perp round trip
+(the residual cancels cost, so raw `mean_ret_costadj` is the money number).
+
+Bug found in that output: `feat_hour_utc`, `feat_asia_vol`, `feat_asia_range`
+validated with `mean_resid_ret` ≈ 1e-19. Time-of-day states are identical
+across the cross-section, so LOO residuals cancel exactly and `> 0.0` let
+floating-point noise pass 3/5 folds; two `feat_rsi_divergence:2:LONG` rows
+validated with *negative* overall alpha. Production runs with
+`REQUIRE_BONFERRONI=0`, so discovery's alpha-significance test was bypassed
+and validation had no alpha floor. Added `alpha_positive` gate (`MIN_ALPHA`,
+env `BREAKWATER_VALIDATION_MIN_ALPHA_BPS`, default = float guard) applied to
+the whole-sample residual and to each fold. Default floor is deliberately ~0;
+raise it once there is a paper-trade read on the reversal cluster.
+
+### Ledger rotation (same session)
+
+`localdata/research/paper_trade_log.csv` was 54 MB in git and growing
+~1 MB/day toward GitHub's 100 MB blob limit, which would have broken
+`commit_state.sh` for the paper role. 99.85% of it was skip/guard rows
+(349,759 skipped vs 536 closes); nothing reads those for a decision — every
+consumer filters to `win`/`loss` first. `append_log` now routes skipped rows
+to `paper_skip_log/YYYY-Www.csv` (ISO week); on week rollover older weeks are
+gzipped in place (~12x). The open week stays plain CSV deliberately: git
+delta-compresses appended text, a gzip that changes hourly would store a
+fresh blob per commit. `rotate_skips_out_of_log` runs at the top of every
+paper cycle: a one-time 3 s split of the legacy ledger on the runner (so the
+PR did not have to touch the hourly-updated file), then a no-op read of a
+~200 KB file. Lossless and idempotent; realised PnL unchanged.
+`iter_paper_log(include_skips=True)` gives the full decision journal.
+Old 54 MB blobs remain in git *history*, which is fine — the limit is per
+pushed blob, not per repo.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar

@@ -201,7 +201,7 @@ def _evaluate(prepared: pd.DataFrame, candidate, *, lane: str, group: str) -> di
     # cannot pass beta or stop mechanics off as edge (see discovery module).
     residualized = bool(_RESIDUALIZE and "start" in subset.columns)
     if residualized:
-        bench, _ = loo_cross_sectional_mean(subset["start"].to_numpy(), values)
+        bench, _ = loo_cross_sectional_mean(subset["start"], values)
         resid_values = values - bench
     else:
         resid_values = values

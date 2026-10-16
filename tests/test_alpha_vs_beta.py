@@ -26,6 +26,7 @@ from breakwater.discovery import (
     SliceStat,
     attach_market_benchmark,
     discover_slices,
+    loo_cross_sectional_mean,
     prepare_pooled,
 )
 from breakwater.validation import validate_slices
@@ -179,9 +180,9 @@ def test_residualized_discovery_finds_relative_alpha():
     assert bottom_short.mean_resid_costadj > 0
 
 
-def _cand(state, side, bonf=True):
+def _cand(state, side, bonf=True, feature="sig"):
     return SliceStat(
-        slice_id=f"sig:{state}:{side}", kind="SPOT", feature="sig", state=state, side=side,
+        slice_id=f"{feature}:{state}:{side}", kind="SPOT", feature=feature, state=state, side=side,
         n=300, mean_ret_costadj=0.001, median_ret_costadj=0.0, hit_rate=0.5,
         t_stat=4.0, p_value=1e-4, bonferroni_pass=bonf, horizon_bars=1,
     )
@@ -233,3 +234,43 @@ def test_validated_schema_roundtrip_with_alpha_fields(tmp_path):
 def test_attach_market_benchmark_noop_without_required_columns():
     df = pd.DataFrame({"x": [1, 2]})
     assert attach_market_benchmark(df) is df
+
+
+def test_group_codes_avoid_object_path_and_agree_across_inputs():
+    """tz-aware keys must factorize via the int64 view (the object path cost
+    ~140 ms per call and pushed the deep audit past its 6 h limit)."""
+    from breakwater.discovery import _group_codes
+
+    starts = pd.date_range("2026-01-01", periods=5, freq="h", tz="UTC")
+    ser = pd.Series(np.tile(starts, 3))
+    codes_series, n_series = _group_codes(ser)
+    codes_obj, n_obj = _group_codes(ser.to_numpy())
+    codes_int, n_int = _group_codes(np.tile(np.arange(5), 3))
+    assert n_series == n_obj == n_int == 5
+    np.testing.assert_array_equal(codes_series, codes_obj)
+    np.testing.assert_array_equal(codes_series, codes_int)
+
+    vals = np.arange(15, dtype=float)
+    bench, peers = loo_cross_sectional_mean(ser, vals)
+    assert (peers == 2).all()
+    # row 0 (t0, sym0) peers are rows 5 and 10 -> mean 7.5
+    assert bench[0] == pytest.approx(7.5)
+
+
+def test_cross_sectionally_constant_state_cannot_validate(monkeypatch):
+    """A feature whose state is the same for every symbol at a bar (hour of
+    day, session flags) has no cross-sectional content: LOO residuals cancel
+    to ~1e-19.  That floating-point noise must not pass the fold gates.
+    Real run 2026-10-16 validated feat_hour_utc/feat_asia_* this way."""
+    monkeypatch.setattr(validation, "RESIDUAL_VALIDATION", True)
+    frame = beta_universe()
+    # Time-only feature: identical across symbols at each bar.
+    frame["clock"] = frame["start"].dt.hour.astype(float)
+    prepared = prepare_pooled(frame, ["clock"], cost_bps=0.0, horizon_bars=1)
+    rows = validate_slices(prepared, [_cand(s, "LONG", feature="clock") for s in (0, 1, 2)])
+    assert rows
+    for r in rows:
+        assert abs(r.mean_resid_ret) < 1e-12
+        assert not r.alpha_positive
+        assert not r.validated
+        assert "alpha<=0" in r.fail_reasons

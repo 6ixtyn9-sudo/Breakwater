@@ -69,8 +69,10 @@ from __future__ import annotations
 
 import csv
 import fcntl
+import gzip
 import json
 import os
+import shutil
 import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -467,7 +469,77 @@ def _migrate_log_header(path: Path) -> None:
         raise
 
 
-def append_log(path: Path, row: dict) -> None:
+# ---------------------------------------------------------------------------
+# Ledger layout
+#
+# ``paper_trade_log.csv`` is the committed source of truth for realised paper
+# PnL and is read by every gate (lane_gate, promotion_evidence, live_readiness,
+# hip3_research, daily print).  All of those filter to outcome in {win, loss}.
+#
+# Skip/guard rows ("fail-open visibility: every skipped entry is journaled")
+# are ~6k/day and were 99.85% of the file; at ~1 MB/day it was going to hit
+# GitHub's 100 MB blob limit and break commit_state.sh.  They now live beside
+# the ledger in ``paper_skip_log/YYYY-Www.csv`` (ISO week); when a new week
+# opens, older weeks are gzipped in place (~12x).  The open week stays plain
+# CSV on purpose: git delta-compresses appended text well, whereas a gzip
+# that changes hourly would store a fresh blob every commit.  Nothing reads
+# skips for a decision, so the ledger readers are unchanged;
+# ``iter_paper_log(include_skips=True)`` exists for the full journal.
+# ---------------------------------------------------------------------------
+
+SKIP_LOG_DIRNAME = "paper_skip_log"
+SKIP_OUTCOMES = frozenset({"skipped"})
+
+
+def skip_log_dir(log_path: Path) -> Path:
+    return log_path.parent / SKIP_LOG_DIRNAME
+
+
+def _period_key(closed_at: str) -> str:
+    """ISO-week bucket, e.g. ``2026-W42``; falls back to the current week."""
+    text = str(closed_at or "").strip()
+    stamp = None
+    if len(text) >= 10:
+        try:
+            stamp = datetime.fromisoformat(text[:10])
+        except ValueError:
+            stamp = None
+    if stamp is None:
+        stamp = datetime.now(timezone.utc)
+    year, week, _ = stamp.isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def skip_log_path(log_path: Path, closed_at: str = "") -> Path:
+    return skip_log_dir(log_path) / f"{_period_key(closed_at)}.csv"
+
+
+def _compress_stale_skip_logs(directory: Path, keep: Path) -> None:
+    """Gzip every plain skip file except ``keep`` (the open period)."""
+    for plain in sorted(directory.glob("*.csv")):
+        if plain == keep:
+            continue
+        packed = plain.with_suffix(".csv.gz")
+        if packed.exists():
+            # Both exist only if a previous run died between steps; the
+            # plain file is the newer one, so re-pack it.
+            packed.unlink()
+        tmp = packed.with_name(packed.name + ".tmp")
+        try:
+            with plain.open("rb") as src, gzip.open(tmp, "wb", compresslevel=6) as dst:
+                shutil.copyfileobj(src, dst)
+            os.replace(tmp, packed)
+            plain.unlink()
+        except OSError:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+            # Leave the plain file; the next rollover will try again.
+            return
+
+
+def _append_csv_row(path: Path, row: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists()
     if exists:
@@ -478,6 +550,112 @@ def append_log(path: Path, row: dict) -> None:
             writer.writeheader()
         writer.writerow(row)
         handle.flush()
+
+
+def append_log(path: Path, row: dict) -> None:
+    """Append one decision row; skip/guard rows are routed to the monthly
+    sidecar so the committed ledger only carries trades."""
+    if str(row.get("outcome") or "") in SKIP_OUTCOMES:
+        target = skip_log_path(path, str(row.get("closed_at") or ""))
+        new_period = not target.exists()
+        _append_csv_row(target, row)
+        if new_period:
+            _compress_stale_skip_logs(target.parent, keep=target)
+        return
+    _append_csv_row(path, row)
+
+
+def rotate_skips_out_of_log(path: Path) -> int:
+    """One-time, idempotent split of an old mixed ledger.
+
+    Streams ``path``; skip rows are appended to their weekly sidecar files,
+    the ledger is atomically rewritten with only the remaining rows.  Returns
+    the number of rows moved.  On a ledger that is already trade-only this is
+    a single read of a ~100 KB file.
+    """
+    if not path.exists():
+        return 0
+    _migrate_log_header(path)
+    moved = 0
+    kept: list[dict] = []
+    buckets: dict[str, list[dict]] = {}
+    with path.open(newline="") as handle:
+        for row in csv.DictReader(handle):
+            if str(row.get("outcome") or "") in SKIP_OUTCOMES:
+                buckets.setdefault(_period_key(str(row.get("closed_at") or "")), []).append(row)
+                moved += 1
+            else:
+                kept.append(row)
+    if not moved:
+        return 0
+
+    directory = skip_log_dir(path)
+    directory.mkdir(parents=True, exist_ok=True)
+    periods = sorted(buckets)
+    for period in periods:
+        target = directory / f"{period}.csv"
+        packed = target.with_suffix(".csv.gz")
+        # If this period was already packed, append into a plain file and let
+        # the compressor fold it: simplest correct path for a re-run.
+        if packed.exists():
+            with gzip.open(packed, "rt", newline="") as handle:
+                existing = list(csv.DictReader(handle))
+            packed.unlink()
+            with target.open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=PAPER_LOG_HEADERS)
+                writer.writeheader()
+                writer.writerows(existing)
+        exists = target.exists()
+        with target.open("a", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=PAPER_LOG_HEADERS)
+            if not exists:
+                writer.writeheader()
+            writer.writerows(buckets[period])
+            handle.flush()
+
+    # Rewrite the ledger with trades only, atomically.
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(file_descriptor, "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=PAPER_LOG_HEADERS)
+            writer.writeheader()
+            writer.writerows(kept)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+
+    # Only the newest period stays plain.
+    _compress_stale_skip_logs(directory, keep=directory / f"{periods[-1]}.csv")
+    return moved
+
+
+def iter_paper_log(path: Path, *, include_skips: bool = False):
+    """Yield ledger rows, optionally followed by the skip journal (oldest
+    period first, gz or plain)."""
+    if path.exists():
+        with path.open(newline="") as handle:
+            yield from csv.DictReader(handle)
+    if not include_skips:
+        return
+    directory = skip_log_dir(path)
+    if not directory.exists():
+        return
+    files = sorted(directory.glob("*.csv*"), key=lambda p: p.name.split(".")[0])
+    for file in files:
+        if file.suffix == ".gz":
+            with gzip.open(file, "rt", newline="") as handle:
+                yield from csv.DictReader(handle)
+        else:
+            with file.open(newline="") as handle:
+                yield from csv.DictReader(handle)
 
 
 def append_cooldown(path: Path, entry: dict) -> None:
@@ -1356,6 +1534,12 @@ def run_paper_cycle(
     green_gate: object | None = None,
 ) -> dict:
     closed_rows: list[dict] = []
+    # Split any legacy skip rows out of the ledger before anything reads it.
+    # Idempotent; a no-op single read once the ledger is trade-only.
+    try:
+        rotate_skips_out_of_log(log_path)
+    except OSError:
+        pass
     reconcile_paper_stats_from_log(book_path, log_path)
     if hip3_book_path is not None:
         reconcile_paper_stats_from_log(hip3_book_path, log_path)

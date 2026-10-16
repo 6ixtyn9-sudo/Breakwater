@@ -65,6 +65,9 @@ research_files=(
 
 paper_files=(
   localdata/research/paper_trade_log.csv
+  # Skip/guard journal, ISO-weekly, older weeks gzipped (see paper_trade.append_log).
+  localdata/research/paper_skip_log/*.csv
+  localdata/research/paper_skip_log/*.csv.gz
   localdata/research/paper_positions.json
   localdata/research/paper_position_quarantine.json
   localdata/research/paper_counterfactuals.json
