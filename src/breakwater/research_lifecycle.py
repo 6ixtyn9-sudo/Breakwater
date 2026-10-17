@@ -616,6 +616,7 @@ def sync_book(
         "carried_cooldown": 0,
         "carried_decayed": 0,
         "paper_protected": 0,
+        "research_rejected_dropped": 0,
         "rows_total_after_sync": 0,
     }
 
@@ -683,14 +684,42 @@ def sync_book(
     # edge has decayed below the floor in the current research run must NOT
     # survive on its old stored value.
     _current_validated: dict[str, float] = {}
+    _current_rows: dict[str, ValidatedSlice] = {}
     for _vrow in validated_rows:
+        _current_rows[_vrow.slice_id] = _vrow
         try:
             _current_validated[_vrow.slice_id] = float(_vrow.mean_ret_costadj)
         except (TypeError, ValueError):
             pass
 
+    def _research_rejected(sid: str) -> bool:
+        """This run's research scored the slice and said no.
+
+        Carry-forward used to key only on the raw ``mean_ret_costadj`` staying
+        above the keep floor, which never consulted ``validated``.  A slice
+        failing ``regime_confounded`` / ``alpha<=0`` / ``direction_ok`` with a
+        still-positive raw mean (bull-market beta) therefore stayed
+        ``monitored`` indefinitely: on 2026-10-17, 31 of 53 book rows were
+        research-rejected, 26 still tradeable, 61 paper trades for -25.8 ZAR.
+        Slices absent from this run's output (another lane's research cycle)
+        are not "rejected" and keep the legacy edge-floor behaviour.
+        """
+        current = _current_rows.get(sid)
+        if current is None:
+            return False
+        if current.validated:
+            return False
+        return not _is_concentrated_candidate(current, enter_pool_floors)
+
+    _rejected_seen: set[str] = set()
+
     def _carry_eligible(row: dict) -> bool:
         sid = str(row.get("slice_id") or "")
+        if _research_rejected(sid):
+            if sid not in _rejected_seen:
+                _rejected_seen.add(sid)
+                summary["research_rejected_dropped"] += 1
+            return False
         # Use current research edge if available; fall back to stored value
         # only for slices not in this run's validated set (e.g. HIP-3 slices
         # from a separate research cycle).

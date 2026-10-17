@@ -552,6 +552,36 @@ PR did not have to touch the hourly-updated file), then a no-op read of a
 Old 54 MB blobs remain in git *history*, which is fine — the limit is per
 pushed blob, not per repo.
 
+### Second real run (2026-10-17) and the carry-forward leak
+
+Research refresh completed in 4h42 (deep audit 4h02, no timeout); ledger
+rotation landed (0.19 MB ledger, weekly gz sidecars). Validated: 73, all
+LONG, `alpha_positive` column live. Yesterday's three `feat_adx_14:0:SHORT`
+rows did not re-validate.
+
+Digest said "book slices absent from pools: 30". Cause: `sync_book`'s
+`_carry_eligible` looked up the slice's current raw `mean_ret_costadj` and
+carried it if above the keep floor — it never read `validated`. So the
+alpha/regime gates rejected a slice and the lifecycle kept it anyway on its
+raw (beta) edge: 31 of 53 book rows were research-rejected, 26 still
+`monitored`, 61 paper trades for −25.8 ZAR. Fixed: a slice present in this
+run's output that is neither `validated` nor a concentrated candidate is not
+carried (nor paper-protected). Slices absent from the run (another lane's
+cycle) keep legacy behaviour. Replay on committed state drops exactly those
+31. New summary key `research_rejected_dropped`.
+
+**The SHORT finding worth building on.** The strongest residual alpha in the
+whole run is SHORT: `feat_vol_regime:0:SHORT` h15/h20/h24 at +24..+31 bps
+benchmark-relative, 4/5 folds, failing *only* `mean_net<=0` (raw −31..−45
+bps because the sample's market drift is positive). That is the mirror image
+of the original bug: `mean_positive` on raw returns is itself a beta gate —
+it admits longs in bull samples and rejects shorts in them. An outright
+short of a cross-sectional signal is beta-dependent by construction. The
+residual evidence says the signal is real in both directions; the engine
+that captures it without beta is long state-2 / short state-0 on perps
+(market-neutral, 9 bps). That is the "more engines" candidate with actual
+evidence behind it; everything else so far is directional beta exposure.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
