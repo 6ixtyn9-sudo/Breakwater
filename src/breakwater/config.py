@@ -206,6 +206,12 @@ class Settings:
         return self.data_dir / "research" / name
 
     @property
+    def spread_slices_path(self) -> Path:
+        suffix = os.getenv("BREAKWATER_RESEARCH_SHARD", "").strip()
+        name = f"spread_slices_{suffix}.csv" if suffix else "spread_slices.csv"
+        return self.data_dir / "research" / name
+
+    @property
     def book_path(self) -> Path:
         return self.data_dir / "research" / "monitored_slices.csv"
 

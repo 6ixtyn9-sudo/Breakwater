@@ -62,6 +62,7 @@ from breakwater.short_inventory import (
     compute_short_inventory,
     write_short_inventory,
 )
+from breakwater.spread_research import spread_stats, write_spreads
 from breakwater.status import append_status
 from breakwater.strategy import detect_big_wave
 from breakwater.universe import (
@@ -1577,6 +1578,8 @@ class BreakwaterEngine:
         from breakwater.costs import perp_round_trip_bps, spot_round_trip_bps
 
         perp_cost_bps = perp_round_trip_bps()
+        spreads = []
+        spread_errors: list[str] = []
         for kind, cost_bps in (("SPOT", spot_round_trip_bps()), ("PERP", perp_cost_bps)):
             # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
@@ -1612,9 +1615,27 @@ class BreakwaterEngine:
                 discovered.extend(found)
                 validated.extend(checked)
 
+                # Market-neutral spread evidence (advisory, perps only: both
+                # legs need a short-able venue). Feeds no gate; see
+                # docs/market_neutral_engine.md for the go/no-go read.
+                if kind == "PERP":
+                    try:
+                        spreads.extend(
+                            spread_stats(
+                                prepared,
+                                kind=kind,
+                                feature_columns=FEATURE_COLUMNS,
+                                horizon_bars=horizon_bars,
+                            )
+                        )
+                    except Exception as exc:  # research-only; never fail the run
+                        spread_errors.append(f"h{horizon_bars}: {exc}")
+
         write_discovered(self.settings.discovered_path, discovered)
         write_validated(self.settings.validated_path, validated)
         write_asset_edges(self.settings.asset_edges_path, asset_edges)
+        spreads.sort(key=lambda row: (not row.qualifies, -row.t_nonoverlap))
+        write_spreads(self.settings.spread_slices_path, spreads)
 
         # Research-side short audit: the daily pass must say plainly whether it
         # produced any short that qualifies. Shorts that cleared the floor but
@@ -1685,6 +1706,22 @@ class BreakwaterEngine:
                 "untested": sum(1 for row in asset_edges if row.asset_status == "untested"),
             },
             "short_audit": short_audit,
+            "spread_research": {
+                "rows": len(spreads),
+                "qualifying": sum(1 for row in spreads if row.qualifies),
+                "best": [
+                    {
+                        "spread_id": row.spread_id,
+                        "mean_bps": round(row.mean_ret_costadj * 10000.0, 2),
+                        "t_nonoverlap": round(row.t_nonoverlap, 2),
+                        "folds": row.fold_pattern,
+                        "market_corr": round(row.market_corr, 3),
+                        "qualifies": row.qualifies,
+                    }
+                    for row in spreads[:5]
+                ],
+                "errors": spread_errors,
+            },
             "validation_require_bonferroni": validation_require_bonferroni,
             "validation_relaxed_min_passes": validation_relaxed_min_passes,
             "book": book_summary,
