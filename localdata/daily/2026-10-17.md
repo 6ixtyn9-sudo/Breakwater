@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-17 22:59 UTC
+# Breakwater daily print — 2026-10-17 23:24 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -63,9 +63,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 3 open, stop-risk **2.76 ZAR**
-  - SOLUSDC BUY ntl=116 risk=2.76 bars=0 stop=99.79250000000000515 peak=102.22
-  - BTCUSDC BUY ntl=117 risk=0.00 bars=56 stop=80468.749999999999900 peak=82898.0
-  - XMRUSDC BUY ntl=117 risk=0.00 bars=5 stop=550.21500000000003950 peak=566.26
+  - SOLUSDC BUY ntl=116 risk=2.76 bars=1 stop=99.79250000000000515 peak=103.31
+  - BTCUSDC BUY ntl=117 risk=0.00 bars=57 stop=80468.749999999999900 peak=82898.0
+  - XMRUSDC BUY ntl=117 risk=0.00 bars=6 stop=550.95500000000003950 peak=567.0
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -75,9 +75,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **2.76 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **2.76 / 162.42 ZAR | 2.2% | ok**
 - Remaining: 158.7926 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 24, "skipped": 24, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 1, "pair_held": 5, "signals": 128, "skipped": 122, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 27, "skipped": 27, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 3, "signals": 111, "skipped": 108, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **SOLUSDC** 2.7551 ZAR
-- positions without bars: 0 | replayed: 4 | invalid: 0
+- positions without bars: 0 | replayed: 3 | invalid: 0
 
 ## 6. Monitored books
 
@@ -92,14 +92,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_donchian_width_20:1:LONG:h24` edge=0.0018 n=9228 p=0.6755 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_gap:1:LONG:h24` edge=0.0033 n=9552 p=0.7842 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20` edge=0.0081 n=494 p=0.1655 src=validated_walk_forward unproven=False paper=20n/+9.43
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_strength:1:LONG:h18` edge=0.0001 n=1420 p=0.9829 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ret_20:1:LONG:h18` edge=0.0001 n=1563 p=0.9678 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_trend_slope_20:0:LONG:h20` edge=0.0008 n=1576 p=0.1320 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `hip3_xyz_commodity_c0:feat_atr_norm_ext:0:LONG:h23` edge=0.0009 n=1577 p=0.0441 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -127,9 +127,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.8 bull=0.0667 neutral=0.1333 | symbols=15
+- Label: **bear** | breadth bear=0.8667 bull=0.0667 neutral=0.0667 | symbols=15
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 12 / bull 0
-- as_of: 2026-10-17T22:55:26Z
+- as_of: 2026-10-17T23:18:01Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -212,13 +212,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-10-17T22:08:31: errors=0 signals=152 regime_blocked=253
-- this cycle: closed=2 new_signals=152 skipped=146 slot_full=0 slice_full=0 pair_held=5
-- Action funnel: regime_blocked=253 | lane_gate_blocked=12 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=5 | slot_full=0 | skipped=146
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 12, "pair_held": 5, "regime_blocked": 253, "skipped": 146, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-10-17T23:24:29: errors=1 signals=138 regime_blocked=221
+- this cycle: closed=0 new_signals=138 skipped=135 slot_full=0 slice_full=0 pair_held=3
+- Action funnel: regime_blocked=221 | lane_gate_blocked=12 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=3 | slot_full=0 | skipped=135
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 12, "pair_held": 3, "regime_blocked": 221, "skipped": 135, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=20 blocks=39
-- aggregate_risk: ok open=0.0000 cap=162.4219 used=0.0223 remaining=158.7926 replayed=4 no_new_bars=0
-- pair_errors: []
+- aggregate_risk: ok open=2.7551 cap=162.4219 used=0.0223 remaining=158.7926 replayed=3 no_new_bars=0
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:EWT"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
