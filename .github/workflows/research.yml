@@ -90,6 +90,7 @@ jobs:
             localdata/research/discovered_slices_h${{ matrix.horizon }}_${{ matrix.kind }}.csv
             localdata/research/validated_slices_h${{ matrix.horizon }}_${{ matrix.kind }}.csv
             localdata/research/asset_edges_h${{ matrix.horizon }}_${{ matrix.kind }}.csv
+            localdata/research/spread_slices_h${{ matrix.horizon }}_${{ matrix.kind }}.csv
           if-no-files-found: error
           retention-days: 2
   merge:
@@ -214,11 +215,58 @@ jobs:
                   w.writerows(by_key.values())
               print(f"Merged asset_edges {pattern} -> {out_path} {len(by_key)} rows from {len(files)} files (raw {len(rows)})")
               return len(by_key)
+          def merge_spreads(pattern, out_path, headers):
+              # Market-neutral spread evidence (advisory). PERP shards carry
+              # rows; SPOT shards upload a header-only file. Keyed by spread_id,
+              # which is already horizon-unique; keep the higher non-overlap t.
+              files = glob.glob(pattern)
+              rows=[]
+              for fp in files:
+                  try:
+                      with open(fp, newline="") as f:
+                          rows.extend(csv.DictReader(f))
+                  except Exception as e:
+                      print(f"Failed to read {fp}: {e}")
+              by_id={}
+              for row in rows:
+                  sid=row.get("spread_id","")
+                  prev=by_id.get(sid)
+                  if prev is None:
+                      by_id[sid]=row
+                  else:
+                      try:
+                          if float(row.get("t_nonoverlap",0)) > float(prev.get("t_nonoverlap",0)):
+                              by_id[sid]=row
+                      except (TypeError, ValueError):
+                          pass
+              def sort_key(row):
+                  try:
+                      t=float(row.get("t_nonoverlap",0))
+                  except (TypeError, ValueError):
+                      t=0.0
+                  return (row.get("qualifies","") != "True", -t)
+              merged=sorted(by_id.values(), key=sort_key)
+              out_path.parent.mkdir(parents=True, exist_ok=True)
+              with open(out_path,"w",newline="") as out:
+                  w=csv.DictWriter(out, fieldnames=headers)
+                  w.writeheader()
+                  w.writerows(merged)
+              qualifying=[r for r in merged if r.get("qualifies","")=="True"]
+              print(f"Merged spreads {pattern} -> {out_path} {len(merged)} rows from {len(files)} files; qualifying={len(qualifying)}")
+              for r in merged[:5]:
+                  try:
+                      bps=float(r.get("mean_ret_costadj",0))*10000.0
+                  except (TypeError, ValueError):
+                      bps=0.0
+                  print(f"  {r.get('spread_id','')}: mean={bps:+.1f}bps t_no={r.get('t_nonoverlap','')} folds={r.get('fold_pattern','')} corr={r.get('market_corr','')} q={r.get('qualifies','')} {r.get('fail_reasons','')}")
+              return len(merged)
           from breakwater.discovery import DISCOVERY_HEADERS
           from breakwater.validation import VALIDATED_HEADERS, ASSET_EDGE_HEADERS
+          from breakwater.spread_research import SPREAD_HEADERS
           n_disc = merge_validated("/tmp/shards/discovered_slices_h*.csv", Path("localdata/research/discovered_slices.csv"), DISCOVERY_HEADERS)
           n_val = merge_validated("/tmp/shards/validated_slices_h*.csv", Path("localdata/research/validated_slices.csv"), VALIDATED_HEADERS)
           n_edges = merge_asset_edges("/tmp/shards/asset_edges_h*.csv", Path("localdata/research/asset_edges.csv"), ASSET_EDGE_HEADERS)
+          n_spreads = merge_spreads("/tmp/shards/spread_slices_h*.csv", Path("localdata/research/spread_slices.csv"), SPREAD_HEADERS)
           from breakwater.config import get_settings
           from breakwater.research_lifecycle import sync_book
           from datetime import datetime, timezone
