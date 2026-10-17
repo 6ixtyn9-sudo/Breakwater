@@ -124,6 +124,22 @@ case "$ROLE" in
 esac
 files+=("${daily_files[@]}")
 
+# Research runs as shards; their status rows never reach the merge job. Rebuild
+# the research_done row from the merged files so status.csv and the daily
+# print actually describe the cycle that just ran. Loud on failure, not fatal.
+case "$ROLE" in
+  research|research-refresh|"research refresh")
+    if [ -f scripts/research_summary.py ]; then
+      if ! PYTHONPATH=src python3 scripts/research_summary.py > /tmp/breakwater_research_summary.out 2>&1; then
+        echo "::warning::research_summary.py FAILED - status.csv has no research_done row for this cycle."
+        tail -n 25 /tmp/breakwater_research_summary.out || true
+      else
+        cat /tmp/breakwater_research_summary.out
+      fi
+    fi
+    ;;
+esac
+
 owned=()
 for file in "${files[@]}"; do
   if [ -f "$file" ]; then
