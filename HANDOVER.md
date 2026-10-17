@@ -601,6 +601,44 @@ qualifying runs, ≥ +15 bps gross, both legs with residual alpha, breadth ≥ 4
 funding fetch as prerequisite) are in `docs/market_neutral_engine.md`.
 The first real read arrives with the next research run.
 
+### Third run (2026-10-17 10:21Z, 19 min) — where the P&L actually came from
+
+Run 39024592537 on `d4253a4`: 19 minutes end to end (the 4h42 before it was
+the deep audit; research alone is ~20–35 min). 1672 slices, 128 validated,
+**all PERP LONG, zero SPOT**. Book 72 → 49 rows after the carry-forward fix
+(41 unique slices, all in the pool). Spread file: 528 rows, 0 qualifying;
+best is `feat_vol_regime:L2S0:h20` +36.9 bps but carried by the long leg
+(+71 vs +2.7), `market_corr` 0.34, and the whole L2S0 family has a
+*negative* last-20% mean — a "do not build" read, not a near miss.
+`n_nonoverlap` caps at ~28 for h20/h24 with 1000 candles; set the repo
+variable `BREAKWATER_PERP_CANDLE_COUNT=2000` if the spread read at those
+horizons is to mean anything (fetch supports up to 5000; ~doubles shard time).
+
+The decisive number is the P&L split by whether a slice is in the current
+book:
+
+| week | in current book | dropped/rejected |
+|---|---|---|
+| W38 | 0 trades | 258 trades, +278.63 |
+| W39 | 1, +0.51 | 105, +246.80 |
+| W40 | 14, +1.13 | 48, −62.04 |
+| W41 | 22, −53.96 | 55, −19.96 |
+| W42 | 5, −15.99 | 33, −34.56 |
+
+The lifetime +299 ZAR is `feat_close_pos_ma:1:LONG:h24` on **LINKZAR**:
+28 trades, +269.8 of the slice's +283. Research now scores that slice
+`alpha<=0`, folds 00001. It was a LINK rally, not an edge. The current
+41-slice book has 42 closes and −68.8 ZAR of history. Nothing in the
+system has yet demonstrated repeatable alpha; the paper equity curve is
+one asset's beta followed by cost bleed.
+
+Also fixed here: under sharding no `research_done` row ever reached the
+committed `status.csv` (each shard wrote its own, never uploaded), so the
+daily print's §8 had no "Latest research" line. `scripts/research_summary.py`
+now rebuilds the row from the merged files inside `commit_state.sh research`
+(idempotent per merged file set; shard-only facts are marked "not
+propagated").
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
