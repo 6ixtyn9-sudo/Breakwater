@@ -582,6 +582,25 @@ that captures it without beta is long state-2 / short state-0 on perps
 (market-neutral, 9 bps). That is the "more engines" candidate with actual
 evidence behind it; everything else so far is directional beta exposure.
 
+### Market-neutral spread evidence (same day, research-only)
+
+Scoped rather than built. `src/breakwater/spread_research.py` now runs on
+PERP shards inside the research pass and writes
+`localdata/research/spread_slices.csv`: for each feature × horizon × pairing
+(long state 2 / short state 0, and the reverse) the per-bar dollar-neutral
+spread `0.5 * (mean long-leg net + mean short-leg net)`, both legs on the
+same stop-aware 9 bps trade model, ≥3 names per leg per bar. Stats are
+non-overlap `t`, 5 purged folds, drawdown, and `market_corr` against the
+universe return — the last one is the important check: in a crash the
+spread goes positive because stops truncate the long leg, and it shows up
+as `market_corr ≈ −0.9`. The `qualifies` flag feeds **no gate**. Workflow
+merges the shard files; `commit_state.sh` commits the merged file; daily
+print section 8 prints the top three. Go/no-go gates (3 consecutive
+qualifying runs, ≥ +15 bps gross, both legs with residual alpha, breadth ≥ 4,
+`|market_corr| ≤ 0.3`) and the engine shape (pair-position with joint exit,
+funding fetch as prerequisite) are in `docs/market_neutral_engine.md`.
+The first real read arrives with the next research run.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar

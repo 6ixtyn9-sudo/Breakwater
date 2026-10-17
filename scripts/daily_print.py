@@ -920,6 +920,26 @@ def _report_text() -> str:
             f"- Newest research_done row {str(newest_research.get('timestamp_utc') or '?')[:19]} "
             "is unreadable; no research reading to report.\n"
         )
+    # Market-neutral spread evidence (advisory; feeds no gate). Read from the
+    # merged file rather than the status payload so the print stays honest if
+    # the payload was truncated. See docs/market_neutral_engine.md.
+    spread_rows = _read_csv(DATA / "research" / "spread_slices.csv")
+    if spread_rows:
+        qualifying = [r for r in spread_rows if str(r.get("qualifies") or "").strip() == "True"]
+        add(
+            f"- Spread research (long/short, PERP): rows={len(spread_rows)} "
+            f"qualifying={len(qualifying)} (go/no-go gate: >=1 qualifying spread on 3 consecutive runs)"
+        )
+        for r in spread_rows[:3]:
+            add(
+                f"  - {r.get('spread_id')}: mean={_num(r.get('mean_ret_costadj')) * 10000.0:+.1f}b "
+                f"t_no={_num(r.get('t_nonoverlap')):.2f} folds={r.get('fold_pattern')} "
+                f"mkt_corr={_num(r.get('market_corr')):+.2f} dd={_num(r.get('max_drawdown')) * 10000.0:.0f}b "
+                f"legs={_num(r.get('avg_n_long')):.1f}/{_num(r.get('avg_n_short')):.1f} "
+                f"{'QUALIFIES' if str(r.get('qualifies')).strip() == 'True' else 'fail=' + str(r.get('fail_reasons') or '')}"
+            )
+    else:
+        add("- Spread research: no localdata/research/spread_slices.csv yet (first appears after the next research run).")
     deep = _read_json(DATA / "deep_audit" / "summary.json", {})
     if deep:
         audit_rows = _read_csv(DATA / "deep_audit" / "candidates.csv")
