@@ -829,3 +829,71 @@ def test_paper_stats_attribution_is_per_venue(tmp_path):
     # spot lane's record.
     assert perp["paper_trades"] == "0"
     assert float(perp["paper_pnl_zar"]) == 0.0
+
+
+def _book_row(slice_id, *, kind="PERP", status="monitored", trades="5", pnl="6.68", edge="0.007"):
+    return {
+        "slice_id": slice_id,
+        "kind": kind,
+        "feature": slice_id.split(":")[0],
+        "state": slice_id.split(":")[1],
+        "side": slice_id.split(":")[2],
+        "status": status,
+        "validated_at": "",
+        "last_signal_bar": str(int(datetime.now(timezone.utc).timestamp())),
+        "paper_trades": trades,
+        "paper_wins": trades,
+        "paper_losses": "0",
+        "paper_pnl_zar": pnl,
+        "cooldown_until": "",
+        "mean_ret_costadj": edge,
+        "n": "9423",
+        "p_value": "0.000001",
+        "horizon_bars": slice_id.rsplit("h", 1)[-1],
+        "stop_atr_mult": "2.000",
+        "source": "validated_walk_forward",
+        "hostile_unproven": "False",
+        "edge_is_directional_net": "True",
+    }
+
+
+def test_sync_book_drops_slices_this_run_rejected_even_if_raw_edge_and_paper_are_green(tmp_path, monkeypatch):
+    """Regression (2026-10-17): research rejected 31/53 book rows
+    (regime_confounded / alpha<=0) but carry-forward kept them because their
+    raw mean_ret_costadj still cleared the keep floor.  Research says no ->
+    out, regardless of raw edge or a thin green paper record."""
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    from breakwater.research_lifecycle import _write_book
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    _write_book(book_path, [
+        _book_row("feat_vol_regime:2:LONG:h12"),                       # rejected this run
+        _book_row("feat_atr_norm_ext:2:LONG:h15", pnl="15.77"),       # rejected, paper green
+        _book_row("hip3_x:feat_a:1:LONG:h20", edge="0.004"),           # not in this run's output
+    ])
+    keep = validated_row(mean=0.003, n=9000, slice_id="feat_ret_1:0:LONG:h12")
+    keep = ValidatedSlice(**{**keep.__dict__, "kind": "PERP", "feature": "feat_ret_1"})
+    rejected = []
+    for sid, reasons in (
+        ("feat_vol_regime:2:LONG:h12", "temporal_pass,regime_confounded"),
+        ("feat_atr_norm_ext:2:LONG:h15", "temporal_pass,direction_ok,regime_confounded,alpha<=0"),
+    ):
+        base = validated_row(mean=0.007, n=9423, validated=False, slice_id=sid)
+        rejected.append(ValidatedSlice(**{
+            **base.__dict__, "kind": "PERP", "feature": sid.split(":")[0],
+            "fail_reasons": reasons, "regime_confounded": True, "temporal_pass": False,
+            "direction_ok": True, "mean_positive": True, "breadth_ok": True,
+        }))
+    write_validated(validated_path, [keep, *rejected])
+
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    ids = {row["slice_id"] for row in read_book(book_path)}
+    assert "feat_ret_1:0:LONG:h12" in ids
+    assert "feat_vol_regime:2:LONG:h12" not in ids
+    assert "feat_atr_norm_ext:2:LONG:h15" not in ids
+    # Another lane's slice is not "rejected" by this run; legacy carry applies.
+    assert "hip3_x:feat_a:1:LONG:h20" in ids
+    assert summary["research_rejected_dropped"] >= 2
+    assert summary["paper_protected"] == 0
