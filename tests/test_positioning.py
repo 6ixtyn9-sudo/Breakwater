@@ -19,7 +19,7 @@ UNIVERSE_CSV = (
 )
 
 META = [
-    {"universe": [{"name": "BTC"}, {"name": "kPEPE"}, {"name": "xyz:GOLD"}, {"name": "DEAD"}]},
+    {"universe": [{"name": "BTC"}, {"name": "kPEPE"}, {"name": "xyz:GOLD"}, {"name": "DEAD"}, {"name": "kBONK"}]},
     [
         {
             "markPx": "100.0", "oraclePx": "99.0", "midPx": "100.05", "premium": "0.0101",
@@ -31,6 +31,7 @@ META = [
         },
         {"markPx": "4000", "oraclePx": "4000", "funding": "0", "openInterest": "1"},
         {"markPx": "1", "oraclePx": "1", "funding": "0", "openInterest": "0"},
+        {"markPx": "0.00001", "oraclePx": "0.00001", "funding": "0", "openInterest": "5"},
     ],
 ]
 
@@ -42,6 +43,7 @@ BOOK = {
         ]
     },
     "kPEPE": {"levels": [[{"px": "0.01", "sz": "100"}], [{"px": "0.011", "sz": "100"}]]},
+    "kBONK": {"levels": [[{"px": "0.00001", "sz": "1"}], [{"px": "0.000011", "sz": "1"}]]},
 }
 
 
@@ -137,7 +139,7 @@ def test_book_metrics_empty_side_is_blank_not_error():
 
 def test_fetch_asset_contexts_skips_hip3_names():
     out = pos.fetch_asset_contexts(FakeSession())
-    assert set(out) == {"BTC", "kPEPE", "DEAD"}
+    assert set(out) == {"BTC", "kPEPE", "DEAD", "kBONK"}
 
 
 def test_universe_coins_active_perps_only_with_alias_and_cap(universe):
@@ -176,6 +178,28 @@ def test_snapshot_writes_rows_and_is_idempotent_per_hour(tmp_path, universe):
         data_dir=tmp_path, universe_path=universe, session=FakeSession(), now=now + timedelta(hours=1), sleep_seconds=0
     )
     assert len(_read(path)) == 4
+
+
+def test_snapshot_resolves_k_prefixed_coins_by_case_and_reports_missing(tmp_path):
+    # KBONK is not in HL_COIN_ALIASES (only KPEPE is); the venue calls it kBONK.
+    # GHOST is in the universe but not on the venue at all.
+    path = tmp_path / "universe.csv"
+    path.write_text(
+        UNIVERSE_CSV
+        + "KBONKUSDC,PERP,KBONK,USDC,True,4,400,0.00001,10,10,1,2026-10-18T00:00:00+00:00,hyperliquid\n"
+        + "GHOSTUSDC,PERP,GHOST,USDC,True,5,300,1,10,10,1,2026-10-18T00:00:00+00:00,hyperliquid\n"
+    )
+    now = datetime(2026, 10, 18, 14, tzinfo=timezone.utc)
+    session = FakeSession()
+    summary = pos.run_positioning_snapshot(
+        data_dir=tmp_path, universe_path=path, session=session, now=now, sleep_seconds=0
+    )
+    assert summary["coins"] == 4 and summary["rows"] == 3 and summary["book_errors"] == 0
+    assert summary["missing_coins"] == ["GHOST"]
+    rows = _read(Path(summary["path"]))
+    assert [r["coin"] for r in rows] == ["BTC", "kPEPE", "kBONK"]
+    assert rows[2]["open_interest"] == "5"
+    assert any(c.get("coin") == "kBONK" for c in session.calls if c["type"] == "l2Book")
 
 
 def test_snapshot_book_failure_keeps_context_row(tmp_path, universe):

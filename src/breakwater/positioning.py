@@ -43,7 +43,7 @@ from pathlib import Path
 
 import requests
 
-from breakwater.perpdata import HYPERLIQUID_INFO_URL, _api_coin, pair_to_coin
+from breakwater.perpdata import HYPERLIQUID_INFO_URL, pair_to_coin
 
 POSITIONING_DIRNAME = "positioning"
 FUNDING_HISTORY_FILENAME = "funding_history.csv"
@@ -127,8 +127,12 @@ def fetch_asset_contexts(session=None, *, info_url: str = HYPERLIQUID_INFO_URL) 
 
 
 def fetch_l2_book(coin: str, session=None, *, info_url: str = HYPERLIQUID_INFO_URL) -> tuple[list, list]:
-    """``(bids, asks)`` as lists of ``(px, sz)`` floats, best first."""
-    payload = _post_info(session, {"type": "l2Book", "coin": _api_coin(coin)}, info_url=info_url)
+    """``(bids, asks)`` as lists of ``(px, sz)`` floats, best first.
+
+    ``coin`` must be the venue's exact (case-sensitive) name as returned by
+    ``metaAndAssetCtxs`` — e.g. ``kBONK``, not ``KBONK``.
+    """
+    payload = _post_info(session, {"type": "l2Book", "coin": coin}, info_url=info_url)
     levels = payload.get("levels") if isinstance(payload, dict) else None
     if not isinstance(levels, list) or len(levels) != 2:
         raise RuntimeError(f"hyperliquid l2Book response for {coin} is malformed")
@@ -318,6 +322,26 @@ def universe_coins(universe_path: Path, *, max_coins: int | None = None) -> list
 # --------------------------------------------------------------------------
 
 
+def resolve_venue_names(coins: list[str], contexts: dict[str, dict]) -> tuple[list[str], list[str]]:
+    """Map universe coin names onto the venue's exact names.
+
+    The universe upper-cases symbols (``KBONK``) while the venue names the
+    1000x-lot coins ``kBONK``; ``HL_COIN_ALIASES`` only covers kPEPE.  Resolve
+    by case here rather than widening the shared alias table mid-freeze.
+    Returns ``(resolved, missing)`` preserving order.
+    """
+    by_upper = {name.upper(): name for name in contexts}
+    resolved: list[str] = []
+    missing: list[str] = []
+    for requested in coins:
+        name = requested if requested in contexts else by_upper.get(requested.upper())
+        if name is None:
+            missing.append(requested)
+        elif name not in resolved:
+            resolved.append(name)
+    return resolved, missing
+
+
 def run_positioning_snapshot(
     *,
     data_dir: Path,
@@ -339,6 +363,7 @@ def run_positioning_snapshot(
         "rows": 0,
         "book_errors": 0,
         "skipped_existing_hour": False,
+        "missing_coins": [],
         "error": "",
     }
     if hour in recorded_hours(path):
@@ -359,12 +384,11 @@ def run_positioning_snapshot(
 
     session = session or requests.Session()
     contexts = fetch_asset_contexts(session, info_url=info_url)
+    resolved, missing = resolve_venue_names(coins, contexts)
     stamp = now.astimezone(timezone.utc).isoformat()
     rows: list[dict] = []
-    for coin in coins:
-        context = contexts.get(coin)
-        if context is None:
-            continue
+    for coin in resolved:
+        context = contexts[coin]
         row = {"snapshot_at": stamp, "snapshot_hour": hour, **context_row(coin, context), "book_error": ""}
         try:
             bids, asks = fetch_l2_book(coin, session, info_url=info_url)
@@ -379,6 +403,7 @@ def run_positioning_snapshot(
     if rows:
         append_snapshot_rows(directory, rows, now)
     summary["rows"] = len(rows)
+    summary["missing_coins"] = missing
     return summary
 
 
@@ -399,7 +424,7 @@ def fetch_funding_history(
     for _ in range(200):  # hard stop; 200 pages × 500 h ≈ 11 years
         payload = _post_info(
             session,
-            {"type": "fundingHistory", "coin": _api_coin(coin), "startTime": start_ms, "endTime": end_ms},
+            {"type": "fundingHistory", "coin": coin, "startTime": start_ms, "endTime": end_ms},
             info_url=info_url,
         )
         if not isinstance(payload, list) or not payload:
@@ -447,8 +472,11 @@ def run_funding_backfill(
         with path.open(newline="") as handle:
             for row in csv.DictReader(handle):
                 existing[(row.get("coin", ""), row.get("time", ""))] = row
-    coins = universe_coins(universe_path, max_coins=max_coins)
     session = session or requests.Session()
+    coins, missing = resolve_venue_names(
+        universe_coins(universe_path, max_coins=max_coins),
+        fetch_asset_contexts(session, info_url=info_url),
+    )
     start = now - timedelta(days=max(1, int(days)))
     added = 0
     errors: list[str] = []
@@ -476,4 +504,11 @@ def run_funding_backfill(
         writer.writeheader()
         writer.writerows(rows)
     os.replace(tmp, path)
-    return {"path": str(path), "coins": len(coins), "added": added, "rows": len(rows), "errors": errors}
+    return {
+        "path": str(path),
+        "coins": len(coins),
+        "missing_coins": missing,
+        "added": added,
+        "rows": len(rows),
+        "errors": errors,
+    }
