@@ -9,7 +9,7 @@
     "horizon_bars": 20,
     "initial_stop_price": "77748.74999999999990",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-18T14:00:00+00:00",
+    "last_processed_bar_start": "2026-10-18T15:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "117.07663000",
     "pair": "BTCUSDC",
@@ -17,27 +17,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "80468.74999999999990"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "78039.49999999999980"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "80468.74999999999990"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "80468.74999999999990"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "80468.74999999999990"
       }
     },
@@ -57,7 +57,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "99.79250000000000515",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-18T14:00:00+00:00",
+    "last_processed_bar_start": "2026-10-18T15:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "116.01563000",
     "pair": "SOLUSDC",
@@ -70,7 +70,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 17,
+        "bars_held": 18,
         "stop_price": "99.89500000000001030"
       },
       "target_2r_trail_1r": {
@@ -93,7 +93,7 @@
     "signal_id": "5fcf2174025c6811",
     "slice_id": "feat_ret_20:0:LONG:h24",
     "tracked_at": "2026-10-17T22:00:25+00:00",
-    "trough_price": "101.86"
+    "trough_price": "101.69"
   },
   {
     "actual_exit_bar_start": "",
@@ -105,7 +105,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "0.948549999999999985",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-18T14:00:00+00:00",
+    "last_processed_bar_start": "2026-10-18T15:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "116.50075500",
     "pair": "SUIUSDC",
@@ -113,27 +113,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 3,
+        "bars_held": 4,
         "stop_price": "0.948549999999999985"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 3,
+        "bars_held": 4,
         "stop_price": "0.948549999999999985"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 3,
+        "bars_held": 4,
         "stop_price": "0.948549999999999985"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 3,
+        "bars_held": 4,
         "stop_price": "0.948549999999999985"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 3,
+        "bars_held": 4,
         "stop_price": "0.948549999999999985"
       }
     },
@@ -153,35 +153,35 @@
     "horizon_bars": 24,
     "initial_stop_price": "99.39749999999998470",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-18T14:00:00+00:00",
+    "last_processed_bar_start": "2026-10-18T15:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "116.50135000",
     "pair": "SOLUSDC",
-    "peak_price": "102.08",
+    "peak_price": "102.46",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "99.39749999999998470"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "99.39749999999998470"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "99.39749999999998470"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "99.39749999999998470"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 0,
+        "bars_held": 1,
         "stop_price": "99.39749999999998470"
       }
     },
@@ -189,6 +189,6 @@
     "signal_id": "d6581599b1fddfbf",
     "slice_id": "feat_range_pos_20:0:LONG:h24",
     "tracked_at": "2026-10-18T15:00:26+00:00",
-    "trough_price": "102.08"
+    "trough_price": "101.69"
   }
 ]
