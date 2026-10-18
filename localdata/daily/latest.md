@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-18 05:07 UTC
+# Breakwater daily print — 2026-10-18 05:42 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -88,7 +88,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_vol_sma_ratio:2:LONG:h15` edge=0.0019 n=10076 p=0.2131 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_overnight_ret:1:LONG:h24` edge=0.0014 n=9765 p=0.6307 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -128,16 +128,16 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 10. Regime shift
 
 - Label: **bear** | breadth bear=0.8 bull=0.0667 neutral=0.1333 | symbols=15
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 18 / bull 0
-- as_of: 2026-10-18T05:00:23Z
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 19 / bull 0
+- as_of: 2026-10-18T05:35:31Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
 - confirmed_bear: **True** | promote_env: ON
-- candidates: 832 | eligible: 1 | observations: 9 | armable: **9**
+- candidates: 832 | eligible: 1 | observations: 8 | armable: **8**
 - Armable slices: feat_kc_width:0:SHORT:h24
-- Armable pairs: BTCUSDC, ENAUSDC, HYPEUSDC, NEARUSDC, PUMPUSDC, SUIUSDC, WLDUSDC, XPLUSDC, XRPUSDC
+- Armable pairs: BTCUSDC, ENAUSDC, HYPEUSDC, NEARUSDC, PUMPUSDC, SUIUSDC, WLDUSDC, XRPUSDC
   - `feat_kc_width:0:SHORT:h24` edge=21.4b n=10361 breadth=40 validated=False prov=False armable=True (ok)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
