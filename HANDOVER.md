@@ -667,6 +667,26 @@ run (`carry_skipped_promoted`).
 
 Freeze otherwise holds: nothing else in research/validation/paper changed.
 
+### Decision 2026-10-18 — seven-day observation window, then new inputs
+
+Operator decision. **Freeze until 2026-10-25**: no changes to research,
+validation, the book, or paper trading. Plumbing/observability fixes only
+if something breaks. Judge the clean book against: in-book P&L (needs ~60
+closes to mean anything), book turnover per run (`remembered` /
+`carry_skipped_promoted` / rows == unique slices), claimed-vs-realised gap,
+and whether any slice holds its place for three runs while green on paper.
+
+**After 2026-10-25, regardless of the read, action the input problem.**
+Every feature today is OHLCV on hourly bars. The next research cycle adds
+positioning inputs from Hyperliquid: funding rate (history available via
+`fundingHistory`, so it can be back-filled), open interest and basis/premium
+(`metaAndAssetCtxs` is current-state only — no history; needs forward
+collection), and order-book imbalance (`l2Book` snapshot, current-state only;
+needs forward collection). Anything that needs forward collection should
+start being snapshotted *during* the window so there is data to research on
+day eight; that collector is read-only and is the one piece of new code the
+freeze permits.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
