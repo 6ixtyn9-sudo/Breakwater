@@ -19,6 +19,10 @@ from breakwater.hip3 import (  # noqa: E402
     write_hip3_universe,
 )
 from breakwater.hip3_research import run_hip3_research  # noqa: E402
+from breakwater.positioning import (  # noqa: E402
+    run_funding_backfill,
+    run_positioning_snapshot,
+)
 from breakwater.status import append_status  # noqa: E402
 
 
@@ -30,12 +34,24 @@ def main() -> int:
             "guardian", "shadow-scan", "operate", "research",
             "hip3-discover", "hip3-research", "deep-research-audit", "health",
             "short-inventory", "hip3-short-audit",
+            "positioning-snapshot", "positioning-backfill-funding",
         ],
     )
     parser.add_argument("--max-pairs", type=int)
     parser.add_argument("--lane", choices=["native", "hip3", "all"], default="native")
     parser.add_argument("--candle-count", type=int, default=5000)
     parser.add_argument("--output-dir", default="localdata/deep_audit")
+    parser.add_argument(
+        "--max-coins",
+        type=int,
+        help="positioning-*: cap the perp universe (default: every active PERP).",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=60,
+        help="positioning-backfill-funding: how far back to pull fundingHistory.",
+    )
     parser.add_argument(
         "--apply-book",
         action="store_true",
@@ -60,6 +76,19 @@ def main() -> int:
                 output_dir=output_dir,
                 max_pairs=max(8, min(150, max_pairs)),
                 candle_count=max(3000, min(5000, args.candle_count)),
+            )
+        elif args.command == "positioning-snapshot":
+            result = run_positioning_snapshot(
+                data_dir=settings.data_dir,
+                universe_path=settings.universe_path,
+                max_coins=args.max_coins,
+            )
+        elif args.command == "positioning-backfill-funding":
+            result = run_funding_backfill(
+                data_dir=settings.data_dir,
+                universe_path=settings.universe_path,
+                days=args.days,
+                max_coins=args.max_coins,
             )
         elif args.command == "hip3-discover":
             snapshot = HyperliquidHip3Discovery().discover()

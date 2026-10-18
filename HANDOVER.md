@@ -667,6 +667,51 @@ run (`carry_skipped_promoted`).
 
 Freeze otherwise holds: nothing else in research/validation/paper changed.
 
+### Decision 2026-10-18 — seven-day observation window, then new inputs
+
+Operator decision. **Freeze until 2026-10-25**: no changes to research,
+validation, the book, or paper trading. Plumbing/observability fixes only
+if something breaks. Judge the clean book against: in-book P&L (needs ~60
+closes to mean anything), book turnover per run (`remembered` /
+`carry_skipped_promoted` / rows == unique slices), claimed-vs-realised gap,
+and whether any slice holds its place for three runs while green on paper.
+
+**After 2026-10-25, regardless of the read, action the input problem.**
+Every feature today is OHLCV on hourly bars. The next research cycle adds
+positioning inputs from Hyperliquid: funding rate (history available via
+`fundingHistory`, so it can be back-filled), open interest and basis/premium
+(`metaAndAssetCtxs` is current-state only — no history; needs forward
+collection), and order-book imbalance (`l2Book` snapshot, current-state only;
+needs forward collection). Anything that needs forward collection should
+start being snapshotted *during* the window so there is data to research on
+day eight; that collector is read-only and is the one piece of new code the
+freeze permits.
+
+**Collector shipped (same PR):** `src/breakwater/positioning.py`, two CLI
+commands, nothing else touched.
+
+- `breakwater.py positioning-snapshot` — one `metaAndAssetCtxs` call plus one
+  `l2Book` per active PERP coin in `localdata/universe.csv` (~178 coins, ~0.1 s
+  apart, well under the venue's weight budget). Per coin: mark/oracle/mid,
+  premium, hourly funding, open interest (+ USD notional), 24h volume, best
+  bid/ask, spread bps, cumulative USD depth and imbalance
+  `(bid−ask)/(bid+ask)` at 1/5/10 levels. Appends to
+  `localdata/positioning/YYYY-Www.csv` (ISO week; older weeks gzipped like the
+  skip log). Keyed by `snapshot_hour`: a second run in the same hour is a
+  no-op with zero network calls, so it rides the 20–40 min paper cadence and
+  yields one row per coin per hour. A failed book keeps the context row with
+  `book_error` set; a 429/5xx retries three times honouring `Retry-After`.
+- `breakwater.py positioning-backfill-funding --days N` — paginates
+  `fundingHistory` into `localdata/positioning/funding_history.csv`
+  (coin, time, funding_rate, premium), deduped and resuming from the newest
+  stored point per coin. Run once by hand (`--days 90`), re-run any time.
+- `scripts/commit_state.sh` paper role ships `localdata/positioning/*.csv{,.gz}`.
+- Wiring is a `paper.yml` step after the shadow scan (the sandbox cannot
+  edit workflows): `continue-on-error: true`, `PYTHONPATH=src python
+  scripts/breakwater.py positioning-snapshot`. Until that step is added the
+  code is inert.
+- Budget: ~178 rows × ~250 bytes × 24 h ≈ 1 MB/week plain, ~100 KB gzipped.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
