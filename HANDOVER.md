@@ -687,6 +687,31 @@ start being snapshotted *during* the window so there is data to research on
 day eight; that collector is read-only and is the one piece of new code the
 freeze permits.
 
+**Collector shipped (same PR):** `src/breakwater/positioning.py`, two CLI
+commands, nothing else touched.
+
+- `breakwater.py positioning-snapshot` — one `metaAndAssetCtxs` call plus one
+  `l2Book` per active PERP coin in `localdata/universe.csv` (~178 coins, ~0.1 s
+  apart, well under the venue's weight budget). Per coin: mark/oracle/mid,
+  premium, hourly funding, open interest (+ USD notional), 24h volume, best
+  bid/ask, spread bps, cumulative USD depth and imbalance
+  `(bid−ask)/(bid+ask)` at 1/5/10 levels. Appends to
+  `localdata/positioning/YYYY-Www.csv` (ISO week; older weeks gzipped like the
+  skip log). Keyed by `snapshot_hour`: a second run in the same hour is a
+  no-op with zero network calls, so it rides the 20–40 min paper cadence and
+  yields one row per coin per hour. A failed book keeps the context row with
+  `book_error` set; a 429/5xx retries three times honouring `Retry-After`.
+- `breakwater.py positioning-backfill-funding --days N` — paginates
+  `fundingHistory` into `localdata/positioning/funding_history.csv`
+  (coin, time, funding_rate, premium), deduped and resuming from the newest
+  stored point per coin. Run once by hand (`--days 90`), re-run any time.
+- `scripts/commit_state.sh` paper role ships `localdata/positioning/*.csv{,.gz}`.
+- Wiring is a `paper.yml` step after the shadow scan (the sandbox cannot
+  edit workflows): `continue-on-error: true`, `PYTHONPATH=src python
+  scripts/breakwater.py positioning-snapshot`. Until that step is added the
+  code is inert.
+- Budget: ~178 rows × ~250 bytes × 24 h ≈ 1 MB/week plain, ~100 KB gzipped.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar

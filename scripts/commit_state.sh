@@ -70,6 +70,9 @@ paper_files=(
   # Skip/guard journal, ISO-weekly, older weeks gzipped (see paper_trade.append_log).
   localdata/research/paper_skip_log/*.csv
   localdata/research/paper_skip_log/*.csv.gz
+  # Positioning tape (funding/OI/premium/book imbalance), ISO-weekly, older weeks gzipped (see positioning.py).
+  localdata/positioning/*.csv
+  localdata/positioning/*.csv.gz
   localdata/research/paper_positions.json
   localdata/research/paper_position_quarantine.json
   localdata/research/paper_counterfactuals.json
