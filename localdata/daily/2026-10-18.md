@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-18 12:07 UTC
+# Breakwater daily print — 2026-10-18 12:42 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **449.30 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **447.98 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -88,7 +88,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_ret_autocorr:0:LONG:h12` edge=0.0020 n=9337 p=0.4274 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_vol_breakout:2:LONG:h12` edge=0.0030 n=11045 p=0.9102 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -127,9 +127,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.8 bull=0.0667 neutral=0.1333 | symbols=15
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 25 / bull 0
-- as_of: 2026-10-18T12:00:28Z
+- Label: **bear** | breadth bear=0.7333 bull=0.0667 neutral=0.2 | symbols=15
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 26 / bull 0
+- as_of: 2026-10-18T12:35:26Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
@@ -137,7 +137,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - confirmed_bear: **True** | promote_env: ON
 - candidates: 832 | eligible: 1 | observations: 12 | armable: **12**
 - Armable slices: feat_kc_width:0:SHORT:h24
-- Armable pairs: BTCUSDC, DOGEUSDC, ENAUSDC, ETHUSDC, HYPEUSDC, NEARUSDC, PUMPUSDC, SOLUSDC, SUIUSDC, WLDUSDC, XRPUSDC, ZECUSDC
+- Armable pairs: BTCUSDC, ENAUSDC, ETHUSDC, HYPEUSDC, INJUSDC, NEARUSDC, PUMPUSDC, SOLUSDC, SUIUSDC, WLDUSDC, XRPUSDC, ZECUSDC
   - `feat_kc_width:0:SHORT:h24` edge=21.4b n=10361 breadth=40 validated=False prov=False armable=True (ok)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
