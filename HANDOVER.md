@@ -639,6 +639,34 @@ now rebuilds the row from the merged files inside `commit_state.sh research`
 (idempotent per merged file set; shard-only facts are marked "not
 propagated").
 
+### Slice memory (2026-10-18) — rotation is fine, amnesia is not
+
+Overnight run (00:10Z, 4h32 with deep audit): validated 128 → 53 (first
+three SHORTs ever, `feat_adx_14:0:SHORT`, +2..+13 bps), regime_confounded
+536 → 732, book 49 → 19 rows: 32 of 41 slices dropped, 28 of them on
+`regime_confounded`, every surviving row at 0 paper trades. Operator's call:
+slices may rotate, but a slice that comes back must be remembered.
+
+`sync_book` now keeps `localdata/research/slice_memory.csv` (per
+`(slice_id, kind)`: first/last validated, times admitted/dropped, last drop
+reason, paper record and cooldown at the moment of dropping). A slice that
+returns with no row in the book inherits that record instead of
+`paper_trades=0`, and faces the same test a held slice faces: cooldown still
+running → `cooldown`; ≥3 trades and negative → `decayed`. No staleness test
+on return (it could not have signalled while out). Summary keys:
+`remembered`, `remembered_cooldown`, `remembered_decayed`, `memory_rows`.
+`scripts/backfill_slice_memory.py` seeded 151 entries from the trade log
+(52 of them would return `decayed`); it never overwrites what `sync_book`
+recorded.
+
+Also fixed in the same change, because memory could not be counted without
+it: a slice re-validated this run was both promoted (fresh row) **and**
+carried (old row) — 49 rows for 41 slices on 10-17, and a `monitored` twin
+that outlived a `decayed` verdict. Carry now skips slice_ids promoted this
+run (`carry_skipped_promoted`).
+
+Freeze otherwise holds: nothing else in research/validation/paper changed.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
