@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-17 23:24 UTC
+# Breakwater daily print — 2026-10-18 00:01 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -19,7 +19,7 @@
 ## 2. Paper account
 
 - Equity: **2281.20 ZAR** (seed 2000) | lifetime: **+281.20 ZAR** | closed: 447
-- Today: 5 closed, **-18.51 ZAR**
+- Today: 0 closed, **+0.00 ZAR**
 - 7d: **-62.51 ZAR** | 30d: **+315.80 ZAR**
 
 ## 2b. Claimed vs realised
@@ -42,7 +42,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 401 | wins: 195 | win%: 48.6 | P&L: **+325.71 ZAR** | today: -18.51 | 7d: -62.51 | 30d: +357.59
+- Closed: 401 | wins: 195 | win%: 48.6 | P&L: **+325.71 ZAR** | today: +0.00 | 7d: -62.51 | 30d: +357.59
 - By exit: target +516.3, horizon +68.4, trail_stop +61.2, regime_shift -11.9, stop -308.3
 - By entry regime (n/pnl): neutral 153/+225.2, bull 112/+179.0, bear 136/-78.6
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_ext_strength:2:LONG:h15 12n/8w +24.00; feat_bb_pos_20:2:LONG:h15 4n/4w +16.17; feat_atr_norm_ext:2:LONG:h15 3n/3w +15.77
@@ -92,14 +92,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_donchian_width_20:1:LONG:h24` edge=0.0018 n=9228 p=0.6755 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_gap:1:LONG:h24` edge=0.0033 n=9552 p=0.7842 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20` edge=0.0081 n=494 p=0.1655 src=validated_walk_forward unproven=False paper=20n/+9.43
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_strength:1:LONG:h18` edge=0.0001 n=1420 p=0.9829 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ret_20:1:LONG:h18` edge=0.0001 n=1563 p=0.9678 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_trend_slope_20:0:LONG:h20` edge=0.0008 n=1576 p=0.1320 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_commodity_c0:feat_atr_norm_ext:0:LONG:h23` edge=0.0009 n=1577 p=0.0441 src=validated_walk_forward unproven=False paper=0n/+0.00
 
 ## 7. HIP-3 live gate
 
@@ -128,8 +128,8 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 10. Regime shift
 
 - Label: **bear** | breadth bear=0.8667 bull=0.0667 neutral=0.0667 | symbols=15
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 12 / bull 0
-- as_of: 2026-10-17T23:18:01Z
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 13 / bull 0
+- as_of: 2026-10-17T23:51:31Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
