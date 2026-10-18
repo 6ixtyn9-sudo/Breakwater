@@ -1582,5 +1582,13 @@
     "signal_id": "bc0b29fdd1d82f7a",
     "slice_id": "feat_atr_ratio:0:LONG:h24",
     "stopped_at": "2026-10-17T22:00:25+00:00"
+  },
+  {
+    "pair": "SUIUSDC",
+    "pnl_zar": "-3.9545",
+    "reason": "stop",
+    "signal_id": "c4cf5ac4e575015a",
+    "slice_id": "feat_gap:1:LONG:h24",
+    "stopped_at": "2026-10-18T20:00:29+00:00"
   }
 ]
