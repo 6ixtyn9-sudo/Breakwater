@@ -77,6 +77,12 @@ jobs:
           BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY: ${{ vars.BREAKWATER_PAPER_MAX_AGGREGATE_RISK_OF_EQUITY || '0.07' }}
           BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR: ${{ vars.BREAKWATER_PAPER_MAX_AGGREGATE_OPEN_RISK_ZAR || '' }}
         run: PYTHONPATH=src python scripts/breakwater.py shadow-scan --max-pairs 15
+      - name: Positioning snapshot (read-only tape)
+        if: always()
+        continue-on-error: true
+        env:
+          BREAKWATER_POSITIONING_SLEEP_SECONDS: ${{ vars.BREAKWATER_POSITIONING_SLEEP_SECONDS || '0.1' }}
+        run: PYTHONPATH=src python scripts/breakwater.py positioning-snapshot
       - name: Persist bounded state
         if: always()
         env:
