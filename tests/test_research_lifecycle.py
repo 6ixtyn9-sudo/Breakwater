@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
 from breakwater.research_lifecycle import (
+    COOLDOWN,
+    DECAYED,
     MONITORED,
     apply_signal_feedback,
     read_book,
@@ -897,3 +899,123 @@ def test_sync_book_drops_slices_this_run_rejected_even_if_raw_edge_and_paper_are
     assert "hip3_x:feat_a:1:LONG:h20" in ids
     assert summary["research_rejected_dropped"] >= 2
     assert summary["paper_protected"] == 0
+
+
+def _perp_validated(sid, *, validated=True, mean=0.007, reasons=""):
+    base = validated_row(mean=mean, n=9423, validated=validated, slice_id=sid)
+    return ValidatedSlice(**{
+        **base.__dict__, "kind": "PERP", "feature": sid.split(":")[0],
+        "fail_reasons": reasons, "regime_confounded": "regime_confounded" in reasons,
+    })
+
+
+def _rotate(tmp_path, monkeypatch, *, book_rows, rejected_reasons, days=(0, 1, 2)):
+    """Admit -> research rejects -> research re-admits. Returns the three summaries."""
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    from breakwater.research_lifecycle import _write_book
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    _write_book(book_path, book_rows)
+    sids = [r["slice_id"] for r in book_rows]
+    t0 = datetime(2026, 10, 18, tzinfo=timezone.utc)
+    summaries = []
+    # Day 0: everything validated, book rows are "held".
+    write_validated(validated_path, [_perp_validated(s) for s in sids])
+    summaries.append(sync_book(validated_path=validated_path, book_path=book_path, now=t0 + timedelta(days=days[0])))
+    # Day 1: research rejects them all (plus one unrelated keeper so the book is non-empty).
+    write_validated(validated_path, [
+        _perp_validated("feat_keep:0:LONG:h12", mean=0.003),
+        *[_perp_validated(s, validated=False, reasons=rejected_reasons) for s in sids],
+    ])
+    summaries.append(sync_book(validated_path=validated_path, book_path=book_path, now=t0 + timedelta(days=days[1])))
+    assert not ({*sids} & {r["slice_id"] for r in read_book(book_path)})
+    # Day 2: they validate again.
+    write_validated(validated_path, [_perp_validated("feat_keep:0:LONG:h12", mean=0.003), *[_perp_validated(s) for s in sids]])
+    summaries.append(sync_book(validated_path=validated_path, book_path=book_path, now=t0 + timedelta(days=days[2])))
+    return summaries, book_path
+
+
+def test_returning_slice_remembers_its_paper_record_and_losers_come_back_decayed(tmp_path, monkeypatch):
+    """A slice may rotate out on a regime flip and back in a run later. It used
+    to return as a stranger: paper_trades=0, status=monitored. Now it returns
+    with its record, and a record that would have decayed it had it stayed
+    decays it on return."""
+    from breakwater.research_lifecycle import memory_path_for, read_memory
+
+    loser = _book_row("feat_a:2:LONG:h12", trades="4", pnl="-12.50")
+    loser["paper_wins"], loser["paper_losses"] = "1", "3"
+    winner = _book_row("feat_b:0:LONG:h24", trades="5", pnl="6.68")
+    thin = _book_row("feat_c:1:LONG:h15", trades="2", pnl="-3.00")  # below PNL_DECAY_MIN_TRADES
+    summaries, book_path = _rotate(
+        tmp_path, monkeypatch, book_rows=[loser, winner, thin], rejected_reasons="temporal_pass,regime_confounded",
+    )
+    drop, back = summaries[1], summaries[2]
+    assert drop["research_rejected_dropped"] == 3 and drop["memory_rows"] == 4
+
+    memory = read_memory(memory_path_for(book_path))
+    entry = memory[("feat_a:2:LONG:h12", "PERP")]
+    # held on day 0, dropped on day 1, re-admitted on day 2
+    assert entry["times_admitted"] == "2" and entry["times_dropped"] == "1"
+    assert entry["last_drop_reason"] == "temporal_pass,regime_confounded"
+    assert entry["paper_trades"] == "4" and entry["paper_pnl_zar"] == "-12.50"
+
+    assert back["remembered"] == 3
+    assert back["remembered_decayed"] == 1
+    rows = {r["slice_id"]: r for r in read_book(book_path)}
+    assert rows["feat_a:2:LONG:h12"]["status"] == DECAYED
+    assert rows["feat_a:2:LONG:h12"]["paper_trades"] == "4"
+    assert rows["feat_a:2:LONG:h12"]["paper_pnl_zar"] == "-12.50"
+    assert rows["feat_b:0:LONG:h24"]["status"] == MONITORED
+    assert rows["feat_b:0:LONG:h24"]["paper_trades"] == "5"
+    assert rows["feat_c:1:LONG:h15"]["status"] == MONITORED  # 2 trades: not enough to judge
+    assert entry["last_status"] == DECAYED
+
+
+def test_returning_slice_still_in_cooldown_comes_back_as_cooldown(tmp_path, monkeypatch):
+    far = str(int(datetime(2026, 10, 25, tzinfo=timezone.utc).timestamp()))
+    cooled = _book_row("feat_d:2:LONG:h12", status=COOLDOWN, trades="3", pnl="-1.00")
+    cooled["cooldown_until"] = far
+    summaries, book_path = _rotate(tmp_path, monkeypatch, book_rows=[cooled], rejected_reasons="alpha<=0")
+    assert summaries[2]["remembered"] == 1 and summaries[2]["remembered_cooldown"] == 1
+    row = {r["slice_id"]: r for r in read_book(book_path)}["feat_d:2:LONG:h12"]
+    assert row["status"] == COOLDOWN and row["cooldown_until"] == far
+
+
+def test_memory_is_keyed_by_kind(tmp_path, monkeypatch):
+    """SPOT and PERP share slice_ids; a SPOT record must not judge a PERP return."""
+    from breakwater.research_lifecycle import _write_memory, memory_path_for
+
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    _write_memory(memory_path_for(book_path), {("feat_e:2:LONG:h12", "SPOT"): {
+        "slice_id": "feat_e:2:LONG:h12", "kind": "SPOT", "paper_trades": "4", "paper_pnl_zar": "-9.00",
+        "times_admitted": "1", "times_dropped": "1",
+    }})
+    write_validated(validated_path, [_perp_validated("feat_e:2:LONG:h12")])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    assert summary["remembered"] == 0
+    row = {r["slice_id"]: r for r in read_book(book_path)}["feat_e:2:LONG:h12"]
+    assert row["kind"] == "PERP" and row["status"] == MONITORED and row["paper_trades"] == "0"
+
+
+def test_revalidated_slice_is_not_duplicated_by_carry(tmp_path, monkeypatch):
+    """Regression: the book held 49 rows for 41 slices because a slice promoted
+    this run was also carried from the previous book. One slice, one row."""
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    from breakwater.research_lifecycle import _write_book
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    loser = _book_row("feat_a:2:LONG:h12", trades="4", pnl="-12.50")
+    _write_book(book_path, [loser])
+    write_validated(validated_path, [_perp_validated("feat_a:2:LONG:h12")])
+    summary = sync_book(validated_path=validated_path, book_path=book_path)
+    rows = read_book(book_path)
+    assert [r["slice_id"] for r in rows] == ["feat_a:2:LONG:h12"]
+    assert rows[0]["status"] == DECAYED  # the verdict is no longer shadowed by a monitored twin
+    assert summary["carry_skipped_promoted"] == 1

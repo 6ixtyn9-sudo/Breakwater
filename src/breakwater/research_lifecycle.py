@@ -67,6 +67,99 @@ BOOK_HEADERS = [
 MONITORED = "monitored"
 COOLDOWN = "cooldown"
 DECAYED = "decayed"
+
+# Slice memory: what the book knew about a slice when it rotated out, so a
+# slice that rotates back in is not treated as a stranger. Rotation itself is
+# fine (research re-judges every run); amnesia is not -- a slice that burned
+# three paper trades, dropped on a regime flip and returned a week later used
+# to come back as a fresh "monitored" row with paper_trades=0.
+MEMORY_HEADERS = [
+    "slice_id",
+    "kind",
+    "first_validated_at",
+    "last_validated_at",
+    "last_dropped_at",
+    "times_admitted",
+    "times_dropped",
+    "last_drop_reason",
+    "last_status",
+    "paper_trades",
+    "paper_wins",
+    "paper_losses",
+    "paper_pnl_zar",
+    "last_signal_bar",
+    "cooldown_until",
+]
+MEMORY_FILENAME = "slice_memory.csv"
+
+
+def memory_path_for(book_path: Path) -> Path:
+    return book_path.parent / MEMORY_FILENAME
+
+
+def read_memory(path: Path) -> dict[tuple[str, str], dict]:
+    if not path.exists():
+        return {}
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or not {"slice_id", "kind"}.issubset(set(reader.fieldnames)):
+            raise RuntimeError("slice memory has an unsupported schema")
+        out: dict[tuple[str, str], dict] = {}
+        for row in reader:
+            key = (str(row.get("slice_id") or ""), str(row.get("kind") or "").upper())
+            if key[0]:
+                out[key] = {h: row.get(h, "") or "" for h in MEMORY_HEADERS}
+        return out
+
+
+def _write_memory(path: Path, memory: dict[tuple[str, str], dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = sorted(memory.values(), key=lambda r: (r.get("slice_id", ""), r.get("kind", "")))
+    file_descriptor, temporary_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(file_descriptor, "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=MEMORY_HEADERS, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+
+
+def _memory_key(row: dict) -> tuple[str, str]:
+    return (str(row.get("slice_id") or ""), str(row.get("kind") or "").upper())
+
+
+def _remember(memory: dict, row: dict, *, now_iso: str, event: str, reason: str = "") -> None:
+    """Fold a book row into memory. ``event`` is "admitted", "held" or "dropped"."""
+    key = _memory_key(row)
+    if not key[0]:
+        return
+    entry = memory.get(key) or {h: "" for h in MEMORY_HEADERS}
+    entry["slice_id"], entry["kind"] = key
+    if not entry.get("first_validated_at"):
+        entry["first_validated_at"] = str(row.get("validated_at") or now_iso)
+    for field in ("paper_trades", "paper_wins", "paper_losses", "paper_pnl_zar", "last_signal_bar", "cooldown_until"):
+        entry[field] = str(row.get(field) or ("0" if field.startswith("paper_") else ""))
+    entry["last_status"] = str(row.get("status") or "")
+    if event == "admitted":
+        entry["times_admitted"] = str(_coerce_int(entry.get("times_admitted"), 0) + 1)
+        entry["last_validated_at"] = now_iso
+    elif event == "held":
+        entry["last_validated_at"] = now_iso
+        if not entry.get("times_admitted"):
+            entry["times_admitted"] = "1"
+    elif event == "dropped":
+        entry["times_dropped"] = str(_coerce_int(entry.get("times_dropped"), 0) + 1)
+        entry["last_dropped_at"] = now_iso
+        entry["last_drop_reason"] = reason
+    memory[key] = entry
 PROVENANCE_VALIDATED = "validated_walk_forward"
 
 MIN_BOOK_ROWS = 60
@@ -465,6 +558,7 @@ def sync_book(
     validated_path: Path,
     book_path: Path,
     now: datetime | None = None,
+    memory_path: Path | None = None,
 ) -> dict:
     now = now or datetime.now(timezone.utc)
     now_epoch = int(now.timestamp())
@@ -473,6 +567,8 @@ def sync_book(
     validated_all = [row for row in validated_rows if row.validated]
     existing_rows = read_book(book_path)
     existing = {row["slice_id"]: row for row in existing_rows}
+    memory_path = memory_path or memory_path_for(book_path)
+    memory = read_memory(memory_path)
 
     # Per-asset-aware promotion is ALWAYS on: read the conventional per-asset
     # edges file next to the validated file. If missing/empty (e.g. bare local
@@ -617,12 +713,31 @@ def sync_book(
         "carried_decayed": 0,
         "paper_protected": 0,
         "research_rejected_dropped": 0,
+        "remembered": 0,
+        "remembered_cooldown": 0,
+        "remembered_decayed": 0,
+        "memory_rows": 0,
+        "carry_skipped_promoted": 0,
         "rows_total_after_sync": 0,
     }
 
     # Promote newly validated slices (filtered and/or gated)
     for row in to_promote:
         prior = existing.get(row.slice_id)
+        remembered = None
+        if prior is None:
+            remembered = memory.get((row.slice_id, str(row.kind).upper()))
+            if remembered is not None:
+                summary["remembered"] += 1
+                # A returning slice inherits its record, not a clean slate.
+                prior = {
+                    "paper_trades": remembered.get("paper_trades") or "0",
+                    "paper_wins": remembered.get("paper_wins") or "0",
+                    "paper_losses": remembered.get("paper_losses") or "0",
+                    "paper_pnl_zar": remembered.get("paper_pnl_zar") or "0",
+                    "last_signal_bar": remembered.get("last_signal_bar") or "",
+                    "cooldown_until": remembered.get("cooldown_until") or "",
+                }
 
         promoted_kinds.add(row.kind)
 
@@ -630,6 +745,20 @@ def sync_book(
         if cooldown_until > now_epoch:
             status = COOLDOWN
             summary["cooldown"] += 1
+            if remembered is not None:
+                summary["remembered_cooldown"] += 1
+        elif remembered is not None:
+            # Same losing test a held slice faces; no staleness test, because a
+            # slice that was out of the book could not have been signalling.
+            paper_trades = _coerce_int(prior.get("paper_trades"), 0)
+            paper_pnl = float(prior.get("paper_pnl_zar") or 0)
+            if paper_trades >= PNL_DECAY_MIN_TRADES and paper_pnl < 0:
+                status = DECAYED
+                summary["decayed"] += 1
+                summary["remembered_decayed"] += 1
+            else:
+                status = MONITORED
+                summary["monitored"] += 1
         elif prior and prior.get("status") == MONITORED:
             last_signal = _coerce_int(prior.get("last_signal_bar"), 0)
             paper_trades = _coerce_int(prior.get("paper_trades"), 0)
@@ -758,7 +887,14 @@ def sync_book(
     # LIVE_DECAY_BARS should be dropped. PnL-based decay happens during
     # promotion, not here.
     carried = []
+    promoted_ids = {str(r.get("slice_id") or "") for r in rows}
     for r in existing_rows:
+        # A slice promoted this run already has its (fresh) row above. Carrying
+        # the old row too produced duplicates -- 49 rows for 41 slices on
+        # 2026-10-17 -- and a "monitored" twin that outlived a "decayed" verdict.
+        if str(r.get("slice_id") or "") in promoted_ids:
+            summary["carry_skipped_promoted"] = summary.get("carry_skipped_promoted", 0) + 1
+            continue
         if not _carry_eligible(r):
             continue
         status = str(r.get("status") or "")
@@ -826,6 +962,31 @@ def sync_book(
 
     summary["rows_total_after_sync"] = len(rows)
     _write_book(book_path, rows)
+
+    # Update memory: every row still in the book is "held" (or "admitted" if
+    # it has no prior row); every prior row that is gone is "dropped" with the
+    # reason research gave, so a later return can be judged against it.
+    now_iso = now.isoformat()
+    final_ids = {str(r.get("slice_id") or "") for r in rows}
+    for r in rows:
+        sid = str(r.get("slice_id") or "")
+        _remember(memory, r, now_iso=now_iso, event="held" if sid in existing else "admitted")
+    dropped_keys: set[tuple[str, str]] = set()
+    for r in existing_rows:
+        sid = str(r.get("slice_id") or "")
+        if not sid or sid in final_ids or _memory_key(r) in dropped_keys:
+            continue
+        dropped_keys.add(_memory_key(r))
+        current = _current_rows.get(sid)
+        if current is None:
+            reason = "not_in_research"
+        elif not current.validated:
+            reason = str(current.fail_reasons or "").strip() or "not_validated"
+        else:
+            reason = "validated_not_promoted"
+        _remember(memory, r, now_iso=now_iso, event="dropped", reason=reason)
+    _write_memory(memory_path, memory)
+    summary["memory_rows"] = len(memory)
     return summary
 
 

@@ -60,6 +60,7 @@ research_files=(
   localdata/research/asset_edges.csv
   localdata/research/spread_slices.csv
   localdata/research/monitored_slices.csv
+  localdata/research/slice_memory.csv
   localdata/deep_audit/summary.json
   localdata/deep_audit/candidates.csv
 )
@@ -96,6 +97,7 @@ hip3_files=(
   localdata/hip3/research/discovered_slices.csv
   localdata/hip3/research/validated_slices.csv
   localdata/hip3/research/asset_edges.csv
+  localdata/hip3/research/slice_memory.csv
   localdata/hip3/research/monitored_slices.csv
 )
 

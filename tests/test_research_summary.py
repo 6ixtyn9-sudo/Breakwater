@@ -98,3 +98,35 @@ def test_commit_state_runs_research_summary_for_research_role():
     text = (ROOT / "scripts" / "commit_state.sh").read_text()
     assert "scripts/research_summary.py" in text
     assert "localdata/research/spread_slices.csv" in text
+
+
+def test_backfill_slice_memory_seeds_from_trade_log_without_overwriting(tmp_path):
+    spec = importlib.util.spec_from_file_location("backfill_slice_memory", ROOT / "scripts" / "backfill_slice_memory.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    from breakwater.research_lifecycle import _write_memory, read_memory
+
+    research = tmp_path / "research"
+    research.mkdir()
+    with (research / "paper_trade_log.csv").open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["closed_at", "slice_id", "kind", "outcome", "exit_reason", "pnl_zar"])
+        writer.writeheader()
+        writer.writerows([
+            {"closed_at": "2026-10-01T00:00", "slice_id": "a:0:LONG:h12", "kind": "PERP", "outcome": "loss", "exit_reason": "stop", "pnl_zar": "-4"},
+            {"closed_at": "2026-10-02T00:00", "slice_id": "a:0:LONG:h12", "kind": "PERP", "outcome": "win", "exit_reason": "target", "pnl_zar": "1"},
+            {"closed_at": "2026-10-03T00:00", "slice_id": "a:0:LONG:h12", "kind": "PERP", "outcome": "loss", "exit_reason": "horizon", "pnl_zar": "-2"},
+            {"closed_at": "2026-10-03T00:00", "slice_id": "a:0:LONG:h12", "kind": "SPOT", "outcome": "win", "exit_reason": "target", "pnl_zar": "9"},
+            {"closed_at": "2026-10-03T00:00", "slice_id": "b:1:LONG:h24", "kind": "PERP", "outcome": "loss", "exit_reason": "not_book", "pnl_zar": "-9"},
+        ])
+    _write_memory(research / "slice_memory.csv", {("a:0:LONG:h12", "SPOT"): {
+        "slice_id": "a:0:LONG:h12", "kind": "SPOT", "paper_trades": "7", "times_dropped": "2",
+    }})
+    added, total = module.backfill(research)
+    assert (added, total) == (1, 2)
+    memory = read_memory(research / "slice_memory.csv")
+    perp = memory[("a:0:LONG:h12", "PERP")]
+    assert (perp["paper_trades"], perp["paper_wins"], perp["paper_losses"], perp["paper_pnl_zar"]) == ("3", "1", "2", "-5.0000")
+    assert perp["last_drop_reason"] == "backfilled_from_trade_log"
+    assert memory[("a:0:LONG:h12", "SPOT")]["paper_trades"] == "7"  # existing entry untouched
+    assert ("b:1:LONG:h24", "PERP") not in memory  # not_book exits are not real closes
+    assert module.backfill(research) == (0, 2)
