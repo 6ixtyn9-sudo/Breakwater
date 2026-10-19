@@ -153,6 +153,19 @@ for file in "${files[@]}"; do
   fi
 done
 
+# Weekly rotation (paper_skip_log, positioning) gzips the previous week and
+# unlinks the plain .csv.  The loop above only stages files that still exist,
+# so that deletion was never committed and both 2026-W42.csv and its .gz
+# landed in the tree.  Stage removals of tracked files in the rotated dirs.
+for rotated_dir in localdata/research/paper_skip_log localdata/positioning; do
+  if [ -d "$rotated_dir" ] || git ls-files --error-unmatch -- "$rotated_dir" >/dev/null 2>&1; then
+    while IFS= read -r -d '' gone; do
+      git rm -q --cached -- "$gone"
+      owned+=("$gone")
+    done < <(git ls-files -z --deleted -- "$rotated_dir" 2>/dev/null)
+  fi
+done
+
 if git diff --cached --quiet; then
   echo "No Breakwater state changes"
   exit 0
