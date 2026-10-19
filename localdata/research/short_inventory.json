@@ -1,18 +1,14 @@
 {
-  "armable": 1,
-  "armable_pairs": [
-    "NEARUSDC"
-  ],
-  "armable_slices": [
-    "feat_kc_width:0:SHORT:h24"
-  ],
-  "as_of": "2026-10-18T23:36:45+00:00",
+  "armable": 0,
+  "armable_pairs": [],
+  "armable_slices": [],
+  "as_of": "2026-10-19T00:00:20+00:00",
   "candidates": 832,
   "candidates_sample": [
     {
       "armable": [
-        true,
-        "ok"
+        false,
+        "not_confirmed_bear"
       ],
       "breadth": 40,
       "edge_bps": 21.4,
@@ -25,17 +21,17 @@
       "validated": false
     }
   ],
-  "confirmed_bear": true,
+  "confirmed_bear": false,
   "eligible": 1,
   "enabled": true,
   "observations": 1,
   "observations_sample": [
     {
-      "arm_reason": "ok",
-      "armable": true,
-      "atr": "0.09491428571428585",
+      "arm_reason": "not_confirmed_bear",
+      "armable": false,
+      "atr": "0.09631428571428582",
       "edge_bps": 21.357519416137304,
-      "entry_price": "4.9569",
+      "entry_price": "5.0164",
       "feature": "feat_kc_width",
       "horizon_bars": 24,
       "kind": "PERP",
@@ -46,7 +42,7 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "5.289100000000000475"
+      "stop_price": "5.353500000000000370"
     }
   ],
   "promote_enabled": true
