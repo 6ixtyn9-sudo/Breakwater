@@ -1,21 +1,5 @@
 [
   {
-    "pair": "SUIUSDC",
-    "pnl_zar": "1.6617",
-    "reason": "slice_gap",
-    "signal_id": "22a12adac1ccd998",
-    "slice_id": "feat_ret_1:2:LONG:h16",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
-    "pair": "BNBUSDC",
-    "pnl_zar": "0.3244",
-    "reason": "slice_gap",
-    "signal_id": "4ea6d00deec3c50c",
-    "slice_id": "feat_vol_regime:2:LONG:h12",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "FARTCOINUSDC",
     "pnl_zar": "3.5626",
     "reason": "slice_gap",
@@ -1590,5 +1574,29 @@
     "signal_id": "c4cf5ac4e575015a",
     "slice_id": "feat_gap:1:LONG:h24",
     "stopped_at": "2026-10-18T20:00:29+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-3.9155",
+    "reason": "stop",
+    "signal_id": "57c9ab175fcbd8d1",
+    "slice_id": "feat_range_pos_50:2:SHORT:h24",
+    "stopped_at": "2026-10-20T15:00:28+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.2749",
+    "reason": "stop",
+    "signal_id": "61ae58e7bf75af43",
+    "slice_id": "feat_range_pos_50:2:SHORT:h24",
+    "stopped_at": "2026-10-20T15:00:28+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-3.3564",
+    "reason": "stop",
+    "signal_id": "c781e04a884ad9b8",
+    "slice_id": "feat_range_pos_50:2:SHORT:h24",
+    "stopped_at": "2026-10-20T15:00:28+00:00"
   }
 ]

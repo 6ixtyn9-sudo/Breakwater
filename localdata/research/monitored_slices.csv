@@ -1,5 +1,5 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
-feat_range_pos_50:2:SHORT:h24,PERP,feat_range_pos_50,2,SHORT,monitored,2026-10-20T01:11:03.455860+00:00,,0,0,0,0,,0.004510,8072,0.124392,24,3.500,validated_walk_forward,False,True,51,0.671
+feat_range_pos_50:2:SHORT:h24,PERP,feat_range_pos_50,2,SHORT,cooldown,2026-10-20T01:11:03.455860+00:00,1792504800,3,0,3,-10.5468,1792591200,0.004510,8072,0.124392,24,3.500,validated_walk_forward,False,True,51,0.671
 feat_vwap_lower_dist:0:LONG:h12,PERP,feat_vwap_lower_dist,0,LONG,monitored,2026-10-20T01:11:03.455860+00:00,,0,0,0,0,,0.002770,9735,0.319724,12,3.500,validated_walk_forward,False,True,31,0.408
 feat_vwap_dist:0:LONG:h12,PERP,feat_vwap_dist,0,LONG,monitored,2026-10-20T01:11:03.455860+00:00,,0,0,0,0,,0.001840,9821,0.380734,12,3.500,validated_walk_forward,False,True,36,0.474
 feat_range_pos_20:0:LONG:h15,PERP,feat_range_pos_20,0,LONG,monitored,2026-10-20T01:11:03.455860+00:00,,0,0,0,0,,0.000391,9819,0.478594,15,3.500,validated_walk_forward,False,True,34,0.447
