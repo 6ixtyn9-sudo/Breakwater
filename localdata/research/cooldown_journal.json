@@ -1,13 +1,5 @@
 [
   {
-    "pair": "FARTCOINUSDC",
-    "pnl_zar": "3.5626",
-    "reason": "slice_gap",
-    "signal_id": "8ad74dae47d48cea",
-    "slice_id": "feat_vol_regime:2:LONG:h12",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "HYPEUSDC",
     "pnl_zar": "1.5550",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "c781e04a884ad9b8",
     "slice_id": "feat_range_pos_50:2:SHORT:h24",
     "stopped_at": "2026-10-20T15:00:28+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-2.6562",
+    "reason": "stop",
+    "signal_id": "7becf1a67ce66f3e",
+    "slice_id": "feat_cci_20:2:SHORT:h24",
+    "stopped_at": "2026-10-21T10:00:29+00:00"
   }
 ]
