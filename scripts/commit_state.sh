@@ -216,6 +216,26 @@ for attempt in 1 2 3; do
         cat "$BACKUP_DIR/orig_status.csv"
         tail -n +2 "$BACKUP_DIR/$file"
       } | awk '!seen[$0]++' > "$file"
+    elif [ "$file" = "localdata/research/monitored_slices.csv" ] \
+      && [ -f scripts/merge_book_on_conflict.py ] \
+      && git show origin/main:"$file" > "$BACKUP_DIR/orig_book.csv" 2>/dev/null; then
+      # The book has two writers. Research owns the composition (which slices,
+      # edge fields); paper owns the per-slice paper_* / cooldown columns.
+      # Restoring a role's whole copy over origin discarded the other role's
+      # work: on 2026-10-21 the 01:00 paper job restored its 01:00 checkout
+      # over the 52-slice book research pushed at 01:04. Merge column-wise
+      # instead; fall back to the old behaviour only if the merge itself fails.
+      case "$ROLE" in
+        paper|"paper trading")
+          composition="$BACKUP_DIR/orig_book.csv"; paper_fields="$BACKUP_DIR/$file" ;;
+        *)
+          composition="$BACKUP_DIR/$file"; paper_fields="$BACKUP_DIR/orig_book.csv" ;;
+      esac
+      if ! python3 scripts/merge_book_on_conflict.py \
+          --composition "$composition" --paper-fields "$paper_fields" --out "$file"; then
+        echo "::warning::merge_book_on_conflict.py failed; restoring role copy of $file"
+        cp "$BACKUP_DIR/$file" "$file"
+      fi
     else
       cp "$BACKUP_DIR/$file" "$file"
     fi
