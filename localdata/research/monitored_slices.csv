@@ -29,4 +29,4 @@ feat_ext_vs_ma_50:0:LONG:h24,PERP,feat_ext_vs_ma_50,0,LONG,decayed,2026-10-20T01
 feat_ret_vol:0:LONG:h20,PERP,feat_ret_vol,0,LONG,monitored,2026-10-20T01:11:03.455860+00:00,,1,0,1,-4.5478,,0.000611,12486,0.313025,20,3.500,validated_walk_forward,False,True,27,0.355
 feat_donchian_break:2:SHORT:h24,PERP,feat_donchian_break,2,SHORT,monitored,2026-10-20T01:11:03.455860+00:00,,0,0,0,0,,0.000785,9281,0.250938,24,3.500,validated_walk_forward,False,True,40,0.526
 feat_vwap_dist:0:LONG:h24,PERP,feat_vwap_dist,0,LONG,monitored,2026-10-19T00:39:22.204446+00:00,,3,3,0,13.0481,,0.001804,9367,0.194231,24,3.500,validated_walk_forward,False,True,32,0.427
-feat_ext_vs_ma_50:2:SHORT:h24,PERP,feat_ext_vs_ma_50,2,SHORT,cooldown,2026-10-19T00:39:22.204446+00:00,1792587600,1,0,1,-2.3504,1792674000,0.002635,9009,0.081289,24,3.500,validated_walk_forward,False,True,50,0.667
+feat_ext_vs_ma_50:2:SHORT:h24,PERP,feat_ext_vs_ma_50,2,SHORT,cooldown,2026-10-19T00:39:22.204446+00:00,1792594800,2,0,2,-4.8577,1792681200,0.002635,9009,0.081289,24,3.500,validated_walk_forward,False,True,50,0.667

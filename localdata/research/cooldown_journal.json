@@ -1,13 +1,5 @@
 [
   {
-    "pair": "LTCUSDC",
-    "pnl_zar": "-0.1978",
-    "reason": "slice_gap",
-    "signal_id": "0768ca68cea7ada9",
-    "slice_id": "feat_vol_regime:2:LONG:h12",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "BTCUSDC",
     "pnl_zar": "0.5502",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "1da5b13a42fe5b3d",
     "slice_id": "feat_cci_20:2:SHORT:h24",
     "stopped_at": "2026-10-21T15:00:27+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-2.5073",
+    "reason": "stop",
+    "signal_id": "60b37136493476b9",
+    "slice_id": "feat_ext_vs_ma_50:2:SHORT:h24",
+    "stopped_at": "2026-10-21T16:00:27+00:00"
   }
 ]
