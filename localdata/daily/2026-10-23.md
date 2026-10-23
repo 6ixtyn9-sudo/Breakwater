@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-23 02:49 UTC
+# Breakwater daily print — 2026-10-23 03:16 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **444.19 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **442.82 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -59,7 +59,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 1 open, stop-risk **0.00 ZAR**
-  - SOLUSDC SELL ntl=115 risk=0.00 bars=34 stop=105.752499999999997400 peak=109.19
+  - SOLUSDC SELL ntl=115 risk=0.00 bars=33 stop=105.752499999999997400 peak=109.19
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -69,7 +69,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **0.00 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **0.00 / 161.77 ZAR | 0.2% | ok**
 - Remaining: 161.4858 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 46, "skipped": 46, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 3, "opened": 0, "pair_held": 2, "signals": 31, "skipped": 26, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 50, "skipped": 50, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 3, "opened": 0, "pair_held": 0, "signals": 23, "skipped": 20, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **SOLUSDC** 0.0000 ZAR
 - positions without bars: 0 | replayed: 1 | invalid: 0
 
@@ -127,20 +127,20 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.0667 bull=0.0 neutral=0.9333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 0
-- as_of: 2026-10-23T02:35:26Z
+- as_of: 2026-10-23T01:00:22Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 832 | eligible: 90 | observations: 79 | armable: **0**
+- candidates: 832 | eligible: 9 | observations: 8 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
-  - `feat_ext_vs_ma_50:2:SHORT:h24` edge=82.6b n=7041 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_ext_vs_ma_50:2:SHORT:h20` edge=74.8b n=7089 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_time_since_low_20:2:SHORT:h20` edge=63.0b n=587 breadth=7 validated=False prov=False armable=False (not_confirmed_bear)
-  - `feat_time_since_low_20:2:SHORT:h24` edge=61.3b n=577 breadth=7 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_macd_12_26:2:SHORT:h24` edge=60.4b n=8644 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_macd_12_26:2:SHORT:h20` edge=60.3b n=8710 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_ext_vs_ma_50:2:SHORT:h24` edge=42.6b n=7083 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_ext_vs_ma_50:2:SHORT:h20` edge=31.4b n=7210 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_range_pos_50:2:SHORT:h24` edge=29.1b n=7391 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_macd_12_26:2:SHORT:h24` edge=23.1b n=9070 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_vwap_lower_dist:2:SHORT:h24` edge=21.8b n=8893 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_macd_12_26:2:SHORT:h20` edge=21.7b n=9207 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
@@ -219,10 +219,10 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-10-23T02:14:31: errors=0 signals=77 regime_blocked=112
-- this cycle: closed=0 new_signals=77 skipped=75 slot_full=0 slice_full=0 pair_held=2
-- Action funnel: regime_blocked=112 | lane_gate_blocked=2 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=2 | slot_full=0 | skipped=75
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 2, "pair_held": 2, "regime_blocked": 112, "skipped": 75, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-10-23T01:04:32: errors=0 signals=73 regime_blocked=53
+- this cycle: closed=0 new_signals=73 skipped=73 slot_full=0 slice_full=0 pair_held=0
+- Action funnel: regime_blocked=53 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | slot_full=0 | skipped=73
+- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 3, "pair_held": 0, "regime_blocked": 53, "skipped": 73, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=20 blocks=42
 - aggregate_risk: ok open=0.0000 cap=161.7745 used=0.0018 remaining=161.4858 replayed=1 no_new_bars=0
 - pair_errors: []
