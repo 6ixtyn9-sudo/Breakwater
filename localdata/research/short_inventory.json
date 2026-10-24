@@ -2,7 +2,7 @@
   "armable": 0,
   "armable_pairs": [],
   "armable_slices": [],
-  "as_of": "2026-10-24T05:00:27+00:00",
+  "as_of": "2026-10-24T06:00:29+00:00",
   "candidates": 832,
   "candidates_sample": [
     {
@@ -234,14 +234,14 @@
   "confirmed_bear": false,
   "eligible": 146,
   "enabled": true,
-  "observations": 89,
+  "observations": 101,
   "observations_sample": [
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.09185714285714289",
+      "atr": "0.08890714285714292",
       "edge_bps": 26.664220910022276,
-      "entry_price": "4.6561",
+      "entry_price": "4.621",
       "feature": "feat_realized_vol_20",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -252,14 +252,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "4.977600000000000115"
+      "stop_price": "4.932175000000000220"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.7135714285714282",
+      "atr": "0.7107142857142849",
       "edge_bps": 26.664220910022276,
-      "entry_price": "102.66",
+      "entry_price": "102.28",
       "feature": "feat_realized_vol_20",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -270,14 +270,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "105.15749999999999870"
+      "stop_price": "104.76749999999999715"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.009214285714285684",
+      "atr": "0.00892142857142854",
       "edge_bps": 26.664220910022276,
-      "entry_price": "1.292",
+      "entry_price": "1.288",
       "feature": "feat_realized_vol_20",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -288,14 +288,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "1.3242499999999998940"
+      "stop_price": "1.319224999999999890"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.05234285714285712",
+      "atr": "0.05044999999999998",
       "edge_bps": 26.664220910022276,
-      "entry_price": "3.1326",
+      "entry_price": "3.1184",
       "feature": "feat_realized_vol_20",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -306,14 +306,32 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "3.315799999999999920"
+      "stop_price": "3.294974999999999930"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.7135714285714282",
+      "atr": "0.08890714285714292",
       "edge_bps": 20.52352094642095,
-      "entry_price": "102.66",
+      "entry_price": "4.621",
+      "feature": "feat_atr_percent",
+      "horizon_bars": 12,
+      "kind": "PERP",
+      "pair": "NEARUSDC",
+      "regime": "bear",
+      "side": "SHORT",
+      "slice_id": "feat_atr_percent:0:SHORT:h12",
+      "state": 0,
+      "state_active": true,
+      "stop_atr_mult": 3.5,
+      "stop_price": "4.932175000000000220"
+    },
+    {
+      "arm_reason": "regime_confounded",
+      "armable": false,
+      "atr": "0.7107142857142849",
+      "edge_bps": 20.52352094642095,
+      "entry_price": "102.28",
       "feature": "feat_atr_percent",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -324,14 +342,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "105.15749999999999870"
+      "stop_price": "104.76749999999999715"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.009214285714285684",
+      "atr": "0.00892142857142854",
       "edge_bps": 20.52352094642095,
-      "entry_price": "1.292",
+      "entry_price": "1.288",
       "feature": "feat_atr_percent",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -342,14 +360,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "1.3242499999999998940"
+      "stop_price": "1.319224999999999890"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.05234285714285712",
+      "atr": "0.05044999999999998",
       "edge_bps": 20.52352094642095,
-      "entry_price": "3.1326",
+      "entry_price": "3.1184",
       "feature": "feat_atr_percent",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -360,14 +378,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "3.315799999999999920"
+      "stop_price": "3.294974999999999930"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.033521428571428556",
+      "atr": "0.03285714285714284",
       "edge_bps": 20.52352094642095,
-      "entry_price": "1.7001",
+      "entry_price": "1.7036",
       "feature": "feat_atr_percent",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -378,14 +396,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "1.8174249999999999460"
+      "stop_price": "1.818599999999999940"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.42421428571428493",
+      "atr": "0.4123571428571421",
       "edge_bps": 20.52352094642095,
-      "entry_price": "24.865",
+      "entry_price": "24.803",
       "feature": "feat_atr_percent",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -396,14 +414,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "26.349749999999997255"
+      "stop_price": "26.24624999999999735"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.09185714285714289",
+      "atr": "0.08890714285714292",
       "edge_bps": 20.843797614418488,
-      "entry_price": "4.6561",
+      "entry_price": "4.621",
       "feature": "feat_kc_width",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -414,14 +432,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "4.977600000000000115"
+      "stop_price": "4.932175000000000220"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.7135714285714282",
+      "atr": "0.7107142857142849",
       "edge_bps": 20.843797614418488,
-      "entry_price": "102.66",
+      "entry_price": "102.28",
       "feature": "feat_kc_width",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -432,14 +450,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "105.15749999999999870"
+      "stop_price": "104.76749999999999715"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.00008657142857142854",
+      "atr": "0.0000860714285714286",
       "edge_bps": 20.843797614418488,
-      "entry_price": "0.004287",
+      "entry_price": "0.004255",
       "feature": "feat_kc_width",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -450,14 +468,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "0.004589999999999999890"
+      "stop_price": "0.00455625000000000010"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.009214285714285684",
+      "atr": "0.00892142857142854",
       "edge_bps": 20.843797614418488,
-      "entry_price": "1.292",
+      "entry_price": "1.288",
       "feature": "feat_kc_width",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -468,14 +486,14 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "1.3242499999999998940"
+      "stop_price": "1.319224999999999890"
     },
     {
       "arm_reason": "regime_confounded",
       "armable": false,
-      "atr": "0.05234285714285712",
+      "atr": "0.05044999999999998",
       "edge_bps": 20.843797614418488,
-      "entry_price": "3.1326",
+      "entry_price": "3.1184",
       "feature": "feat_kc_width",
       "horizon_bars": 12,
       "kind": "PERP",
@@ -486,25 +504,7 @@
       "state": 0,
       "state_active": true,
       "stop_atr_mult": 3.5,
-      "stop_price": "3.315799999999999920"
-    },
-    {
-      "arm_reason": "regime_confounded",
-      "armable": false,
-      "atr": "0.033521428571428556",
-      "edge_bps": 20.843797614418488,
-      "entry_price": "1.7001",
-      "feature": "feat_kc_width",
-      "horizon_bars": 12,
-      "kind": "PERP",
-      "pair": "ZROUSDC",
-      "regime": "bear",
-      "side": "SHORT",
-      "slice_id": "feat_kc_width:0:SHORT:h12",
-      "state": 0,
-      "state_active": true,
-      "stop_atr_mult": 3.5,
-      "stop_price": "1.8174249999999999460"
+      "stop_price": "3.294974999999999930"
     }
   ],
   "promote_enabled": true
