@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-24 08:07 UTC
+# Breakwater daily print — 2026-10-24 08:34 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **432.31 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **435.51 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -59,8 +59,8 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 2 open, stop-risk **0.00 ZAR**
-  - SOLUSDC SELL ntl=115 risk=0.00 bars=63 stop=104.412499999999997400 peak=109.19
-  - XRPUSDC SELL ntl=116 risk=0.00 bars=26 stop=1.31620000000000002850 peak=1.3306
+  - SOLUSDC SELL ntl=115 risk=0.00 bars=64 stop=104.412499999999997400 peak=109.19
+  - XRPUSDC SELL ntl=116 risk=0.00 bars=27 stop=1.31620000000000002850 peak=1.3306
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -70,9 +70,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **0.00 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **0.00 / 162.14 ZAR | 0.4% | ok**
 - Remaining: 161.5602 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 32, "skipped": 32, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 3, "opened": 0, "pair_held": 3, "signals": 28, "skipped": 22, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 36, "skipped": 36, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 7, "signals": 35, "skipped": 28, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **SOLUSDC** 0.0000 ZAR
-- positions without bars: 0 | replayed: 3 | invalid: 0
+- positions without bars: 0 | replayed: 2 | invalid: 0
 
 ## 6. Monitored books
 
@@ -87,7 +87,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_time_since_low_20:2:SHORT:h20` edge=0.0073 n=817 p=0.3580 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_macd_12_26:2:SHORT:h20` edge=0.0070 n=8398 p=0.0081 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -128,13 +128,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.4667 bull=0.0 neutral=0.5333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 0
-- as_of: 2026-10-24T07:35:33Z
+- as_of: 2026-10-24T08:00:59Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 832 | eligible: 146 | observations: 122 | armable: **0**
+- candidates: 832 | eligible: 146 | observations: 114 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_ext_vs_ma_50:2:SHORT:h24` edge=92.2b n=6208 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
   - `feat_time_since_low_20:2:SHORT:h24` edge=83.4b n=817 breadth=9 validated=True prov=False armable=False (not_confirmed_bear)
@@ -220,13 +220,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-10-24T07:32:43: errors=0 signals=60 regime_blocked=122
-- this cycle: closed=1 new_signals=60 skipped=57 slot_full=0 slice_full=0 pair_held=3
-- Action funnel: regime_blocked=122 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=3 | slot_full=0 | skipped=57
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 3, "pair_held": 3, "regime_blocked": 122, "skipped": 57, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-10-24T08:33:58: errors=1 signals=71 regime_blocked=118
+- this cycle: closed=0 new_signals=71 skipped=64 slot_full=0 slice_full=0 pair_held=7
+- Action funnel: regime_blocked=118 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=7 | slot_full=0 | skipped=64
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 3, "pair_held": 7, "regime_blocked": 118, "skipped": 64, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=20 blocks=42
-- aggregate_risk: ok open=0.0000 cap=162.1379 used=0.0036 remaining=161.5602 replayed=3 no_new_bars=0
-- pair_errors: []
+- aggregate_risk: ok open=0.0000 cap=162.1379 used=0.0036 remaining=161.5602 replayed=2 no_new_bars=0
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:AMAT"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
