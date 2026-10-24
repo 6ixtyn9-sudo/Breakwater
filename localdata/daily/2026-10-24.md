@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-24 09:49 UTC
+# Breakwater daily print — 2026-10-24 10:33 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -59,8 +59,8 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 2 open, stop-risk **0.00 ZAR**
-  - SOLUSDC SELL ntl=115 risk=0.00 bars=65 stop=104.412499999999997400 peak=109.19
-  - XRPUSDC SELL ntl=116 risk=0.00 bars=28 stop=1.31460000000000002850 peak=1.3306
+  - SOLUSDC SELL ntl=115 risk=0.00 bars=66 stop=103.852499999999997400 peak=109.19
+  - XRPUSDC SELL ntl=116 risk=0.00 bars=29 stop=1.30810000000000002850 peak=1.3306
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -70,7 +70,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **0.00 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **0.00 / 162.14 ZAR | 0.4% | ok**
 - Remaining: 161.5602 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 29, "skipped": 29, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 6, "signals": 37, "skipped": 31, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 32, "skipped": 32, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 5, "signals": 36, "skipped": 31, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **SOLUSDC** 0.0000 ZAR
 - positions without bars: 0 | replayed: 2 | invalid: 0
 
@@ -87,7 +87,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_time_since_low_20:2:SHORT:h20` edge=0.0073 n=817 p=0.3580 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_macd_12_26:2:SHORT:h20` edge=0.0070 n=8398 p=0.0081 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -126,16 +126,16 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.5333 bull=0.0 neutral=0.4667 | symbols=15
+- Label: **bear** | breadth bear=0.6 bull=0.0 neutral=0.4 | symbols=15
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 2 / bull 0
-- as_of: 2026-10-24T09:35:26Z
+- as_of: 2026-10-24T10:00:29Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
 - confirmed_bear: **True** | promote_env: ON
-- candidates: 832 | eligible: 146 | observations: 132 | armable: **38**
-- Armable slices: feat_atr_percent:1:SHORT:h20, feat_atr_percent:1:SHORT:h24, feat_ext_vs_ma_10:2:SHORT:h24, feat_ret_10:2:SHORT:h15, feat_ret_10:2:SHORT:h20, feat_ret_10:2:SHORT:h24, feat_stoch_k_14:2:SHORT:h12, feat_stoch_k_14:2:SHORT:h15, feat_stoch_k_14:2:SHORT:h20, feat_stoch_k_14:2:SHORT:h24, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_trend_neutral:1:SHORT:h15, feat_vol_of_vol:2:SHORT:h24, feat_williams_r_14:0:SHORT:h12, feat_williams_r_14:0:SHORT:h15, feat_williams_r_14:0:SHORT:h20, feat_williams_r_14:0:SHORT:h24
+- candidates: 832 | eligible: 146 | observations: 114 | armable: **24**
+- Armable slices: feat_atr_percent:1:SHORT:h20, feat_atr_percent:1:SHORT:h24, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_trend_neutral:1:SHORT:h15, feat_vol_of_vol:2:SHORT:h24
 - Armable pairs: BTCUSDC, ENAUSDC, ETHUSDC, HYPEUSDC, KPEPEUSDC, NEARUSDC, WLDUSDC, XMRUSDC, ZECUSDC, ZROUSDC
   - `feat_ext_vs_ma_50:2:SHORT:h24` edge=92.2b n=6208 breadth=40 validated=True prov=False armable=True (ok)
   - `feat_time_since_low_20:2:SHORT:h24` edge=83.4b n=817 breadth=9 validated=True prov=False armable=True (ok)
@@ -221,13 +221,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-10-24T09:32:46: errors=2 signals=66 regime_blocked=120
-- this cycle: closed=0 new_signals=66 skipped=60 slot_full=0 slice_full=0 pair_held=6
-- Action funnel: regime_blocked=120 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=6 | slot_full=0 | skipped=60
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 3, "pair_held": 6, "regime_blocked": 120, "skipped": 60, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-10-24T10:33:04: errors=0 signals=68 regime_blocked=95
+- this cycle: closed=0 new_signals=68 skipped=63 slot_full=0 slice_full=0 pair_held=5
+- Action funnel: regime_blocked=95 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=5 | slot_full=0 | skipped=63
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 3, "pair_held": 5, "regime_blocked": 95, "skipped": 63, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=20 blocks=42
 - aggregate_risk: ok open=0.0000 cap=162.1379 used=0.0036 remaining=161.5602 replayed=2 no_new_bars=0
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:KSTR"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:NET"}]
+- pair_errors: []
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
