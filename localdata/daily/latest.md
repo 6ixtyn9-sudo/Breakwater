@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-24 02:19 UTC
+# Breakwater daily print — 2026-10-24 03:08 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **436.01 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **436.38 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -20,7 +20,7 @@
 
 - Equity: **2273.47 ZAR** (seed 2000) | lifetime: **+273.47 ZAR** | closed: 462
 - Today: 0 closed, **+0.00 ZAR**
-- 7d: **-26.25 ZAR** | 30d: **-201.94 ZAR**
+- 7d: **-25.30 ZAR** | 30d: **-202.64 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -38,7 +38,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 416 | wins: 201 | win%: 48.3 | P&L: **+317.97 ZAR** | today: +0.00 | 7d: -26.25 | 30d: -163.06
+- Closed: 416 | wins: 201 | win%: 48.3 | P&L: **+317.97 ZAR** | today: +0.00 | 7d: -25.30 | 30d: -163.77
 - By exit: target +516.3, trail_stop +74.8, horizon +69.1, max_bars +2.8, regime_shift -11.9, stop -333.1
 - By entry regime (n/pnl): neutral 162/+220.7, bull 113/+176.5, bear 141/-79.2
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_ext_strength:2:LONG:h15 12n/8w +24.00; feat_bb_pos_20:2:LONG:h15 4n/4w +16.17; feat_atr_norm_ext:2:LONG:h15 3n/3w +15.77
@@ -89,7 +89,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_macd_12_26:2:SHORT:h20` edge=0.0070 n=8398 p=0.0081 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_ema_cross_10_20:2:SHORT:h20` edge=0.0061 n=8170 p=0.0243 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -130,7 +130,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.4 bull=0.0 neutral=0.6 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 0
-- as_of: 2026-10-24T02:00:36Z
+- as_of: 2026-10-24T02:35:28Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
