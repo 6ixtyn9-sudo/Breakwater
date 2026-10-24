@@ -9,7 +9,7 @@
     "horizon_bars": 15,
     "initial_stop_price": "111.24249999999999740",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-24T16:00:00+00:00",
+    "last_processed_bar_start": "2026-10-24T17:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "115.49682000",
     "pair": "SOLUSDC",
@@ -17,12 +17,12 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "101.40749999999999740"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "104.17999999999999480"
       },
       "target_2r_trail_1r": {
@@ -37,7 +37,7 @@
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 73,
+        "bars_held": 74,
         "stop_price": "101.40749999999999740"
       }
     },
@@ -57,7 +57,7 @@
     "horizon_bars": 20,
     "initial_stop_price": "1.3535000000000000285",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-24T16:00:00+00:00",
+    "last_processed_bar_start": "2026-10-24T17:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "115.55324500",
     "pair": "XRPUSDC",
@@ -65,27 +65,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 36,
+        "bars_held": 37,
         "stop_price": "1.2897000000000000285"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 36,
+        "bars_held": 37,
         "stop_price": "1.3252000000000000570"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 36,
+        "bars_held": 37,
         "stop_price": "1.2897000000000000285"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 36,
+        "bars_held": 37,
         "stop_price": "1.2897000000000000285"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 36,
+        "bars_held": 37,
         "stop_price": "1.2897000000000000285"
       }
     },
