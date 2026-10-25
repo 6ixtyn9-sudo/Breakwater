@@ -1,13 +1,5 @@
 [
   {
-    "pair": "BTCUSDC",
-    "pnl_zar": "0.5502",
-    "reason": "slice_gap",
-    "signal_id": "aeb68fe80fa19309",
-    "slice_id": "feat_ret_20:2:LONG:h10",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "XRPUSDC",
     "pnl_zar": "3.3438",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "60b37136493476b9",
     "slice_id": "feat_ext_vs_ma_50:2:SHORT:h24",
     "stopped_at": "2026-10-21T16:00:27+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-0.7326",
+    "reason": "slice_gap",
+    "signal_id": "8bc05330e810d66d",
+    "slice_id": "feat_ret_10:2:SHORT:h24",
+    "stopped_at": "2026-10-25T13:00:31+00:00"
   }
 ]
