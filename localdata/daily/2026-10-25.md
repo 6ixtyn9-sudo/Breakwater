@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-25 01:27 UTC
+# Breakwater daily print — 2026-10-25 02:08 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -17,11 +17,11 @@
 
 ## 2b. Claimed vs realised
 
-- Book: 69 slices (native 49 | hip3 20); validated pools: native 143 | hip3 160; book slices absent from pools: 0
-- Claimed edge (median mean_ret_costadj over 69 book slices present in the validated pools): +0.144% | at 154.99 ZAR mean notional/trade: +0.22 ZAR/trade
+- Book: 74 slices (native 54 | hip3 20); validated pools: native 148 | hip3 160; book slices absent from pools: 0
+- Claimed edge (median mean_ret_costadj over 74 book slices present in the validated pools): +0.250% | at 154.99 ZAR mean notional/trade: +0.39 ZAR/trade
 - Realised (466 real closes per lane_gate._is_real_close, net of fees): +0.62 ZAR/trade | sd 4.99 | SE 0.23
-- Gap: +0.39 ZAR/trade | t = +1.70 (one-sample t of realised mean vs the claimed constant) | verdict: NOT ESTABLISHED
-- native: claimed median +0.377% over 49/49 slices (pool 143) ~ +0.58 ZAR | realised 420 closes +0.79 ZAR sd 4.99 SE 0.24 | gap +0.21 t +0.86 | NOT ESTABLISHED
+- Gap: +0.23 ZAR/trade | t = +0.99 (one-sample t of realised mean vs the claimed constant) | verdict: NOT ESTABLISHED
+- native: claimed median +0.300% over 54/54 slices (pool 148) ~ +0.46 ZAR | realised 420 closes +0.79 ZAR sd 4.99 SE 0.24 | gap +0.33 t +1.35 | NOT ESTABLISHED
 - hip3: claimed median +0.062% over 20/20 slices (pool 160) ~ +0.10 ZAR | realised 46 closes -0.97 ZAR sd 4.81 SE 0.71 | gap -1.07 t -1.51 | NOT ESTABLISHED
 - Ledger: 565 decision rows; 466 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 9 exit reasons); the other 99 rows are skipped/guard decisions and never count
 
@@ -73,18 +73,18 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 6. Monitored books
 
-- Native: 49 | HIP-3: 20
+- Native: 54 | HIP-3: 20
 - Native top (by paper P&L):
-  - `feat_donchian_break:2:SHORT:h24` edge=0.0058 n=8039 p=0.2408 src=validated_walk_forward unproven=False paper=2n/+3.68
+  - `feat_donchian_break:2:SHORT:h24` edge=0.0080 n=7892 p=0.1453 src=validated_walk_forward unproven=False paper=2n/+3.68
   - `feat_vwap_lower_dist:2:SHORT:h20` edge=0.0038 n=9108 p=0.1178 src=validated_walk_forward unproven=False paper=1n/+2.38
-  - `feat_vwap_dist:2:SHORT:h12` edge=0.0032 n=8260 p=0.1910 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_vwap_upper_dist:2:SHORT:h15` edge=0.0038 n=7928 p=0.1125 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_vwap_lower_dist:2:SHORT:h15` edge=0.0043 n=8560 p=0.1439 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ret_20:2:SHORT:h20` edge=0.0059 n=7499 p=0.0658 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_trend_slope_20:2:SHORT:h20` edge=0.0057 n=7614 p=0.0588 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_time_since_low_20:2:SHORT:h20` edge=0.0073 n=817 p=0.3580 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_trend_slope_20:2:SHORT:h12` edge=0.0043 n=7292 p=0.2256 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_macd_12_26:2:SHORT:h20` edge=0.0098 n=7293 p=0.0083 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_gap_fill_ratio:0:SHORT:h20` edge=0.0019 n=10841 p=0.6548 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_vwap_lower_dist:2:SHORT:h12` edge=0.0046 n=8213 p=0.1646 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_time_since_high_20:0:SHORT:h12` edge=0.0043 n=7826 p=0.3609 src=validated_walk_forward unproven=False paper=0n/+0.00
+  - `feat_atr_percent:1:SHORT:h15` edge=0.0027 n=9736 p=0.5166 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -100,14 +100,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 8. Research / honesty checks
 
-- Latest research: 2026-10-24T00:58:01.215903+00:00 | discovered 1664 | validated 143 | reg-confounded 394 | hostile-unproven 4
-- floors: "" | book: {"rows": 51, "by_status": {"monitored": 49, "decayed": 2}, "in_validated_pool": 51, "absent_from_pool": 0, "net_edge_floor_enter_bps": ""}
-- Short audit: discovered=832 validated=832 passing=143 eligible=67 best=92.2b best_fail=regime_confounded
+- Latest research: 2026-10-25T01:03:22.791098+00:00 | discovered 1664 | validated 148 | reg-confounded 573 | hostile-unproven 4
+- floors: "" | book: {"rows": 55, "by_status": {"monitored": 54, "decayed": 1}, "in_validated_pool": 55, "absent_from_pool": 0, "net_edge_floor_enter_bps": ""}
+- Short audit: discovered=832 validated=832 passing=148 eligible=113 best=114.2b best_fail=temporal_pass
 - pair_errors: "not propagated from shards"
 - Spread research (long/short, PERP): rows=528 qualifying=0 (go/no-go gate: >=1 qualifying spread on 3 consecutive runs)
-  - feat_time_since_low_20:L2S0:h20: mean=+44.9b t_no=3.20 folds=00001 mkt_corr=+0.30 dd=0b legs=4.0/8.0 fail=n_nonoverlap,folds,market_corr
-  - feat_ret_1:L0S2:h20: mean=-11.6b t_no=2.57 folds=10000 mkt_corr=+0.04 dd=185b legs=11.8/11.3 fail=n_nonoverlap,mean<=0,folds
-  - feat_time_since_low_20:L2S0:h12: mean=+13.2b t_no=2.56 folds=11010 mkt_corr=+0.38 dd=39b legs=4.0/8.0 fail=n_nonoverlap,folds,market_corr
+  - feat_range_pos_50:L0S2:h24: mean=+11.2b t_no=3.32 folds=00111 mkt_corr=-0.00 dd=106b legs=13.3/9.5 fail=n_nonoverlap,folds
+  - feat_ext_vs_ma_50:L0S2:h20: mean=+9.3b t_no=2.81 folds=01111 mkt_corr=-0.02 dd=161b legs=14.5/7.7 fail=n_nonoverlap
+  - feat_williams_r_14:L2S0:h24: mean=+4.0b t_no=2.34 folds=00010 mkt_corr=+0.07 dd=151b legs=12.6/11.0 fail=n_nonoverlap,folds
 - Deep audit: candidates=74880 preliminary_passes=0 audit_passes=0 plateaus=0 fetch_errors=25
 
 ## 9. Live readiness checks
@@ -124,22 +124,22 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 10. Regime shift
 
 - Label: **bear** | breadth bear=0.6 bull=0.1333 neutral=0.2667 | symbols=15
-- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 17 / bull 0
-- as_of: 2026-10-25T01:00:29Z
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 18 / bull 0
+- as_of: 2026-10-25T01:35:29Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
 - confirmed_bear: **True** | promote_env: ON
-- candidates: 832 | eligible: 146 | observations: 1233 | armable: **809**
-- Armable slices: feat_atr_norm_ext:2:SHORT:h20, feat_atr_norm_ext:2:SHORT:h24, feat_atr_percent:1:SHORT:h20, feat_atr_percent:1:SHORT:h24, feat_cci_20:2:SHORT:h12, feat_cci_20:2:SHORT:h15, feat_cci_20:2:SHORT:h20, feat_cci_20:2:SHORT:h24, feat_donchian_break:2:SHORT:h12, feat_donchian_break:2:SHORT:h15, feat_donchian_break:2:SHORT:h20, feat_donchian_break:2:SHORT:h24, feat_ema_cross_10_20:2:SHORT:h12, feat_ema_cross_10_20:2:SHORT:h15, feat_ema_cross_10_20:2:SHORT:h20, feat_ema_cross_10_20:2:SHORT:h24, feat_ext_strength:2:SHORT:h12, feat_ext_strength:2:SHORT:h15, feat_ext_strength:2:SHORT:h20, feat_ext_strength:2:SHORT:h24, feat_ext_vs_ma_10:2:SHORT:h24, feat_ext_vs_ma_20:2:SHORT:h12, feat_ext_vs_ma_20:2:SHORT:h15, feat_ext_vs_ma_20:2:SHORT:h20, feat_ext_vs_ma_20:2:SHORT:h24, feat_ext_vs_ma_50:2:SHORT:h20, feat_ext_vs_ma_50:2:SHORT:h24, feat_keltner_pos:2:SHORT:h20, feat_keltner_pos:2:SHORT:h24, feat_macd_12_26:2:SHORT:h12, feat_macd_12_26:2:SHORT:h15, feat_macd_12_26:2:SHORT:h20, feat_macd_12_26:2:SHORT:h24, feat_mean_rev_strength:0:SHORT:h20, feat_mean_rev_strength:0:SHORT:h24, feat_range_pos_20:2:SHORT:h12, feat_range_pos_20:2:SHORT:h15, feat_range_pos_20:2:SHORT:h20, feat_range_pos_20:2:SHORT:h24, feat_range_pos_50:2:SHORT:h12, feat_range_pos_50:2:SHORT:h15, feat_range_pos_50:2:SHORT:h20, feat_range_pos_50:2:SHORT:h24, feat_ret_10:2:SHORT:h15, feat_ret_10:2:SHORT:h20, feat_ret_10:2:SHORT:h24, feat_ret_20:2:SHORT:h12, feat_ret_20:2:SHORT:h15, feat_ret_20:2:SHORT:h20, feat_ret_20:2:SHORT:h24, feat_ret_vol:2:SHORT:h15, feat_ret_vol:2:SHORT:h20, feat_ret_vol:2:SHORT:h24, feat_rsi_21:2:SHORT:h20, feat_rsi_21:2:SHORT:h24, feat_stoch_d_14:2:SHORT:h12, feat_stoch_d_14:2:SHORT:h15, feat_stoch_d_14:2:SHORT:h20, feat_stoch_d_14:2:SHORT:h24, feat_stoch_k_14:2:SHORT:h12, feat_stoch_k_14:2:SHORT:h15, feat_stoch_k_14:2:SHORT:h20, feat_stoch_k_14:2:SHORT:h24, feat_time_since_high_20:0:SHORT:h12, feat_time_since_high_20:0:SHORT:h15, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_time_since_low_20:2:SHORT:h12, feat_time_since_low_20:2:SHORT:h15, feat_time_since_low_20:2:SHORT:h20, feat_time_since_low_20:2:SHORT:h24, feat_trend_neutral:1:SHORT:h15, feat_trend_slope_20:2:SHORT:h12, feat_trend_slope_20:2:SHORT:h15, feat_trend_slope_20:2:SHORT:h20, feat_trend_slope_20:2:SHORT:h24, feat_vol_breakout:2:SHORT:h15, feat_vol_breakout:2:SHORT:h20, feat_vol_breakout:2:SHORT:h24, feat_vol_of_vol:2:SHORT:h24, feat_vol_trend:2:SHORT:h12, feat_vol_trend:2:SHORT:h15, feat_vol_trend:2:SHORT:h20, feat_vol_trend:2:SHORT:h24, feat_vwap_dist:2:SHORT:h12, feat_vwap_dist:2:SHORT:h15, feat_vwap_dist:2:SHORT:h20, feat_vwap_dist:2:SHORT:h24, feat_vwap_lower_dist:2:SHORT:h12, feat_vwap_lower_dist:2:SHORT:h15, feat_vwap_lower_dist:2:SHORT:h20, feat_vwap_lower_dist:2:SHORT:h24, feat_vwap_upper_dist:2:SHORT:h12, feat_vwap_upper_dist:2:SHORT:h15, feat_vwap_upper_dist:2:SHORT:h20, feat_vwap_upper_dist:2:SHORT:h24, feat_williams_r_14:0:SHORT:h12, feat_williams_r_14:0:SHORT:h15, feat_williams_r_14:0:SHORT:h20, feat_williams_r_14:0:SHORT:h24
+- candidates: 832 | eligible: 299 | observations: 2262 | armable: **1609**
+- Armable slices: feat_adx_14:0:SHORT:h24, feat_adx_14:1:SHORT:h15, feat_adx_14:1:SHORT:h20, feat_adx_14:1:SHORT:h24, feat_asia_range:2:SHORT:h15, feat_asia_range:2:SHORT:h20, feat_asia_range:2:SHORT:h24, feat_asia_vol:2:SHORT:h15, feat_asia_vol:2:SHORT:h20, feat_asia_vol:2:SHORT:h24, feat_atr_norm_ext:1:SHORT:h20, feat_atr_norm_ext:1:SHORT:h24, feat_atr_norm_ext:2:SHORT:h24, feat_atr_percent:1:SHORT:h12, feat_atr_percent:1:SHORT:h15, feat_atr_percent:1:SHORT:h20, feat_atr_percent:1:SHORT:h24, feat_atr_ratio:1:SHORT:h15, feat_atr_ratio:1:SHORT:h20, feat_atr_ratio:1:SHORT:h24, feat_atr_ratio:2:SHORT:h24, feat_bb_pos_20:1:SHORT:h20, feat_bb_pos_20:1:SHORT:h24, feat_bb_pos_20:2:SHORT:h12, feat_bb_pos_20:2:SHORT:h15, feat_bb_pos_20:2:SHORT:h20, feat_bb_pos_20:2:SHORT:h24, feat_bb_width_20:0:SHORT:h12, feat_bb_width_20:0:SHORT:h15, feat_bb_width_20:0:SHORT:h20, feat_bb_width_20:0:SHORT:h24, feat_bb_width_20:1:SHORT:h20, feat_bb_width_20:1:SHORT:h24, feat_buy_vol_ratio:1:SHORT:h24, feat_cci_20:2:SHORT:h12, feat_cci_20:2:SHORT:h15, feat_cci_20:2:SHORT:h20, feat_cci_20:2:SHORT:h24, feat_close_position:1:SHORT:h24, feat_donchian_break:2:SHORT:h12, feat_donchian_break:2:SHORT:h15, feat_donchian_break:2:SHORT:h20, feat_donchian_break:2:SHORT:h24, feat_donchian_width_20:0:SHORT:h24, feat_donchian_width_20:1:SHORT:h20, feat_donchian_width_20:1:SHORT:h24, feat_ema_cross_10_20:2:SHORT:h20, feat_ema_cross_10_20:2:SHORT:h24, feat_ext_strength:2:SHORT:h12, feat_ext_strength:2:SHORT:h15, feat_ext_strength:2:SHORT:h20, feat_ext_strength:2:SHORT:h24, feat_ext_vs_ma_20:1:SHORT:h20, feat_ext_vs_ma_20:1:SHORT:h24, feat_ext_vs_ma_20:2:SHORT:h15, feat_ext_vs_ma_20:2:SHORT:h20, feat_ext_vs_ma_20:2:SHORT:h24, feat_ext_vs_ma_50:2:SHORT:h24, feat_gap:0:SHORT:h15, feat_gap:0:SHORT:h20, feat_gap:0:SHORT:h24, feat_gap_fill_ratio:0:SHORT:h24, feat_gap_fill_ratio:1:SHORT:h20, feat_gap_fill_ratio:1:SHORT:h24, feat_hl_range:0:SHORT:h20, feat_hl_range:0:SHORT:h24, feat_hl_range:1:SHORT:h20, feat_hl_range:1:SHORT:h24, feat_hour_utc:0:SHORT:h15, feat_hour_utc:0:SHORT:h20, feat_hour_utc:0:SHORT:h24, feat_intraday_mom:1:SHORT:h24, feat_kc_width:1:SHORT:h15, feat_kc_width:1:SHORT:h20, feat_kc_width:1:SHORT:h24, feat_keltner_pos:1:SHORT:h20, feat_keltner_pos:1:SHORT:h24, feat_macd_12_26:2:SHORT:h12, feat_macd_12_26:2:SHORT:h15, feat_macd_12_26:2:SHORT:h20, feat_macd_12_26:2:SHORT:h24, feat_mean_rev_strength:0:SHORT:h24, feat_mean_rev_strength:1:SHORT:h24, feat_overnight_ret:0:SHORT:h20, feat_overnight_ret:0:SHORT:h24, feat_price_accel:1:SHORT:h20, feat_price_accel:1:SHORT:h24, feat_price_roc_5:1:SHORT:h20, feat_price_roc_5:1:SHORT:h24, feat_price_roc_5:2:SHORT:h24, feat_range_expansion:1:SHORT:h20, feat_range_expansion:1:SHORT:h24, feat_range_pos_20:2:SHORT:h12, feat_range_pos_20:2:SHORT:h15, feat_range_pos_20:2:SHORT:h20, feat_range_pos_20:2:SHORT:h24, feat_range_pos_50:2:SHORT:h12, feat_range_pos_50:2:SHORT:h15, feat_range_pos_50:2:SHORT:h20, feat_range_pos_50:2:SHORT:h24, feat_realized_vol_20:0:SHORT:h12, feat_realized_vol_20:0:SHORT:h15, feat_realized_vol_20:0:SHORT:h20, feat_realized_vol_20:0:SHORT:h24, feat_ret_10:1:SHORT:h20, feat_ret_10:1:SHORT:h24, feat_ret_10:2:SHORT:h20, feat_ret_10:2:SHORT:h24, feat_ret_1:1:SHORT:h24, feat_ret_1:2:SHORT:h24, feat_ret_20:1:SHORT:h15, feat_ret_20:1:SHORT:h20, feat_ret_20:1:SHORT:h24, feat_ret_20:2:SHORT:h20, feat_ret_20:2:SHORT:h24, feat_ret_3:1:SHORT:h20, feat_ret_3:1:SHORT:h24, feat_ret_5:1:SHORT:h20, feat_ret_5:1:SHORT:h24, feat_ret_5:2:SHORT:h24, feat_ret_autocorr:1:SHORT:h12, feat_ret_autocorr:1:SHORT:h15, feat_ret_autocorr:1:SHORT:h20, feat_ret_autocorr:1:SHORT:h24, feat_ret_sign_streak:2:SHORT:h24, feat_ret_vol:1:SHORT:h20, feat_ret_vol:1:SHORT:h24, feat_ret_vol:2:SHORT:h24, feat_rsi_divergence:0:SHORT:h20, feat_rsi_divergence:1:SHORT:h24, feat_session_mom:1:SHORT:h20, feat_session_mom:1:SHORT:h24, feat_session_mom:2:SHORT:h24, feat_squeeze:0:SHORT:h20, feat_squeeze:1:SHORT:h20, feat_squeeze:1:SHORT:h24, feat_stoch_d_14:2:SHORT:h12, feat_stoch_d_14:2:SHORT:h15, feat_stoch_d_14:2:SHORT:h20, feat_stoch_d_14:2:SHORT:h24, feat_stoch_k_14:2:SHORT:h12, feat_stoch_k_14:2:SHORT:h15, feat_stoch_k_14:2:SHORT:h20, feat_stoch_k_14:2:SHORT:h24, feat_time_since_high_20:0:SHORT:h12, feat_time_since_high_20:0:SHORT:h15, feat_time_since_high_20:0:SHORT:h20, feat_time_since_high_20:0:SHORT:h24, feat_time_since_low_20:1:SHORT:h12, feat_time_since_low_20:1:SHORT:h15, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_trend_neutral:1:SHORT:h12, feat_trend_neutral:1:SHORT:h15, feat_trend_slope_20:1:SHORT:h15, feat_trend_slope_20:1:SHORT:h20, feat_trend_slope_20:1:SHORT:h24, feat_trend_slope_20:2:SHORT:h12, feat_trend_slope_20:2:SHORT:h15, feat_trend_slope_20:2:SHORT:h20, feat_trend_slope_20:2:SHORT:h24, feat_trend_strength_20:2:SHORT:h24, feat_vol_breakout:1:SHORT:h24, feat_vol_breakout:2:SHORT:h15, feat_vol_breakout:2:SHORT:h20, feat_vol_breakout:2:SHORT:h24, feat_vol_breakout_strength:1:SHORT:h20, feat_vol_breakout_strength:1:SHORT:h24, feat_vol_contraction:0:SHORT:h24, feat_vol_contraction:1:SHORT:h12, feat_vol_contraction:1:SHORT:h15, feat_vol_contraction:2:SHORT:h24, feat_vol_regime:0:SHORT:h24, feat_vol_regime:1:SHORT:h12, feat_vol_regime:1:SHORT:h15, feat_vol_regime:2:SHORT:h24, feat_vol_roc_20:1:SHORT:h20, feat_vol_roc_20:1:SHORT:h24, feat_vol_roc_20:2:SHORT:h20, feat_vol_roc_20:2:SHORT:h24, feat_vol_sma_ratio:1:SHORT:h20, feat_vol_sma_ratio:1:SHORT:h24, feat_vol_trend:1:SHORT:h20, feat_vol_trend:1:SHORT:h24, feat_vol_trend:2:SHORT:h20, feat_vol_trend:2:SHORT:h24, feat_vwap_dist:1:SHORT:h20, feat_vwap_dist:1:SHORT:h24, feat_vwap_dist:2:SHORT:h12, feat_vwap_dist:2:SHORT:h15, feat_vwap_dist:2:SHORT:h20, feat_vwap_dist:2:SHORT:h24, feat_vwap_lower_dist:2:SHORT:h12, feat_vwap_lower_dist:2:SHORT:h15, feat_vwap_lower_dist:2:SHORT:h20, feat_vwap_lower_dist:2:SHORT:h24, feat_vwap_upper_dist:1:SHORT:h24, feat_vwap_upper_dist:2:SHORT:h12, feat_vwap_upper_dist:2:SHORT:h15, feat_vwap_upper_dist:2:SHORT:h20, feat_vwap_upper_dist:2:SHORT:h24, feat_williams_r_14:0:SHORT:h12, feat_williams_r_14:0:SHORT:h15, feat_williams_r_14:0:SHORT:h20, feat_williams_r_14:0:SHORT:h24, feat_zscore_20:1:SHORT:h20, feat_zscore_20:1:SHORT:h24, feat_zscore_20:2:SHORT:h12, feat_zscore_20:2:SHORT:h15, feat_zscore_20:2:SHORT:h20, feat_zscore_20:2:SHORT:h24
 - Armable pairs: BTCUSDC, ENAUSDC, ETHUSDC, FARTCOINUSDC, HYPEUSDC, KPEPEUSDC, LITUSDC, NEARUSDC, PUMPUSDC, SOLUSDC, SUIUSDC, WLDUSDC, XMRUSDC, XRPUSDC, ZECUSDC
-  - `feat_ext_vs_ma_50:2:SHORT:h24` edge=92.2b n=6208 breadth=40 validated=True prov=False armable=True (ok)
-  - `feat_time_since_low_20:2:SHORT:h24` edge=83.4b n=817 breadth=9 validated=True prov=False armable=True (ok)
-  - `feat_macd_12_26:2:SHORT:h24` edge=78.9b n=8390 breadth=40 validated=True prov=False armable=True (ok)
-  - `feat_ext_vs_ma_50:2:SHORT:h20` edge=74.7b n=6215 breadth=40 validated=True prov=False armable=True (ok)
-  - `feat_time_since_low_20:2:SHORT:h20` edge=72.6b n=817 breadth=9 validated=True prov=False armable=True (ok)
-  - `feat_ema_cross_10_20:2:SHORT:h24` edge=71.2b n=8161 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_macd_12_26:2:SHORT:h24` edge=114.2b n=7284 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_ema_cross_10_20:2:SHORT:h24` edge=102.9b n=7120 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_ext_vs_ma_50:2:SHORT:h24` edge=100.0b n=5991 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_macd_12_26:2:SHORT:h20` edge=97.7b n=7293 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_trend_slope_20:2:SHORT:h24` edge=86.1b n=7272 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_stoch_d_14:2:SHORT:h24` edge=85.7b n=8246 breadth=40 validated=True prov=False armable=True (ok)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
@@ -151,7 +151,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Green islands kept alive inside red lanes: 2
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h21` pnl=+2.42
   - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` pnl=+3.98
-- Tradable slices: native **48/49** | hip3 **18/20**
+- Tradable slices: native **53/54** | hip3 **18/20**
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 42
   - `feat_adx_14:2:LONG:h12` slice_pnl=-1.83
