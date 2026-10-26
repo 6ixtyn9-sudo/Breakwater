@@ -1,13 +1,5 @@
 [
   {
-    "pair": "XRPUSDC",
-    "pnl_zar": "3.3438",
-    "reason": "slice_gap",
-    "signal_id": "8abe43d3a3ce8433",
-    "slice_id": "feat_ret_20:2:LONG:h10",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "INJUSDC",
     "pnl_zar": "2.4946",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "8bc05330e810d66d",
     "slice_id": "feat_ret_10:2:SHORT:h24",
     "stopped_at": "2026-10-25T13:00:31+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "0.1019",
+    "reason": "slice_gap",
+    "signal_id": "9670e52ac53f6ad7",
+    "slice_id": "feat_time_since_low_20:1:SHORT:h20",
+    "stopped_at": "2026-10-26T12:01:13+00:00"
   }
 ]
