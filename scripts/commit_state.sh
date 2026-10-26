@@ -157,14 +157,34 @@ done
 # unlinks the plain .csv.  The loop above only stages files that still exist,
 # so that deletion was never committed and both 2026-W42.csv and its .gz
 # landed in the tree.  Stage removals of tracked files in the rotated dirs.
+removed=()
 for rotated_dir in localdata/research/paper_skip_log localdata/positioning; do
   if [ -d "$rotated_dir" ] || git ls-files --error-unmatch -- "$rotated_dir" >/dev/null 2>&1; then
     while IFS= read -r -d '' gone; do
       git rm -q --cached -- "$gone"
       owned+=("$gone")
+      removed+=("$gone")
     done < <(git ls-files -z --deleted -- "$rotated_dir" 2>/dev/null)
   fi
 done
+
+# Append-only weekly files (the positioning tape and the skip log) are merged
+# by row union when a push races, never restored wholesale: see
+# merge_append_log_on_conflict.py for the W43->W44 rotation that lost an hour.
+is_append_log() {
+  case "$1" in
+    localdata/positioning/*.csv|localdata/positioning/*.csv.gz) return 0 ;;
+    localdata/research/paper_skip_log/*.csv|localdata/research/paper_skip_log/*.csv.gz) return 0 ;;
+  esac
+  return 1
+}
+
+append_log_key() {
+  case "$1" in
+    localdata/positioning/*) printf '%s' "snapshot_hour,coin" ;;
+    *) printf '%s' "" ;;
+  esac
+}
 
 if git diff --cached --quiet; then
   echo "No Breakwater state changes"
@@ -236,8 +256,34 @@ for attempt in 1 2 3; do
         echo "::warning::merge_book_on_conflict.py failed; restoring role copy of $file"
         cp "$BACKUP_DIR/$file" "$file"
       fi
+    elif is_append_log "$file" && [ -f scripts/merge_append_log_on_conflict.py ] && [ -f "$file" ]; then
+      # Both sides appended their own hour to the same weekly file (or both
+      # packed the previous week from checkouts of different ages). Keep
+      # every row from both; the file on disk is origin's copy after reset.
+      if ! python3 scripts/merge_append_log_on_conflict.py \
+          --origin "$file" --mine "$BACKUP_DIR/$file" --out "$file" --key "$(append_log_key "$file")"; then
+        echo "::warning::merge_append_log_on_conflict.py failed; restoring role copy of $file"
+        cp "$BACKUP_DIR/$file" "$file"
+      fi
     else
       cp "$BACKUP_DIR/$file" "$file"
+    fi
+  done
+
+  # Re-apply the weekly rotation after the reset brought the plain previous
+  # week back from origin. Fold origin's plain rows into the packed copy first
+  # (origin may hold an hour this job's older checkout never saw), then drop
+  # the plain file so the .gz replaces it rather than sitting beside it.
+  for gone in "${removed[@]}"; do
+    [ -f "$gone" ] || continue
+    packed="${gone%.csv}.csv.gz"
+    if [ "$packed" != "$gone" ] && [ -f "$packed" ] && [ -f scripts/merge_append_log_on_conflict.py ]; then
+      if python3 scripts/merge_append_log_on_conflict.py \
+          --origin "$gone" --mine "$packed" --out "$packed" --key "$(append_log_key "$gone")"; then
+        rm -f -- "$gone"
+      else
+        echo "::warning::could not fold $gone into $packed; keeping both"
+      fi
     fi
   done
   rm -rf "$BACKUP_DIR"
