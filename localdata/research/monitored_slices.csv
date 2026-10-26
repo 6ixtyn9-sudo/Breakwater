@@ -1,7 +1,7 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
 feat_premium:2:SHORT:h24,PERP,feat_premium,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,,0,0,0,0,,0.007238,4456,0.294717,24,3.500,validated_walk_forward,False,True,22,0.564
 feat_macd_12_26:2:SHORT:h20,PERP,feat_macd_12_26,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,,0,0,0,0,,0.008135,7084,0.028452,20,3.500,validated_walk_forward,False,True,57,0.750
-feat_funding_cum_24:2:SHORT:h12,PERP,feat_funding_cum_24,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,,0,0,0,0,,0.005444,2758,0.135404,12,3.500,validated_walk_forward,False,True,22,0.579
+feat_funding_cum_24:2:SHORT:h12,PERP,feat_funding_cum_24,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,1793048400,1,0,1,-1.0301,,0.005444,2758,0.135404,12,3.500,validated_walk_forward,False,True,22,0.579
 feat_ema_cross_10_20:2:SHORT:h24,PERP,feat_ema_cross_10_20,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,1793044800,1,0,1,-1.6987,,0.008264,7019,0.067869,24,3.500,validated_walk_forward,False,True,53,0.697
 feat_vwap_dist:2:SHORT:h12,PERP,feat_vwap_dist,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,,0,0,0,0,,0.003020,8059,0.270804,12,3.500,validated_walk_forward,False,True,50,0.658
 feat_vwap_upper_dist:2:SHORT:h24,PERP,feat_vwap_upper_dist,2,SHORT,monitored,2026-10-26T09:37:41.222402+00:00,,0,0,0,0,,0.005519,7128,0.166649,24,3.500,validated_walk_forward,False,True,48,0.632
