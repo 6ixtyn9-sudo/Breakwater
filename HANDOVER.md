@@ -754,9 +754,13 @@ from fundingHistory, paid at the top of the hour).
 Kill switches: `BREAKWATER_POSITIONING_FEATURES=0` (no attach, all NaN),
 `BREAKWATER_POSITIONING_FUNDING_FETCH=0` (tape only).
 
-Known hole, not yet fixed: a held book row already `decayed` is reset to
-`monitored` on the next research run (`sync_book` final `else`); observed
-on `feat_cci_20:2:SHORT:h24` 10-24 and 10-26.
+Decay-reset hole fixed in PR #25 (held `decayed` rows are re-tested, not
+reset). Same PR memoised per-pair features in `monitor_book` (scan compute
+~22 min -> ~1 min); the scan still takes ~20 min because the per-pair
+`fundingHistory` fetch added in #24 is rate-limited (429s appear in the
+guardian pass since 09:17Z). Once the tape holds >= 200 hours (~2026-10-27
+03:00Z) set `BREAKWATER_POSITIONING_FUNDING_FETCH: "0"` in the paper job
+only; research keeps fetching the deep history nightly.
 
 ### Still open (not done here)
 
@@ -767,3 +771,32 @@ on `feat_cci_20:2:SHORT:h24` 10-24 and 10-26.
   be worth trading; USDC spot (20 bps) / perps (9 bps) do not.
 - Features beyond OHLCV: positioning set admitted 2026-10-26 (above); funding
   z-score vs own history, OI/volume ratio and deeper book levels not yet.
+
+## Decision: 2026-11-09 — positioning inputs pass or the pipeline stops
+
+Agreed 2026-10-26. The price-feature edge did not converge through the
+2026-10-18..25 freeze (19 closes, -3.73; book ~85% churn per run; SELL-only
+since the regime flip). Positioning features (#24) are the last input with a
+mechanism rather than a pattern. They go through the unchanged pipeline and
+are judged on 2026-11-09 by two criteria fixed now:
+
+- **A. survival** — at least 3 positioning slices
+  (`feat_funding_rate`, `feat_funding_cum_24`, `feat_premium`,
+  `feat_oi_chg_24`, `feat_oi_ret_div`, `feat_book_imb_5`) are in the book,
+  each held for >= 3 consecutive research runs. Research runs are the
+  distinct `validated_at` stamps on PERP rows of `monitored_slices.csv` in
+  git history (`sync_book` re-stamps every run).
+- **B. P&L** — >= 30 paper closes on positioning slices with total
+  `pnl_zar >= 0` (`paper_trade_log.csv`, `slice_id` prefix match).
+
+Both required. FAIL means stop, not tune. Baseline at decision time: 6
+positioning slices in book (all admitted 10-26 09:37Z, streak 1), 0 closes,
+1 open (`feat_funding_cum_24:2:SHORT:h12` XMR). Price-slice context: 56 in
+book, 16 held >= 3 runs.
+
+Deliberately not applied before the verdict: a p-value floor on admission.
+Of 180 validated slices on 10-26, 6 have p <= 0.05 and none of those are
+positioning slices, so a floor now would decide the experiment by the gate
+rather than the inputs. Revisit on 11-09 either way.
+
+No daily reads until then; check-ins 2026-10-30 and 2026-11-09.
