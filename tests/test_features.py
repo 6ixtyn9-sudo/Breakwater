@@ -6,6 +6,7 @@ from breakwater.features import (
     compute_price_features,
     forward_returns,
 )
+from breakwater.positioning_features import POSITIONING_FEATURE_COLUMNS
 
 
 def frame(n=120, seed=7):
@@ -26,7 +27,12 @@ def test_all_feature_columns_are_computed():
     for column in FEATURE_COLUMNS:
         assert column in featured.columns
     tail = featured.tail(30)
-    assert np.isfinite(tail[FEATURE_COLUMNS].to_numpy()).all()
+    # Price-state features are finite from candles alone; positioning
+    # features need pos_* sources (see test_positioning_features.py) and are
+    # NaN by design on a bare candle frame.
+    price_state = [c for c in FEATURE_COLUMNS if c not in POSITIONING_FEATURE_COLUMNS]
+    assert np.isfinite(tail[price_state].to_numpy()).all()
+    assert tail[POSITIONING_FEATURE_COLUMNS].isna().all().all()
 
 
 def test_forward_returns_shift_by_horizon():
