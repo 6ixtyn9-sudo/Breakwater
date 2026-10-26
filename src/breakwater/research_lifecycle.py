@@ -759,7 +759,13 @@ def sync_book(
             else:
                 status = MONITORED
                 summary["monitored"] += 1
-        elif prior and prior.get("status") == MONITORED:
+        elif prior and prior.get("status") in (MONITORED, DECAYED):
+            # A held row that is already decayed is re-tested, not reset:
+            # before 2026-10-26 it fell through to the final branch and came
+            # back as monitored on the next research run with the same
+            # losing record (feat_cci_20:2:SHORT:h24, 3 trades / -7.35, was
+            # re-admitted on 10-24 and 10-26). A returning slice with that
+            # record is decayed via memory; a held one must be too.
             last_signal = _coerce_int(prior.get("last_signal_bar"), 0)
             paper_trades = _coerce_int(prior.get("paper_trades"), 0)
             paper_pnl = float(prior.get("paper_pnl_zar") or 0)

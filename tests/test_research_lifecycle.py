@@ -1019,3 +1019,29 @@ def test_revalidated_slice_is_not_duplicated_by_carry(tmp_path, monkeypatch):
     assert [r["slice_id"] for r in rows] == ["feat_a:2:LONG:h12"]
     assert rows[0]["status"] == DECAYED  # the verdict is no longer shadowed by a monitored twin
     assert summary["carry_skipped_promoted"] == 1
+
+
+def test_held_decayed_row_is_retested_not_reset_on_revalidation(tmp_path, monkeypatch):
+    """A held row already marked decayed used to fall through to the final
+    branch of sync_book and come back as monitored on the next run with the
+    same losing record (feat_cci_20:2:SHORT:h24, 10-24 and 10-26). It must get
+    the same test a monitored row gets: still losing -> still decayed."""
+    monkeypatch.setenv("BREAKWATER_MIN_NET_EDGE", "0")
+    monkeypatch.setenv("BREAKWATER_PROMOTION_MULTI_HORIZON_MIN_PASSES", "1")
+    from breakwater.research_lifecycle import _write_book
+
+    still_losing = _book_row("feat_a:2:SHORT:h24", status=DECAYED, trades="3", pnl="-7.35")
+    still_losing["paper_wins"], still_losing["paper_losses"] = "0", "3"
+    # Decayed for staleness (2 trades), signalled again since: recovers.
+    was_stale = _book_row("feat_b:2:SHORT:h24", status=DECAYED, trades="2", pnl="-4.86")
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    _write_book(book_path, [still_losing, was_stale])
+    write_validated(validated_path, [_perp_validated(r["slice_id"]) for r in (still_losing, was_stale)])
+
+    summary = sync_book(validated_path=validated_path, book_path=book_path, now=datetime.now(timezone.utc))
+    rows = {r["slice_id"]: r for r in read_book(book_path)}
+    assert rows["feat_a:2:SHORT:h24"]["status"] == DECAYED
+    assert rows["feat_a:2:SHORT:h24"]["paper_trades"] == "3"
+    assert rows["feat_b:2:SHORT:h24"]["status"] == MONITORED
+    assert summary["decayed"] == 1 and summary["monitored"] == 1
