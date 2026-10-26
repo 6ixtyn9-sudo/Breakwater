@@ -223,3 +223,50 @@ def test_venue_cost_gate_can_be_disabled(monkeypatch):
         server_time=datetime.now(timezone.utc),
     )
     assert signals
+
+
+def test_monitor_book_computes_features_once_per_pair(monkeypatch):
+    """54 book rows x 128 pairs x ~270 ms per feature pass was ~30 min per
+    hourly scan (2026-10-26 Actions log: scan 08:00:33 -> 08:27:12). The
+    per-pair work must not scale with the number of book rows."""
+    import numpy as np
+    import pandas as pd
+
+    from breakwater import monitor as mon
+
+    calls = {"features": 0, "regime": 0}
+    real_features = mon.compute_price_features
+    real_regime = mon.regime_of
+
+    def counting_features(frame):
+        calls["features"] += 1
+        return real_features(frame)
+
+    def counting_regime(frame):
+        calls["regime"] += 1
+        return real_regime(frame)
+
+    monkeypatch.setattr(mon, "compute_price_features", counting_features)
+    monkeypatch.setattr(mon, "regime_of", counting_regime)
+
+    rng = np.random.default_rng(1)
+    frames = {}
+    for pair in ("AAAUSDC", "BBBUSDC", "CCCUSDC"):
+        close = 100 + np.cumsum(rng.normal(0, 0.5, 260))
+        frames[pair] = pd.DataFrame({
+            "start": pd.date_range("2026-10-01", periods=260, freq="h", tz="UTC"),
+            "open": close - 0.2, "high": close + 0.4, "low": close - 0.4,
+            "close": close, "volume": rng.uniform(10, 50, 260),
+        })
+    book = []
+    for i, feature in enumerate(("feat_ret_5", "feat_rsi_14", "feat_ret_5", "feat_cci_20", "feat_rsi_14")):
+        for state in (0, 1, 2):
+            book.append({
+                "slice_id": f"{feature}:{state}:LONG:h24", "kind": "PERP", "feature": feature,
+                "state": str(state), "side": "LONG", "status": "monitored",
+                "mean_ret_costadj": "0.005", "horizon_bars": "24", "stop_atr_mult": "3.5",
+                "p_value": "0.01", "n": "500", "hostile_unproven": "False",
+            })
+    mon.monitor_book(book, {"PERP": frames}, server_time=pd.Timestamp("2026-10-11T20:30:00Z").to_pydatetime())
+    assert calls["features"] == 3, calls  # once per pair, not 15 x 3
+    assert calls["regime"] == 3, calls

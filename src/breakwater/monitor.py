@@ -232,6 +232,34 @@ def monitor_book(
     blocked: list[dict] = []
     seen = set()
 
+    # Per-pair work is independent of the book row, so do it once per pair.
+    # Before this cache the loop below recomputed the full feature set for
+    # every (book row x pair): ~270 ms x 54 rows x 128 pairs = ~30 min per
+    # hourly scan on 2026-10-26, which is why the paper job's lag grew from
+    # 6 min to 38 min as the book grew from 6 to 55 rows and the hourly jobs
+    # began overlapping. Memoised, the same scan is under a minute.
+    featured_cache: dict[tuple[str, str], pd.DataFrame] = {}
+    regime_cache: dict[tuple[str, str], str] = {}
+    state_cache: dict[tuple[str, str, str], tuple] = {}
+
+    def _featured(kind: str, pair: str, frame: pd.DataFrame) -> pd.DataFrame:
+        key = (kind, pair)
+        if key not in featured_cache:
+            featured_cache[key] = compute_price_features(frame)
+        return featured_cache[key]
+
+    def _regime(kind: str, pair: str, frame: pd.DataFrame) -> str:
+        key = (kind, pair)
+        if key not in regime_cache:
+            regime_cache[key] = regime_of(frame)
+        return regime_cache[key]
+
+    def _state(kind: str, pair: str, feature: str, featured: pd.DataFrame) -> tuple:
+        key = (kind, pair, feature)
+        if key not in state_cache:
+            state_cache[key] = _latest_state(featured, feature)
+        return state_cache[key]
+
     for row in book_rows:
         if row.get("status") != "monitored":
             continue
@@ -270,9 +298,9 @@ def monitor_book(
             if frame is None or frame.empty or len(frame) < 60:
                 continue
 
-            regime = regime_of(frame)
-            featured = compute_price_features(frame)
-            latest_state, latest_row = _latest_state(featured, feature)
+            regime = _regime(kind, pair, frame)
+            featured = _featured(kind, pair, frame)
+            latest_state, latest_row = _state(kind, pair, feature, featured)
             if latest_state != state:
                 continue
 
