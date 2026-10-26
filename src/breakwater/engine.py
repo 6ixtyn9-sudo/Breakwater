@@ -49,6 +49,7 @@ from breakwater.models import Candle, Lifecycle, PairType, Side
 from breakwater.monitor import SliceSignal, monitor_book, regime_of, signal_pair_type
 from breakwater.paper_trade import append_log, read_positions, run_paper_cycle
 from breakwater.perpdata import fetch_perp_candles, fetch_perp_candles_for_pair, pair_to_coin
+from breakwater.positioning_features import POSITIONING_FEATURE_COLUMNS, PositioningContext
 from breakwater.promotion import PromotionRegistry
 from breakwater.regime_tracker import (
     compute_regime_snapshot,
@@ -427,6 +428,14 @@ class BreakwaterEngine:
         spot_count = max(60, min(5000, spot_count))
         perp_count = max(60, min(5000, perp_count))
 
+        # Positioning inputs (funding / basis / OI / book) for native perps.
+        # Loaded once per call; attached as pos_* columns so the feature pass
+        # can derive the positioning features. Advisory: a failure here leaves
+        # the columns NaN and the price-state features untouched.
+        positioning = PositioningContext(
+            self.settings.data_dir, now=server_time, lookback_hours=perp_count
+        )
+
         for pair, kind in targets:
             if kind == "PERP":
                 coin = pair_to_coin(pair) or (pair if ":" in pair else None)
@@ -451,10 +460,13 @@ class BreakwaterEngine:
                     )
                 frame = candle_frame(candles)
                 frame["symbol"] = pair.upper()
+                if kind == "PERP" and ":" not in pair:
+                    frame = positioning.attach(pair, kind, frame)
                 frames[pair.upper()] = frame
             except Exception as exc:
                 errors[pair.upper()] = f"{type(exc).__name__}: {exc}"[:140]
 
+        self._positioning_summary = positioning.summary()
         return frames, errors
 
     def guardian(self) -> dict:
@@ -1750,6 +1762,10 @@ class BreakwaterEngine:
                 "untested": sum(1 for row in asset_edges if row.asset_status == "untested"),
             },
             "short_audit": short_audit,
+            "positioning": getattr(self, "_positioning_summary", None),
+            "positioning_validated": sum(
+                1 for row in validated if str(row.feature) in POSITIONING_FEATURE_COLUMNS
+            ),
             "fail_top": fail_tokens.most_common(6),
             "knobs": {
                 "BREAKWATER_MIN_NET_EDGE": min_net_edge,

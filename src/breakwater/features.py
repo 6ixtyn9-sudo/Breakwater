@@ -98,6 +98,17 @@ FEATURE_COLUMNS = [
     "feat_range_pos_50",    # (close - low50)/(high50 - low50): longer range pos
 ]
 
+# Positioning inputs (funding, basis, OI, book) — perps only, NaN elsewhere.
+# Defined in positioning_features.py; admitted to the same pool so a
+# positioning slice is discovered, validated, booked and traded exactly like a
+# price-state slice. Decision 2026-10-26, after the seven-day freeze.
+from breakwater.positioning_features import (  # noqa: E402
+    POSITIONING_FEATURE_COLUMNS,
+    compute_positioning_features,
+)
+
+FEATURE_COLUMNS = FEATURE_COLUMNS + POSITIONING_FEATURE_COLUMNS
+
 
 def candle_frame(candles) -> pd.DataFrame:
     frame = pd.DataFrame([
@@ -487,6 +498,10 @@ def compute_price_features(frame: pd.DataFrame) -> pd.DataFrame:
     low_50 = low.rolling(50).min()
     range_50 = (high_50 - low_50).replace(0, np.nan)
     df["feat_range_pos_50"] = (close - low_50) / range_50
+
+    # Positioning features ride on pos_* columns attached by the engine's
+    # frame loader; absent columns (spot, HIP-3, tests) give NaN features.
+    df = compute_positioning_features(df)
 
     return df
 

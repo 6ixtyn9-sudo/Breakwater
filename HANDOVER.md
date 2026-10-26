@@ -712,6 +712,52 @@ commands, nothing else touched.
   code is inert.
 - Budget: ~178 rows × ~250 bytes × 24 h ≈ 1 MB/week plain, ~100 KB gzipped.
 
+### Decision 2026-10-26 — positioning inputs admitted as features
+
+Window read (2026-10-18 13:00Z → 10-25 13:00Z): 19 closes, −3.73, 10 wins;
+book 18→6→31→52→28→40→51→55→54 with ~85% turnover a night and no slice
+holding three runs on window trades; the validated set's long/short mix went
+50/3 → … → 0/152 following the regime label. Operator: "straight to
+features" — no separate study.
+
+`src/breakwater/positioning_features.py` adds six perp-only features to
+`FEATURE_COLUMNS` (NaN on spot / HIP-3 / bare frames, which `bin_states`
+reads as no state):
+
+| feature | source | meaning |
+|---|---|---|
+| `feat_funding_rate` | fundingHistory (tape fallback) | rate paid at bar open; >0 longs pay |
+| `feat_funding_cum_24` | same | 24-bar sum, persistent crowding |
+| `feat_premium` | same | mark vs oracle, basis proxy |
+| `feat_oi_chg_24` | tape | OI notional / 24 bars ago − 1 |
+| `feat_oi_ret_div` | tape + close | sign(ret_24) × oi_chg_24 |
+| `feat_book_imb_5` | tape | (bid−ask)/(bid+ask) depth, 5 levels |
+
+Alignment: fundingHistory `time` T → bar opening at T. Tape `snapshot_hour` H:
+`funding_hourly` → bar H+1 (it pays at H+1), premium/OI/book → bar H.
+`BreakwaterEngine._frames` builds one `PositioningContext` per call (tape
+loaded once, one `fundingHistory` fetch per native perp pair, ≤2 pages for
+1000 bars) and attaches `pos_*` columns; `compute_price_features` derives
+the features. Everything downstream — discovery, validation, book, paper,
+live state matching — is untouched. `research_done` carries `positioning`
+(tape rows/coins, attached pairs, errors) and `positioning_validated`.
+
+Expectations: funding/premium features have the full candle history from
+the first run. OI/book features need 200 tape hours per coin before
+`bin_states` emits a state (tape began 2026-10-18 15:00Z → first states
+~2026-10-27 03:00Z) and will fail temporal validation until the tape is
+weeks long; they are in the pool so they qualify on their own evidence.
+`paper.yml` must run `positioning-snapshot` *before* the shadow scan so the
+forming bar has the hour's OI/book row (the forming bar's funding comes
+from fundingHistory, paid at the top of the hour).
+
+Kill switches: `BREAKWATER_POSITIONING_FEATURES=0` (no attach, all NaN),
+`BREAKWATER_POSITIONING_FUNDING_FETCH=0` (tape only).
+
+Known hole, not yet fixed: a held book row already `decayed` is reset to
+`monitored` on the next research run (`sync_book` final `else`); observed
+on `feat_cci_20:2:SHORT:h24` 10-24 and 10-26.
+
 ### Still open (not done here)
 
 - Cross-sectional *state* binning (rank the feature across symbols per bar
@@ -719,4 +765,5 @@ commands, nothing else touched.
   computation at trade time, so left as a follow-up.
 - Venue routing: ZAR spot at 70 bps round trip needs ≥ 100 bps raw edge to
   be worth trading; USDC spot (20 bps) / perps (9 bps) do not.
-- Features beyond OHLCV (funding, basis, OI, order-book imbalance).
+- Features beyond OHLCV: positioning set admitted 2026-10-26 (above); funding
+  z-score vs own history, OI/volume ratio and deeper book levels not yet.
