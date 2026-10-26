@@ -1,21 +1,5 @@
 [
   {
-    "pair": "ASTERUSDC",
-    "pnl_zar": "2.2926",
-    "reason": "slice_gap",
-    "signal_id": "e143f0537d6b408e",
-    "slice_id": "feat_ret_5:0:LONG:h16",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
-    "pair": "ETHUSDC",
-    "pnl_zar": "4.3453",
-    "reason": "slice_gap",
-    "signal_id": "db01b98f263d93a0",
-    "slice_id": "feat_ret_5:0:LONG:h16",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "TAOUSDC",
     "pnl_zar": "2.2534",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "5e34904a2a33fcf1",
     "slice_id": "feat_time_since_low_20:1:SHORT:h20",
     "stopped_at": "2026-10-26T13:01:18+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-0.0325",
+    "reason": "trail_stop",
+    "signal_id": "ae66b30667e9ee3b",
+    "slice_id": "feat_ret_20:2:SHORT:h20",
+    "stopped_at": "2026-10-26T16:01:10+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-4.2143",
+    "reason": "stop",
+    "signal_id": "470e37930c6670eb",
+    "slice_id": "feat_ret_vol:2:SHORT:h20",
+    "stopped_at": "2026-10-26T16:01:10+00:00"
   }
 ]
