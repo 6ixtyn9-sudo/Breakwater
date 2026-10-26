@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-10-26 03:00 UTC
+# Breakwater daily print — 2026-10-26 03:14 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -11,7 +11,7 @@
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **430.63 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **432.91 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -59,14 +59,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 8 open, stop-risk **20.77 ZAR**
-  - FARTCOINUSDC SELL ntl=116 risk=4.55 bars=13 stop=0.1292025000000000060 peak=0.1265
-  - UNIUSDC SELL ntl=116 risk=4.47 bars=4 stop=7.243525000000000135 peak=7.0405
-  - HYPEUSDC SELL ntl=116 risk=2.76 bars=12 stop=78.29949999999999790 peak=77.475
-  - XRPUSDC SELL ntl=116 risk=2.41 bars=5 stop=1.3269749999999999155 peak=1.3025
-  - SOLUSDC SELL ntl=116 risk=2.31 bars=4 stop=103.65750000000000005 peak=102.01
-  - ETHUSDC SELL ntl=116 risk=2.23 bars=13 stop=2383.7500000000001390 peak=2364.3
-  - BTCUSDC SELL ntl=116 risk=2.03 bars=5 stop=81942.32750 peak=80692.0
-  - SUIUSDC SELL ntl=116 risk=0.00 bars=24 stop=0.93951999999999999750 peak=0.94051
+  - FARTCOINUSDC SELL ntl=116 risk=4.55 bars=12 stop=0.1292025000000000060 peak=0.1265
+  - UNIUSDC SELL ntl=116 risk=4.47 bars=3 stop=7.243525000000000135 peak=7.0405
+  - HYPEUSDC SELL ntl=116 risk=2.76 bars=11 stop=78.29949999999999790 peak=77.475
+  - XRPUSDC SELL ntl=116 risk=2.41 bars=4 stop=1.3269749999999999155 peak=1.3025
+  - SOLUSDC SELL ntl=116 risk=2.31 bars=3 stop=103.65750000000000005 peak=102.01
+  - ETHUSDC SELL ntl=116 risk=2.23 bars=12 stop=2383.7500000000001390 peak=2364.3
+  - BTCUSDC SELL ntl=116 risk=2.03 bars=4 stop=81942.32750 peak=80692.0
+  - SUIUSDC SELL ntl=116 risk=0.00 bars=23 stop=0.93951999999999999750 peak=0.94051
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -76,7 +76,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **20.77 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **20.77 / 162.43 ZAR | 14.2% | ok**
 - Remaining: 139.3429 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 29, "skipped": 29, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 41, "signals": 136, "skipped": 95, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 28, "skipped": 28, "slice_full": 0, "slot_full": 0}, "native": {"lane_gate_blocked": 0, "opened": 0, "pair_held": 40, "signals": 108, "skipped": 68, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **FARTCOINUSDC** 4.5486 ZAR
 - positions without bars: 0 | replayed: 16 | invalid: 0
 
@@ -132,22 +132,23 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **bear** | breadth bear=0.6875 bull=0.0 neutral=0.3125 | symbols=16
-- confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 1 / bull 0
-- as_of: 2026-10-26T02:35:32Z
-- Defensive gate: off (no confirmed flip)
+- Label: **bear** | breadth bear=0.5625 bull=0.0 neutral=0.4375 | symbols=16
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 2 / bull 0
+- as_of: 2026-10-26T00:09:24Z
+- Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
-- confirmed_bear: **False** | promote_env: ON
-- candidates: 832 | eligible: 201 | observations: 649 | armable: **0**
-- No armable short today (no validated SHORT slice clears the floor).
-  - `feat_macd_12_26:2:SHORT:h24` edge=98.6b n=6942 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_ext_vs_ma_50:2:SHORT:h24` edge=90.0b n=5783 breadth=40 validated=False prov=False armable=False (regime_confounded)
-  - `feat_ema_cross_10_20:2:SHORT:h24` edge=89.2b n=6857 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_macd_12_26:2:SHORT:h20` edge=86.9b n=7027 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_vol_trend:2:SHORT:h24` edge=84.3b n=7860 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_ret_vol:2:SHORT:h24` edge=79.1b n=7724 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
+- confirmed_bear: **True** | promote_env: ON
+- candidates: 832 | eligible: 299 | observations: 1440 | armable: **1121**
+- Armable slices: feat_adx_14:0:SHORT:h24, feat_adx_14:1:SHORT:h15, feat_adx_14:1:SHORT:h20, feat_adx_14:1:SHORT:h24, feat_atr_norm_ext:1:SHORT:h20, feat_atr_norm_ext:1:SHORT:h24, feat_atr_norm_ext:2:SHORT:h24, feat_atr_percent:1:SHORT:h12, feat_atr_percent:1:SHORT:h15, feat_atr_percent:1:SHORT:h20, feat_atr_percent:1:SHORT:h24, feat_atr_ratio:1:SHORT:h15, feat_atr_ratio:1:SHORT:h20, feat_atr_ratio:1:SHORT:h24, feat_atr_ratio:2:SHORT:h24, feat_bb_pos_20:1:SHORT:h20, feat_bb_pos_20:1:SHORT:h24, feat_bb_pos_20:2:SHORT:h12, feat_bb_pos_20:2:SHORT:h15, feat_bb_pos_20:2:SHORT:h20, feat_bb_pos_20:2:SHORT:h24, feat_bb_width_20:0:SHORT:h12, feat_bb_width_20:0:SHORT:h15, feat_bb_width_20:0:SHORT:h20, feat_bb_width_20:0:SHORT:h24, feat_bb_width_20:1:SHORT:h20, feat_bb_width_20:1:SHORT:h24, feat_buy_vol_ratio:1:SHORT:h24, feat_cci_20:2:SHORT:h12, feat_cci_20:2:SHORT:h15, feat_cci_20:2:SHORT:h20, feat_cci_20:2:SHORT:h24, feat_close_pos_ma:1:SHORT:h20, feat_close_pos_ma:1:SHORT:h24, feat_close_position:1:SHORT:h24, feat_donchian_break:2:SHORT:h12, feat_donchian_break:2:SHORT:h15, feat_donchian_break:2:SHORT:h20, feat_donchian_break:2:SHORT:h24, feat_donchian_width_20:0:SHORT:h24, feat_donchian_width_20:1:SHORT:h20, feat_donchian_width_20:1:SHORT:h24, feat_ema_cross_10_20:2:SHORT:h20, feat_ema_cross_10_20:2:SHORT:h24, feat_ext_strength:2:SHORT:h12, feat_ext_strength:2:SHORT:h15, feat_ext_strength:2:SHORT:h20, feat_ext_strength:2:SHORT:h24, feat_ext_vs_ma_10:1:SHORT:h20, feat_ext_vs_ma_10:1:SHORT:h24, feat_ext_vs_ma_20:1:SHORT:h20, feat_ext_vs_ma_20:1:SHORT:h24, feat_ext_vs_ma_20:2:SHORT:h15, feat_ext_vs_ma_20:2:SHORT:h20, feat_ext_vs_ma_20:2:SHORT:h24, feat_ext_vs_ma_50:2:SHORT:h24, feat_gap:0:SHORT:h15, feat_gap:0:SHORT:h20, feat_gap:0:SHORT:h24, feat_gap_fill_ratio:0:SHORT:h24, feat_gap_fill_ratio:1:SHORT:h20, feat_gap_fill_ratio:1:SHORT:h24, feat_hl_range:1:SHORT:h20, feat_hl_range:1:SHORT:h24, feat_intraday_mom:1:SHORT:h24, feat_kc_width:1:SHORT:h15, feat_kc_width:1:SHORT:h20, feat_kc_width:1:SHORT:h24, feat_keltner_pos:1:SHORT:h20, feat_keltner_pos:1:SHORT:h24, feat_macd_12_26:2:SHORT:h12, feat_macd_12_26:2:SHORT:h15, feat_macd_12_26:2:SHORT:h20, feat_macd_12_26:2:SHORT:h24, feat_mean_rev_strength:0:SHORT:h24, feat_mean_rev_strength:1:SHORT:h24, feat_overnight_ret:0:SHORT:h20, feat_overnight_ret:0:SHORT:h24, feat_price_accel:1:SHORT:h20, feat_price_accel:1:SHORT:h24, feat_price_roc_5:1:SHORT:h20, feat_price_roc_5:1:SHORT:h24, feat_range_expansion:1:SHORT:h20, feat_range_expansion:1:SHORT:h24, feat_range_pos_20:2:SHORT:h12, feat_range_pos_20:2:SHORT:h15, feat_range_pos_20:2:SHORT:h20, feat_range_pos_20:2:SHORT:h24, feat_range_pos_50:2:SHORT:h12, feat_range_pos_50:2:SHORT:h15, feat_range_pos_50:2:SHORT:h20, feat_range_pos_50:2:SHORT:h24, feat_realized_vol_20:0:SHORT:h12, feat_realized_vol_20:0:SHORT:h15, feat_realized_vol_20:0:SHORT:h20, feat_realized_vol_20:0:SHORT:h24, feat_ret_10:1:SHORT:h20, feat_ret_10:1:SHORT:h24, feat_ret_10:2:SHORT:h20, feat_ret_10:2:SHORT:h24, feat_ret_1:1:SHORT:h24, feat_ret_20:1:SHORT:h15, feat_ret_20:1:SHORT:h20, feat_ret_20:1:SHORT:h24, feat_ret_20:2:SHORT:h20, feat_ret_20:2:SHORT:h24, feat_ret_3:1:SHORT:h20, feat_ret_3:1:SHORT:h24, feat_ret_5:1:SHORT:h20, feat_ret_5:1:SHORT:h24, feat_ret_autocorr:1:SHORT:h12, feat_ret_autocorr:1:SHORT:h15, feat_ret_autocorr:1:SHORT:h20, feat_ret_autocorr:1:SHORT:h24, feat_ret_vol:1:SHORT:h20, feat_ret_vol:1:SHORT:h24, feat_ret_vol:2:SHORT:h24, feat_rsi_divergence:0:SHORT:h20, feat_rsi_divergence:1:SHORT:h24, feat_session_mom:1:SHORT:h20, feat_session_mom:1:SHORT:h24, feat_squeeze:0:SHORT:h20, feat_squeeze:1:SHORT:h20, feat_squeeze:1:SHORT:h24, feat_stoch_d_14:2:SHORT:h12, feat_stoch_d_14:2:SHORT:h15, feat_stoch_d_14:2:SHORT:h20, feat_stoch_d_14:2:SHORT:h24, feat_stoch_k_14:2:SHORT:h12, feat_stoch_k_14:2:SHORT:h15, feat_stoch_k_14:2:SHORT:h20, feat_stoch_k_14:2:SHORT:h24, feat_time_since_high_20:0:SHORT:h12, feat_time_since_high_20:0:SHORT:h15, feat_time_since_high_20:0:SHORT:h20, feat_time_since_high_20:0:SHORT:h24, feat_time_since_low_20:1:SHORT:h12, feat_time_since_low_20:1:SHORT:h15, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_trend_neutral:1:SHORT:h12, feat_trend_neutral:1:SHORT:h15, feat_trend_slope_20:1:SHORT:h15, feat_trend_slope_20:1:SHORT:h20, feat_trend_slope_20:1:SHORT:h24, feat_trend_slope_20:2:SHORT:h12, feat_trend_slope_20:2:SHORT:h15, feat_trend_slope_20:2:SHORT:h20, feat_trend_slope_20:2:SHORT:h24, feat_trend_strength_20:2:SHORT:h24, feat_vol_breakout:1:SHORT:h24, feat_vol_breakout:2:SHORT:h15, feat_vol_breakout:2:SHORT:h20, feat_vol_breakout:2:SHORT:h24, feat_vol_breakout_strength:1:SHORT:h20, feat_vol_breakout_strength:1:SHORT:h24, feat_vol_contraction:0:SHORT:h24, feat_vol_contraction:1:SHORT:h12, feat_vol_contraction:1:SHORT:h15, feat_vol_contraction:2:SHORT:h24, feat_vol_regime:0:SHORT:h24, feat_vol_regime:1:SHORT:h12, feat_vol_regime:1:SHORT:h15, feat_vol_regime:2:SHORT:h24, feat_vol_roc_20:1:SHORT:h20, feat_vol_roc_20:1:SHORT:h24, feat_vol_roc_20:2:SHORT:h20, feat_vol_roc_20:2:SHORT:h24, feat_vol_sma_ratio:1:SHORT:h20, feat_vol_sma_ratio:1:SHORT:h24, feat_vol_sma_ratio:2:SHORT:h24, feat_vol_trend:1:SHORT:h20, feat_vol_trend:1:SHORT:h24, feat_vol_trend:2:SHORT:h20, feat_vol_trend:2:SHORT:h24, feat_vwap_dist:1:SHORT:h20, feat_vwap_dist:1:SHORT:h24, feat_vwap_dist:2:SHORT:h12, feat_vwap_dist:2:SHORT:h15, feat_vwap_dist:2:SHORT:h20, feat_vwap_dist:2:SHORT:h24, feat_vwap_lower_dist:1:SHORT:h20, feat_vwap_lower_dist:1:SHORT:h24, feat_vwap_lower_dist:2:SHORT:h12, feat_vwap_lower_dist:2:SHORT:h15, feat_vwap_lower_dist:2:SHORT:h20, feat_vwap_lower_dist:2:SHORT:h24, feat_vwap_upper_dist:1:SHORT:h24, feat_vwap_upper_dist:2:SHORT:h12, feat_vwap_upper_dist:2:SHORT:h15, feat_vwap_upper_dist:2:SHORT:h20, feat_vwap_upper_dist:2:SHORT:h24, feat_williams_r_14:0:SHORT:h12, feat_williams_r_14:0:SHORT:h15, feat_williams_r_14:0:SHORT:h20, feat_williams_r_14:0:SHORT:h24, feat_zscore_20:1:SHORT:h20, feat_zscore_20:1:SHORT:h24, feat_zscore_20:2:SHORT:h12, feat_zscore_20:2:SHORT:h15, feat_zscore_20:2:SHORT:h20, feat_zscore_20:2:SHORT:h24
+- Armable pairs: BTCUSDC, ENAUSDC, ETHUSDC, FARTCOINUSDC, HYPEUSDC, KPEPEUSDC, LITUSDC, NEARUSDC, PUMPUSDC, SOLUSDC, SUIUSDC, UNIUSDC, WLDUSDC, XMRUSDC, XRPUSDC, ZECUSDC
+  - `feat_macd_12_26:2:SHORT:h24` edge=114.2b n=7284 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_ema_cross_10_20:2:SHORT:h24` edge=102.9b n=7120 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_ext_vs_ma_50:2:SHORT:h24` edge=100.0b n=5991 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_macd_12_26:2:SHORT:h20` edge=97.7b n=7293 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_trend_slope_20:2:SHORT:h24` edge=86.1b n=7272 breadth=40 validated=True prov=False armable=True (ok)
+  - `feat_stoch_d_14:2:SHORT:h24` edge=85.7b n=8246 breadth=40 validated=True prov=False armable=True (ok)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
@@ -227,10 +228,10 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-10-26T02:07:56: errors=0 signals=165 regime_blocked=194
-- this cycle: closed=0 new_signals=165 skipped=124 slot_full=0 slice_full=0 pair_held=41
-- Action funnel: regime_blocked=194 | lane_gate_blocked=4 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=41 | slot_full=0 | skipped=124
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 4, "pair_held": 41, "regime_blocked": 194, "skipped": 124, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-10-26T01:08:19: errors=0 signals=136 regime_blocked=178
+- this cycle: closed=0 new_signals=136 skipped=96 slot_full=0 slice_full=0 pair_held=40
+- Action funnel: regime_blocked=178 | lane_gate_blocked=4 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=40 | slot_full=0 | skipped=96
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "lane_gate_blocked": 4, "pair_held": 40, "regime_blocked": 178, "skipped": 96, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=20 blocks=43
 - aggregate_risk: ok open=20.7669 cap=162.4340 used=0.1422 remaining=139.3429 replayed=16 no_new_bars=0
 - pair_errors: []
