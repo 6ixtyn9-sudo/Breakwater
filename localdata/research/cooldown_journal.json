@@ -1,13 +1,5 @@
 [
   {
-    "pair": "INJUSDC",
-    "pnl_zar": "2.4946",
-    "reason": "slice_gap",
-    "signal_id": "0730c5288e4fa303",
-    "slice_id": "feat_ext_vs_ma_10:2:LONG:h15",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "ASTERUSDC",
     "pnl_zar": "2.2926",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "9670e52ac53f6ad7",
     "slice_id": "feat_time_since_low_20:1:SHORT:h20",
     "stopped_at": "2026-10-26T12:01:13+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-0.0845",
+    "reason": "trail_stop",
+    "signal_id": "5e34904a2a33fcf1",
+    "slice_id": "feat_time_since_low_20:1:SHORT:h20",
+    "stopped_at": "2026-10-26T13:01:18+00:00"
   }
 ]
