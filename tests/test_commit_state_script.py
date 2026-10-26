@@ -246,3 +246,94 @@ def test_research_race_keeps_own_composition_and_takes_paper_counters(tmp_path):
     assert book["A:0:LONG:h24"]["mean_ret_costadj"] == "0.007"
     assert book["A:0:LONG:h24"]["paper_trades"] == "3"
     assert book["A:0:LONG:h24"]["status"] == "cooldown"
+
+
+# ---------------------------------------------------------------------------
+# Append-only tape races (positioning / skip log)
+# ---------------------------------------------------------------------------
+
+TAPE_HEADER = "snapshot_at,snapshot_hour,coin\n"
+W44 = "localdata/positioning/2026-W44.csv"
+W43 = "localdata/positioning/2026-W43.csv"
+
+
+def _init_origin_with_files(tmp_path: Path, files: dict[str, str]) -> tuple[Path, Path]:
+    origin = tmp_path / "origin.git"
+    work = tmp_path / "work"
+    subprocess.run(["git", "init", "--bare", "-b", "main", str(origin)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(work)], check=True, capture_output=True)
+    _git(work, "remote", "add", "origin", str(origin))
+    (work / "scripts").mkdir()
+    for name in ("commit_state.sh", "merge_book_on_conflict.py", "merge_append_log_on_conflict.py"):
+        (work / "scripts" / name).write_text((SCRIPT.parent / name).read_text())
+    for rel, text in files.items():
+        path = work / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    _git(work, "add", "-A")
+    _git(work, "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-m", "init")
+    _git(work, "push", "-u", "origin", "main")
+    return origin, work
+
+
+def _origin_text(work: Path, rel: str) -> str:
+    _git(work, "fetch", "-q", "origin", "main")
+    return _git(work, "show", f"origin/main:{rel}")
+
+
+def _origin_tracks(work: Path, rel: str) -> bool:
+    _git(work, "fetch", "-q", "origin", "main")
+    return subprocess.run(["git", "cat-file", "-e", f"origin/main:{rel}"], cwd=work).returncode == 0
+
+
+def test_paper_race_unions_tape_hours_instead_of_replacing(tmp_path):
+    """Two overlapping paper jobs each append their own hour to the open week.
+    The later push must keep both hours (2026-10-26: hour 00:00 was lost)."""
+    _, work = _init_origin_with_files(tmp_path, {
+        W44: TAPE_HEADER + "a,2026-10-26T00:00Z,BTC\n",
+        "localdata/research/paper_trade_log.csv": "closed_at,outcome\n",
+    })
+    # The other job (newer checkout) pushes hour 01:00 first.
+    _push_from_other_clone(tmp_path, tmp_path / "origin.git", W44,
+                           TAPE_HEADER + "a,2026-10-26T00:00Z,BTC\nb,2026-10-26T01:00Z,BTC\n")
+    # This job, pinned to the older checkout, appends hour 02:00.
+    with (work / W44).open("a") as handle:
+        handle.write("c,2026-10-26T02:00Z,BTC\n")
+
+    result = _run_commit_state(work, "paper")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "after conflict resolution" in result.stdout
+
+    hours = [r.split(",")[1] for r in _origin_text(work, W44).splitlines()[1:]]
+    assert hours == ["2026-10-26T00:00Z", "2026-10-26T01:00Z", "2026-10-26T02:00Z"], hours
+
+
+def test_rotation_race_folds_origin_plain_into_gz_and_drops_it(tmp_path):
+    """This job rotated from an older checkout (previous week missing its
+    last hour) while origin still holds the fuller plain file. The packed
+    week must contain origin's extra hour and the plain file must go."""
+    import gzip
+
+    _, work = _init_origin_with_files(tmp_path, {
+        W43: TAPE_HEADER + "a,2026-10-25T21:00Z,BTC\n",
+        "localdata/research/paper_trade_log.csv": "closed_at,outcome\n",
+    })
+    _push_from_other_clone(tmp_path, tmp_path / "origin.git", W43,
+                           TAPE_HEADER + "a,2026-10-25T21:00Z,BTC\nb,2026-10-25T22:00Z,BTC\n")
+
+    plain = work / W43
+    with plain.open("rb") as src, gzip.open(work / (W43 + ".gz"), "wb") as dst:
+        dst.write(src.read())
+    plain.unlink()
+    (work / W44).write_text(TAPE_HEADER + "c,2026-10-26T00:00Z,BTC\n")
+
+    result = _run_commit_state(work, "paper")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "after conflict resolution" in result.stdout
+
+    assert not _origin_tracks(work, W43)
+    packed = subprocess.run(["git", "show", f"origin/main:{W43}.gz"], cwd=work,
+                            check=True, capture_output=True).stdout
+    hours = [r.split(",")[1] for r in gzip.decompress(packed).decode().splitlines()[1:]]
+    assert hours == ["2026-10-25T21:00Z", "2026-10-25T22:00Z"], hours
+    assert _origin_text(work, W44).splitlines()[1:] == ["c,2026-10-26T00:00Z,BTC"]

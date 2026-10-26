@@ -974,7 +974,7 @@ def test_returning_slice_remembers_its_paper_record_and_losers_come_back_decayed
 
 
 def test_returning_slice_still_in_cooldown_comes_back_as_cooldown(tmp_path, monkeypatch):
-    far = str(int(datetime(2026, 10, 25, tzinfo=timezone.utc).timestamp()))
+    far = str(int(datetime.now(timezone.utc).timestamp()) + 30 * 86400)  # a month out, never stale
     cooled = _book_row("feat_d:2:LONG:h12", status=COOLDOWN, trades="3", pnl="-1.00")
     cooled["cooldown_until"] = far
     summaries, book_path = _rotate(tmp_path, monkeypatch, book_rows=[cooled], rejected_reasons="alpha<=0")
