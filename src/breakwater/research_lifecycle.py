@@ -421,9 +421,12 @@ def _promotion_multi_horizon_select() -> str:
     return mode if mode in allowed else "edge_per_bar"
 
 
-def _family_key(row: ValidatedSlice) -> tuple[str, str, int, str]:
-    # Horizon intentionally excluded: defines a slice family.
-    return (str(row.kind), str(row.feature), int(row.state), str(row.side))
+def _family_key(row: ValidatedSlice) -> tuple[str, str]:
+    # Horizon intentionally excluded: defines a slice family. Keyed on the
+    # horizon-stripped id rather than (feature, state, side) so an OI-cohort
+    # slice (``feature@group:...``, perp_groups.py) is its own family and is
+    # never collapsed into the global slice with the same feature/state/side.
+    return (str(row.kind), _strip_horizon_suffix(str(row.slice_id)))
 
 
 def _select_family_candidate(candidates: list[ValidatedSlice], *, mode: str) -> ValidatedSlice:
