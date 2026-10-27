@@ -35,6 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from breakwater.hip3 import hip3_session_restricted, hip3_slice_market_class
+from breakwater.perp_groups import group_of_slice
 from breakwater.validation import AssetEdge, ValidatedSlice, read_asset_edges, read_validated
 
 BOOK_HEADERS = [
@@ -716,6 +717,7 @@ def sync_book(
         "carried_decayed": 0,
         "paper_protected": 0,
         "research_rejected_dropped": 0,
+        "cohort_unsearched_dropped": 0,
         "remembered": 0,
         "remembered_cooldown": 0,
         "remembered_decayed": 0,
@@ -844,7 +846,13 @@ def sync_book(
         """
         current = _current_rows.get(sid)
         if current is None:
-            return False
+            # Cohort rows (``feature@oi_x``) are produced only by the native
+            # PERP pass that also produced the global rows, so absence means
+            # the lane no longer searches that slice (scope changed, cohort
+            # too small). They are not another lane's cycle; drop them.
+            # Without this the 102 price-feature cohort rows from the first
+            # full run (10-27) would have carried on the stored edge forever.
+            return group_of_slice(sid) is not None
         if current.validated:
             return False
         return not _is_concentrated_candidate(current, enter_pool_floors)
@@ -856,7 +864,8 @@ def sync_book(
         if _research_rejected(sid):
             if sid not in _rejected_seen:
                 _rejected_seen.add(sid)
-                summary["research_rejected_dropped"] += 1
+                key = "research_rejected_dropped" if sid in _current_rows else "cohort_unsearched_dropped"
+                summary[key] += 1
             return False
         # Use current research edge if available; fall back to stored value
         # only for slices not in this run's validated set (e.g. HIP-3 slices

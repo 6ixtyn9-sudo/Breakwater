@@ -265,3 +265,46 @@ def test_shadow_scan_monitors_cohort_rows_on_member_frames_only(tmp_path, monkey
         (["feat_ret_5:0:LONG:h12"], ["BTCUSDC", "ETHUSDC"]),
         (["feat_ret_5@oi_hi:0:LONG:h12"], ["BTCUSDC"]),
     ]
+
+
+def test_sync_book_drops_cohort_rows_the_lane_no_longer_searches(tmp_path):
+    """What happened on main 2026-10-27: after #28 narrowed the cohort scope,
+    102 price-feature ``@oi_*`` rows were absent from the validated file and
+    sync_book carried them on their stored edge like another lane's slices.
+    A cohort row absent from the run's output is dropped; a global row absent
+    from the output (genuinely another lane) keeps the legacy carry."""
+    import csv as _csv
+
+    from breakwater.research_lifecycle import sync_book
+    from breakwater.validation import ValidatedSlice, write_validated
+
+    def vrow(sid, feature):
+        return ValidatedSlice(
+            slice_id=sid, kind="PERP", feature=feature, state=0, side="SHORT", folds=5,
+            walk_forward_pass_pattern="11111", walk_forward_pass_count=5,
+            fold_mean_rets="0.001,0.001,0.001,0.001,0.001", fold_sizes="20,20,20,20,20",
+            n=80, mean_ret_costadj=0.001, p_value=0.001, validated=True, horizon_bars=12,
+        )
+
+    validated_path = tmp_path / "validated.csv"
+    book_path = tmp_path / "book.csv"
+    now = datetime.now(timezone.utc)
+    # run 1: global row, a positioning cohort row, a price cohort row
+    write_validated(validated_path, [
+        vrow("feat_ret_5:0:SHORT:h12", "feat_ret_5"),
+        vrow("feat_premium@oi_lo:0:SHORT:h12", "feat_premium"),
+        vrow("feat_ret_5@oi_lo:0:SHORT:h12", "feat_ret_5"),
+    ])
+    sync_book(validated_path=validated_path, book_path=book_path, now=now)
+    assert {r["slice_id"] for r in _csv.DictReader(book_path.open())} == {
+        "feat_ret_5:0:SHORT:h12", "feat_premium@oi_lo:0:SHORT:h12", "feat_ret_5@oi_lo:0:SHORT:h12"}
+
+    # run 2: the lane is scoped to positioning features; the price cohort row
+    # is simply not in the output any more. The global row is also absent
+    # (as if another lane's cycle) and must still be carried.
+    write_validated(validated_path, [vrow("feat_premium@oi_lo:0:SHORT:h12", "feat_premium")])
+    summary = sync_book(validated_path=validated_path, book_path=book_path, now=now)
+    assert {r["slice_id"] for r in _csv.DictReader(book_path.open())} == {
+        "feat_ret_5:0:SHORT:h12", "feat_premium@oi_lo:0:SHORT:h12"}
+    assert summary["cohort_unsearched_dropped"] == 1
+    assert summary["research_rejected_dropped"] == 0

@@ -818,9 +818,12 @@ How this interacts with the 11-09 read:
   on 10-26. Exclude `@oi_` ids when computing them. Report the cohort
   slices alongside as a second line (same two criteria, informational).
 - The first cohort run (10-27 07:33Z, #27 before #28) searched every
-  feature and put 102 price/vol `@oi_*` rows in the book. They drop at the
-  next research run after #28; any paper closes they produce in between
-  are tagged by slice id and should be excluded from both lines.
+  feature and put 102 price/vol `@oi_*` rows in the book. `sync_book`
+  carried 60 of them on their stored edge (absent-from-output rows were
+  treated as another lane's cycle); #29 drops cohort rows the lane no
+  longer searches (`cohort_unsearched_dropped` in the research summary).
+  Any paper closes they produced in between are tagged by slice id and
+  should be excluded from both lines.
 - Repo is frozen from 2026-10-27 to the 11-09 read apart from the hourly
   state commits. Paper scan time on the funding-fetch-off switch
   (`764840e`) is 36-45 min with zero 429s; the 90-min job timeout and the
