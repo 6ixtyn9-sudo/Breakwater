@@ -2,7 +2,7 @@ slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trade
 feat_trend_slope_20:2:SHORT:h24,PERP,feat_trend_slope_20,2,SHORT,monitored,2026-10-27T00:59:39.935357+00:00,,0,0,0,0,,0.009731,6353,0.076093,24,3.500,validated_walk_forward,False,True,50,0.658
 feat_ret_10:2:SHORT:h24,PERP,feat_ret_10,2,SHORT,monitored,2026-10-27T00:59:39.935357+00:00,,1,0,1,-0.7326,,0.006948,7086,0.282132,24,3.500,validated_walk_forward,False,True,50,0.658
 feat_range_pos_50:2:SHORT:h24,PERP,feat_range_pos_50,2,SHORT,decayed,2026-10-27T00:59:39.935357+00:00,1792504800,3,0,3,-10.5468,,0.007944,6249,0.082601,24,3.500,validated_walk_forward,False,True,49,0.645
-feat_ext_strength:2:SHORT:h24,PERP,feat_ext_strength,2,SHORT,monitored,2026-10-27T00:59:39.935357+00:00,,0,0,0,0,,0.007675,7073,0.260135,24,3.500,validated_walk_forward,False,True,48,0.632
+feat_ext_strength:2:SHORT:h24,PERP,feat_ext_strength,2,SHORT,cooldown,2026-10-27T00:59:39.935357+00:00,1793059200,1,0,1,-2.1844,1793145600,0.007675,7073,0.260135,24,3.500,validated_walk_forward,False,True,48,0.632
 feat_buy_vol_ratio:1:SHORT:h15,PERP,feat_buy_vol_ratio,1,SHORT,monitored,2026-10-27T00:59:39.935357+00:00,,0,0,0,0,,0.000703,10112,0.655081,15,3.500,validated_walk_forward,False,True,26,0.464
 feat_close_position:1:SHORT:h15,PERP,feat_close_position,1,SHORT,monitored,2026-10-27T00:59:39.935357+00:00,,0,0,0,0,,0.000703,10112,0.655081,15,3.500,validated_walk_forward,False,True,26,0.464
 feat_funding_rate:1:SHORT:h15,PERP,feat_funding_rate,1,SHORT,monitored,2026-10-27T00:59:39.935357+00:00,,0,0,0,0,,0.006496,1075,0.129716,15,3.500,validated_walk_forward,False,True,9,0.391
