@@ -1,21 +1,5 @@
 [
   {
-    "pair": "DOGEUSDC",
-    "pnl_zar": "0.8726",
-    "reason": "slice_gap",
-    "signal_id": "8b4b90c0fd077a92",
-    "slice_id": "feat_trend_slope_20:2:LONG:h11",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
-    "pair": "XPLUSDC",
-    "pnl_zar": "4.6853",
-    "reason": "slice_gap",
-    "signal_id": "a54c4c065db4be34",
-    "slice_id": "feat_trend_slope_20:2:LONG:h11",
-    "stopped_at": "2026-09-14T21:30:29+00:00"
-  },
-  {
     "pair": "XYZ:AMZN",
     "pnl_zar": "-0.1531",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "64623601b6be06a9",
     "slice_id": "feat_ext_strength:2:SHORT:h24",
     "stopped_at": "2026-10-27T01:01:34+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-0.5343",
+    "reason": "slice_gap",
+    "signal_id": "1d75cd44ea720d38",
+    "slice_id": "feat_rsi_21:2:SHORT:h24",
+    "stopped_at": "2026-10-27T12:01:53+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "0.5136",
+    "reason": "slice_gap",
+    "signal_id": "ba5361ddc1964bff",
+    "slice_id": "feat_vol_breakout:2:SHORT:h24",
+    "stopped_at": "2026-10-27T12:01:53+00:00"
   }
 ]
