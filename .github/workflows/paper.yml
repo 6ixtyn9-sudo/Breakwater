@@ -34,6 +34,9 @@ jobs:
           VALR_API_KEY: ${{ secrets.VALR_API_KEY }}
           VALR_API_SECRET: ${{ secrets.VALR_API_SECRET }}
           BREAKWATER_MODE: shadow
+          # Paper reads funding/premium from the positioning tape; only research
+          # pulls the deep fundingHistory. Removes ~380 rate-limited calls/hour.
+          BREAKWATER_POSITIONING_FUNDING_FETCH: "0"
           BREAKWATER_MIN_NET_EDGE: ${{ vars.BREAKWATER_MIN_NET_EDGE || '0.004' }}
           BREAKWATER_GREEN_GATE: ${{ vars.BREAKWATER_GREEN_GATE || '1' }}
           BREAKWATER_SPOT_CANDLE_COUNT: ${{ vars.BREAKWATER_SPOT_CANDLE_COUNT || '1000' }}
