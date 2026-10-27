@@ -1,13 +1,5 @@
 [
   {
-    "pair": "XYZ:AVGO",
-    "pnl_zar": "0.0541",
-    "reason": "slice_gap",
-    "signal_id": "92344be6faca0eed",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T01:30:28+00:00"
-  },
-  {
     "pair": "XYZ:BABA",
     "pnl_zar": "0.9671",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "a5be6cf8e2a3c826",
     "slice_id": "feat_ret_vol:2:SHORT:h24",
     "stopped_at": "2026-10-27T16:01:15+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-2.4902",
+    "reason": "stop",
+    "signal_id": "ec4d731cd7bb7868",
+    "slice_id": "feat_adx_14:0:SHORT:h24",
+    "stopped_at": "2026-10-27T22:01:23+00:00"
   }
 ]
