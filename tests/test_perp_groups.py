@@ -142,6 +142,8 @@ def test_research_pass_adds_cohort_slices_scoped_to_their_members(tmp_path, monk
     import breakwater.engine as eng
 
     monkeypatch.setattr(eng, "FEATURE_COLUMNS", ["feat_ret_5", "feat_ret_20", "feat_rsi_14", "feat_cci_20"])
+    # the lane defaults to positioning features; the fake frames carry none, so scope it explicitly
+    monkeypatch.setenv("BREAKWATER_PERP_GROUP_FEATURES", "feat_ret_5,feat_rsi_14")
 
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     coins = {f"C{i:02d}": float(5_000_000 - i * 100_000) for i in range(15)}
@@ -169,6 +171,9 @@ def test_research_pass_adds_cohort_slices_scoped_to_their_members(tmp_path, monk
     assert cohort and glob
     assert all(r["feature"].startswith("feat_") and "@" not in r["feature"] for r in cohort)
     assert all(r["slice_id"].endswith(":h12") for r in cohort)
+    assert {r["feature"] for r in cohort} <= {"feat_ret_5", "feat_rsi_14"}
+    assert {r["feature"] for r in glob} == {"feat_ret_5", "feat_ret_20", "feat_rsi_14", "feat_cci_20"}
+    assert result["perp_groups"]["features"] == 2
 
     members = {"oi_hi": set(pairs[:5]), "oi_mid": set(pairs[5:10]), "oi_lo": set(pairs[10:])}
     edges = list(csv.DictReader(settings.asset_edges_path.open()))
@@ -186,6 +191,16 @@ def test_research_pass_adds_cohort_slices_scoped_to_their_members(tmp_path, monk
     result = engine.research_pass(max_pairs=50)
     assert result["perp_groups"] == {"enabled": False}
     assert not any("@" in r["slice_id"] for r in csv.DictReader(settings.discovered_path.open()))
+
+
+def test_feature_scope_defaults_to_positioning_columns(monkeypatch):
+    from breakwater.positioning_features import POSITIONING_FEATURE_COLUMNS
+
+    available = ["feat_ret_5", *POSITIONING_FEATURE_COLUMNS, "feat_rsi_14"]
+    monkeypatch.delenv("BREAKWATER_PERP_GROUP_FEATURES", raising=False)
+    assert pg.feature_columns(available) == list(POSITIONING_FEATURE_COLUMNS)
+    monkeypatch.setenv("BREAKWATER_PERP_GROUP_FEATURES", "feat_rsi_14, feat_missing")
+    assert pg.feature_columns(available) == ["feat_rsi_14"]
 
 
 def test_shadow_scan_monitors_cohort_rows_on_member_frames_only(tmp_path, monkeypatch):

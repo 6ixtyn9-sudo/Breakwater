@@ -1682,18 +1682,20 @@ class BreakwaterEngine:
                 except Exception as exc:
                     assignment = {}
                     perp_group_summary["error"] = f"{type(exc).__name__}: {exc}"[:140]
+                group_features = perp_groups.feature_columns(FEATURE_COLUMNS)
+                perp_group_summary["features"] = len(group_features)
                 for group in perp_groups.GROUP_NAMES:
                     group_frames = {p: f for p, f in kind_frames.items() if assignment.get(p) == group}
                     perp_group_summary.setdefault("pairs", {})[group] = len(group_frames)
-                    if len(group_frames) < perp_groups.MIN_GROUPABLE_PAIRS // 3:
+                    if not group_features or len(group_frames) < perp_groups.MIN_GROUPABLE_PAIRS // 3:
                         continue
                     group_pooled = _pool_frames(group_frames)
                     for horizon_bars in horizons:
                         group_prepared = prepare_pooled(
-                            group_pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars
+                            group_pooled, group_features, cost_bps, horizon_bars=horizon_bars
                         )
                         group_found = _slice_stats(
-                            group_prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars
+                            group_prepared, kind, group_features, horizon_bars=horizon_bars
                         )
                         group_found = perp_groups.retag_candidates(group_found, group)
                         group_found = _retag_candidates_for_horizon(
