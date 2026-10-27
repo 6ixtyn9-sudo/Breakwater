@@ -25,7 +25,7 @@ feat_funding_cum_24:1:SHORT:h24,PERP,feat_funding_cum_24,1,SHORT,monitored,2026-
 feat_macd_12_26:2:SHORT:h24,PERP,feat_macd_12_26,2,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,0,0,0,0,,0.009708,6543,0.069398,24,3.500,validated_walk_forward,False,True,47,0.618
 feat_trend_slope_20:2:SHORT:h24,PERP,feat_trend_slope_20,2,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,0,0,0,0,,0.008569,6740,0.101939,24,3.500,validated_walk_forward,False,True,49,0.645
 feat_vwap_upper_dist:2:SHORT:h24,PERP,feat_vwap_upper_dist,2,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,0,0,0,0,,0.007458,7098,0.076873,24,3.500,validated_walk_forward,False,True,46,0.605
-feat_vwap_dist:2:SHORT:h15,PERP,feat_vwap_dist,2,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,0,0,0,0,,0.004921,7451,0.209771,15,3.500,validated_walk_forward,False,True,48,0.640
+feat_vwap_dist:2:SHORT:h15,PERP,feat_vwap_dist,2,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,1,1,0,1.8346,,0.004921,7451,0.209771,15,3.500,validated_walk_forward,False,True,48,0.640
 feat_vol_trend:2:SHORT:h24,PERP,feat_vol_trend,2,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,0,0,0,0,,0.005924,8882,0.280561,24,3.500,validated_walk_forward,False,True,46,0.605
 feat_ext_strength:2:SHORT:h24,PERP,feat_ext_strength,2,SHORT,cooldown,2026-10-27T09:48:20.352654+00:00,1793059200,1,0,1,-2.1844,1793145600,0.006185,7534,0.262042,24,3.500,validated_walk_forward,False,True,50,0.658
 feat_rsi_7:1:SHORT:h24,PERP,feat_rsi_7,1,SHORT,monitored,2026-10-27T09:48:20.352654+00:00,,0,0,0,0,,0.001690,10038,0.614070,24,3.500,validated_walk_forward,False,True,38,0.500
