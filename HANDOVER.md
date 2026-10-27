@@ -800,3 +800,30 @@ positioning slices, so a floor now would decide the experiment by the gate
 rather than the inputs. Revisit on 11-09 either way.
 
 No daily reads until then; check-ins 2026-10-30 and 2026-11-09.
+
+### Addendum 2026-10-27 — OI-cohort lane (#27, #28) and the freeze
+
+A parallel PERP lane now runs the same discovery/validation once per
+open-interest tercile (`oi_hi`/`oi_mid`/`oi_lo`, ~40 perps each) over the
+six positioning features only. Cohort slice ids carry the group on the
+feature token: `feat_funding_cum_24@oi_hi:2:SHORT:h12`. They share the book
+and the paper budget, and are monitored only on the pairs that were in the
+cohort when validated (their `asset_edges.csv` rows). Global discovery is
+unchanged. Kill switch `BREAKWATER_PERP_GROUPS=0`; feature scope
+`BREAKWATER_PERP_GROUP_FEATURES`.
+
+How this interacts with the 11-09 read:
+
+- Criteria A and B are judged on **global** positioning slices, as agreed
+  on 10-26. Exclude `@oi_` ids when computing them. Report the cohort
+  slices alongside as a second line (same two criteria, informational).
+- The first cohort run (10-27 07:33Z, #27 before #28) searched every
+  feature and put 102 price/vol `@oi_*` rows in the book. They drop at the
+  next research run after #28; any paper closes they produce in between
+  are tagged by slice id and should be excluded from both lines.
+- Repo is frozen from 2026-10-27 to the 11-09 read apart from the hourly
+  state commits. Paper scan time on the funding-fetch-off switch
+  (`764840e`) is 36-45 min with zero 429s; the 90-min job timeout and the
+  concurrency group cover it. If `status.csv` shows `shadow_scan_done`
+  gaps of more than two hours, the scan has outgrown the hour and that is
+  the first thing to look at on 11-09.
