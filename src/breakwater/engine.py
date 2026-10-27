@@ -21,6 +21,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from breakwater import perp_groups
 from breakwater.account import (
     EquityValuator,
     aggregate_open_stop_risk_zar,
@@ -982,13 +983,35 @@ class BreakwaterEngine:
             asset_edge_lookup = build_asset_edge_lookup(
                 read_asset_edges(self.settings.asset_edges_path)
             )
+            plain_rows, cohort_rows = perp_groups.split_book_rows(book_rows)
             signals, blocked = monitor_book(
-                book_rows,
+                plain_rows,
                 frames_by_kind,
                 server_time=server_time,
                 regime_shift=regime_shift,
                 asset_edge_lookup=asset_edge_lookup,
             )
+            # OI-cohort slices (perp_groups.py) fire only on the pairs research
+            # judged them on: the per-asset edge rows name exactly those pairs.
+            cohort_members = perp_groups.group_members_from_asset_edges(asset_edge_lookup)
+            for group, rows in cohort_rows.items():
+                members = cohort_members.get(group) or set()
+                group_frames = {
+                    pair: frame
+                    for pair, frame in (frames_by_kind.get("PERP") or {}).items()
+                    if pair.upper() in members
+                }
+                if not group_frames:
+                    continue
+                group_signals, group_blocked = monitor_book(
+                    rows,
+                    {"PERP": group_frames},
+                    server_time=server_time,
+                    regime_shift=regime_shift,
+                    asset_edge_lookup=asset_edge_lookup,
+                )
+                signals.extend(group_signals)
+                blocked.extend(group_blocked)
         else:
             signals = self._big_wave_fallback(targets, frames, server_time)
 
@@ -1592,6 +1615,7 @@ class BreakwaterEngine:
         perp_cost_bps = perp_round_trip_bps()
         spreads = []
         spread_errors: list[str] = []
+        perp_group_summary: dict = {"enabled": perp_groups.enabled()}
         for kind, cost_bps in (("SPOT", spot_round_trip_bps()), ("PERP", perp_cost_bps)):
             # IMPORTANT: only include frames that actually exist (avoid KeyError).
             kind_frames = {}
@@ -1642,6 +1666,46 @@ class BreakwaterEngine:
                         )
                     except Exception as exc:  # research-only; never fail the run
                         spread_errors.append(f"h{horizon_bars}: {exc}")
+
+            # OI-cohort lane (perp_groups.py): the same discovery and
+            # validation, run once per cohort beside the global pass. Cohort
+            # slices carry ``feature@group`` ids; their per-asset edges are
+            # written for cohort members only, which is what scopes them at
+            # trade time. Advisory failure: the global pass is already done.
+            if kind == "PERP" and perp_groups.enabled():
+                try:
+                    from breakwater.positioning_features import load_tape
+
+                    assignment = perp_groups.assign_oi_groups(
+                        kind_frames.keys(), load_tape(self.settings.data_dir), now=server_time
+                    )
+                except Exception as exc:
+                    assignment = {}
+                    perp_group_summary["error"] = f"{type(exc).__name__}: {exc}"[:140]
+                for group in perp_groups.GROUP_NAMES:
+                    group_frames = {p: f for p, f in kind_frames.items() if assignment.get(p) == group}
+                    perp_group_summary.setdefault("pairs", {})[group] = len(group_frames)
+                    if len(group_frames) < perp_groups.MIN_GROUPABLE_PAIRS // 3:
+                        continue
+                    group_pooled = _pool_frames(group_frames)
+                    for horizon_bars in horizons:
+                        group_prepared = prepare_pooled(
+                            group_pooled, FEATURE_COLUMNS, cost_bps, horizon_bars=horizon_bars
+                        )
+                        group_found = _slice_stats(
+                            group_prepared, kind, FEATURE_COLUMNS, horizon_bars=horizon_bars
+                        )
+                        group_found = perp_groups.retag_candidates(group_found, group)
+                        group_found = _retag_candidates_for_horizon(
+                            group_found, horizon_bars=horizon_bars, multi=multi
+                        )
+                        group_checked = validate_slices(
+                            group_prepared, group_found, asset_edges=asset_edges
+                        )
+                        discovered.extend(group_found)
+                        validated.extend(group_checked)
+                        counts = perp_group_summary.setdefault("validated", {})
+                        counts[group] = counts.get(group, 0) + sum(1 for r in group_checked if r.validated)
 
         write_discovered(self.settings.discovered_path, discovered)
         write_validated(self.settings.validated_path, validated)
@@ -1736,6 +1800,7 @@ class BreakwaterEngine:
             },
             "validation_require_bonferroni": validation_require_bonferroni,
             "validation_relaxed_min_passes": validation_relaxed_min_passes,
+            "perp_groups": perp_group_summary,
             "book": book_summary,
         }
 
