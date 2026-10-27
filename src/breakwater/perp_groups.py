@@ -27,6 +27,12 @@ that slice: those rows exist only for the pairs that were in the cohort when
 it was validated, so a cohort slice can never fire on a pair it was not
 judged on, even when OI ranks drift between research runs.
 
+Scope: the lane exists for positioning inputs, so by default it searches
+only ``POSITIONING_FEATURE_COLUMNS``. The first full run over every feature
+put 105 cohort rows in the book, 102 of them price/vol slices that gain
+nothing from a crowdedness split. ``BREAKWATER_PERP_GROUP_FEATURES`` (comma
+list) overrides the default.
+
 Kill switch: ``BREAKWATER_PERP_GROUPS=0``.
 """
 
@@ -39,6 +45,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from breakwater.perpdata import pair_to_coin
+from breakwater.positioning_features import POSITIONING_FEATURE_COLUMNS
 
 GROUP_SEP = "@"
 GROUP_NAMES = ("oi_hi", "oi_mid", "oi_lo")
@@ -47,6 +54,13 @@ MIN_GROUPABLE_PAIRS = 12  # fewer than 4 per cohort is not a cross-section
 
 def enabled() -> bool:
     return os.getenv("BREAKWATER_PERP_GROUPS", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def feature_columns(available) -> list[str]:
+    """Features the cohort lane searches, in ``available`` order."""
+    raw = os.getenv("BREAKWATER_PERP_GROUP_FEATURES", "").strip()
+    wanted = {c.strip() for c in raw.split(",") if c.strip()} if raw else set(POSITIONING_FEATURE_COLUMNS)
+    return [c for c in available if c in wanted]
 
 
 def oi_window_days() -> int:
