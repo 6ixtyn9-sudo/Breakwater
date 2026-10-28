@@ -1,13 +1,5 @@
 [
   {
-    "pair": "XYZ:BABA",
-    "pnl_zar": "0.9671",
-    "reason": "slice_gap",
-    "signal_id": "738dc988d22f433a",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T01:30:28+00:00"
-  },
-  {
     "pair": "XYZ:COST",
     "pnl_zar": "0.0069",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "ec4d731cd7bb7868",
     "slice_id": "feat_adx_14:0:SHORT:h24",
     "stopped_at": "2026-10-27T22:01:23+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.1062",
+    "reason": "stop",
+    "signal_id": "f22d594efa14bf2c",
+    "slice_id": "feat_adx_14:0:SHORT:h24",
+    "stopped_at": "2026-10-28T02:01:18+00:00"
   }
 ]
