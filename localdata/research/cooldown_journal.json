@@ -1,13 +1,5 @@
 [
   {
-    "pair": "XYZ:COST",
-    "pnl_zar": "-0.0345",
-    "reason": "slice_gap",
-    "signal_id": "6b7c48faabf5a306",
-    "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23",
-    "stopped_at": "2026-09-15T02:00:31+00:00"
-  },
-  {
     "pair": "XYZ:AMZN",
     "pnl_zar": "-0.1018",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "27efb27bf503b6f0",
     "slice_id": "feat_bb_width_20:1:SHORT:h24",
     "stopped_at": "2026-10-29T11:01:14+00:00"
+  },
+  {
+    "pair": "XMRUSDC",
+    "pnl_zar": "-4.4376",
+    "reason": "stop",
+    "signal_id": "b54275c99a38496b",
+    "slice_id": "feat_funding_rate:2:SHORT:h12",
+    "stopped_at": "2026-10-29T17:01:12+00:00"
   }
 ]
