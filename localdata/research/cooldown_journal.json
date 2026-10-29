@@ -1,13 +1,5 @@
 [
   {
-    "pair": "XYZ:BABA",
-    "pnl_zar": "0.1925",
-    "reason": "slice_gap",
-    "signal_id": "738dc988d22f433a",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T02:00:31+00:00"
-  },
-  {
     "pair": "XYZ:COST",
     "pnl_zar": "-0.0345",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "43c4cec1c231ed0e",
     "slice_id": "feat_trend_slope_20:2:SHORT:h24",
     "stopped_at": "2026-10-28T21:01:12+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-3.3801",
+    "reason": "stop",
+    "signal_id": "27efb27bf503b6f0",
+    "slice_id": "feat_bb_width_20:1:SHORT:h24",
+    "stopped_at": "2026-10-29T11:01:14+00:00"
   }
 ]
