@@ -2,14 +2,14 @@
   {
     "asset_status": "green",
     "atr": "730.2857142857143",
-    "bars_held": "6",
+    "bars_held": "7",
     "entry_guard": "passed",
     "entry_price": "77339.0",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "15",
     "initial_stop_price": "79895.00000000000005",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-30T17:00:00+00:00",
+    "last_processed_bar_start": "2026-10-30T18:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "115.38052000",
     "opened_at": "2026-10-30T12:01:17+00:00",
@@ -24,19 +24,19 @@
     "stop_atr_mult": "3.500000",
     "stop_price": "79895.00000000000005",
     "trail_active": "0",
-    "trough_price": "76590.0"
+    "trough_price": "76264.0"
   },
   {
     "asset_status": "green",
     "atr": "0.013828571428571397",
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "1.245",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "24",
     "initial_stop_price": "1.2933999999999998895",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-30T17:00:00+00:00",
+    "last_processed_bar_start": "2026-10-30T18:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "115.38052000",
     "opened_at": "2026-10-30T18:01:15+00:00",
@@ -51,24 +51,24 @@
     "stop_atr_mult": "3.500000",
     "stop_price": "1.2933999999999998895",
     "trail_active": "0",
-    "trough_price": "1.245"
+    "trough_price": "1.233"
   },
   {
     "asset_status": "green",
     "atr": "21.799999999999986",
-    "bars_held": "0",
+    "bars_held": "1",
     "entry_guard": "passed",
     "entry_price": "2242.2",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "15",
     "initial_stop_price": "2318.4999999999999510",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-10-30T17:00:00+00:00",
+    "last_processed_bar_start": "2026-10-30T18:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "115.38052000",
     "opened_at": "2026-10-30T18:01:15+00:00",
     "pair": "ETHUSDC",
-    "peak_price": "2242.2",
+    "peak_price": "2244.8",
     "regime": "bear",
     "risk_fraction": "0.03402908",
     "side": "SELL",
@@ -78,6 +78,6 @@
     "stop_atr_mult": "3.500000",
     "stop_price": "2318.4999999999999510",
     "trail_active": "0",
-    "trough_price": "2242.2"
+    "trough_price": "2217.8"
   }
 ]
