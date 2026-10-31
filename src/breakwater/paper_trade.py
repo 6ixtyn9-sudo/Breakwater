@@ -93,8 +93,11 @@ from breakwater.paper_counterfactual import (
     write_counterfactual_trackers,
 )
 from breakwater.research_lifecycle import (
+    _strip_horizon_suffix,
     apply_signal_feedback,
+    memory_path_for,
     read_book,
+    read_memory,
     reconcile_paper_stats_from_log,
 )
 
@@ -1185,6 +1188,44 @@ def _migrate_legacy_positions(open_positions: list[dict], *, horizon_map: dict[s
                 position["regime"] = "unknown"
 
 
+# Negative-paper veto at FAMILY level. The veto ("3+ paper closes and
+# negative P&L: no new entries") keyed on the exact slice_id, so a thesis
+# that burned out at :h12 kept trading as :h15 and :h20 - the horizon
+# suffix is a research artefact, not a different idea. Measured on
+# 2026-10-01..31: 38 trades (-32.8 ZAR) were opened after their family
+# already had >=3 closes and negative P&L; the per-slice rule saw 20 of
+# them. Stats come from the live book rows plus slice memory for siblings
+# that have rotated out (memory wins only where the book has no row).
+# BREAKWATER_PAPER_FAMILY_VETO=0 restores the per-slice lookup.
+FAMILY_VETO = _env_bool("BREAKWATER_PAPER_FAMILY_VETO", "1")
+
+
+def _family_paper_stats(book_path: Path) -> dict[str, tuple[int, float]]:
+    """family (slice_id minus :hN) -> (paper_trades, paper_pnl_zar) summed
+    over the book rows and remembered siblings."""
+    try:
+        rows = read_book(book_path)
+    except Exception:
+        rows = []
+    seen: dict[str, dict] = {str(r.get("slice_id") or ""): r for r in rows if r.get("slice_id")}
+    try:
+        for (sid, _kind), entry in read_memory(memory_path_for(book_path)).items():
+            if sid and sid not in seen:
+                seen[sid] = entry
+    except Exception:
+        pass
+    out: dict[str, tuple[int, float]] = {}
+    for sid, row in seen.items():
+        fam = _strip_horizon_suffix(sid)
+        try:
+            pnl = float(row.get("paper_pnl_zar") or 0.0)
+        except (TypeError, ValueError):
+            pnl = 0.0
+        trades, total = out.get(fam, (0, 0.0))
+        out[fam] = (trades + _coerce_int(row.get("paper_trades"), 0), total + pnl)
+    return out
+
+
 def _slice_trade_counts(book_path: Path) -> dict[str, int]:
     """slice_id -> paper_trades from the book (best-effort)."""
     try:
@@ -2001,6 +2042,8 @@ def run_paper_cycle(
 
     trade_counts = _slice_trade_counts(book_path)
     paper_pnls = _slice_paper_pnl(book_path)
+    family_stats = _family_paper_stats(book_path) if FAMILY_VETO else {}
+    family_vetoed = 0
     incumbents = _incumbent_slice_ids(book_path)
     means = _slice_means(book_path)
     if hip3_book_path is not None:
@@ -2137,6 +2180,13 @@ def run_paper_cycle(
             skipped += 1
             _deny(signal, "skipped")
             continue
+        if FAMILY_VETO and not str(signal.slice_id or "").startswith("hip3_"):
+            fam_trades, fam_pnl = family_stats.get(_strip_horizon_suffix(str(signal.slice_id)), (0, 0.0))
+            if fam_trades >= 3 and fam_pnl < 0:
+                skipped += 1
+                family_vetoed += 1
+                _deny(signal, "skipped")
+                continue
 
         # Green-account entry freeze: a frozen lane or a slice whose own paper
         # history is negative must not open new exposure even if it reaches the
@@ -2715,6 +2765,7 @@ def run_paper_cycle(
         "slice_full": slice_full,
         "pair_held": pair_held,
         "cluster_cap": cluster_capped,
+        "family_vetoed": family_vetoed,
         "reentry_blocked": reentry_blocked,
         "through_target_blocked": through_target_blocked,
         "one_entry_per_signal": ONE_ENTRY_PER_SIGNAL,

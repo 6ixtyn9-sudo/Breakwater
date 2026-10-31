@@ -172,6 +172,7 @@ def _pre_2026_10_31_paper_knobs(monkeypatch):
 
     monkeypatch.setattr(pt, "MAX_ENTRIES_PER_CYCLE_PER_SIDE", 0)
     monkeypatch.setattr(pt, "STOP_SLIP_BPS", Decimal(0))
+    monkeypatch.setattr(pt, "FAMILY_VETO", False)
     monkeypatch.setenv("BREAKWATER_PAPER_STOP_SLIP_BPS", "0")  # counterfactual tracker reads env
 
 
@@ -696,6 +697,84 @@ def test_stop_fill_takes_slippage_bounded_by_the_bar_extreme(tmp_path, monkeypat
     assert result["closed"] == 1
     log = pd.read_csv(second / "log.csv")
     assert float(log.iloc[0]["exit_price"]) == 94.9
+
+
+def _book_row(slice_id, *, trades, pnl, status="monitored"):
+    feature, state, side = slice_id.split(":")[:3]
+    return {
+        "slice_id": slice_id, "kind": "SPOT", "feature": feature, "state": state, "side": side,
+        "status": status, "validated_at": "", "last_signal_bar": "", "paper_trades": str(trades),
+        "paper_wins": "0", "paper_losses": str(trades), "paper_pnl_zar": str(pnl), "cooldown_until": "",
+        "mean_ret_costadj": "0.002", "n": "500", "p_value": "0.3", "horizon_bars": "12",
+        "stop_atr_mult": "2.0", "source": "validated_walk_forward", "hostile_unproven": "",
+        "edge_is_directional_net": "True",
+    }
+
+
+def test_family_veto_blocks_horizon_siblings_of_a_burned_thesis(tmp_path, monkeypatch):
+    """feat:0:LONG:h12 burned three paper trades; feat:0:LONG:h24 is the same
+    thesis with a research artefact on the end and must not get a fresh start.
+    A different state (feat:1:LONG) is a different family and still enters."""
+    import breakwater.paper_trade as pt
+    from breakwater.research_lifecycle import _write_book
+
+    monkeypatch.setattr(pt, "FAMILY_VETO", True)
+    _write_book(tmp_path / "book.csv", [
+        _book_row("feat:0:LONG:h12", trades=3, pnl=-6.0),
+        _book_row("feat:0:LONG:h24", trades=0, pnl=0.0),
+        _book_row("feat:1:LONG:h24", trades=0, pnl=0.0),
+    ])
+    result = cycle(
+        tmp_path,
+        signals=[
+            signal(pair="BTCZAR", slice_id="feat:0:LONG:h24", horizon=24),
+            signal(pair="ETHZAR", slice_id="feat:1:LONG:h24", horizon=24),
+        ],
+        frames={"BTCZAR": spot_frame(close=100), "ETHZAR": spot_frame(close=100)},
+        book={"feat:0:LONG:h12", "feat:0:LONG:h24", "feat:1:LONG:h24"},
+    )
+    assert result["family_vetoed"] == 1
+    assert [p["slice_id"] for p in read_positions(tmp_path / "positions.json")] == ["feat:1:LONG:h24"]
+
+    # kill switch: per-slice lookup only, the sibling enters
+    monkeypatch.setattr(pt, "FAMILY_VETO", False)
+    second = tmp_path / "b"
+    second.mkdir()
+    _write_book(second / "book.csv", [
+        _book_row("feat:0:LONG:h12", trades=3, pnl=-6.0),
+        _book_row("feat:0:LONG:h24", trades=0, pnl=0.0),
+    ])
+    result = cycle(
+        second,
+        signals=[signal(pair="BTCZAR", slice_id="feat:0:LONG:h24", horizon=24)],
+        frames={"BTCZAR": spot_frame(close=100)},
+        book={"feat:0:LONG:h12", "feat:0:LONG:h24"},
+    )
+    assert result["open"] == 1 and result["family_vetoed"] == 0
+
+
+def test_family_veto_reads_siblings_from_slice_memory(tmp_path, monkeypatch):
+    """The burned sibling has rotated out of the book; its record lives in
+    slice_memory.csv and still counts."""
+    import csv
+
+    import breakwater.paper_trade as pt
+    from breakwater.research_lifecycle import MEMORY_HEADERS, _write_book, memory_path_for
+
+    monkeypatch.setattr(pt, "FAMILY_VETO", True)
+    _write_book(tmp_path / "book.csv", [_book_row("feat:0:LONG:h24", trades=0, pnl=0.0)])
+    with memory_path_for(tmp_path / "book.csv").open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=MEMORY_HEADERS)
+        writer.writeheader()
+        writer.writerow({**{h: "" for h in MEMORY_HEADERS}, "slice_id": "feat:0:LONG:h12", "kind": "SPOT",
+                         "paper_trades": "4", "paper_losses": "4", "paper_pnl_zar": "-9.1"})
+    result = cycle(
+        tmp_path,
+        signals=[signal(pair="BTCZAR", slice_id="feat:0:LONG:h24", horizon=24)],
+        frames={"BTCZAR": spot_frame(close=100)},
+        book={"feat:0:LONG:h24"},
+    )
+    assert result["family_vetoed"] == 1 and result["open"] == 0
 
 
 def test_cluster_cap_zero_restores_unlimited_same_side_entries(tmp_path, monkeypatch):
