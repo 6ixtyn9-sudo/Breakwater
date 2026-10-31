@@ -163,12 +163,16 @@ def spot_frame(close, high=None, low=None):
 
 
 @pytest.fixture(autouse=True)
-def _no_cluster_cap(monkeypatch):
-    """Slot/seat tests predate the cluster cap and open several same-side
-    positions per cycle on purpose. The cap has its own tests below."""
+def _pre_2026_10_31_paper_knobs(monkeypatch):
+    """The mechanics tests predate the cluster cap and stop-fill slippage:
+    slot tests open several same-side positions per cycle on purpose, and
+    exit tests assert exact stop-price fills. Both knobs have their own
+    tests below at the production defaults."""
     import breakwater.paper_trade as pt
 
     monkeypatch.setattr(pt, "MAX_ENTRIES_PER_CYCLE_PER_SIDE", 0)
+    monkeypatch.setattr(pt, "STOP_SLIP_BPS", Decimal(0))
+    monkeypatch.setenv("BREAKWATER_PAPER_STOP_SLIP_BPS", "0")  # counterfactual tracker reads env
 
 
 def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None, server_time=None, green_gate=None):
@@ -669,6 +673,29 @@ def test_cluster_cap_keeps_one_entry_per_side_per_cycle(tmp_path, monkeypatch):
     rows = list(iter_paper_log(tmp_path / "log.csv", include_skips=True))
     capped = [r for r in rows if r["exit_reason"] == "cluster_cap"]
     assert len(capped) == 1 and capped[0]["pair"] == "ETHZAR" and capped[0]["outcome"] == "skipped"
+
+
+def test_stop_fill_takes_slippage_bounded_by_the_bar_extreme(tmp_path, monkeypatch):
+    """A stop fills STOP_SLIP_BPS through the level, never worse than the
+    bar's own extreme. Entry 100 / stop 95 / 15 bps: 94.8575 on a bar that
+    printed 94; 94.9 on a bar whose low was 94.9. The row's stop_price keeps
+    the level so the slip is readable from the log."""
+    import breakwater.paper_trade as pt
+
+    monkeypatch.setattr(pt, "STOP_SLIP_BPS", Decimal("15"))  # the production default
+    result = cycle(tmp_path, signals=[], frames={"BTCUSDC": spot_frame(close=96, low=94)}, positions=open_position())
+    assert result["closed"] == 1
+    log = pd.read_csv(tmp_path / "log.csv")
+    assert float(log.iloc[0]["exit_price"]) == 94.8575
+    assert float(log.iloc[0]["stop_price"]) == 95.0
+    assert log.iloc[0]["exit_reason"] == "stop"
+
+    second = tmp_path / "b"
+    second.mkdir()
+    result = cycle(second, signals=[], frames={"BTCUSDC": spot_frame(close=96, low=94.9)}, positions=open_position())
+    assert result["closed"] == 1
+    log = pd.read_csv(second / "log.csv")
+    assert float(log.iloc[0]["exit_price"]) == 94.9
 
 
 def test_cluster_cap_zero_restores_unlimited_same_side_entries(tmp_path, monkeypatch):

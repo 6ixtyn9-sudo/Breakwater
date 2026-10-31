@@ -60,6 +60,13 @@ class CounterfactualAdvance:
     state_error: str | None
 
 
+
+def _stop_slip_fraction() -> Decimal:
+    try:
+        return Decimal(os.getenv("BREAKWATER_PAPER_STOP_SLIP_BPS", "15")) / Decimal(10000)
+    except Exception:
+        return Decimal("0.0015")
+
 def read_counterfactual_trackers(path: Path) -> tuple[list[dict], str | None]:
     if not path.exists():
         return [], None
@@ -459,18 +466,21 @@ def advance_counterfactuals(
                     )
                     exit_price = None
                     exit_reason = ""
+                    # Same stop-fill slippage as the live paper book
+                    # (paper_trade.STOP_SLIP_BPS, read here by env to avoid
+                    # the import cycle) so delta_vs_actual stays a policy
+                    # comparison and not a fill-model difference.
+                    slip = _stop_slip_fraction()
                     if tracker["side"] == "BUY":
                         if low <= stop:
-                            exit_price, exit_reason = stop, (
-                                "trail_stop" if stop != initial_stop else "stop"
-                            )
+                            exit_price = max(low, stop * (Decimal(1) - slip))
+                            exit_reason = "trail_stop" if stop != initial_stop else "stop"
                         elif target is not None and high >= target:
                             exit_price, exit_reason = target, "target"
                     else:
                         if high >= stop:
-                            exit_price, exit_reason = stop, (
-                                "trail_stop" if stop != initial_stop else "stop"
-                            )
+                            exit_price = min(high, stop * (Decimal(1) + slip))
+                            exit_reason = "trail_stop" if stop != initial_stop else "stop"
                         elif target is not None and low <= target:
                             exit_price, exit_reason = target, "target"
 

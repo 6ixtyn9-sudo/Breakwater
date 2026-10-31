@@ -158,6 +158,17 @@ FAT_PAPER_SEATS = max(0, int(os.getenv("BREAKWATER_PAPER_FAT_SEATS", "10")))
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
+
+# Stop-fill slippage. Live protection is an exchange-side stop-limit with a
+# 2% band (risk.py), so the fill lands near the stop, not at the bar close -
+# but not AT the stop either: the trigger is a trade through the level and
+# the fill is the next liquidity. Paper used to fill every stop and trail
+# at exactly the stop price (gross_r == -1.0000 on all 60 October stops).
+# This applies an adverse offset of STOP_SLIP_BPS to stop and trail fills,
+# bounded by the bar's own extreme so a fill is never worse than a price
+# that printed. 0 restores the exact-stop fill. Logged implicitly: the row's
+# exit_price differs from stop_price by the slip.
+STOP_SLIP_BPS = Decimal(os.getenv("BREAKWATER_PAPER_STOP_SLIP_BPS", "15"))
 PREMIUM_ATR_MULT = Decimal("0.25")
 PREMIUM_CAP_BPS = Decimal("100")
 
@@ -1347,15 +1358,18 @@ def _mark_position_bar(
     # Target exits are OFF by default (see TARGET_ENABLE): winners run on the
     # trail instead of being capped at +2R.
     allow_target = TARGET_ENABLE and (horizon_bars == 0 or R_GATE_ENABLE)
+    slip = STOP_SLIP_BPS / Decimal(10000)
     if side == "BUY":
         if low <= stop:
-            exit_price, outcome = stop, ("win" if stop >= entry else "loss")
+            exit_price = max(low, stop * (Decimal(1) - slip))
+            outcome = "win" if exit_price >= entry else "loss"
             exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
         elif allow_target and high >= target:
             exit_price, exit_reason, outcome = target, "target", "win"
     else:
         if high >= stop:
-            exit_price, outcome = stop, ("win" if stop <= entry else "loss")
+            exit_price = min(high, stop * (Decimal(1) + slip))
+            outcome = "win" if exit_price <= entry else "loss"
             exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
         elif allow_target and low <= target:
             exit_price, exit_reason, outcome = target, "target", "win"
@@ -2683,7 +2697,7 @@ def run_paper_cycle(
             "prospective_only": True,
             "limitations": [
                 "funding_not_modeled",
-                "slippage_not_modeled",
+                "slippage_modeled_on_stop_fills_only",
                 "hourly_intrabar_path_unknown",
             ],
         }
