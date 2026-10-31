@@ -967,3 +967,76 @@ Not done, deliberately, all post-11-09 if at all: multi-hour cluster guard,
 entry/horizon slippage (41.6 + 19.6 unmodelled at 15 bps), per-kind slip,
 veto forgiveness timer, kind-aware family key (no slice_id spans kinds in
 the current book or memory), same-pair re-entry cooldown (-4.6 in October).
+
+### Sunday 2026-11-09 runbook (added 2026-10-31, after the Binance hack)
+
+Context for the week: on 2026-10-29 ~20:05Z about USD 6.36bn left Binance
+hot wallets in ~20 minutes (TRM: North Korea / TraderTraitor); BTC fell ~5%
+to under 80k; Binance halted withdrawals, froze ~3bn, promised to cover
+losses, proof of reserves due 11-02. The book was 100% SHORT going in (regime
+tracker in bear for weeks). Hack night was the best few hours paper has had:
+9 closes 10-29 18Z -> 10-31 17Z, +10.51, incl. 4 trail stops at 1.3-1.9 R in
+4 hours; one XMR stop -4.01 in the first-hour squeeze. All pre-slip fills.
+On 10-31 18Z: 8 open, all SELL, stops 1.75-3.9% away, BTC short from 77,580.
+The risk for the week is a relief squeeze when Binance resumes, not more
+selling: a 4% rally stops all eight in one or two candles. Bounded by the
+7%-of-equity aggregate cap (~-160 ZAR) plus 15 bps per fill.
+
+**Step 0 - was the machinery sound?** Before any criterion:
+- `status.csv` `shadow_scan_done` rows every hour 10-31 18Z -> 11-09;
+  `guardian_ok` heartbeat gaps should be gone (90-min timeout). Any
+  `paper.usdc_zar_fallback: true` rows (VALR rate fetch failed; harmless to
+  P&L, only gates the 10 USDC minimum, but note the hour).
+- If 6-8 stops landed in one hour: that is the pre-registered multi-hour
+  stacking gap (positions opened one per cycle across 10-30/31), NOT a
+  failure of the cluster cap. Check the slipped fills: `exit_price` vs
+  `stop_price` by 15 bps, bounded by the bar extreme; `gross_r` just under
+  -1. If any exit printed exactly at `stop_price`, the slip did not apply -
+  find out why before reading anything else.
+
+**Step 1 - criterion B** (>=30 global positioning closes, pnl >= 0; exclude
+`@oi_` cohort). Pre-registered expectation: 20-24 closes, i.e. a miss on
+count. Read it as two numbers: count, and pnl on whatever closed. Count
+miss + pnl >= 0 is "the lane did not produce enough trades"; count miss +
+pnl < 0 on 20+ closes is a real negative. Quote the 08-23Z-only figure.
+
+**Step 2 - criterion A** (>=3 global positioning slices held >=3 consecutive
+nightly research runs). Streak = nightly runs since the slice's current
+`validated_at` while continuously present; from `git log -p` on
+`monitored_slices.csv`. No slice survived 3 runs 10-26 -> 10-31; if that is
+still true, A fails on churn and the question becomes whether the
+positioning features ever re-validate the same slice twice.
+
+**Step 3 - attribution of the four changes**, per the addendum above
+(split 10-31T18:00Z; `entry_guard` in `cluster_cap` / `family_veto`;
+per-trade pnl and R, not totals; the asia cohort exists only pre-split).
+
+**Step 4 - verdict and the next list.** Whatever the verdict, these are the
+items waiting, in order. None of them was done before 11-09 because each
+changes the paper read or has no paper effect; items 1-2 were re-checked
+after the hack and already fail closed on the live side.
+
+1. **Multi-hour same-side stacking** (paper; changes the read). Rolling
+   "max N same-side native entries in the trailing K hours", or a
+   per-direction share of the aggregate-risk cap. October same-side runs:
+   126 trades / -81.4. Needs its own env kill switch and a 24-run pre/post.
+   Only if the verdict is PASS or CONTINUE.
+2. **Live: halted venue / gapped stop-limit.** Already fail-closed:
+   `_server_state` raises `GuardianHalt` when VALR is not `online`; a
+   TRIGGERED-but-unfilled stop-limit makes the position count as
+   unprotected (`account.unprotected_positions`) and halts the guardian. The
+   residual is that a halt is not a close: the operator must flatten by
+   hand. Paper cannot model a halted venue and should not pretend to. Before
+   any live arming: decide whether an unprotected position should market-close
+   automatically (execution has `_emergency_close_short` for entries only).
+3. **USDC/ZAR fallback** (`engine.py`, shadow path only): now flagged in
+   `status.csv` as `paper.usdc_zar_fallback`. It only gates the Hyperliquid
+   10 USDC minimum; the live guardian path has no fallback and halts. Leave.
+4. **Paper vs live fill gap still open:** entries and horizon exits take no
+   slippage (41.6 + 19.6 ZAR unmodelled in October at 15 bps; stops now
+   charged 18.3). Relative criteria cancel it; absolute P&L does not.
+5. Everything in the 10-31 "not done, deliberately" list.
+
+If the verdict is FAIL: stop the paper workflows, leave the guardian
+heartbeat running read-only, and write the post-mortem from the October
+diagnostic plus the 11-09 read before touching research again.

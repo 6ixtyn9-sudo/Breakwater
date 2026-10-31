@@ -1068,10 +1068,16 @@ class BreakwaterEngine:
         paper_result = None
         if self.settings.mode in {"shadow", "live"} and self.risk is not None:
             valuator = EquityValuator(self.client, self.catalog.refresh())
+            # Paper only uses this rate for Hyperliquid's 10 USDC minimum-order
+            # check, so a stale fallback cannot mis-size or mis-value a trade -
+            # but it must be visible. The live guardian path has no fallback
+            # and halts (fail closed) when the rate will not resolve.
+            usdc_zar_fallback = False
             try:
                 usdc_zar = valuator.rate_to_zar("USDC")
             except Exception:
                 usdc_zar = Decimal("16.29")
+                usdc_zar_fallback = True
             book_slice_ids = {
                 str(row["slice_id"]) for row in book_rows
             } | {str(row["slice_id"]) for row in hip3_book_rows}
@@ -1092,6 +1098,8 @@ class BreakwaterEngine:
                 regime_shift=regime_shift,
                 green_gate=green_gate,
             )
+            if usdc_zar_fallback:
+                paper_result["usdc_zar_fallback"] = True
             def _append_blocked(entry: dict, guard: str) -> None:
                 append_log(
                     self.settings.paper_log_path,
