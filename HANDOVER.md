@@ -830,3 +830,50 @@ How this interacts with the 11-09 read:
   concurrency group cover it. If `status.csv` shows `shadow_scan_done`
   gaps of more than two hours, the scan has outgrown the hour and that is
   the first thing to look at on 11-09.
+
+### Notes for the 11-09 session (added 2026-10-31, docs only)
+
+Corrections to the method above, found while watching the freeze:
+
+- `validated_at` is stamped at **admission** and carried unchanged while a
+  slice stays in the book; it is not re-stamped every run. A slice's streak
+  is therefore "nightly research runs since its stamp while still present",
+  not a count of distinct stamps. On 10-31 all six global positioning slices
+  carried 10-30/10-31 stamps: the 10-26 and 10-28 sets had cycled out and
+  different feature/state/horizon combinations came back.
+- Positioning closes to 10-31 13:00Z: 10, total -4.33 (SOL
+  `feat_premium:2:SHORT:h15` +4.47; XMR `feat_funding_rate:2:SHORT:h12`
+  stopped twice, -8.45, re-entering the hour after its first stop). Cohort
+  closes: 1 (-0.22).
+- Guardian runs are hitting their 50-minute job timeout in 30-60% of hours
+  since 10-28 (the read-only pass includes a full shadow scan; book 78-103
+  rows). State still persists on cancelled runs; the `guardian_ok` heartbeat
+  is missing for those hours. Fix is `timeout-minutes: 90` in
+  `guardian.yml`, matching `paper.yml`. Left for the operator; no logic.
+- 10-31 06:00Z paper run failed in 1 s with `ValrAuthenticationError 403`;
+  the next guardian and paper runs authenticated normally. One-off so far.
+
+Candidates to weigh on the day, in this order, only if the verdict is PASS.
+Neither is to be started before the read. Source: a pass over the
+QuantJourney/quants.md example library (50 textbook daily-bar strategies,
+best Sharpe 0.62, median ~0.1) whose indicator vocabulary is essentially
+`FEATURE_COLUMNS`; its scoreboard is independent evidence that the
+price-feature lane churns because there is no stable edge there, not
+because the gate is mis-tuned.
+
+1. **Re-entry keeps memory.** A slice that re-validates within N runs of
+   being dropped re-enters carrying its `slice_memory.csv` record
+   (first_validated_at, paper stats) rather than as a fresh streak-1 row.
+   Bookkeeping only: no change to what enters or leaves the book, no
+   hysteresis on exit (rejected 10-19 and again 10-26). Makes criterion A
+   measure persistence of the edge rather than of a specific
+   `feature:state:horizon` string.
+2. **Entry quality.** If positioning slices show a thin but real edge, the
+   cheapest basis points are at the fill: passive entry one tick inside the
+   spread with a one-bar timeout, measured against the current close-fill
+   model in `paper_counterfactual_log.csv` before anything changes in
+   `paper_trade.py`. Only once there is an edge to protect.
+
+Not worth pursuing from that library: cross-sectional momentum/reversal
+(flat for 26 years), per-slice parameter search (the engines lane already
+paid -38 for that), intraday samples of a few weeks.
