@@ -877,3 +877,93 @@ because the gate is mis-tuned.
 Not worth pursuing from that library: cross-sectional momentum/reversal
 (flat for 26 years), per-slice parameter search (the engines lane already
 paid -38 for that), intraday samples of a few weeks.
+
+### Addendum 2026-10-31 — freeze broken: four changes, and how to read them on 11-09
+
+The freeze was broken on the operator's instruction after a read of October
+paper results (220 closes since 10-01, -161.34; 60 stops at exactly -1.0 R,
+-232.85; same-hour multi-entry hours 109 trades / -135). PR #31 (`dd6475a`)
+and two operator workflow commits landed together. A second-agent red-team
+review of the merge (read-only, all replays re-run from `paper_trade_log.csv`
+and hourly `monitored_slices.csv` history) kept all three code changes and
+produced the corrections recorded here.
+
+**The four changes, all live from the 18:01Z paper cycle on 10-31:**
+
+| # | change | knob (revert value) | October replay |
+|---|--------|---------------------|----------------|
+| 1 | Cluster cap: one new native entry per (kind, side) per cycle; rest journaled `entry_guard=cluster_cap` | `BREAKWATER_PAPER_MAX_ENTRIES_PER_CYCLE_PER_SIDE` (`0`) | kept 159 trades = -71.18 vs actual -161.34 (engine ordering); random-keep mean -81.5, p5..p95 -103..-60 |
+| 2 | Stop and trail fills 15 bps through the level, bounded by the bar extreme; counterfactuals match | `BREAKWATER_PAPER_STOP_SLIP_BPS` (`0`) | exact cost 18.32 (11.13 stops + 7.19 trails), 8 % of stop P&L |
+| 3 | Negative-paper veto counts horizon siblings (family = slice_id minus `:hN`, book + slice memory); journaled `entry_guard=family_veto` from PR #32 | `BREAKWATER_PAPER_FAMILY_VETO` (`0`) | blocks 34 / -37.4 path-dependent vs per-slice 4 / -2.9; 10 of the 34 were winners (+12.5 given up) |
+| 4 | `paper.yml` default `BREAKWATER_PAPER_SESSIONS` `eu,us,asia` -> `eu,us` (operator commit; no entries on bars starting 00-07Z) | repo variable `BREAKWATER_PAPER_SESSIONS=eu,us,asia` | removes 78 trades / -99.03 and ~1/3 of positioning entries — larger than 1-3 combined |
+
+Change 4 is a hand exclusion and the operator chose it knowingly. It is the
+biggest confound in the read: the pre period contains the asia cohort and the
+post period cannot. The guardian runs read-only and never runs the paper
+cycle (`engine.py`, mode gate before `run_paper_cycle`), so its own
+`eu,us,asia` default cannot open paper positions.
+
+**Corrections to the October diagnostic** (red-team reproduction):
+
+- Win rate was 42.7 % (94/220), not 38 %; 37 % is the asia subset.
+- "7 hours with >=3 simultaneous stops = 24 trades / -98" is grouped by EXIT
+  hour. All 24 were opened across >=2 entry hours; the per-cycle cap
+  addresses none of them. The cap's actual target is the same-entry-hour
+  duplicate bet (109 trades / -135), which reproduces. Stop bursts recurring
+  under the cap are not evidence that the cap failed. Multi-hour same-side
+  runs (126 trades / -81.4) are a known, untouched gap.
+- The per-slice veto baseline "20 / -13.2" does not reproduce (4 / -2.9
+  path-dependent); the family number does (34 vs the stated 38).
+- The counterfactual exit policies were not all "within -4.6..-7.4":
+  `no_target_trail_2r` was -69.8. The current policy was the best of the
+  five in October; leave it.
+- Gap-through opens are not modelled by the slip (fill can sit above the
+  open on a gap-down). Measured on real exit bars: 2 of 95, 1.24 ZAR. Ignore.
+
+**What the veto has already done.** 43 families are permanently vetoed
+(>=3 closes, negative sum, no forgiveness path; lifetime 264 trades /
+-277.1). Five of the 103 book rows re-validated 10-31 01:15Z are in dead
+families, including the positioning family `feat_funding_rate:2:SHORT`
+(XMR, 3 closes, -7.96). The global positioning pool is therefore five live
+families, not six. The veto blocks paper entries, not book rows, so it does
+not touch criterion A directly.
+
+**Honest expectation for 11-09, written before the data:**
+
+- Criterion B (>=30 positioning closes, pnl >= 0): 9 global closes by 10-31
+  13:00Z at ~1.75/day gave ~25 by 11-09 before any of the four changes.
+  With the asia drop, the cap and the dead XMR family, the central estimate
+  is 20-24. B is likely to miss on COUNT regardless of PR #31; if it does,
+  the finding is "the positioning lane did not produce enough closes", not
+  "the edge is negative". Read pnl >= 0 on whatever closes exist.
+- Criterion A (>=3 slices held >=3 consecutive research runs): decided by
+  nightly churn, not by these changes. No positioning slice_id survived
+  three consecutive nightly runs 10-26 -> 10-31.
+
+**Attribution rules for the read:**
+
+1. Split at `closed_at >= 2026-10-31T18:00Z`. Run every pre/post comparison
+   twice: all hours, and entries at 08-23Z only (the window both periods
+   share). Quote the 08-23Z one.
+2. Cluster cap: skip rows `entry_guard == "cluster_cap"` (pair, side,
+   slice_id); `paper.cluster_cap` per cycle in `status.csv`. Same-(kind,
+   side, hour) entry groups should collapse to ~1. Solo-entry per-trade pnl
+   should NOT change; if it degrades, the kept signal's quality is suspect.
+3. Stop slip: stop/trail rows now have `exit_price != stop_price` by
+   qty x 15 bps (bounded by the bar extreme) and `gross_r` < -1; pre-change
+   stops were all exactly -1.0. Horizon and `slice_gap` rows are the
+   built-in control group. Expect a few marginal trail wins to print as
+   losses (October: 5 of 37 would have flipped); that is the fill model, not
+   a trail regression. `gross_r` has no consumer outside `paper_trade.py`.
+4. Family veto: skip rows `entry_guard == "family_veto"` (from PR #32) and
+   `paper.family_vetoed` per cycle. If the blocked slices' families would
+   have averaged better than about -1.1/trade, the veto cost money.
+5. Compare per-trade pnl and R, not ZAR totals: sizing compounds with paper
+   equity across the split.
+6. Other confounds to name: bear regime since mid-October; the post period
+   trades a book that was ~fully re-validated 10-31; small samples.
+
+Not done, deliberately, all post-11-09 if at all: multi-hour cluster guard,
+entry/horizon slippage (41.6 + 19.6 unmodelled at 15 bps), per-kind slip,
+veto forgiveness timer, kind-aware family key (no slice_id spans kinds in
+the current book or memory), same-pair re-entry cooldown (-4.6 in October).

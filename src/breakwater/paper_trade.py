@@ -2186,6 +2186,34 @@ def run_paper_cycle(
                 skipped += 1
                 family_vetoed += 1
                 _deny(signal, "skipped")
+                # Journal the denial (same shape as the cluster_cap row) so the
+                # 9-Nov read can see WHICH slices the family veto silenced, not
+                # just how many per cycle.
+                append_log(
+                    log_path,
+                    {
+                        "closed_at": server_time.isoformat(),
+                        "signal_id": signal.signal_id,
+                        "pair": signal.pair,
+                        "kind": signal.kind,
+                        "slice_id": signal.slice_id,
+                        "side": signal.side.value,
+                        "entry_price": str(signal.entry_price),
+                        "exit_price": "",
+                        "stop_price": str(signal.stop_price),
+                        "notional_zar": "0",
+                        "pnl_zar": "0",
+                        "outcome": "skipped",
+                        "bars_held": "0",
+                        "exit_reason": "family_veto",
+                        "entry_guard": "family_veto",
+                        "regime": str(getattr(signal, "regime", "") or ""),
+                        "pnl_outcome": "",
+                        "atr": str(getattr(signal, "atr", "") or ""),
+                        "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                        "risk_fraction": "",
+                    },
+                )
                 continue
 
         # Green-account entry freeze: a frozen lane or a slice whose own paper
