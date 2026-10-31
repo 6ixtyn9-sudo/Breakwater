@@ -93,8 +93,11 @@ from breakwater.paper_counterfactual import (
     write_counterfactual_trackers,
 )
 from breakwater.research_lifecycle import (
+    _strip_horizon_suffix,
     apply_signal_feedback,
+    memory_path_for,
     read_book,
+    read_memory,
     reconcile_paper_stats_from_log,
 )
 
@@ -158,6 +161,17 @@ FAT_PAPER_SEATS = max(0, int(os.getenv("BREAKWATER_PAPER_FAT_SEATS", "10")))
 
 ADVERSE_ATR_MULT = Decimal("1.0")
 ADVERSE_CAP_BPS = Decimal("200")
+
+# Stop-fill slippage. Live protection is an exchange-side stop-limit with a
+# 2% band (risk.py), so the fill lands near the stop, not at the bar close -
+# but not AT the stop either: the trigger is a trade through the level and
+# the fill is the next liquidity. Paper used to fill every stop and trail
+# at exactly the stop price (gross_r == -1.0000 on all 60 October stops).
+# This applies an adverse offset of STOP_SLIP_BPS to stop and trail fills,
+# bounded by the bar's own extreme so a fill is never worse than a price
+# that printed. 0 restores the exact-stop fill. Logged implicitly: the row's
+# exit_price differs from stop_price by the slip.
+STOP_SLIP_BPS = Decimal(os.getenv("BREAKWATER_PAPER_STOP_SLIP_BPS", "15"))
 PREMIUM_ATR_MULT = Decimal("0.25")
 PREMIUM_CAP_BPS = Decimal("100")
 
@@ -201,6 +215,18 @@ SLICE_GAP_BARS = int(os.getenv("BREAKWATER_PAPER_SLICE_GAP_BARS", "12"))
 # the book from bloating to 48+ stale slices that dilute capital across dead
 # edges.  Set to 0 to disable.
 MAX_BOOK_SLICES = int(os.getenv("BREAKWATER_PAPER_MAX_BOOK_SLICES", "20"))
+
+# Cluster cap: at most N NEW native entries per (kind, side) per cycle. The
+# book fires the same direction on BTC/ETH/XRP/SOL in the same hour when the
+# market moves together; measured 2026-10-01..31, entries opened in an hour
+# with >=2 entries lost -135 ZAR over 109 trades, solo entries -26 over 111,
+# and seven single hours with >=3 simultaneous stops were 42% of all stop
+# losses. One such cluster is one bet at 3-4x size that the per-pair hold
+# rule cannot see. Candidates are already ranked (fat by mean, then
+# incumbents by paper P&L), so the cap keeps the best-ranked signal per
+# direction and journals the rest as ``cluster_cap``. HIP-3 has its own
+# pool and is exempt. 0 disables.
+MAX_ENTRIES_PER_CYCLE_PER_SIDE = int(os.getenv("BREAKWATER_PAPER_MAX_ENTRIES_PER_CYCLE_PER_SIDE", "1"))
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -1162,6 +1188,44 @@ def _migrate_legacy_positions(open_positions: list[dict], *, horizon_map: dict[s
                 position["regime"] = "unknown"
 
 
+# Negative-paper veto at FAMILY level. The veto ("3+ paper closes and
+# negative P&L: no new entries") keyed on the exact slice_id, so a thesis
+# that burned out at :h12 kept trading as :h15 and :h20 - the horizon
+# suffix is a research artefact, not a different idea. Measured on
+# 2026-10-01..31: 38 trades (-32.8 ZAR) were opened after their family
+# already had >=3 closes and negative P&L; the per-slice rule saw 20 of
+# them. Stats come from the live book rows plus slice memory for siblings
+# that have rotated out (memory wins only where the book has no row).
+# BREAKWATER_PAPER_FAMILY_VETO=0 restores the per-slice lookup.
+FAMILY_VETO = _env_bool("BREAKWATER_PAPER_FAMILY_VETO", "1")
+
+
+def _family_paper_stats(book_path: Path) -> dict[str, tuple[int, float]]:
+    """family (slice_id minus :hN) -> (paper_trades, paper_pnl_zar) summed
+    over the book rows and remembered siblings."""
+    try:
+        rows = read_book(book_path)
+    except Exception:
+        rows = []
+    seen: dict[str, dict] = {str(r.get("slice_id") or ""): r for r in rows if r.get("slice_id")}
+    try:
+        for (sid, _kind), entry in read_memory(memory_path_for(book_path)).items():
+            if sid and sid not in seen:
+                seen[sid] = entry
+    except Exception:
+        pass
+    out: dict[str, tuple[int, float]] = {}
+    for sid, row in seen.items():
+        fam = _strip_horizon_suffix(sid)
+        try:
+            pnl = float(row.get("paper_pnl_zar") or 0.0)
+        except (TypeError, ValueError):
+            pnl = 0.0
+        trades, total = out.get(fam, (0, 0.0))
+        out[fam] = (trades + _coerce_int(row.get("paper_trades"), 0), total + pnl)
+    return out
+
+
 def _slice_trade_counts(book_path: Path) -> dict[str, int]:
     """slice_id -> paper_trades from the book (best-effort)."""
     try:
@@ -1335,15 +1399,18 @@ def _mark_position_bar(
     # Target exits are OFF by default (see TARGET_ENABLE): winners run on the
     # trail instead of being capped at +2R.
     allow_target = TARGET_ENABLE and (horizon_bars == 0 or R_GATE_ENABLE)
+    slip = STOP_SLIP_BPS / Decimal(10000)
     if side == "BUY":
         if low <= stop:
-            exit_price, outcome = stop, ("win" if stop >= entry else "loss")
+            exit_price = max(low, stop * (Decimal(1) - slip))
+            outcome = "win" if exit_price >= entry else "loss"
             exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
         elif allow_target and high >= target:
             exit_price, exit_reason, outcome = target, "target", "win"
     else:
         if high >= stop:
-            exit_price, outcome = stop, ("win" if stop <= entry else "loss")
+            exit_price = min(high, stop * (Decimal(1) + slip))
+            outcome = "win" if exit_price <= entry else "loss"
             exit_reason = "trail_stop" if stop != initial_stop_price else "stop"
         elif allow_target and low <= target:
             exit_price, exit_reason, outcome = target, "target", "win"
@@ -1932,6 +1999,8 @@ def run_paper_cycle(
     slot_full = 0
     slice_full = 0
     pair_held = 0
+    cluster_capped = 0
+    opened_this_cycle: dict[tuple[str, str], int] = {}
     reentry_blocked = 0
     through_target_blocked = 0
     aggregate_risk_cap_skips = 0
@@ -1973,6 +2042,8 @@ def run_paper_cycle(
 
     trade_counts = _slice_trade_counts(book_path)
     paper_pnls = _slice_paper_pnl(book_path)
+    family_stats = _family_paper_stats(book_path) if FAMILY_VETO else {}
+    family_vetoed = 0
     incumbents = _incumbent_slice_ids(book_path)
     means = _slice_means(book_path)
     if hip3_book_path is not None:
@@ -2021,8 +2092,8 @@ def run_paper_cycle(
     # "how many HIP-3 trades couldn't get a seat?" a number instead of an
     # inference. Shared counters above stay the source of truth.
     book_stats = {
-        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
-        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
+        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "cluster_cap": 0, "skipped": 0, "lane_gate_blocked": 0},
+        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "cluster_cap": 0, "skipped": 0, "lane_gate_blocked": 0},
     }
     for sig in signals:
         book_stats[_bkey_book(sig)]["signals"] += 1
@@ -2109,6 +2180,13 @@ def run_paper_cycle(
             skipped += 1
             _deny(signal, "skipped")
             continue
+        if FAMILY_VETO and not str(signal.slice_id or "").startswith("hip3_"):
+            fam_trades, fam_pnl = family_stats.get(_strip_horizon_suffix(str(signal.slice_id)), (0, 0.0))
+            if fam_trades >= 3 and fam_pnl < 0:
+                skipped += 1
+                family_vetoed += 1
+                _deny(signal, "skipped")
+                continue
 
         # Green-account entry freeze: a frozen lane or a slice whose own paper
         # history is negative must not open new exposure even if it reaches the
@@ -2148,6 +2226,41 @@ def run_paper_cycle(
         if (signal.pair.upper(), signal.kind.upper()) in open_pairs:
             pair_held += 1
             _deny(signal, "pair_held")
+            continue
+
+        cluster_key = (str(signal.kind).upper(), str(signal.side.value))
+        if (
+            MAX_ENTRIES_PER_CYCLE_PER_SIDE > 0
+            and not str(signal.slice_id or "").startswith("hip3_")
+            and opened_this_cycle.get(cluster_key, 0) >= MAX_ENTRIES_PER_CYCLE_PER_SIDE
+        ):
+            cluster_capped += 1
+            _deny(signal, "cluster_cap")
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "cluster_cap",
+                    "entry_guard": "cluster_cap",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
             continue
 
         # Re-entry accounting: one signal, one position. A signal that is still
@@ -2529,6 +2642,8 @@ def run_paper_cycle(
             signal_horizon = book_horizon_map.get(signal.slice_id, 0)
 
         book_stats[_bkey_book(signal)]["opened"] += 1
+        if not str(signal.slice_id or "").startswith("hip3_"):
+            opened_this_cycle[cluster_key] = opened_this_cycle.get(cluster_key, 0) + 1
         surviving.append(
             {
                 "signal_id": signal.signal_id,
@@ -2632,7 +2747,7 @@ def run_paper_cycle(
             "prospective_only": True,
             "limitations": [
                 "funding_not_modeled",
-                "slippage_not_modeled",
+                "slippage_modeled_on_stop_fills_only",
                 "hourly_intrabar_path_unknown",
             ],
         }
@@ -2649,6 +2764,8 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "cluster_cap": cluster_capped,
+        "family_vetoed": family_vetoed,
         "reentry_blocked": reentry_blocked,
         "through_target_blocked": through_target_blocked,
         "one_entry_per_signal": ONE_ENTRY_PER_SIGNAL,

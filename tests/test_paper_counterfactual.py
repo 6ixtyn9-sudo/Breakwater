@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import pandas as pd
+import pytest
 
 from breakwater.paper_counterfactual import (
     advance_counterfactuals,
@@ -11,6 +12,17 @@ from breakwater.paper_counterfactual import (
 )
 
 NOW = datetime(2026, 8, 23, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _exact_stop_fills(monkeypatch):
+    """These tests assert policy mechanics on exact stop-price fills; the
+    stop-fill slippage (BREAKWATER_PAPER_STOP_SLIP_BPS, default 15) is
+    covered in test_paper.py."""
+    import breakwater.paper_trade as pt
+
+    monkeypatch.setenv("BREAKWATER_PAPER_STOP_SLIP_BPS", "0")
+    monkeypatch.setattr(pt, "STOP_SLIP_BPS", pt.Decimal(0))
 
 
 def position(side="BUY", entry="100", stop="95"):
