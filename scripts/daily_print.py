@@ -1124,6 +1124,7 @@ def _report_text() -> str:
             ("aggregate_risk_unknown_skips", paper.get("aggregate_risk_unknown_skips")),
             ("slice_full", paper.get("slice_full")),
             ("pair_held", paper.get("pair_held")),
+            ("cluster_cap", paper.get("cluster_cap")),
             ("slot_full", paper.get("slot_full")),
             ("skipped", paper.get("skipped")),
         ]

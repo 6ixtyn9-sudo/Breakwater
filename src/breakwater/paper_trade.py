@@ -202,6 +202,18 @@ SLICE_GAP_BARS = int(os.getenv("BREAKWATER_PAPER_SLICE_GAP_BARS", "12"))
 # edges.  Set to 0 to disable.
 MAX_BOOK_SLICES = int(os.getenv("BREAKWATER_PAPER_MAX_BOOK_SLICES", "20"))
 
+# Cluster cap: at most N NEW native entries per (kind, side) per cycle. The
+# book fires the same direction on BTC/ETH/XRP/SOL in the same hour when the
+# market moves together; measured 2026-10-01..31, entries opened in an hour
+# with >=2 entries lost -135 ZAR over 109 trades, solo entries -26 over 111,
+# and seven single hours with >=3 simultaneous stops were 42% of all stop
+# losses. One such cluster is one bet at 3-4x size that the per-pair hold
+# rule cannot see. Candidates are already ranked (fat by mean, then
+# incumbents by paper P&L), so the cap keeps the best-ranked signal per
+# direction and journals the rest as ``cluster_cap``. HIP-3 has its own
+# pool and is exempt. 0 disables.
+MAX_ENTRIES_PER_CYCLE_PER_SIDE = int(os.getenv("BREAKWATER_PAPER_MAX_ENTRIES_PER_CYCLE_PER_SIDE", "1"))
+
 
 def _env_bool(name: str, default: str = "0") -> bool:
     value = str(os.getenv(name, default)).strip().lower()
@@ -1932,6 +1944,8 @@ def run_paper_cycle(
     slot_full = 0
     slice_full = 0
     pair_held = 0
+    cluster_capped = 0
+    opened_this_cycle: dict[tuple[str, str], int] = {}
     reentry_blocked = 0
     through_target_blocked = 0
     aggregate_risk_cap_skips = 0
@@ -2021,8 +2035,8 @@ def run_paper_cycle(
     # "how many HIP-3 trades couldn't get a seat?" a number instead of an
     # inference. Shared counters above stay the source of truth.
     book_stats = {
-        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
-        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "skipped": 0, "lane_gate_blocked": 0},
+        "native": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "cluster_cap": 0, "skipped": 0, "lane_gate_blocked": 0},
+        "hip3": {"signals": 0, "opened": 0, "slot_full": 0, "slice_full": 0, "pair_held": 0, "cluster_cap": 0, "skipped": 0, "lane_gate_blocked": 0},
     }
     for sig in signals:
         book_stats[_bkey_book(sig)]["signals"] += 1
@@ -2148,6 +2162,41 @@ def run_paper_cycle(
         if (signal.pair.upper(), signal.kind.upper()) in open_pairs:
             pair_held += 1
             _deny(signal, "pair_held")
+            continue
+
+        cluster_key = (str(signal.kind).upper(), str(signal.side.value))
+        if (
+            MAX_ENTRIES_PER_CYCLE_PER_SIDE > 0
+            and not str(signal.slice_id or "").startswith("hip3_")
+            and opened_this_cycle.get(cluster_key, 0) >= MAX_ENTRIES_PER_CYCLE_PER_SIDE
+        ):
+            cluster_capped += 1
+            _deny(signal, "cluster_cap")
+            append_log(
+                log_path,
+                {
+                    "closed_at": server_time.isoformat(),
+                    "signal_id": signal.signal_id,
+                    "pair": signal.pair,
+                    "kind": signal.kind,
+                    "slice_id": signal.slice_id,
+                    "side": signal.side.value,
+                    "entry_price": str(signal.entry_price),
+                    "exit_price": "",
+                    "stop_price": str(signal.stop_price),
+                    "notional_zar": "0",
+                    "pnl_zar": "0",
+                    "outcome": "skipped",
+                    "bars_held": "0",
+                    "exit_reason": "cluster_cap",
+                    "entry_guard": "cluster_cap",
+                    "regime": str(getattr(signal, "regime", "") or ""),
+                    "pnl_outcome": "",
+                    "atr": str(getattr(signal, "atr", "") or ""),
+                    "stop_atr_mult": str(getattr(signal, "stop_atr_mult", "") or ""),
+                    "risk_fraction": "",
+                },
+            )
             continue
 
         # Re-entry accounting: one signal, one position. A signal that is still
@@ -2529,6 +2578,8 @@ def run_paper_cycle(
             signal_horizon = book_horizon_map.get(signal.slice_id, 0)
 
         book_stats[_bkey_book(signal)]["opened"] += 1
+        if not str(signal.slice_id or "").startswith("hip3_"):
+            opened_this_cycle[cluster_key] = opened_this_cycle.get(cluster_key, 0) + 1
         surviving.append(
             {
                 "signal_id": signal.signal_id,
@@ -2649,6 +2700,7 @@ def run_paper_cycle(
         "slot_full": slot_full,
         "slice_full": slice_full,
         "pair_held": pair_held,
+        "cluster_cap": cluster_capped,
         "reentry_blocked": reentry_blocked,
         "through_target_blocked": through_target_blocked,
         "one_entry_per_signal": ONE_ENTRY_PER_SIGNAL,

@@ -162,6 +162,15 @@ def spot_frame(close, high=None, low=None):
     )
 
 
+@pytest.fixture(autouse=True)
+def _no_cluster_cap(monkeypatch):
+    """Slot/seat tests predate the cluster cap and open several same-side
+    positions per cycle on purpose. The cap has its own tests below."""
+    import breakwater.paper_trade as pt
+
+    monkeypatch.setattr(pt, "MAX_ENTRIES_PER_CYCLE_PER_SIDE", 0)
+
+
 def cycle(tmp_path, signals, frames, positions=None, book=BOOK, monkeypatch=None, server_time=None, green_gate=None):
     import os
     os.environ.setdefault("BREAKWATER_PAPER_MAX_RISK_FRACTION", "1")
@@ -628,6 +637,52 @@ def test_new_book_signal_opens_position_when_slot_free(tmp_path):
     positions = read_positions(tmp_path / "positions.json")
     assert positions[0]["slice_id"] == "feat:0:LONG"
     assert positions[0]["entry_guard"] == "passed"
+
+
+def test_cluster_cap_keeps_one_entry_per_side_per_cycle(tmp_path, monkeypatch):
+    """Same-hour, same-direction entries are one bet at N-times size: the
+    best-ranked signal per (kind, side) opens, the rest are journaled as
+    ``cluster_cap``. Opposite directions do not cap each other."""
+    import breakwater.paper_trade as pt
+
+    monkeypatch.setattr(pt, "MAX_ENTRIES_PER_CYCLE_PER_SIDE", 1)  # the production default
+    result = cycle(
+        tmp_path,
+        signals=[
+            signal(pair="BTCZAR", slice_id="feat:0:LONG"),
+            signal(pair="ETHZAR", slice_id="feat:1:LONG"),
+            signal(pair="XRPZAR", slice_id="feat:0:SHORT", side=Side.SELL, entry="100", stop="105"),
+        ],
+        frames={
+            "BTCZAR": spot_frame(close=100),
+            "ETHZAR": spot_frame(close=100),
+            "XRPZAR": spot_frame(close=100),
+        },
+        book=BOOK | {"feat:1:LONG"},
+    )
+    assert result["open"] == 2
+    assert result["cluster_cap"] == 1
+    assert result["book_stats"]["native"]["cluster_cap"] == 1
+    assert {p["pair"] for p in read_positions(tmp_path / "positions.json")} == {"BTCZAR", "XRPZAR"}
+    from breakwater.paper_trade import iter_paper_log
+
+    rows = list(iter_paper_log(tmp_path / "log.csv", include_skips=True))
+    capped = [r for r in rows if r["exit_reason"] == "cluster_cap"]
+    assert len(capped) == 1 and capped[0]["pair"] == "ETHZAR" and capped[0]["outcome"] == "skipped"
+
+
+def test_cluster_cap_zero_restores_unlimited_same_side_entries(tmp_path, monkeypatch):
+    import breakwater.paper_trade as pt
+
+    monkeypatch.setattr(pt, "MAX_ENTRIES_PER_CYCLE_PER_SIDE", 0)
+    result = cycle(
+        tmp_path,
+        signals=[signal(pair="BTCZAR"), signal(pair="ETHZAR", slice_id="feat:1:LONG")],
+        frames={"BTCZAR": spot_frame(close=100), "ETHZAR": spot_frame(close=100)},
+        book=BOOK | {"feat:1:LONG"},
+    )
+    assert result["open"] == 2
+    assert result["cluster_cap"] == 0
 
 
 def test_winner_capture_premium_raises_long_reference(tmp_path, monkeypatch):
