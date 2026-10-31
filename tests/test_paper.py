@@ -735,6 +735,11 @@ def test_family_veto_blocks_horizon_siblings_of_a_burned_thesis(tmp_path, monkey
     )
     assert result["family_vetoed"] == 1
     assert [p["slice_id"] for p in read_positions(tmp_path / "positions.json")] == ["feat:1:LONG:h24"]
+    # the denial is journaled so the read can see WHICH slice was silenced
+    from breakwater.paper_trade import iter_paper_log
+
+    vetoed = [r for r in iter_paper_log(tmp_path / "log.csv", include_skips=True) if r["entry_guard"] == "family_veto"]
+    assert len(vetoed) == 1 and vetoed[0]["slice_id"] == "feat:0:LONG:h24" and vetoed[0]["outcome"] == "skipped"
 
     # kill switch: per-slice lookup only, the sibling enters
     monkeypatch.setattr(pt, "FAMILY_VETO", False)

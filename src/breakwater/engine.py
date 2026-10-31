@@ -1242,6 +1242,7 @@ class BreakwaterEngine:
                     "slice_full": int(paper_result.get("slice_full") or 0),
                     "pair_held": int(paper_result.get("pair_held") or 0),
                     "cluster_cap": int(paper_result.get("cluster_cap") or 0),
+                    "family_vetoed": int(paper_result.get("family_vetoed") or 0),
                     "slot_full": int(paper_result.get("slot_full") or 0),
                     "skipped": int(paper_result.get("skipped") or 0),
                     "lane_gate_blocked": int(paper_result.get("lane_gate_blocked", len(lane_gate_blocked)) or 0),
