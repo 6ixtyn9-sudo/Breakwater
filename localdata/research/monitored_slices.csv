@@ -51,7 +51,7 @@ feat_adx_14:2:SHORT:h24,PERP,feat_adx_14,2,SHORT,monitored,2026-11-01T01:18:43.4
 feat_gap:1:SHORT:h24,PERP,feat_gap,1,SHORT,monitored,2026-11-01T01:18:43.414409+00:00,,0,0,0,0,,0.002059,8037,0.307326,24,3.500,validated_walk_forward,False,True,23,0.442
 feat_vol_of_vol:2:SHORT:h24,PERP,feat_vol_of_vol,2,SHORT,monitored,2026-11-01T01:18:43.414409+00:00,,1,0,1,-1.0689,,0.003091,9651,0.038372,24,3.500,validated_walk_forward,False,True,32,0.421
 feat_funding_cum_24:2:SHORT:h12,PERP,feat_funding_cum_24,2,SHORT,monitored,2026-11-01T01:18:43.414409+00:00,1793048400,1,0,1,-1.0301,,0.003824,2192,0.317261,12,3.500,validated_walk_forward,False,True,15,0.484
-feat_oi_chg_24:0:LONG:h12,PERP,feat_oi_chg_24,0,LONG,monitored,2026-11-01T01:18:43.414409+00:00,,0,0,0,0,,0.007954,1128,0.130564,12,3.500,validated_walk_forward,False,True,14,0.359
+feat_oi_chg_24:0:LONG:h12,PERP,feat_oi_chg_24,0,LONG,cooldown,2026-11-01T01:18:43.414409+00:00,1793556000,1,0,1,-2.1909,1793642400,0.007954,1128,0.130564,12,3.500,validated_walk_forward,False,True,14,0.359
 feat_funding_rate:2:SHORT:h15,PERP,feat_funding_rate,2,SHORT,monitored,2026-11-01T01:18:43.414409+00:00,,0,0,0,0,,0.008165,1307,0.028687,15,3.500,validated_walk_forward,False,True,13,0.419
 feat_premium@oi_hi:2:SHORT:h15,PERP,feat_premium,2,SHORT,monitored,2026-11-01T01:18:43.414409+00:00,,1,0,1,-0.2173,,0.004907,1357,0.314934,15,3.500,validated_walk_forward,False,True,6,0.462
 feat_funding_cum_24@oi_hi:2:SHORT:h12,PERP,feat_funding_cum_24,2,SHORT,monitored,2026-11-01T01:18:43.414409+00:00,1793512800,2,1,1,-1.3938,,0.002615,1202,0.794617,12,3.500,validated_walk_forward,False,True,6,0.545
