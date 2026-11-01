@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-01 02:48 UTC
+# Breakwater daily print — 2026-11-01 03:08 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -13,7 +13,7 @@
 
 - Equity: **2267.02 ZAR** (seed 2000) | lifetime: **+267.02 ZAR** | closed: 516
 - Today: 0 closed, **+0.00 ZAR**
-- 7d: **-19.93 ZAR** | 30d: **-154.51 ZAR**
+- 7d: **-19.93 ZAR** | 30d: **-156.41 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 470 | wins: 227 | win%: 48.3 | P&L: **+311.52 ZAR** | today: +0.00 | 7d: -19.93 | 30d: -154.51
+- Closed: 470 | wins: 227 | win%: 48.3 | P&L: **+311.52 ZAR** | today: +0.00 | 7d: -19.93 | 30d: -156.41
 - By exit: target +516.3, trail_stop +106.9, horizon +68.1, max_bars +2.8, regime_shift -11.9, stop -370.6
 - By entry regime (n/pnl): neutral 186/+233.0, bull 117/+178.4, bear 167/-99.9
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_ext_strength:2:LONG:h15 12n/8w +24.00; feat_bb_pos_20:2:LONG:h15 4n/4w +16.17; feat_atr_norm_ext:2:LONG:h15 3n/3w +15.77
@@ -51,40 +51,41 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 8 open, stop-risk **27.23 ZAR**
-  - ZECUSDC SELL ntl=115 risk=4.54 bars=9 stop=1328.9499999999999625 peak=1290.5
-  - PUMPUSDC SELL ntl=115 risk=4.52 bars=8 stop=0.004350250000000000320 peak=0.004297
-  - HYPEUSDC SELL ntl=115 risk=4.41 bars=0 stop=91.29549999999999825 peak=87.932
-  - UNIUSDC SELL ntl=115 risk=4.30 bars=10 stop=7.231950000000000105 peak=7.1617
-  - XMRUSDC SELL ntl=115 risk=3.40 bars=5 stop=612.8675000000000135 peak=602.43
-  - ETHUSDC SELL ntl=115 risk=2.02 bars=15 stop=2278.99650 peak=2266.1
-  - BTCUSDC SELL ntl=115 risk=2.02 bars=7 stop=78937.65000 peak=77750.0
-  - XRPUSDC SELL ntl=115 risk=2.02 bars=6 stop=1.2759450 peak=1.2562
+- **NATIVE**: 9 open, stop-risk **28.94 ZAR**
+  - ZECUSDC SELL ntl=115 risk=4.54 bars=11 stop=1328.9499999999999625 peak=1290.5
+  - PUMPUSDC SELL ntl=115 risk=4.52 bars=10 stop=0.004350250000000000320 peak=0.004297
+  - UNIUSDC SELL ntl=115 risk=4.30 bars=12 stop=7.231950000000000105 peak=7.1617
+  - HYPEUSDC SELL ntl=115 risk=4.10 bars=1 stop=91.06000000000000030 peak=88.658
+  - XMRUSDC SELL ntl=115 risk=3.40 bars=7 stop=612.8675000000000135 peak=609.1
+  - ETHUSDC SELL ntl=115 risk=2.02 bars=17 stop=2278.99650 peak=2271.7
+  - BTCUSDC SELL ntl=115 risk=2.02 bars=9 stop=78937.65000 peak=77750.0
+  - XRPUSDC SELL ntl=115 risk=2.02 bars=8 stop=1.2759450 peak=1.2566
+  - SOLUSDC SELL ntl=115 risk=2.02 bars=0 stop=97.0725525 peak=95.403
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
 ## 5. Aggregate risk leash
 
 - Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
-- Computed open stop-risk (section 4): **27.23 ZAR** (informational only, no cap applied)
-- Paper shadow ledger (gates paper entries only, nothing live): **27.23 / 161.31 ZAR | 18.3% | ok**
-- Remaining: 131.7718 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 14, "skipped": 14, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 28, "lane_gate_blocked": 0, "opened": 1, "pair_held": 50, "signals": 224, "skipped": 145, "slice_full": 0, "slot_full": 0}}
+- Computed open stop-risk (section 4): **28.94 ZAR** (informational only, no cap applied)
+- Paper shadow ledger (gates paper entries only, nothing live): **28.94 / 161.31 ZAR | 19.6% | ok**
+- Remaining: 129.7760 | cap skips: 0 | unknown skips: 0
+- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 15, "skipped": 15, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 4, "lane_gate_blocked": 0, "opened": 1, "pair_held": 15, "signals": 24, "skipped": 4, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **ZECUSDC** 4.5411 ZAR
-- positions without bars: 0 | replayed: 14 | invalid: 0
+- positions without bars: 0 | replayed: 8 | invalid: 0
 
 ## 6. Monitored books
 
 - Native: 88 | HIP-3: 21
 - Native top (by paper P&L):
   - `feat_rsi_21:2:SHORT:h24` edge=0.0070 n=6576 p=0.0932 src=validated_walk_forward unproven=False paper=2n/+1.17
+  - `feat_vwap_dist:2:SHORT:h24` edge=0.0072 n=9402 p=0.2148 src=validated_walk_forward unproven=False paper=1n/+0.61
+  - `feat_ret_20:2:SHORT:h20` edge=0.0082 n=8310 p=0.0181 src=validated_walk_forward unproven=False paper=2n/+0.52
   - `feat_funding_cum_24@oi_hi:2:SHORT:h12` edge=0.0026 n=1202 p=0.7946 src=validated_walk_forward unproven=False paper=1n/+0.51
   - `feat_gap_fill_ratio:0:SHORT:h24` edge=0.0018 n=10763 p=0.6128 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_premium:2:SHORT:h24` edge=0.0108 n=3143 p=0.2336 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_time_since_low_20:2:SHORT:h20` edge=0.0035 n=3103 p=0.7645 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_macd_12_26:2:SHORT:h12` edge=0.0065 n=7820 p=0.0006 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ema_cross_10_20:2:SHORT:h12` edge=0.0062 n=8162 p=0.0038 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_ext_vs_ma_50:2:SHORT:h12` edge=0.0050 n=8630 p=0.0049 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -127,13 +128,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.1333 bull=0.2 neutral=0.6667 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-01T02:16:01Z
+- as_of: 2026-11-01T02:48:48Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 337 | observations: 2048 | armable: **0**
+- candidates: 1120 | eligible: 337 | observations: 2050 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_oi_chg_24@oi_lo:2:SHORT:h24` edge=235.6b n=135 breadth=4 validated=False prov=False armable=False (too_few_rows)
   - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=221.1b n=362 breadth=7 validated=False prov=False armable=False (not_confirmed_bear)
@@ -204,12 +205,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-01T00:56:54: errors=0 signals=238 regime_blocked=283
-- this cycle: closed=0 new_signals=238 skipped=159 slot_full=0 slice_full=0 pair_held=50
-- Action funnel: regime_blocked=283 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=50 | cluster_cap=28 | family_vetoed=5 | slot_full=0 | skipped=159
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 28, "family_vetoed": 5, "lane_gate_blocked": 3, "pair_held": 50, "regime_blocked": 283, "skipped": 159, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-11-01T02:31:48: errors=0 signals=39 regime_blocked=60
+- this cycle: closed=0 new_signals=39 skipped=19 slot_full=0 slice_full=0 pair_held=15
+- Action funnel: regime_blocked=60 | lane_gate_blocked=3 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=15 | cluster_cap=4 | family_vetoed=0 | slot_full=0 | skipped=19
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 4, "family_vetoed": 0, "lane_gate_blocked": 3, "pair_held": 15, "regime_blocked": 60, "skipped": 19, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=46
-- aggregate_risk: ok open=22.8235 cap=161.3084 used=0.1831 remaining=131.7718 replayed=14 no_new_bars=0
+- aggregate_risk: ok open=26.9222 cap=161.3084 used=0.1955 remaining=129.7760 replayed=8 no_new_bars=0
 - pair_errors: []
 
 ---
