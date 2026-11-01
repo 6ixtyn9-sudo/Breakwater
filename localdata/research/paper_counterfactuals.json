@@ -202,7 +202,7 @@
     "initial_stop_price": "717.1475000000000590",
     "kind": "PERP",
     "last_processed_bar_start": "2026-10-31T14:00:00+00:00",
-    "missing_bars": 8,
+    "missing_bars": 9,
     "notional_zar": "115.38052000",
     "pair": "BNBUSDC",
     "peak_price": "710.31",
@@ -583,44 +583,44 @@
     "entry_price": "87.932",
     "fee_bps": "9",
     "horizon_bars": 20,
-    "initial_stop_price": "91.06000000000000030",
+    "initial_stop_price": "91.29549999999999825",
     "kind": "PERP",
     "last_processed_bar_start": "2026-11-01T00:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "115.22029500",
     "pair": "HYPEUSDC",
-    "peak_price": "87.932",
+    "peak_price": "88.325",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 0,
-        "stop_price": "91.06000000000000030"
+        "bars_held": 1,
+        "stop_price": "91.29549999999999825"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 0,
-        "stop_price": "91.06000000000000030"
+        "bars_held": 1,
+        "stop_price": "91.29549999999999825"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 0,
-        "stop_price": "91.06000000000000030"
+        "bars_held": 1,
+        "stop_price": "91.29549999999999825"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 0,
-        "stop_price": "91.06000000000000030"
+        "bars_held": 1,
+        "stop_price": "91.29549999999999825"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 0,
-        "stop_price": "91.06000000000000030"
+        "bars_held": 1,
+        "stop_price": "91.29549999999999825"
       }
     },
     "side": "SELL",
     "signal_id": "96ca52ad7f2362cc",
     "slice_id": "feat_funding_cum_24:2:SHORT:h20",
-    "tracked_at": "2026-11-01T01:03:32+00:00",
-    "trough_price": "87.932"
+    "tracked_at": "2026-11-01T00:15:06+00:00",
+    "trough_price": "87.865"
   }
 ]
