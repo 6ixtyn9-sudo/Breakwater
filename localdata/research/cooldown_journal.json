@@ -1,21 +1,5 @@
 [
   {
-    "pair": "XYZ:AMZN",
-    "pnl_zar": "-0.0506",
-    "reason": "slice_gap",
-    "signal_id": "024a3e5fd220fd04",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T03:00:27+00:00"
-  },
-  {
-    "pair": "XYZ:AVGO",
-    "pnl_zar": "0.0483",
-    "reason": "slice_gap",
-    "signal_id": "92344be6faca0eed",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T03:00:27+00:00"
-  },
-  {
     "pair": "XYZ:BABA",
     "pnl_zar": "-0.6368",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "e62aaa6f58a6cced",
     "slice_id": "feat_funding_cum_24@oi_mid:2:SHORT:h24",
     "stopped_at": "2026-11-01T07:01:15+00:00"
+  },
+  {
+    "pair": "ZECUSDC",
+    "pnl_zar": "2.5219",
+    "reason": "slice_gap",
+    "signal_id": "da99df2c7dd8e976",
+    "slice_id": "feat_ret_20:2:SHORT:h24",
+    "stopped_at": "2026-11-01T10:01:11+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-0.8783",
+    "reason": "slice_gap",
+    "signal_id": "5e2b1350f2faea5a",
+    "slice_id": "feat_ret_20:2:SHORT:h24",
+    "stopped_at": "2026-11-01T10:01:11+00:00"
   }
 ]
