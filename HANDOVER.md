@@ -1040,3 +1040,43 @@ after the hack and already fail closed on the live side.
 If the verdict is FAIL: stop the paper workflows, leave the guardian
 heartbeat running read-only, and write the post-mortem from the October
 diagnostic plus the 11-09 read before touching research again.
+
+### 2026-11-02 — multi-year backtest harness (turnaround step 1 and 2)
+
+Root cause, stated once: research runs on `BREAKWATER_PERP_CANDLE_COUNT =
+1000` hourly bars = 42 days. Every slice ever promoted was discovered,
+walk-forward-validated and promoted on six weeks of data; the system
+rediscovers the last six weeks' regime and promotes it as it ends.
+September (+468) was the regime persisting, October (-163) was the
+re-learning. Nothing re-enters the paper loop without passing a multi-year
+out-of-sample test first.
+
+`src/breakwater/backtest.py` + `scripts/backtest.py` (+ `tests/test_backtest.py`).
+Workflow `backtest.yml` (operator-pasted; `workflow_dispatch`) fetches the
+data in CI (sandbox has no venue access), caches it under
+`localdata/backtest/data/` (gitignored), and commits only
+`localdata/backtest/{summary.md,coverage.csv,h1_trend_trail.csv,h2_funding_carry.csv}`.
+
+Pre-registered, no fitting, verdict from the MEDIAN grid variant:
+- Holdout from 2025-07-01; costs 9 bps/side, 5 bps entry slip, 15 bps
+  stop slip; fixed 1x notional per coin, no compounding.
+- Universe: BTC ETH SOL XRP DOGE BNB AVAX LINK LTC ADA. Daily bars from
+  Hyperliquid (`candleSnapshot` keeps at most 5000 candles per interval, so
+  1d = since 2023 listing, 1h = ~7 months - the reason H1 is daily), Binance
+  daily spliced in front for BTC/ETH when reachable, hourly funding from
+  Hyperliquid `fundingHistory`.
+- **H1 trend + trail**: direction = close vs SMA(50|100|200), enter next
+  open, ATR(14) x (2|3|4) trail against the bar extreme, exit on stop or
+  trend flip, long and short. 9 variants.
+- **H2 funding carry**: trailing-24h funding annualised beyond (10|20|30)%
+  -> receiving side next day, hold while it persists. Reported hedged
+  (funding - 4 x fee per episode; assumes a 9 bps second leg - VALR spot at
+  70 bps does not qualify) and directional (price + funding - 2 x fee).
+- PASS = median variant holdout net > 0 AND >= 60% of coin-years positive.
+  Best-of-grid is printed for scale and is never the verdict.
+
+What a PASS buys: the hypothesis goes into the existing paper machinery
+(which the 10-31 red team and the hack week showed works) with its own
+criteria. What a FAIL buys: we stop spending paper weeks on it. Either way
+the harness stays; H3 (ZAR premium, VALR vs global) needs VALR history we
+do not collect yet and is next.

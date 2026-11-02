@@ -12,3 +12,6 @@ localdata/*.db-*
 localdata/*.tmp
 localdata/.hyperliquid-testnet-canary.json
 *.lock
+
+# multi-year backtest raw data: fetched in CI, cached, never committed
+localdata/backtest/data/
