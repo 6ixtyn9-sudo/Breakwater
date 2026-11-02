@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-01 23:34 UTC
+# Breakwater daily print — 2026-11-02 00:01 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -19,7 +19,7 @@
 ## 2. Paper account
 
 - Equity: **2256.97 ZAR** (seed 2000) | lifetime: **+256.97 ZAR** | closed: 522
-- Today: 6 closed, **-10.05 ZAR**
+- Today: 0 closed, **+0.00 ZAR**
 - 7d: **-25.14 ZAR** | 30d: **-159.17 ZAR**
 
 ## 2b. Claimed vs realised
@@ -38,7 +38,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 476 | wins: 228 | win%: 47.9 | P&L: **+301.47 ZAR** | today: -10.05 | 7d: -25.14 | 30d: -159.17
+- Closed: 476 | wins: 228 | win%: 47.9 | P&L: **+301.47 ZAR** | today: +0.00 | 7d: -25.14 | 30d: -159.17
 - By exit: target +516.3, trail_stop +106.9, horizon +64.8, max_bars +2.8, regime_shift -11.9, stop -377.3
 - By entry regime (n/pnl): neutral 191/+224.8, bull 117/+178.4, bear 168/-101.8
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_ext_strength:2:LONG:h15 12n/8w +24.00; feat_bb_pos_20:2:LONG:h15 4n/4w +16.17; feat_atr_norm_ext:2:LONG:h15 3n/3w +15.77
@@ -96,7 +96,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_time_since_low_20:2:SHORT:h20` edge=0.0035 n=3103 p=0.7645 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_macd_12_26:2:SHORT:h12` edge=0.0065 n=7820 p=0.0006 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
-  - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
+  - `hip3_para_equity_c0:feat_vol_regime:2:SHORT:h11` edge=0.0054 n=242 p=0.0000 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h9` edge=0.0006 n=1272 p=0.4321 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `hip3_xyz_commodity_c0:feat_ext_vs_ma_50:1:LONG:h22` edge=0.0006 n=1354 p=0.8646 src=validated_walk_forward unproven=False paper=0n/+0.00
