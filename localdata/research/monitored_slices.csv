@@ -5,7 +5,7 @@ feat_atr_percent:1:SHORT:h15,PERP,feat_atr_percent,1,SHORT,monitored,2026-11-04T
 feat_kc_width:1:SHORT:h15,PERP,feat_kc_width,1,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,0,0,0,0,,0.003697,9389,0.553552,15,3.500,validated_walk_forward,False,True,32,0.421
 feat_ret_5:2:SHORT:h12,PERP,feat_ret_5,2,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,0,0,0,0,,0.003176,9444,0.331298,12,3.500,validated_walk_forward,False,True,49,0.645
 feat_price_roc_5:2:SHORT:h12,PERP,feat_price_roc_5,2,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,0,0,0,0,,0.003176,9444,0.331298,12,3.500,validated_walk_forward,False,True,49,0.645
-feat_macd_12_26:2:SHORT:h15,PERP,feat_macd_12_26,2,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,0,0,0,0,,0.005223,8866,0.130563,15,3.500,validated_walk_forward,False,True,44,0.579
+feat_macd_12_26:2:SHORT:h15,PERP,feat_macd_12_26,2,SHORT,cooldown,2026-11-04T00:55:45.979403+00:00,1793804400,3,0,3,-11.5495,1793890800,0.005223,8866,0.130563,15,3.500,validated_walk_forward,False,True,44,0.579
 feat_vwap_upper_dist:2:SHORT:h15,PERP,feat_vwap_upper_dist,2,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,0,0,0,0,,0.003517,8660,0.487893,15,3.500,validated_walk_forward,False,True,49,0.645
 feat_ema_cross_10_20:2:SHORT:h15,PERP,feat_ema_cross_10_20,2,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,0,0,0,0,,0.005044,9011,0.310816,15,3.500,validated_walk_forward,False,True,46,0.605
 feat_vwap_dist:2:SHORT:h24,PERP,feat_vwap_dist,2,SHORT,monitored,2026-11-04T00:55:45.979403+00:00,,1,1,0,0.6124,,0.005059,9369,0.786194,24,3.500,validated_walk_forward,False,True,45,0.584
