@@ -16,6 +16,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          # Queued runs must see the state the previous run just committed.
+          # A dispatch pins head_sha at creation; after a >60-min cycle the
+          # next run otherwise computes on stale positions and its merge can
+          # drop or double positions (9 of 111 in the week to 2026-11-05).
+          ref: main
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
