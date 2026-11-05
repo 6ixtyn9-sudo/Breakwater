@@ -1,13 +1,5 @@
 [
   {
-    "pair": "XYZ:AVGO",
-    "pnl_zar": "0.2184",
-    "reason": "slice_gap",
-    "signal_id": "92344be6faca0eed",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T04:00:29+00:00"
-  },
-  {
     "pair": "XYZ:BABA",
     "pnl_zar": "-0.6732",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "4570ae739796994b",
     "slice_id": "feat_macd_12_26:2:SHORT:h15",
     "stopped_at": "2026-11-04T17:10:40+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "0.6361",
+    "reason": "slice_gap",
+    "signal_id": "cbc7aa1165cef72e",
+    "slice_id": "feat_macd_12_26:2:SHORT:h15",
+    "stopped_at": "2026-11-05T05:01:10+00:00"
   }
 ]
