@@ -1,21 +1,5 @@
 [
   {
-    "pair": "XYZ:BABA",
-    "pnl_zar": "-0.6732",
-    "reason": "slice_gap",
-    "signal_id": "738dc988d22f433a",
-    "slice_id": "hip3_xyz_equity_c0:feat_vol_regime:2:SHORT:h19",
-    "stopped_at": "2026-09-15T04:00:29+00:00"
-  },
-  {
-    "pair": "XYZ:COST",
-    "pnl_zar": "0.0472",
-    "reason": "slice_gap",
-    "signal_id": "6b7c48faabf5a306",
-    "slice_id": "hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23",
-    "stopped_at": "2026-09-15T04:00:29+00:00"
-  },
-  {
     "pair": "XYZ:AMZN",
     "pnl_zar": "0.0519",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "cbc7aa1165cef72e",
     "slice_id": "feat_macd_12_26:2:SHORT:h15",
     "stopped_at": "2026-11-05T05:01:10+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "0.2486",
+    "reason": "slice_gap",
+    "signal_id": "1e29881cdfe597ec",
+    "slice_id": "feat_oi_ret_div:2:SHORT:h24",
+    "stopped_at": "2026-11-05T11:01:18+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "0.0499",
+    "reason": "slice_gap",
+    "signal_id": "5240d13b43b36216",
+    "slice_id": "feat_oi_ret_div:2:SHORT:h24",
+    "stopped_at": "2026-11-05T11:01:18+00:00"
   }
 ]
