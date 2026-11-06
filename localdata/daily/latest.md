@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-11-06 16:55 UTC
+# Breakwater daily print — 2026-11-06 18:09 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **400.31 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **403.09 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -13,7 +13,7 @@
 
 - Equity: **2278.53 ZAR** (seed 2000) | lifetime: **+278.53 ZAR** | closed: 546
 - Today: 0 closed, **+0.00 ZAR**
-- 7d: **+9.38 ZAR** | 30d: **-105.90 ZAR**
+- 7d: **+9.38 ZAR** | 30d: **-102.34 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 500 | wins: 244 | win%: 48.8 | P&L: **+323.04 ZAR** | today: +0.00 | 7d: +9.38 | 30d: -105.90
+- Closed: 500 | wins: 244 | win%: 48.8 | P&L: **+323.04 ZAR** | today: +0.00 | 7d: +9.38 | 30d: -102.34
 - By exit: target +516.3, trail_stop +137.9, horizon +71.4, max_bars +2.8, regime_shift -11.9, stop -393.5
 - By entry regime (n/pnl): neutral 206/+233.4, bull 120/+187.5, bear 174/-97.9
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_ext_strength:2:LONG:h15 12n/8w +24.00; feat_premium:2:SHORT:h24 5n/4w +20.06; feat_bb_pos_20:2:LONG:h15 4n/4w +16.17
@@ -121,15 +121,15 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.4 bull=0.1333 neutral=0.4667 | symbols=15
+- Label: **neutral** | breadth bear=0.4667 bull=0.1333 neutral=0.4 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-06T15:48:34Z
+- as_of: 2026-11-06T16:56:33Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 604 | observations: 3096 | armable: **0**
+- candidates: 1120 | eligible: 604 | observations: 3082 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_funding_rate@oi_mid:2:SHORT:h24` edge=318.8b n=389 breadth=7 validated=True prov=False armable=False (not_confirmed_bear)
   - `feat_funding_rate@oi_mid:2:SHORT:h20` edge=269.2b n=394 breadth=7 validated=True prov=False armable=False (not_confirmed_bear)
