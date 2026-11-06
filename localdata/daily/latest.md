@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-11-06 02:49 UTC
+# Breakwater daily print — 2026-11-06 02:53 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **399.17 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **398.03 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -122,22 +122,22 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.4 bull=0.1333 neutral=0.4667 | symbols=15
+- Label: **neutral** | breadth bear=0.4 bull=0.0667 neutral=0.5333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bull | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-06T00:01:19Z
+- as_of: 2026-11-06T02:06:28Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 350 | observations: 879 | armable: **0**
+- candidates: 1120 | eligible: 604 | observations: 2420 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
-  - `feat_funding_rate@oi_mid:2:SHORT:h24` edge=160.7b n=396 breadth=8 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=127.8b n=373 breadth=7 validated=False prov=False armable=False (not_confirmed_bear)
-  - `feat_funding_rate@oi_mid:2:SHORT:h20` edge=125.4b n=394 breadth=8 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_funding_cum_24@oi_mid:2:SHORT:h24` edge=119.9b n=1035 breadth=11 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_premium@oi_mid:2:SHORT:h24` edge=103.5b n=1490 breadth=13 validated=False prov=False armable=False (regime_confounded)
-  - `feat_funding_rate:2:SHORT:h24` edge=99.0b n=1282 breadth=22 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_funding_rate@oi_mid:2:SHORT:h24` edge=318.8b n=389 breadth=7 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_funding_rate@oi_mid:2:SHORT:h20` edge=269.2b n=394 breadth=7 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=262.3b n=242 breadth=5 validated=False prov=False armable=False (not_confirmed_bear)
+  - `feat_funding_rate@oi_lo:2:SHORT:h20` edge=196.1b n=231 breadth=4 validated=False prov=False armable=False (not_confirmed_bear)
+  - `feat_funding_rate@oi_mid:2:SHORT:h15` edge=196.0b n=411 breadth=8 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_funding_cum_24@oi_mid:2:SHORT:h24` edge=180.3b n=1323 breadth=10 validated=True prov=False armable=False (not_confirmed_bear)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
