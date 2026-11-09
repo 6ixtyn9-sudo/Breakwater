@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-11-09 18:30 UTC
+# Breakwater daily print — 2026-11-09 18:51 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **393.55 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **391.13 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -122,13 +122,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **bear** | breadth bear=0.7333 bull=0.0667 neutral=0.2 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 1 / bull 0
-- as_of: 2026-11-09T17:01:19Z
+- as_of: 2026-11-09T17:35:30Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 634 | observations: 3547 | armable: **0**
+- candidates: 1120 | eligible: 634 | observations: 3105 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=371.5b n=206 breadth=5 validated=True prov=False armable=False (not_confirmed_bear)
   - `feat_funding_rate@oi_lo:2:SHORT:h20` edge=223.8b n=231 breadth=6 validated=True prov=False armable=False (not_confirmed_bear)
