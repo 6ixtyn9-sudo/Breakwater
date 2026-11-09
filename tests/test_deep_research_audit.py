@@ -19,9 +19,81 @@ def test_deep_audit_forces_both_directions():
     class Candidate:
         side: str
         feature: str = "feat"
+        state: int = 1
 
     expanded = _both_directions([Candidate(side="LONG")])
     assert [candidate.side for candidate in expanded] == ["LONG", "SHORT"]
+
+
+def test_deep_audit_does_not_evaluate_a_family_twice():
+    # discovery._slice_stats emits LONG and SHORT rows itself; the audit must
+    # not re-expand each of them (that doubled every artifact to 2026-11-09).
+    @dataclass(frozen=True)
+    class Candidate:
+        side: str
+        feature: str
+        state: int
+
+    expanded = _both_directions(
+        [
+            Candidate("LONG", "feat_a", 1),
+            Candidate("SHORT", "feat_a", 1),
+            Candidate("SHORT", "feat_a", 2),
+            Candidate("LONG", "feat_b", 0),
+        ]
+    )
+    keys = [(c.feature, c.state, c.side) for c in expanded]
+    assert len(keys) == len(set(keys)) == 6
+    assert sorted({k[:2] for k in keys}) == [("feat_a", 1), ("feat_a", 2), ("feat_b", 0)]
+
+
+def test_fetch_group_attaches_positioning_for_native_coins(monkeypatch):
+    from decimal import Decimal
+
+    import breakwater.deep_research_audit as dra
+    from breakwater.deep_research_audit import AuditGroup, _fetch_group
+    from breakwater.models import Candle
+    from breakwater.positioning_features import PositioningContext
+
+    starts = pd.date_range("2026-01-01", periods=3200, freq="h", tz="UTC")
+    close = np.linspace(100, 120, 3200)
+    candles = [
+        Candle(
+            pair="BTCUSDC",
+            period_seconds=3600,
+            start=ts.to_pydatetime(),
+            open=Decimal(str(c)),
+            high=Decimal(str(c + 1)),
+            low=Decimal(str(c - 1)),
+            close=Decimal(str(c)),
+            volume=Decimal("10"),
+        )
+        for ts, c in zip(starts, close)
+    ]
+    monkeypatch.setattr(dra, "fetch_perp_candles", lambda coin, interval="1h", count=5000: candles)
+
+    funding = pd.DataFrame(
+        {"coin": "BTC", "start": starts, "pos_funding": 0.0001, "pos_premium": 0.0002}
+    )
+    monkeypatch.setattr(
+        "breakwater.positioning_features.funding_history_frame",
+        lambda coin, *, start, end, session=None: funding,
+    )
+    ctx = PositioningContext(None, enabled=True, fetch_funding=True, lookback_hours=3200)
+    group = AuditGroup("native", "native_crypto_c0", ("BTC",), 26.0)
+
+    pooled, errors = _fetch_group(group, candle_count=3200, sleep_seconds=0, positioning=ctx)
+
+    assert errors == {}
+    assert ctx.attached == ["BTCUSDC"]
+    assert pooled["pos_funding"].notna().all()
+    assert pooled["feat_funding_rate"].notna().sum() > 0
+
+    # HIP-3 groups are never attached (prefixed coins are not native perps).
+    hip3 = AuditGroup("hip3", "xyz_equity_c0", ("xyz:SOXL",), 30.0)
+    pooled_hip3, _ = _fetch_group(hip3, candle_count=3200, sleep_seconds=0, positioning=ctx)
+    assert ctx.attached == ["BTCUSDC"]
+    assert pooled_hip3["feat_funding_rate"].isna().all()
 
 
 def test_frozen_recency_weights_halve_each_thousand_hours():
