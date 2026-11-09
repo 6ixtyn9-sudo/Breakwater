@@ -14,7 +14,11 @@ from breakwater.reconcile import realized_pnl_zar, reconcile_realized_pnl
 from breakwater.risk import RiskManager, RiskPolicy
 from breakwater.risk_state import RiskStateStore
 
-NOW = datetime(2026, 9, 29, 12, 0, tzinfo=timezone.utc)
+# RiskStateStore prunes realized-P&L events older than 35 days against the
+# wall clock, so a fixed calendar date here silently ages out and every
+# booking assertion reads 0 (happened 2026-11-03). Anchor to today, midday
+# UTC, so "two hours ago" stays inside the same UTC day.
+NOW = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
 
 
 class Client:
