@@ -1108,6 +1108,26 @@ extended rather than called either way.
    and would break attribution). The only job that may run is research
    `deep_audit: all`, which writes to `localdata/deep_audit/` and touches
    neither the book nor paper.
+   *Amended 11-09 (same day):* the deep-audit module itself may be fixed
+   inside the window because it has no path into the book
+   (`promotion_enabled: false`, artifacts only, nothing in `sync_book` or
+   paper reads it). Found on reading the 11-09 artifacts (the dispatcher has
+   passed `deep_audit: all` nightly since 10-28; the outputs were never
+   read): (a) every candidate was evaluated twice — `discovery._slice_stats`
+   already emits both sides and `_both_directions` re-expanded them; 40,128
+   rows for 20,064 unique, and the native lane's 330-min timeouts on 11-06/07;
+   (b) positioning features were in `FEATURE_COLUMNS` but never attached, so
+   the audit never tested the criterion-B lane. Both fixed in
+   `deep_research_audit.py` only. Headline from the 11-09 artifacts, before
+   the fix: native 0/20,064 and HIP-3 0/119,424 preliminary passes; the 195
+   candidates positive on both recent-1000 and weighted-5000 are all SHORT;
+   the live book's families (macd, ret_autocorr, trend_neutral, rsi_7,
+   SHORT h15-24) are -20..-25 bps per trade over 5000 bars, +10..+18 bps
+   over the last 1000, and ~0 bps against the peer basket. Read: the
+   1000-bar validator is admitting the down-tape, not a feature edge; the
+   post-change P&L is consistent with beta plus cheaper exits. Funding and
+   premium get a real 5000-bar test from the next nightly run; OI and book
+   depth only have the repo tape (since W42) and will fail the sample floors.
 4. The scan-runtime fault stays unfixed for the week (a fix sits inside the
    scan code path). Profiling from run/job metadata only. If skipped cycles
    exceed ~30% in any 24 h it is flagged and decided on the day.

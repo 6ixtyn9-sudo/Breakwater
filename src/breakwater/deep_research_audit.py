@@ -27,6 +27,7 @@ from breakwater.hip3 import read_hip3_universe
 from breakwater.hip3_research import _candidate_rows, _stratified_select
 from breakwater.hyperliquid import HyperliquidReadOnlyVenue
 from breakwater.perpdata import fetch_perp_candles
+from breakwater.positioning_features import PositioningContext
 from breakwater.validation import _calibrate_stop_atr_mult
 
 WEIGHTS = (1.0, 0.5, 0.25, 0.125, 0.0625)
@@ -178,8 +179,18 @@ def _both_directions(candidates) -> list:
     A challenger must also test the rejected direction or a bull sample can
     nearly erase shorts before robustness checks begin.
     """
+    # ``_slice_stats`` now emits each side it can measure; re-expanding every
+    # row doubled the audit (every candidate evaluated twice, 2026-10 -> 11-09
+    # artifacts carried 40,128 rows for 20,064 unique candidates and the
+    # native lane ran into its 330-min timeout). Dedupe by feature/state and
+    # emit exactly one LONG and one SHORT per family.
     expanded = []
+    seen: set[tuple] = set()
     for candidate in candidates:
+        key = (candidate.feature, getattr(candidate, "state", None))
+        if key in seen:
+            continue
+        seen.add(key)
         expanded.append(replace(candidate, side="LONG"))
         expanded.append(replace(candidate, side="SHORT"))
     return expanded
@@ -316,7 +327,11 @@ def _attach_plateaus(rows: list[dict]) -> None:
 
 
 def _fetch_group(
-    group: AuditGroup, *, candle_count: int, sleep_seconds: float
+    group: AuditGroup,
+    *,
+    candle_count: int,
+    sleep_seconds: float,
+    positioning: PositioningContext | None = None,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
     parts = []
     errors: dict[str, str] = {}
@@ -338,6 +353,12 @@ def _fetch_group(
         if len(frame) < min(3000, int(candle_count * 0.75)):
             errors[coin] = f"insufficient_history:{len(frame)}"
             continue
+        # Positioning inputs. Without this the pos_* columns never exist, every
+        # positioning feature is NaN and the audit silently drops the one lane
+        # criterion B is about. Funding and premium come from fundingHistory
+        # (deep); OI and book depth only from the repo tape (short).
+        if positioning is not None and group.lane == "native":
+            frame = positioning.attach(f"{coin}USDC", "PERP", frame)
         featured = compute_price_features(frame)
         featured["symbol"] = coin
         featured["bar_age"] = np.arange(len(featured) - 1, -1, -1)
@@ -395,9 +416,15 @@ def run_deep_research_audit(
     group_summary = {}
     fetch_errors: dict[str, str] = {}
     sleep_seconds = float(os.getenv("BREAKWATER_CANDLE_PAGE_SLEEP_SECONDS", "0.05"))
+    positioning = PositioningContext(
+        data_dir, enabled=True, fetch_funding=True, lookback_hours=candle_count
+    )
     for group in groups:
         pooled, errors = _fetch_group(
-            group, candle_count=candle_count, sleep_seconds=sleep_seconds
+            group,
+            candle_count=candle_count,
+            sleep_seconds=sleep_seconds,
+            positioning=positioning,
         )
         fetch_errors.update(errors)
         group_summary[f"{group.lane}:{group.name}"] = (
@@ -432,6 +459,7 @@ def run_deep_research_audit(
         "groups": group_summary,
         "fetch_error_count": len(fetch_errors),
         "fetch_errors": fetch_errors,
+        "positioning": positioning.summary(),
         "candidates": len(rows),
         "preliminary_passes": sum(bool(row["preliminary_pass"]) for row in rows),
         "plateau_passes": sum(bool(row["audit_pass"]) for row in rows),
