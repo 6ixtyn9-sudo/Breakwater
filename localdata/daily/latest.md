@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-11-09 12:01 UTC
+# Breakwater daily print — 2026-11-09 12:05 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **379.58 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **388.21 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -13,7 +13,7 @@
 
 - Equity: **2348.97 ZAR** (seed 2000) | lifetime: **+348.97 ZAR** | closed: 570
 - Today: 10 closed, **+42.98 ZAR**
-- 7d: **+93.68 ZAR** | 30d: **+5.18 ZAR**
+- 7d: **+90.75 ZAR** | 30d: **+5.18 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 524 | wins: 263 | win%: 50.2 | P&L: **+393.48 ZAR** | today: +42.98 | 7d: +93.68 | 30d: +5.18
+- Closed: 524 | wins: 263 | win%: 50.2 | P&L: **+393.48 ZAR** | today: +42.98 | 7d: +90.75 | 30d: +5.18
 - By exit: target +516.3, trail_stop +209.0, horizon +76.4, max_bars +2.8, regime_shift -11.9, stop -399.0
 - By entry regime (n/pnl): neutral 211/+238.6, bull 121/+199.5, bear 192/-44.7
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_trend_neutral:0:SHORT:h24 5n/5w +24.80; feat_premium@oi_hi:2:SHORT:h24 3n/3w +24.15; feat_ext_strength:2:LONG:h15 12n/8w +24.00
@@ -120,7 +120,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **bear** | breadth bear=0.9333 bull=0.0667 neutral=0.0 | symbols=15
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 61 / bull 0
-- as_of: 2026-11-09T10:32:02Z
+- as_of: 2026-11-09T10:35:56Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
