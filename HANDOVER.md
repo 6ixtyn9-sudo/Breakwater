@@ -1040,3 +1040,80 @@ after the hack and already fail closed on the live side.
 If the verdict is FAIL: stop the paper workflows, leave the guardian
 heartbeat running read-only, and write the post-mortem from the October
 diagnostic plus the 11-09 read before touching research again.
+
+### 2026-11-09 read — inconclusive on count; window extended one week (docs only)
+
+Read taken 05:25Z against `76f8446`. Terms of the extension were fixed in
+this section before any further data; the criteria are unchanged.
+
+**Step 0 — machinery.**
+- *Stale-checkout state race (found 11-05, fixed 11-05 `b1c14b5`).* The
+  paper dispatch pins `head_sha` at creation; when a cycle overran the hour,
+  the queued run checked out the stale SHA, computed on old positions and
+  `commit_state.sh`'s merge dropped or doubled them. Audit of 351
+  `paper_positions.json` commits to 11-05: 111 positions, 9 lost/doubled
+  (~8%): BTC `time_since_low_20` 10-25 19:02; XRP `vol_trend` 11-03 09:18;
+  HYPE `feat_premium:h12` 11-03 12:01; ETH `feat_funding_cum_24:h12` 11-03
+  14:01; XMR `oi_ret_div` 11-04 01:49; BTC/ETH/SOL `feat_macd_12_26:2:SHORT:h15`
+  11-04 09:10/11:29/13:35; BTC `vwap_dist` 11-04 16:01. Two are global
+  positioning closes, so criterion B's count below is understated by <= 2.
+  Closed-side P&L is not corrupted (closes dedupe by `signal_id` with
+  identical fills); some `closed_at` stamps are ~1h late. Fix: Checkout
+  `with: ref: main`. No lost or doubled positions since (audited daily).
+- *Scan runtime (open).* Paper cycles ran 33-56 min on 11-05; from 11-06
+  median 85-94 min, max 139, on books of 68-87 (not book-size driven).
+  Effects: 90-min job timeouts mid-scan, and queued runs dropped (GitHub
+  keeps one pending run per concurrency group). 11-06 11Z -> 11-09 05Z:
+  roughly one hour in four had no paper cycle. Stops on open positions were
+  checked every ~1.7 h on average; the 00:46Z 11-09 batch below followed a
+  1h41m gap. This is the first engineering item after the extended read.
+- `usdc_zar_fallback` never fired. Stop slip applied on every stop
+  (`exit_price != stop_price`, `gross_r` just under -1).
+
+**Step 1 — criterion B: 27/30 global positioning closes, +18.88, 67% win,
++6.49 ex-best (NEAR `feat_premium:2:SHORT:h24` +12.39), 08-23Z entries
+22/+21.69.** No global positioning close since 11-05 11:01Z; the lane was
+starved of entries for four days while price and `@oi_` cohort slices
+traded. Miss on count, pass on sign — the pre-registered "did not produce
+enough trades" case. Cohort lane: 9 closes, +20.38 (XRP `premium@oi_hi`
++12.02 is 60% of it).
+
+**Step 2 — criterion A: 1/3.** Over the 13 research stamps 10-27 -> 11-09,
+one global positioning slice held >= 3 consecutive runs
+(`feat_funding_rate:2:SHORT:h15`, 11-07 -> 11-09). Four others reached 2.
+Three global positioning slices in the 11-09 book.
+
+**Step 3 — post-change line (closed_at >= 2026-10-31T18:00Z), fixed mark
+for the extension:** 68 closes, **+85.26**, 66% win; ex-top-3 +50.92.
+By exit: trail 24/+102.11, stop 9/-28.47, horizon 24/+7.12, slice_gap
+11/+4.50. Week before the changes: 54 closes, -10.65, 46% win. The 11-09
+00:46Z cycle closed ten positions in one pass (nine trail stops +45.3 on a
+Sunday-night sell-off reversing, one fresh BTC stop -2.34). Lifetime 685
+closes, +390.87 (peak +550.2 on 09-22). The whole post-change period is an
+all-SHORT book in a post-hack down-tape; it has not been tested in a rally.
+
+**Verdict 11-09: INCONCLUSIVE, not PASS.** A and B both miss on count; B is
+positive on sign. The count shortfall has two machinery causes that predate
+this weekend (the state race and the skipped cycles), so the window is
+extended rather than called either way.
+
+**Extension terms (agreed 2026-11-09):**
+1. Read on **Monday 2026-11-16 00:00Z**, against whatever `main` holds then.
+2. Criteria unchanged: A >= 3 global positioning slices held >= 3
+   consecutive research runs; B >= 30 global positioning closes, pnl >= 0.
+   No new criteria. The post-change line above is the fixed mark; next
+   week's read quotes the delta from it, not the total.
+3. Nothing changes in paper or research for the week: no logic, no repo
+   vars. `BREAKWATER_PERP_CANDLE_COUNT` stays at 1000 (it reshapes the book
+   and would break attribution). The only job that may run is research
+   `deep_audit: all`, which writes to `localdata/deep_audit/` and touches
+   neither the book nor paper.
+4. The scan-runtime fault stays unfixed for the week (a fix sits inside the
+   scan code path). Profiling from run/job metadata only. If skipped cycles
+   exceed ~30% in any 24 h it is flagged and decided on the day.
+5. Pre-stated reading on 11-16: B reaches 30 -> judge on sign. B still short
+   of 30 after a week with the state race fixed -> that is the finding: the
+   lane does not produce flow at 1000-bar validation, and it feeds the
+   5000-bar re-validation (repo var `BREAKWATER_PERP_CANDLE_COUNT=5000`)
+   rather than more waiting. **No second extension.**
+6. The Step 4 list above is unchanged; item 0 is now the scan runtime.
