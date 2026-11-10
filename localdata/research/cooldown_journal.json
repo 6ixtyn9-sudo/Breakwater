@@ -1,13 +1,5 @@
 [
   {
-    "pair": "FARTCOINUSDC",
-    "pnl_zar": "-6.6546",
-    "reason": "slice_gap",
-    "signal_id": "fba6826e165e1928",
-    "slice_id": "feat_ret_5:2:LONG:h19",
-    "stopped_at": "2026-09-15T07:00:26+00:00"
-  },
-  {
     "pair": "INJUSDC",
     "pnl_zar": "-7.8502",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "317e24d176c139f9",
     "slice_id": "feat_ret_autocorr:2:SHORT:h24",
     "stopped_at": "2026-11-09T00:46:47+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "3.0733",
+    "reason": "slice_gap",
+    "signal_id": "35344b3104ddee48",
+    "slice_id": "feat_ext_strength:2:SHORT:h24",
+    "stopped_at": "2026-11-10T11:01:11+00:00"
   }
 ]
