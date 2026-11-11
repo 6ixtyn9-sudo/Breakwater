@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-11-11 21:14 UTC
+# Breakwater daily print — 2026-11-11 22:11 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **391.72 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **391.41 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -52,11 +52,11 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 5 open, stop-risk **18.62 ZAR**
-  - AVAXUSDC SELL ntl=120 risk=4.34 bars=7 stop=8.901874999999999530 peak=8.7225
-  - SOLUSDC SELL ntl=120 risk=4.00 bars=1 stop=86.84325000000000470 peak=85.383
-  - XRPUSDC SELL ntl=120 risk=3.68 bars=6 stop=1.0916000000000000325 peak=1.0791
-  - BTCUSDC SELL ntl=120 risk=3.67 bars=14 stop=76024.49999999999985 peak=74478.0
-  - ETHUSDC SELL ntl=120 risk=2.94 bars=5 stop=2109.9999999999997145 peak=2090.0
+  - AVAXUSDC SELL ntl=120 risk=4.34 bars=12 stop=8.901874999999999530 peak=8.7308
+  - SOLUSDC SELL ntl=120 risk=4.00 bars=6 stop=86.84325000000000470 peak=85.785
+  - XRPUSDC SELL ntl=120 risk=3.68 bars=11 stop=1.0916000000000000325 peak=1.0799
+  - BTCUSDC SELL ntl=120 risk=3.67 bars=19 stop=76024.49999999999985 peak=74750.0
+  - ETHUSDC SELL ntl=120 risk=2.94 bars=10 stop=2109.9999999999997145 peak=2103.0
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -66,9 +66,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **18.62 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **18.62 / 167.68 ZAR | 12.0% | ok**
 - Remaining: 147.5593 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 140, "skipped": 140, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 42, "signals": 157, "skipped": 115, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 149, "skipped": 149, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 44, "signals": 145, "skipped": 101, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **AVAXUSDC** 4.3411 ZAR
-- positions without bars: 0 | replayed: 5 | invalid: 0
+- positions without bars: 0 | replayed: 10 | invalid: 0
 
 ## 6. Monitored books
 
@@ -122,15 +122,15 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.4 bull=0.2 neutral=0.4 | symbols=15
+- Label: **neutral** | breadth bear=0.3333 bull=0.1333 neutral=0.5333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-11T20:16:56Z
+- as_of: 2026-11-11T21:01:24Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 625 | observations: 3281 | armable: **0**
+- candidates: 1120 | eligible: 625 | observations: 3238 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=375.1b n=184 breadth=4 validated=True prov=False armable=False (too_few_rows)
   - `feat_funding_rate@oi_lo:2:SHORT:h20` edge=276.8b n=189 breadth=4 validated=True prov=False armable=False (too_few_rows)
@@ -203,13 +203,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-11T17:09:54: errors=0 signals=297 regime_blocked=200
-- this cycle: closed=0 new_signals=297 skipped=255 slot_full=0 slice_full=0 pair_held=42
-- Action funnel: regime_blocked=200 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=42 | cluster_cap=0 | family_vetoed=10 | slot_full=0 | skipped=255
-- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 10, "lane_gate_blocked": 1, "pair_held": 42, "regime_blocked": 200, "skipped": 255, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-11-11T22:11:35: errors=4 signals=294 regime_blocked=205
+- this cycle: closed=0 new_signals=294 skipped=250 slot_full=0 slice_full=0 pair_held=44
+- Action funnel: regime_blocked=205 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=44 | cluster_cap=0 | family_vetoed=15 | slot_full=0 | skipped=250
+- **NO ACTION:** dominant blocker = `skipped` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 15, "lane_gate_blocked": 1, "pair_held": 44, "regime_blocked": 205, "skipped": 250, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=48
-- aggregate_risk: ok open=18.6226 cap=167.6796 used=0.1200 remaining=147.5593 replayed=5 no_new_bars=0
-- pair_errors: []
+- aggregate_risk: ok open=18.6226 cap=167.6796 used=0.1200 remaining=147.5593 replayed=10 no_new_bars=0
+- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:BIRD"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:KSTR"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:SNXX"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:XBI"}]
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
