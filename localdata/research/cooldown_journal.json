@@ -1,21 +1,5 @@
 [
   {
-    "pair": "LINKUSDC",
-    "pnl_zar": "-5.3490",
-    "reason": "slice_gap",
-    "signal_id": "c5b7f534fbae9cef",
-    "slice_id": "feat_ret_5:2:LONG:h19",
-    "stopped_at": "2026-09-15T07:00:26+00:00"
-  },
-  {
-    "pair": "WLDUSDC",
-    "pnl_zar": "-8.6816",
-    "reason": "slice_gap",
-    "signal_id": "59830f13ca4c957b",
-    "slice_id": "feat_ret_5:2:LONG:h19",
-    "stopped_at": "2026-09-15T07:00:26+00:00"
-  },
-  {
     "pair": "DOGEUSDC",
     "pnl_zar": "-2.6079",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "7747610dbc8778d4",
     "slice_id": "feat_ret_autocorr:2:SHORT:h20",
     "stopped_at": "2026-11-11T09:21:53+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "1.4761",
+    "reason": "slice_gap",
+    "signal_id": "fcc964893ab46427",
+    "slice_id": "feat_range_pos_20:2:SHORT:h24",
+    "stopped_at": "2026-11-12T09:27:13+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "1.4479",
+    "reason": "slice_gap",
+    "signal_id": "0fcf6e40633dca0b",
+    "slice_id": "feat_range_pos_20:2:SHORT:h24",
+    "stopped_at": "2026-11-12T09:27:13+00:00"
   }
 ]
