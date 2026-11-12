@@ -1,10 +1,10 @@
-# Breakwater daily print — 2026-11-12 00:35 UTC
+# Breakwater daily print — 2026-11-12 01:13 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
 ## 1. Posture
 
-- Mode: **readonly** | VALR equity: **384.74 ZAR** | high-water: **560.11 ZAR**
+- Mode: **readonly** | VALR equity: **390.63 ZAR** | high-water: **560.11 ZAR**
 - Key perms: trade, view access | VALR perps: **retired** (venue choke, not used; Hyperliquid is the perp venue)
   - last perps probe: ValrAuthenticationError: VALR authentication rejected request with HTTP 401
 - risk_allowed: **True** reasons=[]
@@ -13,7 +13,7 @@
 
 - Equity: **2350.45 ZAR** (seed 2000) | lifetime: **+350.45 ZAR** | closed: 578
 - Today: 0 closed, **+0.00 ZAR**
-- 7d: **+78.15 ZAR** | 30d: **+4.38 ZAR**
+- 7d: **+78.15 ZAR** | 30d: **+16.56 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 532 | wins: 269 | win%: 50.6 | P&L: **+394.96 ZAR** | today: +0.00 | 7d: +78.15 | 30d: +4.38
+- Closed: 532 | wins: 269 | win%: 50.6 | P&L: **+394.96 ZAR** | today: +0.00 | 7d: +78.15 | 30d: +16.56
 - By exit: target +516.3, trail_stop +212.4, horizon +79.0, max_bars +2.8, regime_shift -11.9, stop -403.6
 - By entry regime (n/pnl): neutral 213/+234.4, bull 121/+199.5, bear 198/-38.9
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_trend_neutral:0:SHORT:h24 5n/5w +24.80; feat_premium@oi_hi:2:SHORT:h24 3n/3w +24.15; feat_ext_strength:2:LONG:h15 12n/8w +24.00
@@ -124,7 +124,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **bear** | breadth bear=0.6 bull=0.1333 neutral=0.2667 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 1 / bull 0
-- as_of: 2026-11-11T23:06:03Z
+- as_of: 2026-11-11T23:44:15Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
