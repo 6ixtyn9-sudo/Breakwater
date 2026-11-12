@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-12 15:57 UTC
+# Breakwater daily print — 2026-11-12 17:09 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -13,7 +13,7 @@
 
 - Equity: **2351.02 ZAR** (seed 2000) | lifetime: **+351.02 ZAR** | closed: 581
 - Today: 3 closed, **+0.57 ZAR**
-- 7d: **+78.72 ZAR** | 30d: **+16.74 ZAR**
+- 7d: **+72.49 ZAR** | 30d: **+16.74 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 535 | wins: 271 | win%: 50.7 | P&L: **+395.53 ZAR** | today: +0.57 | 7d: +78.72 | 30d: +16.74
+- Closed: 535 | wins: 271 | win%: 50.7 | P&L: **+395.53 ZAR** | today: +0.57 | 7d: +72.49 | 30d: +16.74
 - By exit: target +516.3, trail_stop +212.4, horizon +79.6, max_bars +2.8, regime_shift -11.9, stop -403.6
 - By entry regime (n/pnl): neutral 213/+234.4, bull 122/+199.3, bear 200/-38.1
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_trend_neutral:0:SHORT:h24 5n/5w +24.80; feat_premium@oi_hi:2:SHORT:h24 3n/3w +24.15; feat_ext_strength:2:LONG:h15 12n/8w +24.00
@@ -123,7 +123,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **bear** | breadth bear=0.8667 bull=0.0 neutral=0.1333 | symbols=15
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 14 / bull 0
-- as_of: 2026-11-12T14:28:51Z
+- as_of: 2026-11-12T15:39:52Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
