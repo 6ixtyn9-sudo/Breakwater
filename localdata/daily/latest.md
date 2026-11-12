@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-12 02:06 UTC
+# Breakwater daily print — 2026-11-12 02:44 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -123,9 +123,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 10. Regime shift
 
 - Label: **bear** | breadth bear=0.6 bull=0.1333 neutral=0.2667 | symbols=15
-- confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 1 / bull 0
-- as_of: 2026-11-12T00:36:36Z
-- Defensive gate: off (no confirmed flip)
+- confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 2 / bull 0
+- as_of: 2026-11-12T01:15:05Z
+- Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
