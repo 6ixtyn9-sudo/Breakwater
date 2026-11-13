@@ -20,7 +20,7 @@ feat_funding_cum_24@oi_lo:2:SHORT:h15,PERP,feat_funding_cum_24,2,SHORT,monitored
 feat_oi_chg_24@oi_lo:0:SHORT:h24,PERP,feat_oi_chg_24,0,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,,0,0,0,0,,0.009566,1492,0.369141,24,3.500,validated_walk_forward,False,True,9,0.643
 feat_book_imb_5@oi_lo:0:SHORT:h20,PERP,feat_book_imb_5,0,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,,0,0,0,0,,0.005572,1439,0.487771,20,3.500,validated_walk_forward,False,True,5,0.357
 feat_oi_ret_div@oi_lo:2:SHORT:h24,PERP,feat_oi_ret_div,2,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,,0,0,0,0,,0.004424,1373,0.574665,24,3.500,validated_walk_forward,False,True,8,0.571
-feat_oi_ret_div:2:SHORT:h24,PERP,feat_oi_ret_div,2,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,1794445200,3,3,0,0.3321,,0.004379,3835,0.410982,24,3.500,validated_walk_forward,False,True,22,0.550
+feat_oi_ret_div:2:SHORT:h24,PERP,feat_oi_ret_div,2,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,1794553200,4,4,0,4.6727,,0.004379,3835,0.410982,24,3.500,validated_walk_forward,False,True,22,0.550
 feat_ret_1:2:SHORT:h24,PERP,feat_ret_1,2,SHORT,decayed,2026-11-13T00:29:33.450141+00:00,1794157200,1,1,0,0.0260,,0.004910,9891,0.535123,24,3.500,validated_walk_forward,False,True,40,0.526
 feat_vol_sma_ratio:1:SHORT:h20,PERP,feat_vol_sma_ratio,1,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,,0,0,0,0,,0.004122,9518,0.414406,20,3.500,validated_walk_forward,False,True,31,0.517
 feat_vol_of_vol:2:SHORT:h24,PERP,feat_vol_of_vol,2,SHORT,decayed,2026-11-13T00:29:33.450141+00:00,1794060000,3,1,2,-0.0815,,0.004909,9628,0.407574,24,3.500,validated_walk_forward,False,True,32,0.421
