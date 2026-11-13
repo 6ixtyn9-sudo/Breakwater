@@ -32,7 +32,7 @@ feat_trend_strength_20:2:SHORT:h24,PERP,feat_trend_strength_20,2,SHORT,monitored
 feat_funding_cum_24@oi_mid:1:SHORT:h12,PERP,feat_funding_cum_24,1,SHORT,monitored,2026-11-13T00:29:33.450141+00:00,,0,0,0,0,,0.004542,3255,0.075304,12,3.500,validated_walk_forward,False,True,8,0.615
 feat_book_imb_5:1:SHORT:h20,PERP,feat_book_imb_5,1,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,,0,0,0,0,,0.003537,3678,0.592097,20,3.500,validated_walk_forward,False,True,15,0.395
 feat_intraday_mom:1:SHORT:h12,PERP,feat_intraday_mom,1,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,,0,0,0,0,,0.002050,10059,0.450382,12,3.500,validated_walk_forward,False,True,25,0.463
-feat_vol_roc_20:0:SHORT:h20,PERP,feat_vol_roc_20,0,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,,0,0,0,0,,0.005094,8127,0.311041,20,3.500,validated_walk_forward,False,True,31,0.517
+feat_vol_roc_20:0:SHORT:h20,PERP,feat_vol_roc_20,0,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,1794542400,1,1,0,1.6896,,0.005094,8127,0.311041,20,3.500,validated_walk_forward,False,True,31,0.517
 feat_buy_vol_ratio:2:SHORT:h24,PERP,feat_buy_vol_ratio,2,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,,0,0,0,0,,0.003223,8805,0.726300,24,3.500,validated_walk_forward,False,True,21,0.457
 feat_close_position:2:SHORT:h24,PERP,feat_close_position,2,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,,0,0,0,0,,0.003223,8805,0.726300,24,3.500,validated_walk_forward,False,True,21,0.457
 feat_adx_14:1:SHORT:h15,PERP,feat_adx_14,1,SHORT,monitored,2026-11-12T00:30:55.002790+00:00,,0,0,0,0,,0.003888,8972,0.168178,15,3.500,validated_walk_forward,False,True,37,0.536
