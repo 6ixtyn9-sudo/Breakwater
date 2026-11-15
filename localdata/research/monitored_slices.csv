@@ -13,8 +13,8 @@ feat_gap_fill_ratio:0:SHORT:h12,PERP,feat_gap_fill_ratio,0,SHORT,monitored,2026-
 feat_ema_cross_10_20:2:SHORT:h24,PERP,feat_ema_cross_10_20,2,SHORT,decayed,2026-11-15T00:32:37.094406+00:00,1793221200,4,0,4,-5.4878,,0.010611,9245,0.594942,24,3.500,validated_walk_forward,False,True,42,0.553
 feat_oi_chg_24:2:SHORT:h20,PERP,feat_oi_chg_24,2,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,,0,0,0,0,,0.012371,3263,0.343663,20,3.500,validated_walk_forward,False,True,21,0.553
 feat_ret_autocorr:2:SHORT:h24,PERP,feat_ret_autocorr,2,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,1794567600,6,4,2,8.9555,,0.009328,9595,0.050899,24,3.500,validated_walk_forward,False,True,34,0.447
-feat_buy_vol_ratio:0:SHORT:h24,PERP,feat_buy_vol_ratio,0,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,1794153600,1,1,0,0.5170,,0.005594,9723,0.649000,24,3.500,validated_walk_forward,False,True,24,0.444
-feat_close_position:0:SHORT:h24,PERP,feat_close_position,0,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,,0,0,0,0,,0.005594,9723,0.649000,24,3.500,validated_walk_forward,False,True,24,0.444
+feat_buy_vol_ratio:0:SHORT:h24,PERP,feat_buy_vol_ratio,0,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,1794153600,2,2,0,5.0005,,0.005594,9723,0.649000,24,3.500,validated_walk_forward,False,True,24,0.444
+feat_close_position:0:SHORT:h24,PERP,feat_close_position,0,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,,1,1,0,2.7025,,0.005594,9723,0.649000,24,3.500,validated_walk_forward,False,True,24,0.444
 feat_vol_roc_20:2:SHORT:h24,PERP,feat_vol_roc_20,2,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,,0,0,0,0,,0.002042,9829,0.189353,24,3.500,validated_walk_forward,False,True,29,0.460
 feat_vol_regime:2:SHORT:h24,PERP,feat_vol_regime,2,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,,0,0,0,0,,0.005297,8796,0.091761,24,3.500,validated_walk_forward,False,True,38,0.500
 feat_vol_contraction:2:SHORT:h24,PERP,feat_vol_contraction,2,SHORT,monitored,2026-11-15T00:32:37.094406+00:00,,0,0,0,0,,0.005297,8796,0.091761,24,3.500,validated_walk_forward,False,True,38,0.500
