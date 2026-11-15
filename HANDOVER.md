@@ -1037,9 +1037,13 @@ after the hack and already fail closed on the live side.
    charged 18.3). Relative criteria cancel it; absolute P&L does not.
 5. Everything in the 10-31 "not done, deliberately" list.
 
-If the verdict is FAIL: stop the paper workflows, leave the guardian
+Original FAIL response: stop the paper workflows, leave the guardian
 heartbeat running read-only, and write the post-mortem from the October
-diagnostic plus the 11-09 read before touching research again.
+diagnostic plus the 11-09 read before touching research again. **For the
+2026-11-16 extension read, this is superseded by the user-approved
+2026-11-15 amendment in extension term 7 below:** retain the existing paper
+workflow as a non-promoting shadow/control, keep the guardian read-only, and
+build a separate engine only after the post-mortem.
 
 ### 2026-11-09 read — inconclusive on count; window extended one week (docs only)
 
@@ -1152,3 +1156,15 @@ extended rather than called either way.
    5000-bar re-validation (repo var `BREAKWATER_PERP_CANDLE_COUNT=5000`)
    rather than more waiting. **No second extension.**
 6. The Step 4 list above is unchanged; item 0 is now the scan runtime.
+7. **User-approved amendment (2026-11-15) — FAIL handling and engine work.**
+   The 2026-11-16 00:00Z read and A/B thresholds above do not change. If
+   that read is FAIL, do **not** terminate the existing hourly paper runs:
+   keep the current engine unchanged as a non-promoting shadow/control, with
+   no live orders, and leave the guardian read-only. Freeze/report the final
+   A/B result and complete the post-mortem before touching research. After
+   that, build one new engine in a separate parallel lane with independent
+   state, book, ledger, and predeclared acceptance criteria. Do not replace
+   global discovery, mix its signals into the baseline book, or promote it
+   before evaluation. This amends only the prior FAIL action; it does not
+   extend the read window, change its criteria, or authorize engine logic
+   changes before the 11-16 read. **No second extension.**
