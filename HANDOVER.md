@@ -1131,6 +1131,21 @@ extended rather than called either way.
 4. The scan-runtime fault stays unfixed for the week (a fix sits inside the
    scan code path). Profiling from run/job metadata only. If skipped cycles
    exceed ~30% in any 24 h it is flagged and decided on the day.
+   *Tripped 11-10 17:26Z (15 of 24 cycles in 24 h, 38% skipped; six
+   consecutive runs 03:00-08:00Z cancelled). Operator chose to profile and
+   fix.* Local profile of `shadow_scan` with the production `localdata` and
+   synthetic 1000-bar frames (no network) did not finish in 28 min; py-spy
+   put the time in `short_inventory._observe_candidates`, which called
+   `compute_price_features` once per candidate x frame: 606 eligible SHORT
+   candidates x 15 native perp frames = ~9,000 calls at ~0.3 s. Nothing to
+   do with Hyperliquid 429s or book size; the hour-to-hour variance came
+   from the candidate count and runner speed. Fix: cache features, regime
+   and ATR per (kind, pair) inside the loop, the same cache `monitor_book`
+   already has. Pure performance - observations are byte-identical (test
+   `test_observe_candidates_computes_features_once_per_frame`). Same scan
+   locally after the fix: 157 s (`compute_price_features` 147 calls). The
+   fix changes when a cycle lands, not what it decides; attribution for the
+   week is unaffected.
 5. Pre-stated reading on 11-16: B reaches 30 -> judge on sign. B still short
    of 30 after a week with the state race fixed -> that is the finding: the
    lane does not produce flow at 1000-bar validation, and it feeds the

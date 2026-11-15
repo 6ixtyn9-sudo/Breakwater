@@ -36,6 +36,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+import pandas as pd
+
 # Inventory is part of the paper observation loop. There is no operator env
 # switch to disable it; the evidence gates (validated, edge, breadth, bear) are
 # the safety.
@@ -268,7 +270,29 @@ def _observe_candidates(
 ) -> list[ShortObservation]:
     observations: list[ShortObservation] = []
     # Lazy import: monitor is heavy and already imports this module's siblings.
-    from breakwater.monitor import _latest_state, regime_of
+    from breakwater.features import compute_price_features
+    from breakwater.monitor import _atr, _latest_state, regime_of
+
+    # The feature set, regime and ATR depend only on the frame, never on the
+    # candidate. Compute each once per (kind, pair). Before this cache the
+    # loop recomputed the full feature set for every candidate x frame pair:
+    # ~600 eligible SHORT candidates x 15 native perp frames = ~9,000
+    # compute_price_features calls (~0.3 s each on 1000 bars) per paper
+    # cycle, which was 45-100 min of the hourly run and the cause of the
+    # 90-min timeouts and skipped cycles 2026-11-06 -> 11-10. monitor_book
+    # already carries the same cache; outputs are identical.
+    featured_cache: dict[tuple[str, str], pd.DataFrame | None] = {}
+    regime_cache: dict[tuple[str, str], str] = {}
+    atr_cache: dict[tuple[str, str], float] = {}
+
+    def _featured(kind: str, pair: str, frame: pd.DataFrame):
+        key = (kind, pair.upper())
+        if key not in featured_cache:
+            try:
+                featured_cache[key] = compute_price_features(frame)
+            except Exception:
+                featured_cache[key] = None
+        return featured_cache[key]
 
     for candidate in candidates:
         for kind, pair, frame in _iter_frames(frames_by_kind, candidate.kind):
@@ -276,23 +300,22 @@ def _observe_candidates(
                 continue
             if len(frame) < 60:
                 continue
-            featured = None
-            try:
-                from breakwater.features import compute_price_features
-
-                featured = compute_price_features(frame)
-            except Exception:
+            featured = _featured(kind, pair, frame)
+            if featured is None:
                 continue
             latest_state, latest_row = _latest_state(featured, candidate.feature)
             if latest_state != candidate.state:
                 continue
             close = Decimal(str(latest_row["close"]))
-            regime = regime_of(frame)
+            key = (kind, pair.upper())
+            if key not in regime_cache:
+                regime_cache[key] = regime_of(frame)
+            regime = regime_cache[key]
             # A bad/tiny/short-only active bar should not produce a huge
             # notional; compute a stop the same way monitor does.
-            from breakwater.monitor import _atr
-
-            atr_raw = _atr(featured)
+            if key not in atr_cache:
+                atr_cache[key] = _atr(featured)
+            atr_raw = atr_cache[key]
             if close <= 0 or atr_raw <= 0:
                 continue
             atr = Decimal(str(atr_raw))
