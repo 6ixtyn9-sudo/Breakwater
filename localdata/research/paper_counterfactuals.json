@@ -9,7 +9,7 @@
     "horizon_bars": 24,
     "initial_stop_price": "0.06796874999999999440",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-15T18:00:00+00:00",
+    "last_processed_bar_start": "2026-11-15T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "239.89165000",
     "pair": "DOGEUSDC",
@@ -22,7 +22,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 74,
+        "bars_held": 75,
         "stop_price": "0.06000749999999998880"
       },
       "target_2r_trail_1r": {
@@ -57,7 +57,7 @@
     "horizon_bars": 20,
     "initial_stop_price": "71660.99999999999990",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-15T18:00:00+00:00",
+    "last_processed_bar_start": "2026-11-15T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "120.68624000",
     "pair": "BTCUSDC",
@@ -70,7 +70,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 57,
+        "bars_held": 58,
         "stop_price": "67131.99999999999980"
       },
       "target_2r_trail_1r": {
@@ -105,7 +105,7 @@
     "horizon_bars": 20,
     "initial_stop_price": "1995.800000000000065",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-15T18:00:00+00:00",
+    "last_processed_bar_start": "2026-11-15T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "120.72406000",
     "pair": "ETHUSDC",
@@ -118,7 +118,7 @@
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 45,
+        "bars_held": 46,
         "stop_price": "1845.900000000000130"
       },
       "target_2r_trail_1r": {
@@ -153,35 +153,35 @@
     "horizon_bars": 24,
     "initial_stop_price": "66990.99999999999985",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-15T18:00:00+00:00",
+    "last_processed_bar_start": "2026-11-15T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "122.03609000",
     "pair": "BTCUSDC",
-    "peak_price": "64898.0",
+    "peak_price": "65199.0",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66990.99999999999985"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66990.99999999999985"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66990.99999999999985"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66990.99999999999985"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66990.99999999999985"
       }
     },
@@ -201,35 +201,35 @@
     "horizon_bars": 24,
     "initial_stop_price": "0.06096074999999999745",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-15T18:00:00+00:00",
+    "last_processed_bar_start": "2026-11-15T19:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "122.03609000",
     "pair": "DOGEUSDC",
-    "peak_price": "0.058785",
+    "peak_price": "0.059061",
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "0.06096074999999999745"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "0.06096074999999999745"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "0.06096074999999999745"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "0.06096074999999999745"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 1,
+        "bars_held": 2,
         "stop_price": "0.06096074999999999745"
       }
     },
