@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-16 15:05 UTC
+# Breakwater daily print — 2026-11-16 15:40 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -121,15 +121,15 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.3125 bull=0.0 neutral=0.6875 | symbols=16
+- Label: **neutral** | breadth bear=0.2667 bull=0.0 neutral=0.7333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-16T15:01:23Z
+- as_of: 2026-11-16T15:35:34Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 967 | observations: 5289 | armable: **0**
+- candidates: 1120 | eligible: 967 | observations: 4958 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=222.5b n=339 breadth=5 validated=True prov=False armable=False (not_confirmed_bear)
   - `feat_oi_chg_24@oi_hi:2:SHORT:h24` edge=202.9b n=973 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
