@@ -1,21 +1,5 @@
 [
   {
-    "pair": "DOGEUSDC",
-    "pnl_zar": "-2.6079",
-    "reason": "slice_gap",
-    "signal_id": "ae6c85777eec8c91",
-    "slice_id": "feat_ret_10:2:LONG:h15",
-    "stopped_at": "2026-09-15T07:00:26+00:00"
-  },
-  {
-    "pair": "ETHUSDC",
-    "pnl_zar": "-3.0158",
-    "reason": "slice_gap",
-    "signal_id": "d495183873d7e6e2",
-    "slice_id": "feat_ret_10:2:LONG:h15",
-    "stopped_at": "2026-09-15T07:00:26+00:00"
-  },
-  {
     "pair": "XYZ:PALLADIUM",
     "pnl_zar": "-1.0751",
     "reason": "stop",
@@ -1598,5 +1582,21 @@
     "signal_id": "0fcf6e40633dca0b",
     "slice_id": "feat_range_pos_20:2:SHORT:h24",
     "stopped_at": "2026-11-12T09:27:13+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "0.5699",
+    "reason": "slice_gap",
+    "signal_id": "1f6b58c07cbd1c8e",
+    "slice_id": "feat_vol_regime:2:SHORT:h24",
+    "stopped_at": "2026-11-16T10:01:23+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "2.4474",
+    "reason": "slice_gap",
+    "signal_id": "68d66e1a31473525",
+    "slice_id": "feat_vol_regime:2:SHORT:h24",
+    "stopped_at": "2026-11-16T10:01:23+00:00"
   }
 ]
