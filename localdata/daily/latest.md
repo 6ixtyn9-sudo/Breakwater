@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-17 05:38 UTC
+# Breakwater daily print — 2026-11-17 06:03 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -13,7 +13,7 @@
 
 - Equity: **2391.63 ZAR** (seed 2000) | lifetime: **+391.63 ZAR** | closed: 592
 - Today: 0 closed, **+0.00 ZAR**
-- 7d: **+43.59 ZAR** | 30d: **+110.43 ZAR**
+- 7d: **+43.59 ZAR** | 30d: **+100.73 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 546 | wins: 281 | win%: 51.5 | P&L: **+436.14 ZAR** | today: +0.00 | 7d: +43.59 | 30d: +110.43
+- Closed: 546 | wins: 281 | win%: 51.5 | P&L: **+436.14 ZAR** | today: +0.00 | 7d: +43.59 | 30d: +100.73
 - By exit: target +516.3, trail_stop +249.2, horizon +83.4, max_bars +2.8, regime_shift -11.9, stop -403.6
 - By entry regime (n/pnl): neutral 213/+234.4, bull 122/+199.3, bear 211/+2.5
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_trend_neutral:0:SHORT:h24 5n/5w +24.80; feat_premium@oi_hi:2:SHORT:h24 3n/3w +24.15; feat_ext_strength:2:LONG:h15 12n/8w +24.00
@@ -52,9 +52,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 3 open, stop-risk **12.43 ZAR**
-  - XRPUSDC SELL ntl=122 risk=4.82 bars=19 stop=0.9804950000000000080 peak=0.97627
-  - ETHUSDC SELL ntl=122 risk=4.17 bars=17 stop=1866.550000000000045 peak=1866.2
-  - BTCUSDC SELL ntl=122 risk=3.44 bars=18 stop=66354.00000000000015 peak=65679.0
+  - XRPUSDC SELL ntl=122 risk=4.82 bars=20 stop=0.9804950000000000080 peak=0.97627
+  - ETHUSDC SELL ntl=122 risk=4.17 bars=18 stop=1866.550000000000045 peak=1866.2
+  - BTCUSDC SELL ntl=122 risk=3.44 bars=19 stop=66354.00000000000015 peak=65679.0
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -120,15 +120,15 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.1333 bull=0.0667 neutral=0.8 | symbols=15
+- Label: **neutral** | breadth bear=0.2 bull=0.0667 neutral=0.7333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-17T05:35:29Z
+- as_of: 2026-11-17T06:01:14Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 993 | observations: 5316 | armable: **0**
+- candidates: 1120 | eligible: 993 | observations: 5200 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=262.5b n=148 breadth=2 validated=False prov=False armable=False (too_few_rows)
   - `feat_gap_fill_ratio:2:SHORT:h20` edge=227.7b n=244 breadth=1 validated=False prov=False armable=False (too_few_symbols)
@@ -201,10 +201,10 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-17T05:04:53: errors=0 signals=47 regime_blocked=55
+- Latest scan 2026-11-17T06:03:56: errors=0 signals=47 regime_blocked=47
 - this cycle: closed=0 new_signals=47 skipped=47 slot_full=0 slice_full=0 pair_held=0
-- Action funnel: regime_blocked=55 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | cluster_cap=0 | family_vetoed=0 | slot_full=0 | skipped=47
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 55, "skipped": 47, "slice_full": 0, "slot_full": 0})
+- Action funnel: regime_blocked=47 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | cluster_cap=0 | family_vetoed=0 | slot_full=0 | skipped=47
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 47, "skipped": 47, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=48
 - aggregate_risk: ok open=12.4259 cap=171.2355 used=0.0779 remaining=157.8927 replayed=3 no_new_bars=0
 - pair_errors: []
