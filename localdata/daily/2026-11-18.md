@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-18 00:41 UTC
+# Breakwater daily print — 2026-11-18 01:04 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -52,8 +52,8 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 2 open, stop-risk **8.76 ZAR**
-  - DOGEUSDC SELL ntl=122 risk=4.46 bars=8 stop=0.06051149999999999790 peak=0.060412
-  - BTCUSDC SELL ntl=122 risk=4.30 bars=0 stop=67212.49999999999990 peak=64922.0
+  - DOGEUSDC SELL ntl=122 risk=4.46 bars=9 stop=0.06051149999999999790 peak=0.060412
+  - BTCUSDC SELL ntl=122 risk=4.30 bars=1 stop=67212.49999999999990 peak=64970.0
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -63,9 +63,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **8.76 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **8.76 / 170.49 ZAR | 5.5% | ok**
 - Remaining: 161.1203 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 27, "skipped": 27, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 25, "lane_gate_blocked": 0, "opened": 1, "pair_held": 4, "signals": 39, "skipped": 9, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 38, "skipped": 38, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 3, "skipped": 3, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **DOGEUSDC** 4.4595 ZAR
-- positions without bars: 0 | replayed: 4 | invalid: 0
+- positions without bars: 0 | replayed: 2 | invalid: 0
 
 ## 6. Monitored books
 
@@ -75,10 +75,10 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
   - `feat_ret_autocorr:2:SHORT:h24` edge=0.0112 n=9854 p=0.2985 src=validated_walk_forward unproven=False paper=7n/+12.64
   - `feat_oi_ret_div:2:SHORT:h24` edge=0.0100 n=5832 p=0.5454 src=validated_walk_forward unproven=False paper=4n/+4.67
   - `feat_vol_roc_20:0:SHORT:h20` edge=0.0079 n=9813 p=0.5248 src=validated_walk_forward unproven=False paper=1n/+1.69
+  - `feat_oi_chg_24@oi_hi:2:SHORT:h24` edge=0.0158 n=1069 p=0.3938 src=validated_walk_forward unproven=False paper=1n/+1.58
   - `feat_close_pos_ma:1:SHORT:h24` edge=0.0088 n=9944 p=0.2628 src=validated_walk_forward unproven=False paper=1n/+0.54
   - `feat_intraday_mom:1:SHORT:h15` edge=0.0038 n=10274 p=0.4167 src=validated_walk_forward unproven=False paper=0n/+0.00
   - `feat_ext_vs_ma_10:0:SHORT:h20` edge=0.0038 n=10574 p=0.3256 src=validated_walk_forward unproven=False paper=0n/+0.00
-  - `feat_stoch_d_14:0:SHORT:h15` edge=0.0035 n=10654 p=0.1004 src=validated_walk_forward unproven=False paper=0n/+0.00
 - HIP-3 top (by paper P&L):
   - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` edge=0.0003 n=9570 p=0.3356 src=validated_walk_forward unproven=False paper=15n/+4.27
   - `hip3_xyz_commodity_c0:feat_vol_regime:1:LONG:h11` edge=0.0015 n=1260 p=0.0162 src=validated_walk_forward unproven=False paper=0n/+0.00
@@ -96,9 +96,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 8. Research / honesty checks
 
-- Latest research: 2026-11-17T00:31:35.742853+00:00 | discovered 2240 | validated 274 | reg-confounded 806 | hostile-unproven 8
-- floors: "" | book: {"rows": 63, "by_status": {"monitored": 61, "decayed": 2}, "in_validated_pool": 63, "absent_from_pool": 0, "net_edge_floor_enter_bps": ""}
-- Short audit: discovered=1120 validated=1120 passing=274 eligible=682 best=262.5b best_fail=temporal_pass,direction_ok,breadth_ok
+- Latest research: 2026-11-18T00:41:52.766406+00:00 | discovered 2240 | validated 264 | reg-confounded 773 | hostile-unproven 4
+- floors: "" | book: {"rows": 63, "by_status": {"decayed": 1, "monitored": 61, "cooldown": 1}, "in_validated_pool": 63, "absent_from_pool": 0, "net_edge_floor_enter_bps": ""}
+- Short audit: discovered=1120 validated=1120 passing=264 eligible=630 best=203.5b best_fail=temporal_pass,direction_ok,breadth_ok,alpha<=0
 - pair_errors: "not propagated from shards"
 - Spread research (long/short, PERP): rows=576 qualifying=0 (go/no-go gate: >=1 qualifying spread on 3 consecutive runs)
   - feat_donchian_width_20:L0S2:h24: mean=-8.0b t_no=2.44 folds=00111 mkt_corr=-0.31 dd=323b legs=13.3/10.7 fail=n_nonoverlap,mean<=0,folds,market_corr
@@ -121,20 +121,20 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.1333 bull=0.0667 neutral=0.8 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-18T00:01:01Z
+- as_of: 2026-11-18T01:01:13Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 993 | observations: 5271 | armable: **0**
+- candidates: 1120 | eligible: 998 | observations: 5187 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
-  - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=262.5b n=148 breadth=2 validated=False prov=False armable=False (too_few_rows)
-  - `feat_gap_fill_ratio:2:SHORT:h20` edge=227.7b n=244 breadth=1 validated=False prov=False armable=False (too_few_symbols)
-  - `feat_gap_fill_ratio:2:SHORT:h24` edge=213.8b n=242 breadth=1 validated=False prov=False armable=False (too_few_symbols)
-  - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=201.4b n=1271 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_oi_chg_24@oi_hi:2:SHORT:h24` edge=191.4b n=1022 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_gap_fill_ratio:2:SHORT:h15` edge=180.8b n=247 breadth=1 validated=False prov=False armable=False (too_few_symbols)
+  - `feat_oi_ret_div@oi_lo:0:SHORT:h24` edge=203.5b n=1742 breadth=13 validated=False prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24@oi_lo:1:SHORT:h24` edge=200.2b n=1563 breadth=13 validated=False prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=187.7b n=1409 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24@oi_lo:2:SHORT:h24` edge=173.7b n=1501 breadth=13 validated=False prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_ret_div@oi_lo:0:SHORT:h20` edge=166.5b n=1857 breadth=14 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24:2:SHORT:h24` edge=164.9b n=4090 breadth=39 validated=True prov=False armable=False (not_confirmed_bear)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
@@ -201,13 +201,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-18T00:03:08: errors=2 signals=66 regime_blocked=236
-- this cycle: closed=3 new_signals=66 skipped=36 slot_full=0 slice_full=0 pair_held=4
-- Action funnel: regime_blocked=236 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=4 | cluster_cap=25 | family_vetoed=0 | slot_full=0 | skipped=36
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 25, "family_vetoed": 0, "lane_gate_blocked": 1, "pair_held": 4, "regime_blocked": 236, "skipped": 36, "slice_full": 0, "slot_full": 0})
-- green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=48
-- aggregate_risk: ok open=4.4595 cap=170.4859 used=0.0549 remaining=161.1203 replayed=4 no_new_bars=0
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:DKNG"}, {"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:QNT"}]
+- Latest scan 2026-11-18T01:04:01: errors=0 signals=41 regime_blocked=175
+- this cycle: closed=0 new_signals=41 skipped=41 slot_full=0 slice_full=0 pair_held=0
+- Action funnel: regime_blocked=175 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | cluster_cap=0 | family_vetoed=0 | slot_full=0 | skipped=41
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 175, "skipped": 41, "slice_full": 0, "slot_full": 0})
+- green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=49
+- aggregate_risk: ok open=8.7558 cap=170.4859 used=0.0549 remaining=161.1203 replayed=2 no_new_bars=0
+- pair_errors: []
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
