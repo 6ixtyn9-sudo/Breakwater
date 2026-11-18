@@ -1,29 +1,5 @@
 [
   {
-    "pair": "ETHUSDC",
-    "pnl_zar": "-2.9875",
-    "reason": "stop",
-    "signal_id": "127498cf97d68ef9",
-    "slice_id": "feat_realized_vol_20:2:LONG:h24",
-    "stopped_at": "2026-09-15T15:09:37+00:00"
-  },
-  {
-    "pair": "FILUSDC",
-    "pnl_zar": "-5.0786",
-    "reason": "stop",
-    "signal_id": "feb37a4672f95654",
-    "slice_id": "feat_realized_vol_20:2:LONG:h24",
-    "stopped_at": "2026-09-15T19:00:32+00:00"
-  },
-  {
-    "pair": "XRPUSDC",
-    "pnl_zar": "-3.7932",
-    "reason": "stop",
-    "signal_id": "7ad71598031dc231",
-    "slice_id": "feat_realized_vol_20:2:LONG:h24",
-    "stopped_at": "2026-09-15T19:00:32+00:00"
-  },
-  {
     "pair": "BNBUSDC",
     "pnl_zar": "-2.2983",
     "reason": "stop",
@@ -1598,5 +1574,29 @@
     "signal_id": "1276461dddc9a024",
     "slice_id": "feat_ret_autocorr:2:SHORT:h24",
     "stopped_at": "2026-11-16T12:30:22+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-4.0639",
+    "reason": "stop",
+    "signal_id": "aa536af4b09d22ef",
+    "slice_id": "feat_book_imb_5:0:SHORT:h24",
+    "stopped_at": "2026-11-18T00:01:01+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.6758",
+    "reason": "stop",
+    "signal_id": "18247b2ae0ee4b9d",
+    "slice_id": "feat_book_imb_5:0:SHORT:h24",
+    "stopped_at": "2026-11-18T00:01:01+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-0.1068",
+    "reason": "trail_stop",
+    "signal_id": "c10587988bc2b2a3",
+    "slice_id": "feat_oi_ret_div@oi_hi:2:SHORT:h24",
+    "stopped_at": "2026-11-18T00:01:01+00:00"
   }
 ]
