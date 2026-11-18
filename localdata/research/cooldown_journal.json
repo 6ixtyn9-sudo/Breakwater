@@ -1,13 +1,5 @@
 [
   {
-    "pair": "TRUMPUSDC",
-    "pnl_zar": "-4.9609",
-    "reason": "stop",
-    "signal_id": "2a5c09e7dbc84866",
-    "slice_id": "feat_atr_norm_ext:2:LONG:h19",
-    "stopped_at": "2026-09-15T19:00:32+00:00"
-  },
-  {
     "pair": "PARA:CIEN",
     "pnl_zar": "-1.6551",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "9c284619bf819c6a",
     "slice_id": "feat_oi_ret_div@oi_mid:2:SHORT:h24",
     "stopped_at": "2026-11-18T10:01:15+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "1.2359",
+    "reason": "slice_gap",
+    "signal_id": "500231c6fb91ad12",
+    "slice_id": "feat_bb_width_20:2:SHORT:h24",
+    "stopped_at": "2026-11-18T12:01:16+00:00"
   }
 ]
