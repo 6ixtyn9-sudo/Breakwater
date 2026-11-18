@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:CIEN",
-    "pnl_zar": "-1.6551",
-    "reason": "stop",
-    "signal_id": "44f0efe21a2730f4",
-    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h24",
-    "stopped_at": "2026-09-16T11:00:31+00:00"
-  },
-  {
     "pair": "XLMZAR",
     "pnl_zar": "-2.0180",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "500231c6fb91ad12",
     "slice_id": "feat_bb_width_20:2:SHORT:h24",
     "stopped_at": "2026-11-18T12:01:16+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-0.0273",
+    "reason": "trail_stop",
+    "signal_id": "37afa7c43ff4f8f0",
+    "slice_id": "feat_funding_cum_24@oi_mid:1:SHORT:h15",
+    "stopped_at": "2026-11-18T19:01:07+00:00"
   }
 ]
