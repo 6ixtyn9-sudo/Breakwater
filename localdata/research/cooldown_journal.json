@@ -1,13 +1,5 @@
 [
   {
-    "pair": "NEARUSDC",
-    "pnl_zar": "-3.2722",
-    "reason": "stop",
-    "signal_id": "82924706aa3b2ce2",
-    "slice_id": "engine_mean_reversion:bollinger:2:SELL:h10:NEARUSDC",
-    "stopped_at": "2026-09-16T14:00:31+00:00"
-  },
-  {
     "pair": "PARA:AVGO",
     "pnl_zar": "-0.3678",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "3797ab0f159702b0",
     "slice_id": "feat_oi_chg_24:2:SHORT:h24",
     "stopped_at": "2026-11-19T08:01:22+00:00"
+  },
+  {
+    "pair": "WLDUSDC",
+    "pnl_zar": "-0.4468",
+    "reason": "slice_gap",
+    "signal_id": "2aca6df908d031e6",
+    "slice_id": "feat_book_imb_5@oi_mid:2:SHORT:h24",
+    "stopped_at": "2026-11-19T09:01:19+00:00"
   }
 ]
