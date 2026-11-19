@@ -1,13 +1,5 @@
 [
   {
-    "pair": "ZECUSDC",
-    "pnl_zar": "-4.9325",
-    "reason": "stop",
-    "signal_id": "44412c4cb3d2a503",
-    "slice_id": "engine_mean_reversion:bollinger:2:SELL:h10:ZECUSDC",
-    "stopped_at": "2026-09-16T14:00:31+00:00"
-  },
-  {
     "pair": "NEARUSDC",
     "pnl_zar": "-3.2722",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "23daf2cbedc561c6",
     "slice_id": "feat_funding_cum_24@oi_mid:1:SHORT:h15",
     "stopped_at": "2026-11-19T07:01:15+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-0.5104",
+    "reason": "slice_gap",
+    "signal_id": "3797ab0f159702b0",
+    "slice_id": "feat_oi_chg_24:2:SHORT:h24",
+    "stopped_at": "2026-11-19T08:01:22+00:00"
   }
 ]
