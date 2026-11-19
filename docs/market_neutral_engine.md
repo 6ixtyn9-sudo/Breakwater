@@ -1,8 +1,11 @@
 # Market-neutral long/short engine — scoping note
 
-Status: **research-only**. Nothing in this note trades, promotes, or changes a
-gate. It defines the evidence that must exist before an engine is built, and
-the engine's shape if that evidence arrives.
+Status: **isolated engineering only; dormant**. The user-approved 2026-11-15
+FAIL plan permits work on a separate parallel engine after the final-read
+post-mortem. This does not waive the pre-registered research gates below:
+there are no paper entries, workflow activation, promotion, or live orders
+until those gates pass. The existing hourly paper engine remains unchanged as
+the non-promoting shadow/control.
 
 ## 1. Thesis
 
@@ -81,7 +84,10 @@ spreads near −9 bps (one leg of costs) and nothing qualifies.
 
 ## 3. Go / no-go gates
 
-Build the paper engine only when, on the merged `spread_slices.csv`:
+These gates now control **paper activation** of the parallel engine. The
+isolated preflight and storage boundary may be implemented earlier, but the
+engine must remain dormant until all gates pass on the merged
+`spread_slices.csv` and matching `validated_slices.csv`:
 
 1. **Persistence** — at least one spread qualifies on **three consecutive**
    research runs (the file is overwritten each run; the daily print history in
@@ -119,12 +125,15 @@ single-sample artefact and this note is closed.
   per 8h window per leg (Hyperliquid publishes it; it is currently not fetched
   — that fetch is a prerequisite task), plus a slippage haircut of 2 bps per
   leg on names outside the top-20 liquidity rank.
-- **Sizing**: start at the lane minimum; promotion rules identical to the
-  directional lanes (the registry does not need to know a position is a pair).
-- **What has to change in code**: `paper_trade.py` positions are single-leg
-  (`symbol`, `side`); a pair needs either a `group_id` linking two legs with a
-  joint exit, or a synthetic instrument. The former is smaller and keeps the
-  ledger per-leg honest. The guardian's open-risk summary must net the pair.
+- **Sizing**: disabled until the operator approves a separate gross-risk cap.
+  Proposal: the same ZAR risk cap as one directional perp position, split
+  equally across the two sides; never borrow from the baseline lane's budget.
+- **State and ledger**: a separate runner owns the pair book, positions, and
+  ledger under `localdata/parallel_spread/`. Each position has one group ID;
+  leg fills remain individually auditable and exits are joint.
+- **Promotion and guardian**: there is no promotion path in this experiment.
+  The baseline promotion registry is not read or written, and the guardian
+  remains read-only with no parallel-engine inputs.
 
 ## 5. Risks and what they would look like
 
@@ -143,4 +152,44 @@ single-sample artefact and this note is closed.
   should research run more often for this file alone? (It costs ~10 ms per
   feature-horizon; the cost is the shared frame fetch, not the spread maths.)
 - Gross notional cap for a pair lane at seed: proposal is the same ZAR cap as
-  one directional perp position, split across the two legs.
+  one directional perp position, split across the two legs. This remains an
+  operator decision before any paper activation.
+
+## 7. Isolated parallel implementation after the final-read post-mortem
+
+The 2026-11-16 final read failed (A 1/3; B 28/30 strict real closes,
++23.68 ZAR). The post-mortem is recorded in
+[`POSTMORTEM-2026-11-16.md`](POSTMORTEM-2026-11-16.md). Engineering begins on
+this market-neutral candidate because it directly removes the directional
+market-beta exposure identified in that read; the existing directional engine
+is not forked or modified.
+
+The first implementation slice is `src/breakwater/parallel_spread.py`:
+
+- `evaluate_research_gate` encodes the unchanged three-run, native-PERP,
+  +15 bps, non-overlap, fold, market-correlation, breadth, worst-fold, and
+  two-leg alpha conditions. It is not wired into the baseline runner or a
+  workflow.
+- `ParallelSpreadPaths` reserves `localdata/parallel_spread/` for a separate
+  `book.csv`, `positions.json`, `ledger.csv`, and `status.json`; it checks for
+  collisions with protected baseline files. Constructing the paths is
+  side-effect-free.
+- No fetch, state write, paper execution, promotion, guardian input, or live
+  executor is implemented in this first slice. Workflow wiring stays deferred
+  until pre-paper research gates pass and the operator resolves the gross
+  notional cap above.
+
+The final three completed spread runs before the 11-16 read had 0, 0, then 1
+qualifying spread. The sole qualifying row was
+`feat_vwap_dist:L2S0:h12` at +12.6 bps, below the +15 bps gate, so this lane is
+not ready for paper entries.
+
+**Paper-stage acceptance is fixed before its first entry:** at least 30
+completed pair positions and aggregate net P&L >= 0 ZAR, after both legs'
+fees, realized funding, and the documented slippage haircut. Count each joint
+pair-position once, not each leg. Keep all state, book, positions, ledger,
+and status under `localdata/parallel_spread/`; do not merge its signals or
+statistics into the baseline book or promotion registry. No live orders or
+promotion are part of this experiment. Before paper activation, the operator
+must also approve the gross-risk cap and predeclare the evaluation end date;
+those two launch details are intentionally still open.
