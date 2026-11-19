@@ -1,13 +1,5 @@
 [
   {
-    "pair": "ARBUSDC",
-    "pnl_zar": "-5.0530",
-    "reason": "stop",
-    "signal_id": "90779595ff008b17",
-    "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:ARBUSDC",
-    "stopped_at": "2026-09-16T13:00:31+00:00"
-  },
-  {
     "pair": "ZECUSDC",
     "pnl_zar": "-4.9325",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "3dc903683f60821a",
     "slice_id": "feat_vwap_upper_dist:0:SHORT:h20",
     "stopped_at": "2026-11-19T05:01:15+00:00"
+  },
+  {
+    "pair": "DOGEUSDC",
+    "pnl_zar": "-0.6143",
+    "reason": "slice_gap",
+    "signal_id": "23daf2cbedc561c6",
+    "slice_id": "feat_funding_cum_24@oi_mid:1:SHORT:h15",
+    "stopped_at": "2026-11-19T07:01:15+00:00"
   }
 ]
