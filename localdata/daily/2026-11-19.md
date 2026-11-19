@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-19 11:03 UTC
+# Breakwater daily print — 2026-11-19 11:38 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -13,7 +13,7 @@
 
 - Equity: **2385.25 ZAR** (seed 2000) | lifetime: **+385.25 ZAR** | closed: 604
 - Today: 2 closed, **+1.15 ZAR**
-- 7d: **+35.01 ZAR** | 30d: **+98.29 ZAR**
+- 7d: **+34.23 ZAR** | 30d: **+98.29 ZAR**
 
 ## 2b. Claimed vs realised
 
@@ -31,7 +31,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 558 | wins: 286 | win%: 51.3 | P&L: **+429.76 ZAR** | today: +1.15 | 7d: +35.01 | 30d: +98.29
+- Closed: 558 | wins: 286 | win%: 51.3 | P&L: **+429.76 ZAR** | today: +1.15 | 7d: +34.23 | 30d: +98.29
 - By exit: target +516.3, trail_stop +254.0, horizon +80.0, max_bars +2.8, regime_shift -11.9, stop -411.3
 - By entry regime (n/pnl): neutral 217/+231.4, bull 122/+199.3, bear 219/-0.9
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_trend_neutral:0:SHORT:h24 5n/5w +24.80; feat_premium@oi_hi:2:SHORT:h24 3n/3w +24.15; feat_ext_strength:2:LONG:h15 12n/8w +24.00
@@ -123,13 +123,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.3333 bull=0.1333 neutral=0.5333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-19T11:01:14Z
+- as_of: 2026-11-19T11:35:25Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 885 | observations: 5207 | armable: **0**
+- candidates: 1120 | eligible: 885 | observations: 5205 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=176.3b n=1404 breadth=13 validated=False prov=False armable=False (regime_confounded)
   - `feat_oi_chg_24:2:SHORT:h24` edge=151.3b n=4747 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
