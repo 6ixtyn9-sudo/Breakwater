@@ -10,6 +10,7 @@ def _run(run_id: str, **overrides) -> SpreadRunEvidence:
         "run_id": run_id,
         "spread_id": "feat_vwap_dist:L2S0:h12",
         "kind": "PERP",
+        "research_qualifies": True,
         "n_nonoverlap": 31,
         "mean_ret_costadj": 0.0016,
         "t_nonoverlap": 2.1,
@@ -55,6 +56,14 @@ def test_research_gate_rejects_non_perp_evidence():
     )
     assert not result.ready
     assert "non_perp_evidence" in result.reasons
+
+
+def test_research_gate_rejects_unqualified_source_rows():
+    result = evaluate_research_gate(
+        [_run("r1"), _run("r2", research_qualifies=False), _run("r3")]
+    )
+    assert not result.ready
+    assert "run_2_research_row_not_qualified" in result.reasons
 
 
 def test_research_gate_fails_closed_on_missing_numeric_evidence():

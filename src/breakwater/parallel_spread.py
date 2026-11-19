@@ -25,7 +25,8 @@ MIN_LEG_BREADTH = 4.0
 class SpreadRunEvidence:
     """Evidence for one spread from one completed research run.
 
-    Runs must be supplied oldest-to-newest. ``long_alpha_bps`` and
+    Runs must be supplied oldest-to-newest. ``research_qualifies`` is the
+    source spread-research row's qualification flag. ``long_alpha_bps`` and
     ``short_alpha_bps`` are the matching legs' residual alpha from that same
     run's validated-slice output; missing evidence must fail closed as zero.
     """
@@ -33,6 +34,7 @@ class SpreadRunEvidence:
     run_id: str
     spread_id: str
     kind: str
+    research_qualifies: bool
     n_nonoverlap: int
     mean_ret_costadj: float
     t_nonoverlap: float
@@ -99,6 +101,8 @@ def evaluate_research_gate(runs: Sequence[SpreadRunEvidence]) -> ResearchGateRes
     )
     for index, run in enumerate(recent, start=1):
         prefix = f"run_{index}"
+        if run.research_qualifies is not True:
+            reasons.append(f"{prefix}_research_row_not_qualified")
         values = {field: _finite_float(getattr(run, field)) for field in numeric_fields}
         invalid = [field for field, value in values.items() if value is None]
         if invalid:
