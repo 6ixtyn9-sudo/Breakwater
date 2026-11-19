@@ -1168,3 +1168,33 @@ extended rather than called either way.
    before evaluation. This amends only the prior FAIL action; it does not
    extend the read window, change its criteria, or authorize engine logic
    changes before the 11-16 read. **No second extension.**
+
+### 2026-11-16 final read — FAIL; post-mortem complete
+
+Read against `main` at `1e8f43d` (2026-11-15 23:38Z, the last state before
+00:00Z). **A = 1/3** global positioning slices held across the three final
+research snapshots; only `feat_funding_rate:2:SHORT:h24` persisted. **B =
+28/30 strict real closes, +23.68 ZAR**: positive sign, count short. The
+previous exploratory `31/+24.35` counted three `slice_gap` rows that do not
+pass `lane_gate._is_real_close` / `ACTUAL_EXITS`; it is not a pass. No second
+extension. Full read and post-mortem: `docs/POSTMORTEM-2026-11-16.md`.
+
+Correction to the 10-31 persistence note: `sync_book` refreshes `validated_at`
+when a row is promoted, even when the ID already existed, while
+`slice_memory.csv` records it as `held`. Do not use timestamp equality alone
+to infer a drop. Book membership plus memory drop history shows one slice
+persisted through the final three runs. Strict B at the 11-09 checkpoint is
+24/+18.21; at the final read it is 28/+23.68 (+4 closes/+5.47). The frozen
+11-09 reported mark (27/+18.88) remains unchanged as a historical mark.
+
+The post-mortem is complete. The current hourly paper engine remains an
+unchanged, non-promoting shadow/control; guardian stays read-only and there
+are no live orders. Parallel work starts in the isolated market-neutral
+spread namespace only. The pre-paper research gate has not passed: the latest
+three spread runs had 0, 0, then 1 qualifying spread, and the 11-15 candidate
+was +12.6 bps versus the existing +15 bps requirement. The first parallel
+implementation slice is an unwired preflight/storage contract only. The new
+lane remains dormant with no workflow activation or paper entries until that
+gate passes, the separate risk cap is approved, and the evaluation end date is
+predeclared. Paper acceptance: 30 completed pair positions, net P&L >= 0 ZAR
+after fees, funding and slippage; no promotion or live orders.
