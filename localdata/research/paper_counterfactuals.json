@@ -10,7 +10,7 @@
     "initial_stop_price": "3674.0999999999997790",
     "kind": "PERP",
     "last_processed_bar_start": "2026-11-21T11:00:00+00:00",
-    "missing_bars": 5,
+    "missing_bars": 6,
     "notional_zar": "121.78845000",
     "pair": "PAXGUSDC",
     "peak_price": "3580.5",
