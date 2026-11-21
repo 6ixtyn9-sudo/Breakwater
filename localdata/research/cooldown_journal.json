@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:AVGO",
-    "pnl_zar": "-0.3678",
-    "reason": "slice_gap",
-    "signal_id": "af3e25c9597deaf0",
-    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h24",
-    "stopped_at": "2026-09-16T14:00:31+00:00"
-  },
-  {
     "pair": "PARA:MELI",
     "pnl_zar": "1.0704",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "2aca6df908d031e6",
     "slice_id": "feat_book_imb_5@oi_mid:2:SHORT:h24",
     "stopped_at": "2026-11-19T09:01:19+00:00"
+  },
+  {
+    "pair": "PAXGUSDC",
+    "pnl_zar": "1.2400",
+    "reason": "slice_gap",
+    "signal_id": "25100f35245e6ad5",
+    "slice_id": "feat_atr_ratio:2:SHORT:h24",
+    "stopped_at": "2026-11-21T12:01:12+00:00"
   }
 ]
