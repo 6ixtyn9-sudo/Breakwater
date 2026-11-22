@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-22 13:38 UTC
+# Breakwater daily print — 2026-11-22 14:03 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -51,25 +51,26 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 8 open, stop-risk **37.12 ZAR**
-  - BTCUSDC SELL ntl=126 risk=5.03 bars=16 stop=62841.74999999999985 peak=61646.0
-  - KPEPEUSDC SELL ntl=126 risk=4.89 bars=3 stop=0.003529999999999999845 peak=0.003461
-  - AAVEUSDC SELL ntl=126 risk=4.86 bars=1 stop=102.38425000000000725 peak=99.898
-  - ETHUSDC SELL ntl=126 risk=4.71 bars=14 stop=1742.575000000000055 peak=1731.0
-  - DOGEUSDC SELL ntl=126 risk=4.62 bars=15 stop=0.05728024999999999785 peak=0.055979
-  - ADAUSDC SELL ntl=126 risk=4.39 bars=0 stop=0.15043999999999999465 peak=0.14536
-  - SOLUSDC SELL ntl=126 risk=4.36 bars=13 stop=72.70575000000000920 peak=71.376
-  - XMRUSDC SELL ntl=126 risk=4.27 bars=2 stop=505.577500000000010 peak=489.48
+- **NATIVE**: 9 open, stop-risk **41.22 ZAR**
+  - BTCUSDC SELL ntl=126 risk=5.03 bars=17 stop=62841.74999999999985 peak=61646.0
+  - KPEPEUSDC SELL ntl=126 risk=4.89 bars=4 stop=0.003529999999999999845 peak=0.003461
+  - AAVEUSDC SELL ntl=126 risk=4.86 bars=2 stop=102.38425000000000725 peak=99.898
+  - ETHUSDC SELL ntl=126 risk=4.71 bars=15 stop=1742.575000000000055 peak=1731.0
+  - DOGEUSDC SELL ntl=126 risk=4.62 bars=16 stop=0.05728024999999999785 peak=0.055979
+  - ADAUSDC SELL ntl=126 risk=4.39 bars=1 stop=0.15043999999999999465 peak=0.14554
+  - SOLUSDC SELL ntl=126 risk=4.36 bars=14 stop=72.70575000000000920 peak=71.376
+  - XMRUSDC SELL ntl=126 risk=4.27 bars=3 stop=505.577500000000010 peak=489.99
+  - XRPUSDC SELL ntl=126 risk=4.10 bars=0 stop=0.9500825000000000110 peak=0.92006
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
 ## 5. Aggregate risk leash
 
 - Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
-- Computed open stop-risk (section 4): **37.12 ZAR** (informational only, no cap applied)
-- Paper shadow ledger (gates paper entries only, nothing live): **37.12 / 175.89 ZAR | 22.5% | ok**
-- Remaining: 136.2508 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 21, "skipped": 21, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 10, "lane_gate_blocked": 0, "opened": 1, "pair_held": 12, "signals": 39, "skipped": 16, "slice_full": 0, "slot_full": 0}}
+- Computed open stop-risk (section 4): **41.22 ZAR** (informational only, no cap applied)
+- Paper shadow ledger (gates paper entries only, nothing live): **41.22 / 175.89 ZAR | 25.1% | ok**
+- Remaining: 131.8371 | cap skips: 0 | unknown skips: 0
+- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 21, "skipped": 21, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 5, "lane_gate_blocked": 0, "opened": 1, "pair_held": 12, "signals": 26, "skipped": 8, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **BTCUSDC** 5.0275 ZAR
 - positions without bars: 0 | replayed: 8 | invalid: 0
 
@@ -125,15 +126,15 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 10. Regime shift
 
-- Label: **neutral** | breadth bear=0.125 bull=0.0625 neutral=0.8125 | symbols=16
+- Label: **neutral** | breadth bear=0.0625 bull=0.0625 neutral=0.875 | symbols=16
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-22T13:35:29Z
+- as_of: 2026-11-22T14:01:15Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 1055 | observations: 5855 | armable: **0**
+- candidates: 1120 | eligible: 1055 | observations: 5864 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=217.2b n=1604 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
   - `feat_oi_chg_24:2:SHORT:h24` edge=178.5b n=4811 breadth=38 validated=True prov=False armable=False (not_confirmed_bear)
@@ -208,12 +209,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-22T13:03:24: errors=0 signals=60 regime_blocked=165
-- this cycle: closed=1 new_signals=60 skipped=37 slot_full=0 slice_full=0 pair_held=12
-- Action funnel: regime_blocked=165 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=12 | cluster_cap=10 | family_vetoed=12 | slot_full=0 | skipped=37
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 10, "family_vetoed": 12, "lane_gate_blocked": 1, "pair_held": 12, "regime_blocked": 165, "skipped": 37, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-11-22T14:03:56: errors=0 signals=47 regime_blocked=157
+- this cycle: closed=0 new_signals=47 skipped=29 slot_full=0 slice_full=0 pair_held=12
+- Action funnel: regime_blocked=157 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=12 | cluster_cap=5 | family_vetoed=4 | slot_full=0 | skipped=29
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 5, "family_vetoed": 4, "lane_gate_blocked": 1, "pair_held": 12, "regime_blocked": 157, "skipped": 29, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=50
-- aggregate_risk: ok open=32.7327 cap=175.8909 used=0.2254 remaining=136.2508 replayed=8 no_new_bars=0
+- aggregate_risk: ok open=37.1234 cap=175.8909 used=0.2505 remaining=131.8371 replayed=8 no_new_bars=0
 - pair_errors: []
 
 ---
