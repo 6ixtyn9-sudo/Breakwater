@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-22 00:32 UTC
+# Breakwater daily print — 2026-11-22 00:39 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -98,9 +98,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 8. Research / honesty checks
 
-- Latest research: 2026-11-21T00:33:57.479777+00:00 | discovered 2240 | validated 214 | reg-confounded 1011 | hostile-unproven 5
-- floors: "" | book: {"rows": 13, "by_status": {"decayed": 3, "monitored": 10}, "in_validated_pool": 13, "absent_from_pool": 0, "net_edge_floor_enter_bps": ""}
-- Short audit: discovered=1120 validated=1120 passing=214 eligible=748 best=204.8b best_fail=regime_confounded
+- Latest research: 2026-11-22T00:32:17.879030+00:00 | discovered 2240 | validated 259 | reg-confounded 816 | hostile-unproven 10
+- floors: "" | book: {"rows": 14, "by_status": {"monitored": 13, "decayed": 1}, "in_validated_pool": 14, "absent_from_pool": 0, "net_edge_floor_enter_bps": ""}
+- Short audit: discovered=1120 validated=1120 passing=259 eligible=828 best=217.2b best_fail=regime_confounded
 - pair_errors: "not propagated from shards"
 - Spread research (long/short, PERP): rows=576 qualifying=0 (go/no-go gate: >=1 qualifying spread on 3 consecutive runs)
   - feat_ext_vs_ma_50:L0S2:h12: mean=+1.7b t_no=2.20 folds=10101 mkt_corr=-0.15 dd=248b legs=12.0/10.7 fail=folds
@@ -123,20 +123,20 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.4 bull=0.0667 neutral=0.5333 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-22T00:01:07Z
+- as_of: 2026-11-22T00:35:27Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 1039 | observations: 5476 | armable: **0**
+- candidates: 1120 | eligible: 1055 | observations: 5514 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
-  - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=204.8b n=1526 breadth=13 validated=False prov=False armable=False (regime_confounded)
-  - `feat_oi_chg_24@oi_lo:2:SHORT:h24` edge=192.3b n=2006 breadth=13 validated=False prov=False armable=False (regime_confounded)
-  - `feat_oi_chg_24@oi_lo:2:SHORT:h20` edge=187.2b n=1897 breadth=13 validated=False prov=False armable=False (not_confirmed_bear)
-  - `feat_oi_chg_24:2:SHORT:h24` edge=187.1b n=5281 breadth=40 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_oi_chg_24@oi_mid:2:SHORT:h20` edge=179.2b n=1422 breadth=12 validated=True prov=False armable=False (not_confirmed_bear)
-  - `feat_oi_chg_24@oi_hi:2:SHORT:h24` edge=169.3b n=1592 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=217.2b n=1604 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24:2:SHORT:h24` edge=178.5b n=4811 breadth=38 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_ret_div@oi_lo:0:SHORT:h24` edge=174.5b n=2249 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24@oi_lo:2:SHORT:h24` edge=168.7b n=1739 breadth=13 validated=True prov=False armable=False (not_confirmed_bear)
+  - `feat_oi_chg_24@oi_mid:2:SHORT:h20` edge=166.3b n=1471 breadth=12 validated=False prov=False armable=False (regime_confounded)
+  - `feat_oi_ret_div@oi_lo:0:SHORT:h20` edge=156.0b n=2157 breadth=13 validated=False prov=False armable=False (regime_confounded)
 - HIP-3 short evidence: discovered=6912 validated=6912 passing=42 eligible=177 best=321.4b best_fail=temporal_pass,breadth_ok
 
 ## 12. Green gate
