@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-22 17:03 UTC
+# Breakwater daily print — 2026-11-22 17:40 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -128,7 +128,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.0 bull=0.0625 neutral=0.9375 | symbols=16
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-22T17:01:09Z
+- as_of: 2026-11-22T17:35:33Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
