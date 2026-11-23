@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:RDDT",
-    "pnl_zar": "-0.8970",
-    "reason": "slice_gap",
-    "signal_id": "4a8124e5249eee6b",
-    "slice_id": "hip3_para_equity_c0:feat_vol_regime:2:SHORT:h24",
-    "stopped_at": "2026-09-16T14:00:31+00:00"
-  },
-  {
     "pair": "PARA:CRWD",
     "pnl_zar": "1.0324",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "c9a00916f8b1b390",
     "slice_id": "feat_oi_chg_24:2:SHORT:h15",
     "stopped_at": "2026-11-22T13:01:09+00:00"
+  },
+  {
+    "pair": "XMRUSDC",
+    "pnl_zar": "-1.5811",
+    "reason": "slice_gap",
+    "signal_id": "6e44096c37302463",
+    "slice_id": "feat_oi_chg_24:2:SHORT:h15",
+    "stopped_at": "2026-11-23T01:01:18+00:00"
   }
 ]
