@@ -10,7 +10,7 @@
     "initial_stop_price": "0.15043999999999999465",
     "kind": "PERP",
     "last_processed_bar_start": "2026-11-23T09:00:00+00:00",
-    "missing_bars": 6,
+    "missing_bars": 7,
     "notional_zar": "125.63635500",
     "pair": "ADAUSDC",
     "peak_price": "0.14727",
@@ -57,7 +57,7 @@
     "horizon_bars": 20,
     "initial_stop_price": "66223.50000000000005",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-23T15:00:00+00:00",
+    "last_processed_bar_start": "2026-11-23T16:00:00+00:00",
     "missing_bars": 0,
     "notional_zar": "123.48303000",
     "pair": "BTCUSDC",
@@ -65,27 +65,27 @@
     "policies": {
       "no_target_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66223.50000000000005"
       },
       "no_target_trail_2r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66223.50000000000005"
       },
       "target_2r_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66223.50000000000005"
       },
       "target_3r_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66223.50000000000005"
       },
       "target_4r_trail_1r": {
         "active": true,
-        "bars_held": 2,
+        "bars_held": 3,
         "stop_price": "66223.50000000000005"
       }
     },
@@ -93,6 +93,6 @@
     "signal_id": "d7149298d02623a4",
     "slice_id": "feat_rsi_divergence:0:SHORT:h20",
     "tracked_at": "2026-11-23T14:01:29+00:00",
-    "trough_price": "62586.0"
+    "trough_price": "61726.0"
   }
 ]
