@@ -1,21 +1,5 @@
 [
   {
-    "pair": "PARA:CRWD",
-    "pnl_zar": "1.0324",
-    "reason": "slice_gap",
-    "signal_id": "9699e27dcf8eb7f5",
-    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h24",
-    "stopped_at": "2026-09-16T14:00:31+00:00"
-  },
-  {
-    "pair": "PARA:IGV",
-    "pnl_zar": "-0.0897",
-    "reason": "slice_gap",
-    "signal_id": "e8814c9c3df37754",
-    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h24",
-    "stopped_at": "2026-09-16T14:00:31+00:00"
-  },
-  {
     "pair": "UNIUSDC",
     "pnl_zar": "1.0747",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "6e44096c37302463",
     "slice_id": "feat_oi_chg_24:2:SHORT:h15",
     "stopped_at": "2026-11-23T01:01:18+00:00"
+  },
+  {
+    "pair": "ADAUSDC",
+    "pnl_zar": "-1.2545",
+    "reason": "slice_gap",
+    "signal_id": "48f04194b886880e",
+    "slice_id": "feat_buy_vol_ratio:0:SHORT:h24",
+    "stopped_at": "2026-11-23T10:01:16+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-2.6432",
+    "reason": "slice_gap",
+    "signal_id": "8f9c93c397764240",
+    "slice_id": "feat_buy_vol_ratio:0:SHORT:h24",
+    "stopped_at": "2026-11-23T10:01:16+00:00"
   }
 ]
