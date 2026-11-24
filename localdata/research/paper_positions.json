@@ -2,14 +2,14 @@
   {
     "asset_status": "green",
     "atr": "683.2857142857143",
-    "bars_held": "13",
+    "bars_held": "14",
     "entry_guard": "passed",
     "entry_price": "63832.0",
     "exit_policy": "notarget_trail1r",
     "horizon_bars": "20",
     "initial_stop_price": "66223.50000000000005",
     "kind": "PERP",
-    "last_processed_bar_start": "2026-11-24T02:00:00+00:00",
+    "last_processed_bar_start": "2026-11-24T03:00:00+00:00",
     "missing_bars": "0",
     "notional_zar": "123.48303000",
     "opened_at": "2026-11-23T14:01:29+00:00",
@@ -19,11 +19,11 @@
     "risk_fraction": "0.03746553",
     "side": "SELL",
     "signal_id": "d7149298d02623a4",
-    "slice_gap_bars": "13",
+    "slice_gap_bars": "14",
     "slice_id": "feat_rsi_divergence:0:SHORT:h20",
     "stop_atr_mult": "3.500000",
-    "stop_price": "62443.500000000000050",
+    "stop_price": "61804.500000000000050",
     "trail_active": "1",
-    "trough_price": "60052.0"
+    "trough_price": "59413.0"
   }
 ]
