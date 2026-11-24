@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PENDLEUSDC",
-    "pnl_zar": "-2.9539",
-    "reason": "stop",
-    "signal_id": "2a1e54819d3b67f6",
-    "slice_id": "engine_momentum:breakout:2:SELL:h10:PENDLEUSDC",
-    "stopped_at": "2026-09-16T19:00:30+00:00"
-  },
-  {
     "pair": "FILUSDC",
     "pnl_zar": "-2.4469",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "e09545e98dbe6cff",
     "slice_id": "feat_rsi_divergence:0:SHORT:h20",
     "stopped_at": "2026-11-23T14:01:29+00:00"
+  },
+  {
+    "pair": "XMRUSDC",
+    "pnl_zar": "-4.9693",
+    "reason": "stop",
+    "signal_id": "558664a47ecc350f",
+    "slice_id": "feat_realized_vol_20:1:SHORT:h20",
+    "stopped_at": "2026-11-24T23:48:20+00:00"
   }
 ]
