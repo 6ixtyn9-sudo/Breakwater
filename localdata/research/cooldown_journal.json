@@ -1,13 +1,5 @@
 [
   {
-    "pair": "FILUSDC",
-    "pnl_zar": "-2.4469",
-    "reason": "stop",
-    "signal_id": "e58546f42afcaae0",
-    "slice_id": "engine_momentum:trend_align:2:SELL:h15:FILUSDC",
-    "stopped_at": "2026-09-16T19:00:30+00:00"
-  },
-  {
     "pair": "PARA:COHR",
     "pnl_zar": "-3.4660",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "558664a47ecc350f",
     "slice_id": "feat_realized_vol_20:1:SHORT:h20",
     "stopped_at": "2026-11-24T23:48:20+00:00"
+  },
+  {
+    "pair": "AAVEUSDC",
+    "pnl_zar": "-4.7299",
+    "reason": "stop",
+    "signal_id": "393591f853f0c1b6",
+    "slice_id": "feat_vwap_dist:0:SHORT:h24",
+    "stopped_at": "2026-11-25T18:01:11+00:00"
   }
 ]
