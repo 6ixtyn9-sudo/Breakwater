@@ -1,6 +1,13 @@
-# Breakwater daily print — 2026-11-25 08:38 UTC
+# Breakwater daily print — 2026-11-25 09:04 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
+
+> ## COMA ALARM — NATIVE
+
+> No **proven** slice in this lane. Auditions can still open entries, so
+> this is not a dead lane: it trades, but nothing in it trades on a record
+> it earned, so it cannot unfreeze itself. The runner will keep reporting
+> operational, which is why this block exists. Attention, not intervention.
 
 ## 1. Posture
 
@@ -11,19 +18,19 @@
 
 ## 2. Paper account
 
-- Equity: **2420.84 ZAR** (seed 2000) | lifetime: **+420.84 ZAR** | closed: 629
-- Today: 1 closed, **+3.40 ZAR**
-- 7d: **+39.92 ZAR** | 30d: **+136.35 ZAR**
+- Equity: **2423.59 ZAR** (seed 2000) | lifetime: **+423.59 ZAR** | closed: 630
+- Today: 2 closed, **+6.14 ZAR**
+- 7d: **+42.67 ZAR** | 30d: **+139.10 ZAR**
 
 ## 2b. Claimed vs realised
 
 - Book: 32 slices (native 12 | hip3 20); validated pools: native 194 | hip3 160; book slices absent from pools: 0
-- Claimed edge (median mean_ret_costadj over 32 book slices present in the validated pools): +0.108% | at 145.62 ZAR mean notional/trade: +0.16 ZAR/trade
-- Realised (629 real closes per lane_gate._is_real_close, net of fees): +0.67 ZAR/trade | sd 4.78 | SE 0.19
-- Gap: +0.51 ZAR/trade | t = +2.69 (one-sample t of realised mean vs the claimed constant) | verdict: EXCEEDS
-- native: claimed median +0.596% over 12/12 slices (pool 194) ~ +0.86 ZAR | realised 583 closes +0.80 ZAR sd 4.76 SE 0.20 | gap -0.06 t -0.30 | NOT ESTABLISHED
+- Claimed edge (median mean_ret_costadj over 32 book slices present in the validated pools): +0.108% | at 145.58 ZAR mean notional/trade: +0.16 ZAR/trade
+- Realised (630 real closes per lane_gate._is_real_close, net of fees): +0.67 ZAR/trade | sd 4.78 | SE 0.19
+- Gap: +0.52 ZAR/trade | t = +2.71 (one-sample t of realised mean vs the claimed constant) | verdict: EXCEEDS
+- native: claimed median +0.596% over 12/12 slices (pool 194) ~ +0.86 ZAR | realised 584 closes +0.80 ZAR sd 4.76 SE 0.20 | gap -0.06 t -0.29 | NOT ESTABLISHED
 - hip3: claimed median +0.062% over 20/20 slices (pool 160) ~ +0.10 ZAR | realised 46 closes -0.97 ZAR sd 4.81 SE 0.71 | gap -1.07 t -1.51 | NOT ESTABLISHED
-- Ledger: 759 decision rows; 629 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 9 exit reasons); the other 130 rows are skipped/guard decisions and never count
+- Ledger: 760 decision rows; 630 real closes (outcome win/loss and exit_reason in lane_gate.ACTUAL_EXITS, 9 exit reasons); the other 130 rows are skipped/guard decisions and never count
 
 _Read-only and advisory: this section feeds no gate, admission decision or promotion path._
 
@@ -31,9 +38,9 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ### NATIVE
 
-- Closed: 583 | wins: 296 | win%: 50.8 | P&L: **+465.35 ZAR** | today: +3.40 | 7d: +39.92 | 30d: +136.35
-- By exit: target +516.3, trail_stop +336.5, horizon +76.2, max_bars +2.8, regime_shift -11.9, stop -454.5
-- By entry regime (n/pnl): neutral 236/+245.6, bull 122/+199.3, bear 225/+20.5
+- Closed: 584 | wins: 297 | win%: 50.9 | P&L: **+468.09 ZAR** | today: +6.14 | 7d: +42.67 | 30d: +139.10
+- By exit: target +516.3, trail_stop +336.5, horizon +79.0, max_bars +2.8, regime_shift -11.9, stop -454.5
+- By entry regime (n/pnl): neutral 236/+245.6, bull 122/+199.3, bear 226/+23.2
 - Top slices: feat_close_pos_ma:1:LONG:h24 37n/32w +283.35; feat_close_pos_ma:2:LONG:h12 29n/19w +121.93; feat_adx_14:1:SHORT:h20 4n/4w +53.91; feat_overnight_ret:1:SHORT:h24 2n/2w +26.35; feat_trend_neutral:0:SHORT:h24 5n/5w +24.80
 - Worst slices: feat_cci_20:0:LONG:h24 5n/0w -17.74; feat_funding_cum_24:0:SHORT:h24 5n/1w -16.09; feat_realized_vol_20:2:LONG:h24 4n/0w -13.68; feat_macd_12_26:2:SHORT:h15 3n/0w -11.55; feat_ext_vs_ma_50:0:LONG:h20 4n/1w -11.21
 - Top pairs: LINKZAR 28n +269.82; LTCZAR 8n +106.00; SOLUSDC 71n +25.40; BTCUSDC 70n +25.20; ENAUSDC 7n +23.48
@@ -51,20 +58,20 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 4. Open positions & risk
 
-- **NATIVE**: 3 open, stop-risk **9.24 ZAR**
-  - XRPUSDC SELL ntl=123 risk=4.75 bars=21 stop=0.964575000000000005 peak=0.93442
-  - ETHUSDC SELL ntl=123 risk=4.50 bars=23 stop=1753.4250000000000030 peak=1707.0
-  - BTCUSDC SELL ntl=123 risk=0.00 bars=42 stop=60986.500000000000050 peak=64575.0
+- **NATIVE**: 3 open, stop-risk **8.57 ZAR**
+  - XRPUSDC SELL ntl=123 risk=4.75 bars=22 stop=0.964575000000000005 peak=0.93442
+  - ETHUSDC SELL ntl=124 risk=3.83 bars=0 stop=1703.8750000000000125 peak=1652.7
+  - BTCUSDC SELL ntl=123 risk=0.00 bars=43 stop=60986.500000000000050 peak=64575.0
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
 ## 5. Aggregate risk leash
 
 - Aggregate: **NOT WIRED FOR LIVE TRADING** - no cap is applied to any live position (there is no live executor); the computed open stop-risk is informational only.
-- Computed open stop-risk (section 4): **9.24 ZAR** (informational only, no cap applied)
-- Paper shadow ledger (gates paper entries only, nothing live): **9.24 / 172.77 ZAR | 5.9% | ok**
-- Remaining: 162.5970 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 51, "skipped": 51, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 0, "skipped": 0, "slice_full": 0, "slot_full": 0}}
+- Computed open stop-risk (section 4): **8.57 ZAR** (informational only, no cap applied)
+- Paper shadow ledger (gates paper entries only, nothing live): **8.57 / 172.96 ZAR | 5.5% | ok**
+- Remaining: 163.4615 | cap skips: 0 | unknown skips: 0
+- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 42, "skipped": 42, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 5, "lane_gate_blocked": 0, "opened": 1, "pair_held": 1, "signals": 14, "skipped": 7, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **XRPUSDC** 4.7452 ZAR
 - positions without bars: 0 | replayed: 3 | invalid: 0
 
@@ -122,14 +129,14 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **bear** | breadth bear=0.8 bull=0.0667 neutral=0.1333 | symbols=15
 - confirmed_bear: **True** | confirmed_bull: **False** | flip: **True** | flipped_from: bear | consecutive_bear: 25 / bull 0
-- as_of: 2026-11-25T08:35:31Z
+- as_of: 2026-11-25T09:01:18Z
 - Defensive gate: ON (wrong-direction entries blocked & opposite exits armed)
 
 ## 11. Short inventory
 
 - confirmed_bear: **True** | promote_env: ON
-- candidates: 1120 | eligible: 983 | observations: 4682 | armable: **2205**
-- Armable slices: feat_adx_14:2:SHORT:h20, feat_adx_14:2:SHORT:h24, feat_asia_range:2:SHORT:h20, feat_asia_range:2:SHORT:h24, feat_asia_vol:2:SHORT:h20, feat_asia_vol:2:SHORT:h24, feat_atr_norm_ext:0:SHORT:h20, feat_atr_norm_ext:0:SHORT:h24, feat_atr_norm_ext:2:SHORT:h24, feat_atr_percent:2:SHORT:h15, feat_atr_percent:2:SHORT:h20, feat_atr_percent:2:SHORT:h24, feat_atr_ratio:1:SHORT:h12, feat_atr_ratio:1:SHORT:h15, feat_bb_pos_20:0:SHORT:h15, feat_bb_pos_20:0:SHORT:h20, feat_bb_pos_20:1:SHORT:h15, feat_bb_pos_20:1:SHORT:h20, feat_bb_pos_20:2:SHORT:h24, feat_bb_squeeze_20:1:SHORT:h12, feat_bb_squeeze_20:1:SHORT:h15, feat_bb_squeeze_20:1:SHORT:h20, feat_bb_squeeze_20:1:SHORT:h24, feat_bb_squeeze_20:2:SHORT:h20, feat_bb_squeeze_20:2:SHORT:h24, feat_bb_width_20:2:SHORT:h12, feat_bb_width_20:2:SHORT:h15, feat_bb_width_20:2:SHORT:h20, feat_bb_width_20:2:SHORT:h24, feat_book_imb_5:0:SHORT:h12, feat_book_imb_5:0:SHORT:h15, feat_book_imb_5:2:SHORT:h24, feat_book_imb_5@oi_hi:0:SHORT:h12, feat_book_imb_5@oi_hi:0:SHORT:h15, feat_book_imb_5@oi_hi:0:SHORT:h20, feat_book_imb_5@oi_hi:0:SHORT:h24, feat_book_imb_5@oi_hi:1:SHORT:h15, feat_book_imb_5@oi_hi:1:SHORT:h20, feat_book_imb_5@oi_hi:1:SHORT:h24, feat_book_imb_5@oi_hi:2:SHORT:h12, feat_book_imb_5@oi_hi:2:SHORT:h15, feat_book_imb_5@oi_hi:2:SHORT:h20, feat_book_imb_5@oi_hi:2:SHORT:h24, feat_book_imb_5@oi_mid:1:SHORT:h12, feat_book_imb_5@oi_mid:1:SHORT:h15, feat_book_imb_5@oi_mid:1:SHORT:h20, feat_book_imb_5@oi_mid:1:SHORT:h24, feat_book_imb_5@oi_mid:2:SHORT:h12, feat_book_imb_5@oi_mid:2:SHORT:h24, feat_buy_vol_ratio:0:SHORT:h12, feat_buy_vol_ratio:0:SHORT:h15, feat_buy_vol_ratio:0:SHORT:h20, feat_buy_vol_ratio:2:SHORT:h12, feat_buy_vol_ratio:2:SHORT:h15, feat_buy_vol_ratio:2:SHORT:h20, feat_buy_vol_ratio:2:SHORT:h24, feat_cci_20:0:SHORT:h15, feat_cci_20:0:SHORT:h20, feat_cci_20:1:SHORT:h15, feat_cci_20:1:SHORT:h20, feat_cci_20:2:SHORT:h24, feat_close_pos_ma:1:SHORT:h12, feat_close_pos_ma:1:SHORT:h15, feat_close_pos_ma:1:SHORT:h20, feat_close_pos_ma:1:SHORT:h24, feat_close_pos_ma:2:SHORT:h15, feat_close_pos_ma:2:SHORT:h20, feat_close_pos_ma:2:SHORT:h24, feat_close_position:0:SHORT:h12, feat_close_position:0:SHORT:h15, feat_close_position:0:SHORT:h20, feat_close_position:2:SHORT:h12, feat_close_position:2:SHORT:h15, feat_close_position:2:SHORT:h20, feat_close_position:2:SHORT:h24, feat_donchian_break:0:SHORT:h15, feat_donchian_break:0:SHORT:h20, feat_donchian_break:0:SHORT:h24, feat_donchian_break:1:SHORT:h15, feat_donchian_width_20:1:SHORT:h12, feat_donchian_width_20:1:SHORT:h15, feat_donchian_width_20:1:SHORT:h20, feat_donchian_width_20:1:SHORT:h24, feat_donchian_width_20:2:SHORT:h20, feat_donchian_width_20:2:SHORT:h24, feat_ema_cross_10_20:0:SHORT:h24, feat_ema_cross_10_20:2:SHORT:h12, feat_ema_cross_10_20:2:SHORT:h15, feat_ema_cross_10_20:2:SHORT:h20, feat_ema_cross_10_20:2:SHORT:h24, feat_ext_strength:0:SHORT:h12, feat_ext_strength:0:SHORT:h15, feat_ext_strength:0:SHORT:h20, feat_ext_strength:2:SHORT:h20, feat_ext_strength:2:SHORT:h24, feat_ext_vs_ma_10:0:SHORT:h15, feat_ext_vs_ma_10:0:SHORT:h20, feat_ext_vs_ma_10:0:SHORT:h24, feat_ext_vs_ma_10:2:SHORT:h24, feat_ext_vs_ma_20:0:SHORT:h20, feat_ext_vs_ma_20:0:SHORT:h24, feat_ext_vs_ma_20:2:SHORT:h20, feat_ext_vs_ma_20:2:SHORT:h24, feat_ext_vs_ma_50:1:SHORT:h12, feat_ext_vs_ma_50:1:SHORT:h15, feat_ext_vs_ma_50:1:SHORT:h20, feat_funding_cum_24:1:SHORT:h12, feat_funding_cum_24:1:SHORT:h15, feat_funding_cum_24:2:SHORT:h20, feat_funding_cum_24:2:SHORT:h24, feat_funding_cum_24@oi_hi:0:SHORT:h20, feat_funding_cum_24@oi_hi:0:SHORT:h24, feat_funding_cum_24@oi_hi:2:SHORT:h15, feat_funding_cum_24@oi_hi:2:SHORT:h20, feat_funding_cum_24@oi_hi:2:SHORT:h24, feat_funding_cum_24@oi_lo:0:SHORT:h20, feat_funding_cum_24@oi_lo:1:SHORT:h12, feat_funding_cum_24@oi_lo:1:SHORT:h15, feat_funding_cum_24@oi_lo:1:SHORT:h20, feat_funding_cum_24@oi_lo:1:SHORT:h24, feat_funding_cum_24@oi_mid:1:SHORT:h12, feat_funding_cum_24@oi_mid:1:SHORT:h15, feat_funding_cum_24@oi_mid:1:SHORT:h24, feat_funding_cum_24@oi_mid:2:SHORT:h12, feat_funding_cum_24@oi_mid:2:SHORT:h15, feat_funding_cum_24@oi_mid:2:SHORT:h20, feat_funding_cum_24@oi_mid:2:SHORT:h24, feat_funding_rate:0:SHORT:h15, feat_funding_rate@oi_hi:0:SHORT:h12, feat_funding_rate@oi_hi:0:SHORT:h15, feat_funding_rate@oi_hi:0:SHORT:h20, feat_funding_rate@oi_hi:0:SHORT:h24, feat_funding_rate@oi_hi:1:SHORT:h12, feat_funding_rate@oi_lo:1:SHORT:h12, feat_funding_rate@oi_lo:1:SHORT:h15, feat_funding_rate@oi_lo:1:SHORT:h20, feat_funding_rate@oi_lo:1:SHORT:h24, feat_funding_rate@oi_mid:0:SHORT:h12, feat_funding_rate@oi_mid:0:SHORT:h15, feat_funding_rate@oi_mid:0:SHORT:h20, feat_funding_rate@oi_mid:0:SHORT:h24, feat_gap:0:SHORT:h20, feat_gap_fill_ratio:0:SHORT:h12, feat_gap_fill_ratio:0:SHORT:h20, feat_gap_fill_ratio:0:SHORT:h24, feat_hl_range:2:SHORT:h15, feat_hl_range:2:SHORT:h20, feat_hl_range:2:SHORT:h24, feat_hour_utc:0:SHORT:h20, feat_hour_utc:0:SHORT:h24, feat_intraday_mom:0:SHORT:h12, feat_intraday_mom:0:SHORT:h15, feat_intraday_mom:0:SHORT:h20, feat_intraday_mom:0:SHORT:h24, feat_intraday_mom:2:SHORT:h24, feat_kc_width:2:SHORT:h15, feat_kc_width:2:SHORT:h20, feat_kc_width:2:SHORT:h24, feat_keltner_pos:0:SHORT:h20, feat_keltner_pos:0:SHORT:h24, feat_keltner_pos:2:SHORT:h24, feat_macd_12_26:2:SHORT:h12, feat_macd_12_26:2:SHORT:h15, feat_macd_12_26:2:SHORT:h20, feat_macd_12_26:2:SHORT:h24, feat_mean_rev_strength:0:SHORT:h24, feat_mean_rev_strength:2:SHORT:h15, feat_mean_rev_strength:2:SHORT:h20, feat_oi_chg_24:2:SHORT:h15, feat_oi_chg_24:2:SHORT:h20, feat_oi_chg_24:2:SHORT:h24, feat_oi_chg_24@oi_hi:1:SHORT:h12, feat_oi_chg_24@oi_hi:1:SHORT:h15, feat_oi_chg_24@oi_hi:1:SHORT:h20, feat_oi_chg_24@oi_hi:1:SHORT:h24, feat_oi_chg_24@oi_hi:2:SHORT:h12, feat_oi_chg_24@oi_hi:2:SHORT:h15, feat_oi_chg_24@oi_hi:2:SHORT:h20, feat_oi_chg_24@oi_hi:2:SHORT:h24, feat_oi_chg_24@oi_lo:1:SHORT:h12, feat_oi_chg_24@oi_lo:1:SHORT:h15, feat_oi_chg_24@oi_mid:0:SHORT:h15, feat_oi_chg_24@oi_mid:0:SHORT:h20, feat_oi_chg_24@oi_mid:0:SHORT:h24, feat_oi_chg_24@oi_mid:2:SHORT:h12, feat_oi_chg_24@oi_mid:2:SHORT:h15, feat_oi_ret_div:0:SHORT:h12, feat_oi_ret_div:0:SHORT:h15, feat_oi_ret_div@oi_hi:0:SHORT:h12, feat_oi_ret_div@oi_hi:0:SHORT:h15, feat_oi_ret_div@oi_hi:0:SHORT:h20, feat_oi_ret_div@oi_hi:1:SHORT:h15, feat_oi_ret_div@oi_hi:1:SHORT:h20, feat_oi_ret_div@oi_hi:1:SHORT:h24, feat_oi_ret_div@oi_hi:2:SHORT:h24, feat_oi_ret_div@oi_lo:1:SHORT:h12, feat_oi_ret_div@oi_lo:1:SHORT:h15, feat_oi_ret_div@oi_lo:1:SHORT:h20, feat_oi_ret_div@oi_mid:2:SHORT:h12, feat_oi_ret_div@oi_mid:2:SHORT:h15, feat_overnight_ret:0:SHORT:h12, feat_overnight_ret:0:SHORT:h15, feat_overnight_ret:0:SHORT:h20, feat_overnight_ret:2:SHORT:h24, feat_premium:0:SHORT:h20, feat_premium:1:SHORT:h12, feat_premium:1:SHORT:h15, feat_premium:1:SHORT:h20, feat_premium:1:SHORT:h24, feat_premium:2:SHORT:h24, feat_premium@oi_hi:1:SHORT:h12, feat_premium@oi_hi:1:SHORT:h15, feat_premium@oi_hi:1:SHORT:h20, feat_premium@oi_hi:1:SHORT:h24, feat_premium@oi_hi:2:SHORT:h24, feat_premium@oi_lo:0:SHORT:h12, feat_premium@oi_lo:0:SHORT:h20, feat_premium@oi_mid:1:SHORT:h12, feat_premium@oi_mid:1:SHORT:h15, feat_premium@oi_mid:1:SHORT:h20, feat_premium@oi_mid:1:SHORT:h24, feat_price_accel:0:SHORT:h12, feat_price_accel:2:SHORT:h12, feat_price_accel:2:SHORT:h15, feat_price_accel:2:SHORT:h20, feat_price_accel:2:SHORT:h24, feat_price_roc_5:0:SHORT:h15, feat_price_roc_5:0:SHORT:h20, feat_price_roc_5:0:SHORT:h24, feat_price_roc_5:2:SHORT:h24, feat_range_expansion:1:SHORT:h12, feat_range_expansion:1:SHORT:h15, feat_range_expansion:1:SHORT:h20, feat_range_expansion:1:SHORT:h24, feat_range_pos_20:0:SHORT:h12, feat_range_pos_20:0:SHORT:h15, feat_range_pos_20:0:SHORT:h20, feat_range_pos_20:0:SHORT:h24, feat_range_pos_20:2:SHORT:h20, feat_range_pos_20:2:SHORT:h24, feat_range_pos_50:0:SHORT:h20, feat_range_pos_50:0:SHORT:h24, feat_range_pos_50:1:SHORT:h12, feat_range_pos_50:1:SHORT:h15, feat_range_pos_50:1:SHORT:h20, feat_range_pos_50:1:SHORT:h24, feat_realized_vol_20:1:SHORT:h12, feat_realized_vol_20:1:SHORT:h20, feat_realized_vol_20:1:SHORT:h24, feat_realized_vol_20:2:SHORT:h15, feat_ret_10:0:SHORT:h15, feat_ret_10:0:SHORT:h20, feat_ret_10:2:SHORT:h24, feat_ret_1:0:SHORT:h15, feat_ret_1:0:SHORT:h20, feat_ret_1:0:SHORT:h24, feat_ret_1:2:SHORT:h12, feat_ret_1:2:SHORT:h15, feat_ret_1:2:SHORT:h20, feat_ret_1:2:SHORT:h24, feat_ret_20:0:SHORT:h24, feat_ret_20:2:SHORT:h12, feat_ret_20:2:SHORT:h15, feat_ret_20:2:SHORT:h20, feat_ret_20:2:SHORT:h24, feat_ret_3:0:SHORT:h15, feat_ret_3:0:SHORT:h20, feat_ret_3:0:SHORT:h24, feat_ret_3:2:SHORT:h12, feat_ret_3:2:SHORT:h24, feat_ret_5:0:SHORT:h15, feat_ret_5:0:SHORT:h20, feat_ret_5:0:SHORT:h24, feat_ret_5:2:SHORT:h24, feat_ret_autocorr:2:SHORT:h12, feat_ret_autocorr:2:SHORT:h15, feat_ret_autocorr:2:SHORT:h20, feat_ret_autocorr:2:SHORT:h24, feat_ret_sign_streak:2:SHORT:h24, feat_ret_vol:0:SHORT:h15, feat_ret_vol:0:SHORT:h20, feat_ret_vol:2:SHORT:h12, feat_ret_vol:2:SHORT:h15, feat_ret_vol:2:SHORT:h20, feat_ret_vol:2:SHORT:h24, feat_rsi_14:0:SHORT:h15, feat_rsi_14:0:SHORT:h20, feat_rsi_14:0:SHORT:h24, feat_rsi_14:1:SHORT:h15, feat_rsi_14:2:SHORT:h24, feat_rsi_21:0:SHORT:h15, feat_rsi_21:0:SHORT:h20, feat_rsi_21:0:SHORT:h24, feat_rsi_21:2:SHORT:h20, feat_rsi_21:2:SHORT:h24, feat_rsi_7:0:SHORT:h15, feat_rsi_7:0:SHORT:h20, feat_rsi_7:0:SHORT:h24, feat_rsi_7:1:SHORT:h15, feat_rsi_7:1:SHORT:h20, feat_rsi_7:2:SHORT:h24, feat_rsi_divergence:0:SHORT:h12, feat_rsi_divergence:0:SHORT:h15, feat_rsi_divergence:0:SHORT:h20, feat_rsi_divergence:0:SHORT:h24, feat_session_mom:0:SHORT:h12, feat_session_mom:0:SHORT:h15, feat_session_mom:0:SHORT:h20, feat_session_mom:2:SHORT:h24, feat_squeeze:1:SHORT:h12, feat_squeeze:1:SHORT:h15, feat_squeeze:2:SHORT:h12, feat_squeeze:2:SHORT:h15, feat_squeeze:2:SHORT:h20, feat_squeeze:2:SHORT:h24, feat_stoch_d_14:0:SHORT:h12, feat_stoch_d_14:0:SHORT:h15, feat_stoch_d_14:2:SHORT:h20, feat_stoch_d_14:2:SHORT:h24, feat_stoch_k_14:0:SHORT:h12, feat_stoch_k_14:0:SHORT:h15, feat_stoch_k_14:0:SHORT:h20, feat_stoch_k_14:2:SHORT:h24, feat_time_since_high_20:0:SHORT:h24, feat_time_since_high_20:1:SHORT:h12, feat_time_since_high_20:1:SHORT:h15, feat_time_since_high_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h12, feat_time_since_low_20:1:SHORT:h15, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_trend_neutral:0:SHORT:h12, feat_trend_neutral:0:SHORT:h15, feat_trend_neutral:0:SHORT:h20, feat_trend_neutral:0:SHORT:h24, feat_trend_neutral:2:SHORT:h12, feat_trend_neutral:2:SHORT:h15, feat_trend_slope_20:0:SHORT:h15, feat_trend_slope_20:0:SHORT:h20, feat_trend_slope_20:2:SHORT:h24, feat_trend_strength_20:0:SHORT:h12, feat_trend_strength_20:0:SHORT:h15, feat_trend_strength_20:2:SHORT:h20, feat_trend_strength_20:2:SHORT:h24, feat_vol_breakout:0:SHORT:h15, feat_vol_breakout:0:SHORT:h20, feat_vol_breakout:2:SHORT:h12, feat_vol_breakout:2:SHORT:h20, feat_vol_breakout:2:SHORT:h24, feat_vol_breakout_strength:1:SHORT:h12, feat_vol_breakout_strength:1:SHORT:h15, feat_vol_breakout_strength:1:SHORT:h20, feat_vol_breakout_strength:1:SHORT:h24, feat_vol_breakout_strength:2:SHORT:h15, feat_vol_breakout_strength:2:SHORT:h20, feat_vol_breakout_strength:2:SHORT:h24, feat_vol_contraction:2:SHORT:h15, feat_vol_contraction:2:SHORT:h20, feat_vol_contraction:2:SHORT:h24, feat_vol_of_vol:1:SHORT:h12, feat_vol_of_vol:1:SHORT:h15, feat_vol_of_vol:1:SHORT:h24, feat_vol_regime:2:SHORT:h15, feat_vol_regime:2:SHORT:h20, feat_vol_regime:2:SHORT:h24, feat_vol_roc_20:1:SHORT:h12, feat_vol_roc_20:1:SHORT:h15, feat_vol_roc_20:1:SHORT:h20, feat_vol_roc_20:1:SHORT:h24, feat_vol_sma_ratio:0:SHORT:h12, feat_vol_sma_ratio:0:SHORT:h15, feat_vol_sma_ratio:0:SHORT:h20, feat_vol_sma_ratio:0:SHORT:h24, feat_vol_sma_ratio:1:SHORT:h12, feat_vol_sma_ratio:1:SHORT:h20, feat_vol_sma_ratio:1:SHORT:h24, feat_vol_trend:0:SHORT:h12, feat_vol_trend:1:SHORT:h12, feat_vol_trend:1:SHORT:h15, feat_vol_trend:1:SHORT:h20, feat_vol_trend:1:SHORT:h24, feat_vol_trend:2:SHORT:h24, feat_vwap_dist:0:SHORT:h12, feat_vwap_dist:0:SHORT:h15, feat_vwap_dist:0:SHORT:h20, feat_vwap_dist:0:SHORT:h24, feat_vwap_dist:2:SHORT:h24, feat_vwap_lower_dist:0:SHORT:h12, feat_vwap_lower_dist:0:SHORT:h15, feat_vwap_lower_dist:0:SHORT:h20, feat_vwap_lower_dist:0:SHORT:h24, feat_vwap_lower_dist:2:SHORT:h24, feat_vwap_upper_dist:0:SHORT:h12, feat_vwap_upper_dist:0:SHORT:h15, feat_vwap_upper_dist:0:SHORT:h20, feat_vwap_upper_dist:0:SHORT:h24, feat_vwap_upper_dist:2:SHORT:h24, feat_williams_r_14:0:SHORT:h24, feat_williams_r_14:2:SHORT:h12, feat_williams_r_14:2:SHORT:h15, feat_williams_r_14:2:SHORT:h20, feat_zscore_20:0:SHORT:h15, feat_zscore_20:0:SHORT:h20, feat_zscore_20:1:SHORT:h15, feat_zscore_20:1:SHORT:h20, feat_zscore_20:2:SHORT:h24
+- candidates: 1120 | eligible: 983 | observations: 4874 | armable: **1984**
+- Armable slices: feat_adx_14:2:SHORT:h20, feat_adx_14:2:SHORT:h24, feat_atr_norm_ext:0:SHORT:h20, feat_atr_norm_ext:0:SHORT:h24, feat_atr_norm_ext:2:SHORT:h24, feat_atr_percent:2:SHORT:h15, feat_atr_percent:2:SHORT:h20, feat_atr_percent:2:SHORT:h24, feat_bb_pos_20:0:SHORT:h15, feat_bb_pos_20:0:SHORT:h20, feat_bb_pos_20:1:SHORT:h15, feat_bb_pos_20:1:SHORT:h20, feat_bb_pos_20:2:SHORT:h24, feat_bb_squeeze_20:1:SHORT:h12, feat_bb_squeeze_20:1:SHORT:h15, feat_bb_squeeze_20:1:SHORT:h20, feat_bb_squeeze_20:1:SHORT:h24, feat_bb_squeeze_20:2:SHORT:h20, feat_bb_squeeze_20:2:SHORT:h24, feat_bb_width_20:2:SHORT:h12, feat_bb_width_20:2:SHORT:h15, feat_bb_width_20:2:SHORT:h20, feat_bb_width_20:2:SHORT:h24, feat_book_imb_5:0:SHORT:h12, feat_book_imb_5:0:SHORT:h15, feat_book_imb_5:2:SHORT:h24, feat_book_imb_5@oi_hi:0:SHORT:h12, feat_book_imb_5@oi_hi:0:SHORT:h15, feat_book_imb_5@oi_hi:0:SHORT:h20, feat_book_imb_5@oi_hi:0:SHORT:h24, feat_book_imb_5@oi_hi:1:SHORT:h15, feat_book_imb_5@oi_hi:1:SHORT:h20, feat_book_imb_5@oi_hi:1:SHORT:h24, feat_book_imb_5@oi_hi:2:SHORT:h12, feat_book_imb_5@oi_hi:2:SHORT:h15, feat_book_imb_5@oi_hi:2:SHORT:h20, feat_book_imb_5@oi_hi:2:SHORT:h24, feat_book_imb_5@oi_mid:1:SHORT:h12, feat_book_imb_5@oi_mid:1:SHORT:h15, feat_book_imb_5@oi_mid:1:SHORT:h20, feat_book_imb_5@oi_mid:1:SHORT:h24, feat_book_imb_5@oi_mid:2:SHORT:h12, feat_book_imb_5@oi_mid:2:SHORT:h24, feat_buy_vol_ratio:0:SHORT:h12, feat_buy_vol_ratio:0:SHORT:h15, feat_buy_vol_ratio:0:SHORT:h20, feat_buy_vol_ratio:2:SHORT:h12, feat_buy_vol_ratio:2:SHORT:h15, feat_buy_vol_ratio:2:SHORT:h20, feat_buy_vol_ratio:2:SHORT:h24, feat_cci_20:0:SHORT:h15, feat_cci_20:0:SHORT:h20, feat_cci_20:1:SHORT:h15, feat_cci_20:1:SHORT:h20, feat_cci_20:2:SHORT:h24, feat_close_pos_ma:1:SHORT:h12, feat_close_pos_ma:1:SHORT:h15, feat_close_pos_ma:1:SHORT:h20, feat_close_pos_ma:1:SHORT:h24, feat_close_pos_ma:2:SHORT:h15, feat_close_pos_ma:2:SHORT:h20, feat_close_pos_ma:2:SHORT:h24, feat_close_position:0:SHORT:h12, feat_close_position:0:SHORT:h15, feat_close_position:0:SHORT:h20, feat_close_position:2:SHORT:h12, feat_close_position:2:SHORT:h15, feat_close_position:2:SHORT:h20, feat_close_position:2:SHORT:h24, feat_donchian_break:0:SHORT:h15, feat_donchian_break:0:SHORT:h20, feat_donchian_break:0:SHORT:h24, feat_donchian_break:1:SHORT:h15, feat_donchian_width_20:1:SHORT:h12, feat_donchian_width_20:1:SHORT:h15, feat_donchian_width_20:1:SHORT:h20, feat_donchian_width_20:1:SHORT:h24, feat_donchian_width_20:2:SHORT:h20, feat_donchian_width_20:2:SHORT:h24, feat_ema_cross_10_20:0:SHORT:h24, feat_ema_cross_10_20:2:SHORT:h12, feat_ema_cross_10_20:2:SHORT:h15, feat_ema_cross_10_20:2:SHORT:h20, feat_ema_cross_10_20:2:SHORT:h24, feat_ext_strength:0:SHORT:h12, feat_ext_strength:0:SHORT:h15, feat_ext_strength:0:SHORT:h20, feat_ext_strength:2:SHORT:h20, feat_ext_strength:2:SHORT:h24, feat_ext_vs_ma_10:0:SHORT:h15, feat_ext_vs_ma_10:0:SHORT:h20, feat_ext_vs_ma_10:0:SHORT:h24, feat_ext_vs_ma_10:2:SHORT:h24, feat_ext_vs_ma_20:0:SHORT:h20, feat_ext_vs_ma_20:0:SHORT:h24, feat_ext_vs_ma_20:2:SHORT:h20, feat_ext_vs_ma_20:2:SHORT:h24, feat_ext_vs_ma_50:1:SHORT:h12, feat_ext_vs_ma_50:1:SHORT:h15, feat_ext_vs_ma_50:1:SHORT:h20, feat_funding_cum_24:1:SHORT:h12, feat_funding_cum_24:1:SHORT:h15, feat_funding_cum_24:2:SHORT:h20, feat_funding_cum_24:2:SHORT:h24, feat_funding_cum_24@oi_hi:0:SHORT:h20, feat_funding_cum_24@oi_hi:0:SHORT:h24, feat_funding_cum_24@oi_hi:2:SHORT:h15, feat_funding_cum_24@oi_hi:2:SHORT:h20, feat_funding_cum_24@oi_hi:2:SHORT:h24, feat_funding_cum_24@oi_lo:0:SHORT:h20, feat_funding_cum_24@oi_lo:1:SHORT:h12, feat_funding_cum_24@oi_lo:1:SHORT:h15, feat_funding_cum_24@oi_lo:1:SHORT:h20, feat_funding_cum_24@oi_lo:1:SHORT:h24, feat_funding_cum_24@oi_mid:1:SHORT:h12, feat_funding_cum_24@oi_mid:1:SHORT:h15, feat_funding_cum_24@oi_mid:1:SHORT:h24, feat_funding_cum_24@oi_mid:2:SHORT:h12, feat_funding_cum_24@oi_mid:2:SHORT:h15, feat_funding_cum_24@oi_mid:2:SHORT:h20, feat_funding_cum_24@oi_mid:2:SHORT:h24, feat_funding_rate:0:SHORT:h15, feat_funding_rate@oi_hi:0:SHORT:h12, feat_funding_rate@oi_hi:0:SHORT:h15, feat_funding_rate@oi_hi:0:SHORT:h20, feat_funding_rate@oi_hi:0:SHORT:h24, feat_funding_rate@oi_hi:1:SHORT:h12, feat_funding_rate@oi_lo:1:SHORT:h12, feat_funding_rate@oi_lo:1:SHORT:h15, feat_funding_rate@oi_lo:1:SHORT:h20, feat_funding_rate@oi_lo:1:SHORT:h24, feat_funding_rate@oi_mid:0:SHORT:h12, feat_funding_rate@oi_mid:0:SHORT:h15, feat_funding_rate@oi_mid:0:SHORT:h20, feat_funding_rate@oi_mid:0:SHORT:h24, feat_gap:0:SHORT:h20, feat_gap:1:SHORT:h12, feat_gap:1:SHORT:h15, feat_gap:1:SHORT:h20, feat_gap_fill_ratio:0:SHORT:h12, feat_gap_fill_ratio:0:SHORT:h20, feat_gap_fill_ratio:0:SHORT:h24, feat_hl_range:2:SHORT:h15, feat_hl_range:2:SHORT:h20, feat_hl_range:2:SHORT:h24, feat_intraday_mom:2:SHORT:h24, feat_kc_width:2:SHORT:h15, feat_kc_width:2:SHORT:h20, feat_kc_width:2:SHORT:h24, feat_keltner_pos:0:SHORT:h20, feat_keltner_pos:0:SHORT:h24, feat_keltner_pos:2:SHORT:h24, feat_macd_12_26:2:SHORT:h12, feat_macd_12_26:2:SHORT:h15, feat_macd_12_26:2:SHORT:h20, feat_macd_12_26:2:SHORT:h24, feat_mean_rev_strength:0:SHORT:h24, feat_mean_rev_strength:2:SHORT:h15, feat_mean_rev_strength:2:SHORT:h20, feat_oi_chg_24:2:SHORT:h15, feat_oi_chg_24:2:SHORT:h20, feat_oi_chg_24:2:SHORT:h24, feat_oi_chg_24@oi_hi:1:SHORT:h12, feat_oi_chg_24@oi_hi:1:SHORT:h15, feat_oi_chg_24@oi_hi:1:SHORT:h20, feat_oi_chg_24@oi_hi:1:SHORT:h24, feat_oi_chg_24@oi_hi:2:SHORT:h12, feat_oi_chg_24@oi_hi:2:SHORT:h15, feat_oi_chg_24@oi_hi:2:SHORT:h20, feat_oi_chg_24@oi_hi:2:SHORT:h24, feat_oi_chg_24@oi_lo:1:SHORT:h12, feat_oi_chg_24@oi_lo:1:SHORT:h15, feat_oi_chg_24@oi_mid:0:SHORT:h15, feat_oi_chg_24@oi_mid:0:SHORT:h20, feat_oi_chg_24@oi_mid:0:SHORT:h24, feat_oi_chg_24@oi_mid:2:SHORT:h12, feat_oi_chg_24@oi_mid:2:SHORT:h15, feat_oi_ret_div:0:SHORT:h12, feat_oi_ret_div:0:SHORT:h15, feat_oi_ret_div@oi_hi:0:SHORT:h12, feat_oi_ret_div@oi_hi:0:SHORT:h15, feat_oi_ret_div@oi_hi:0:SHORT:h20, feat_oi_ret_div@oi_hi:1:SHORT:h15, feat_oi_ret_div@oi_hi:1:SHORT:h20, feat_oi_ret_div@oi_hi:1:SHORT:h24, feat_oi_ret_div@oi_hi:2:SHORT:h24, feat_oi_ret_div@oi_lo:1:SHORT:h12, feat_oi_ret_div@oi_lo:1:SHORT:h15, feat_oi_ret_div@oi_lo:1:SHORT:h20, feat_oi_ret_div@oi_mid:2:SHORT:h12, feat_oi_ret_div@oi_mid:2:SHORT:h15, feat_overnight_ret:0:SHORT:h12, feat_overnight_ret:0:SHORT:h15, feat_overnight_ret:0:SHORT:h20, feat_overnight_ret:1:SHORT:h12, feat_overnight_ret:1:SHORT:h15, feat_overnight_ret:1:SHORT:h20, feat_overnight_ret:1:SHORT:h24, feat_overnight_ret:2:SHORT:h24, feat_premium:0:SHORT:h20, feat_premium:1:SHORT:h12, feat_premium:1:SHORT:h15, feat_premium:1:SHORT:h20, feat_premium:1:SHORT:h24, feat_premium:2:SHORT:h24, feat_premium@oi_hi:1:SHORT:h12, feat_premium@oi_hi:1:SHORT:h15, feat_premium@oi_hi:1:SHORT:h20, feat_premium@oi_hi:1:SHORT:h24, feat_premium@oi_hi:2:SHORT:h24, feat_premium@oi_lo:0:SHORT:h12, feat_premium@oi_lo:0:SHORT:h20, feat_premium@oi_mid:1:SHORT:h12, feat_premium@oi_mid:1:SHORT:h15, feat_premium@oi_mid:1:SHORT:h20, feat_premium@oi_mid:1:SHORT:h24, feat_price_accel:2:SHORT:h12, feat_price_accel:2:SHORT:h15, feat_price_accel:2:SHORT:h20, feat_price_accel:2:SHORT:h24, feat_price_roc_5:0:SHORT:h15, feat_price_roc_5:0:SHORT:h20, feat_price_roc_5:0:SHORT:h24, feat_price_roc_5:2:SHORT:h24, feat_range_expansion:1:SHORT:h12, feat_range_expansion:1:SHORT:h15, feat_range_expansion:1:SHORT:h20, feat_range_expansion:1:SHORT:h24, feat_range_pos_20:0:SHORT:h12, feat_range_pos_20:0:SHORT:h15, feat_range_pos_20:0:SHORT:h20, feat_range_pos_20:0:SHORT:h24, feat_range_pos_20:2:SHORT:h20, feat_range_pos_20:2:SHORT:h24, feat_range_pos_50:0:SHORT:h20, feat_range_pos_50:0:SHORT:h24, feat_range_pos_50:1:SHORT:h12, feat_range_pos_50:1:SHORT:h15, feat_range_pos_50:1:SHORT:h20, feat_range_pos_50:1:SHORT:h24, feat_realized_vol_20:1:SHORT:h12, feat_realized_vol_20:1:SHORT:h20, feat_realized_vol_20:1:SHORT:h24, feat_realized_vol_20:2:SHORT:h15, feat_ret_10:0:SHORT:h15, feat_ret_10:0:SHORT:h20, feat_ret_10:2:SHORT:h24, feat_ret_1:2:SHORT:h12, feat_ret_1:2:SHORT:h15, feat_ret_1:2:SHORT:h20, feat_ret_1:2:SHORT:h24, feat_ret_20:0:SHORT:h24, feat_ret_20:2:SHORT:h12, feat_ret_20:2:SHORT:h15, feat_ret_20:2:SHORT:h20, feat_ret_20:2:SHORT:h24, feat_ret_3:0:SHORT:h15, feat_ret_3:0:SHORT:h20, feat_ret_3:0:SHORT:h24, feat_ret_3:2:SHORT:h12, feat_ret_3:2:SHORT:h24, feat_ret_5:0:SHORT:h15, feat_ret_5:0:SHORT:h20, feat_ret_5:0:SHORT:h24, feat_ret_5:2:SHORT:h24, feat_ret_autocorr:2:SHORT:h12, feat_ret_autocorr:2:SHORT:h15, feat_ret_autocorr:2:SHORT:h20, feat_ret_autocorr:2:SHORT:h24, feat_ret_sign_streak:2:SHORT:h24, feat_ret_vol:0:SHORT:h15, feat_ret_vol:0:SHORT:h20, feat_ret_vol:2:SHORT:h12, feat_ret_vol:2:SHORT:h15, feat_ret_vol:2:SHORT:h20, feat_ret_vol:2:SHORT:h24, feat_rsi_14:0:SHORT:h15, feat_rsi_14:0:SHORT:h20, feat_rsi_14:0:SHORT:h24, feat_rsi_14:1:SHORT:h15, feat_rsi_14:2:SHORT:h24, feat_rsi_21:0:SHORT:h15, feat_rsi_21:0:SHORT:h20, feat_rsi_21:0:SHORT:h24, feat_rsi_21:2:SHORT:h20, feat_rsi_21:2:SHORT:h24, feat_rsi_7:0:SHORT:h15, feat_rsi_7:0:SHORT:h20, feat_rsi_7:0:SHORT:h24, feat_rsi_7:1:SHORT:h15, feat_rsi_7:1:SHORT:h20, feat_rsi_7:2:SHORT:h24, feat_rsi_divergence:0:SHORT:h12, feat_rsi_divergence:0:SHORT:h15, feat_rsi_divergence:0:SHORT:h20, feat_rsi_divergence:0:SHORT:h24, feat_session_mom:2:SHORT:h24, feat_squeeze:1:SHORT:h12, feat_squeeze:1:SHORT:h15, feat_squeeze:2:SHORT:h12, feat_squeeze:2:SHORT:h15, feat_squeeze:2:SHORT:h20, feat_squeeze:2:SHORT:h24, feat_stoch_d_14:0:SHORT:h12, feat_stoch_d_14:0:SHORT:h15, feat_stoch_d_14:2:SHORT:h20, feat_stoch_d_14:2:SHORT:h24, feat_stoch_k_14:0:SHORT:h12, feat_stoch_k_14:0:SHORT:h15, feat_stoch_k_14:0:SHORT:h20, feat_stoch_k_14:2:SHORT:h24, feat_time_since_high_20:0:SHORT:h24, feat_time_since_high_20:1:SHORT:h12, feat_time_since_high_20:1:SHORT:h15, feat_time_since_high_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h12, feat_time_since_low_20:1:SHORT:h15, feat_time_since_low_20:1:SHORT:h20, feat_time_since_low_20:1:SHORT:h24, feat_trend_neutral:0:SHORT:h12, feat_trend_neutral:0:SHORT:h15, feat_trend_neutral:0:SHORT:h20, feat_trend_neutral:0:SHORT:h24, feat_trend_neutral:2:SHORT:h12, feat_trend_neutral:2:SHORT:h15, feat_trend_slope_20:0:SHORT:h15, feat_trend_slope_20:0:SHORT:h20, feat_trend_slope_20:2:SHORT:h24, feat_trend_strength_20:0:SHORT:h12, feat_trend_strength_20:0:SHORT:h15, feat_trend_strength_20:2:SHORT:h20, feat_trend_strength_20:2:SHORT:h24, feat_vol_breakout:0:SHORT:h15, feat_vol_breakout:0:SHORT:h20, feat_vol_breakout:2:SHORT:h12, feat_vol_breakout:2:SHORT:h20, feat_vol_breakout:2:SHORT:h24, feat_vol_breakout_strength:1:SHORT:h12, feat_vol_breakout_strength:1:SHORT:h15, feat_vol_breakout_strength:1:SHORT:h20, feat_vol_breakout_strength:1:SHORT:h24, feat_vol_breakout_strength:2:SHORT:h15, feat_vol_breakout_strength:2:SHORT:h20, feat_vol_breakout_strength:2:SHORT:h24, feat_vol_contraction:2:SHORT:h15, feat_vol_contraction:2:SHORT:h20, feat_vol_contraction:2:SHORT:h24, feat_vol_of_vol:1:SHORT:h12, feat_vol_of_vol:1:SHORT:h15, feat_vol_of_vol:1:SHORT:h24, feat_vol_regime:2:SHORT:h15, feat_vol_regime:2:SHORT:h20, feat_vol_regime:2:SHORT:h24, feat_vol_roc_20:1:SHORT:h12, feat_vol_roc_20:1:SHORT:h15, feat_vol_roc_20:1:SHORT:h20, feat_vol_roc_20:1:SHORT:h24, feat_vol_sma_ratio:0:SHORT:h12, feat_vol_sma_ratio:0:SHORT:h15, feat_vol_sma_ratio:0:SHORT:h20, feat_vol_sma_ratio:0:SHORT:h24, feat_vol_sma_ratio:1:SHORT:h12, feat_vol_sma_ratio:1:SHORT:h20, feat_vol_sma_ratio:1:SHORT:h24, feat_vol_trend:0:SHORT:h12, feat_vol_trend:1:SHORT:h12, feat_vol_trend:1:SHORT:h15, feat_vol_trend:1:SHORT:h20, feat_vol_trend:1:SHORT:h24, feat_vol_trend:2:SHORT:h24, feat_vwap_dist:0:SHORT:h12, feat_vwap_dist:0:SHORT:h15, feat_vwap_dist:0:SHORT:h20, feat_vwap_dist:0:SHORT:h24, feat_vwap_dist:2:SHORT:h24, feat_vwap_lower_dist:0:SHORT:h12, feat_vwap_lower_dist:0:SHORT:h15, feat_vwap_lower_dist:0:SHORT:h20, feat_vwap_lower_dist:0:SHORT:h24, feat_vwap_lower_dist:2:SHORT:h24, feat_vwap_upper_dist:0:SHORT:h12, feat_vwap_upper_dist:0:SHORT:h15, feat_vwap_upper_dist:0:SHORT:h20, feat_vwap_upper_dist:0:SHORT:h24, feat_vwap_upper_dist:2:SHORT:h24, feat_williams_r_14:0:SHORT:h24, feat_williams_r_14:2:SHORT:h12, feat_williams_r_14:2:SHORT:h15, feat_williams_r_14:2:SHORT:h20, feat_zscore_20:0:SHORT:h15, feat_zscore_20:0:SHORT:h20, feat_zscore_20:1:SHORT:h15, feat_zscore_20:1:SHORT:h20, feat_zscore_20:2:SHORT:h24
 - Armable pairs: BTCUSDC, ETHUSDC, HYPEUSDC, KPEPEUSDC, LITUSDC, MONUSDC, NEARUSDC, PUMPUSDC, SOLUSDC, UNIUSDC, VVVUSDC, XMRUSDC, XRPUSDC, ZECUSDC, ZROUSDC
   - `feat_funding_rate@oi_lo:2:SHORT:h24` edge=194.6b n=66 breadth=3 validated=False prov=False armable=False (too_few_rows)
   - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=149.4b n=2029 breadth=13 validated=False prov=False armable=False (regime_confounded)
@@ -141,62 +148,92 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 12. Green gate
 
-- Native lane: **GREEN** | closed=20 pnl=+5.36 | frozen=NO
+- Native lane: **RED** | closed=20 pnl=-10.22 | frozen=YES
 - HIP-3 lane: **RED** | closed=20 pnl=-47.39 | frozen=YES
-- Frozen lanes: hip3
+- Frozen lanes: hip3, native
 - Lane verdict judged on the last 20 closes per lane; section 3 is the lifetime ledger. They differ by design, not by staleness.
-- Green islands kept alive inside red lanes: 2
+- Green islands kept alive inside red lanes: 31
+  - `feat_adx_14:1:SHORT:h20` pnl=+53.91
+  - `feat_atr_norm_ext:2:LONG:h15` pnl=+15.77
+  - `feat_bb_pos_20:2:LONG:h15` pnl=+16.17
+  - `feat_bb_width_20:2:LONG:h20` pnl=+1.39
+  - `feat_cci_20:2:LONG:h15` pnl=+10.70
+  - `feat_close_pos_ma:1:LONG:h24` pnl=+283.35
+  - `feat_close_pos_ma:2:LONG:h12` pnl=+121.93
+  - `feat_close_pos_ma:2:LONG:h15` pnl=+4.06
+  - `feat_close_pos_ma:2:LONG:h20` pnl=+5.01
+  - `feat_close_position:2:LONG:h24` pnl=+1.16
+  - `feat_ext_strength:2:LONG:h15` pnl=+24.00
+  - `feat_ext_vs_ma_20:2:LONG:h15` pnl=+9.35
+  - `feat_ext_vs_ma_50:2:SHORT:h24` pnl=+1.39
+  - `feat_funding_cum_24:2:SHORT:h20` pnl=+5.47
+  - `feat_intraday_mom:2:LONG:h24` pnl=+7.09
+  - `feat_macd_12_26:2:SHORT:h24` pnl=+1.90
+  - `feat_premium:2:SHORT:h24` pnl=+20.06
+  - `feat_premium@oi_hi:2:SHORT:h24` pnl=+24.15
+  - `feat_price_roc_5:1:LONG:h24` pnl=+0.70
+  - `feat_realized_vol_20:2:LONG:h12` pnl=+0.61
+  - `feat_ret_10:2:LONG:h19` pnl=+14.58
+  - `feat_ret_20:2:LONG:h14` pnl=+13.42
+  - `feat_ret_autocorr:2:SHORT:h20` pnl=+15.53
+  - `feat_ret_autocorr:2:SHORT:h24` pnl=+8.16
+  - `feat_rsi_divergence:2:LONG:h20` pnl=+8.36
+  - `feat_trend_neutral:0:SHORT:h24` pnl=+24.80
+  - `feat_trend_slope_20:2:LONG:h12` pnl=+11.12
+  - `feat_vol_regime:0:SHORT:h24` pnl=+8.78
+  - `feat_vwap_upper_dist:2:SHORT:h24` pnl=+12.06
   - `hip3_xyz_commodity_c0:feat_realized_vol_20:1:LONG:h21` pnl=+2.42
   - `hip3_xyz_equity_c0:feat_trend_slope_20:2:SHORT:h23` pnl=+3.98
 - Tradable slices: native **12/12** | hip3 **19/20**
+- **COMA LANES: native** — frozen with no tradable slice on an earned green record; auditions may still open.
 - Forced liquidation on freeze: **RETIRED 2026-09-08**. A frozen lane blocks new entries only; open positions run to their own stop/target/horizon.
 - Slice blocks: 52
-  - `feat_adx_14:2:LONG:h12` slice_pnl=-1.83
-  - `feat_adx_14:2:LONG:h15` slice_pnl=-3.92
-  - `feat_atr_norm_ext:2:LONG:h13` slice_pnl=-4.88
-  - `feat_atr_percent:2:LONG:h12` slice_pnl=-1.44
-  - `feat_atr_ratio:0:LONG:h24` slice_pnl=-10.03
-  - `feat_bb_squeeze_20:2:LONG:h20` slice_pnl=-10.15
-  - `feat_bb_width_20:2:LONG:h15` slice_pnl=-6.62
-  - `feat_book_imb_5@oi_hi:1:SHORT:h20` slice_pnl=-3.93
-  - `feat_buy_vol_ratio:2:LONG:h24` slice_pnl=-6.57
-  - `feat_cci_20:0:LONG:h24` slice_pnl=-17.74
-  - `feat_cci_20:2:SHORT:h24` slice_pnl=-7.35
-  - `feat_donchian_break:2:LONG:h15` slice_pnl=-2.57
-  - `feat_ema_cross_10_20:2:LONG:h12` slice_pnl=-3.12
-  - `feat_ema_cross_10_20:2:SHORT:h24` slice_pnl=-5.49
-  - `feat_ext_vs_ma_50:0:LONG:h20` slice_pnl=-11.21
-  - `feat_funding_cum_24:0:SHORT:h24` slice_pnl=-16.09
-  - `feat_funding_cum_24:2:SHORT:h12` slice_pnl=-1.14
-  - `feat_funding_rate:2:SHORT:h12` slice_pnl=-7.96
-  - `feat_hour_utc:2:LONG:h15` slice_pnl=-1.61
-  - `feat_kc_width:2:LONG:h12` slice_pnl=-6.60
-  - `feat_kc_width:2:LONG:h15` slice_pnl=-0.19
-  - `feat_macd_12_26:2:SHORT:h15` slice_pnl=-11.55
-  - `feat_oi_ret_div@oi_hi:2:SHORT:h24` slice_pnl=-1.60
-  - `feat_price_roc_5:2:LONG:h20` slice_pnl=-5.02
-  - `feat_range_pos_20:2:LONG:h15` slice_pnl=-3.77
-  - `feat_range_pos_50:0:LONG:h24` slice_pnl=-6.24
-  - `feat_range_pos_50:2:SHORT:h24` slice_pnl=-10.55
-  - `feat_realized_vol_20:2:LONG:h14` slice_pnl=-0.40
-  - `feat_realized_vol_20:2:LONG:h20` slice_pnl=-2.15
-  - `feat_realized_vol_20:2:LONG:h21` slice_pnl=-2.71
-  - `feat_realized_vol_20:2:LONG:h22` slice_pnl=-1.39
-  - `feat_realized_vol_20:2:LONG:h23` slice_pnl=-0.13
-  - `feat_realized_vol_20:2:LONG:h24` slice_pnl=-13.68
-  - `feat_ret_1:2:LONG:h24` slice_pnl=-1.95
-  - `feat_ret_20:0:LONG:h24` slice_pnl=-3.42
-  - `feat_ret_vol:0:LONG:h24` slice_pnl=-4.69
-  - `feat_time_since_high_20:0:LONG:h12` slice_pnl=-4.14
-  - `feat_trend_slope_20:2:SHORT:h24` slice_pnl=-2.57
-  - `feat_trend_strength_20:2:SHORT:h24` slice_pnl=-5.00
-  - `feat_vol_breakout:2:LONG:h15` slice_pnl=-6.39
-  - `feat_vol_of_vol:1:LONG:h24` slice_pnl=-3.36
-  - `feat_vol_of_vol:2:LONG:h12` slice_pnl=-1.49
-  - `feat_vol_of_vol:2:LONG:h15` slice_pnl=-10.82
-  - `feat_vol_sma_ratio:0:LONG:h24` slice_pnl=-2.20
-  - `feat_vol_trend:0:LONG:h24` slice_pnl=-4.17
-  - `feat_williams_r_14:0:SHORT:h24` slice_pnl=-1.23
+  - `feat_adx_14:2:LONG:h12` lane_not_green
+  - `feat_adx_14:2:LONG:h15` lane_not_green
+  - `feat_atr_norm_ext:2:LONG:h13` lane_not_green
+  - `feat_atr_percent:2:LONG:h12` lane_not_green
+  - `feat_atr_ratio:0:LONG:h24` lane_not_green
+  - `feat_bb_squeeze_20:2:LONG:h20` lane_not_green
+  - `feat_bb_width_20:2:LONG:h15` lane_not_green
+  - `feat_book_imb_5@oi_hi:1:SHORT:h20` lane_not_green
+  - `feat_buy_vol_ratio:2:LONG:h24` lane_not_green
+  - `feat_cci_20:0:LONG:h24` lane_not_green
+  - `feat_cci_20:2:SHORT:h24` lane_not_green
+  - `feat_donchian_break:2:LONG:h15` lane_not_green
+  - `feat_ema_cross_10_20:2:LONG:h12` lane_not_green
+  - `feat_ema_cross_10_20:2:SHORT:h24` lane_not_green
+  - `feat_ext_vs_ma_50:0:LONG:h20` lane_not_green
+  - `feat_funding_cum_24:0:SHORT:h24` lane_not_green
+  - `feat_funding_cum_24:2:SHORT:h12` lane_not_green
+  - `feat_funding_rate:2:SHORT:h12` lane_not_green
+  - `feat_hour_utc:2:LONG:h15` lane_not_green
+  - `feat_kc_width:2:LONG:h12` lane_not_green
+  - `feat_kc_width:2:LONG:h15` lane_not_green
+  - `feat_macd_12_26:2:SHORT:h15` lane_not_green
+  - `feat_oi_ret_div@oi_hi:2:SHORT:h24` lane_not_green
+  - `feat_price_roc_5:2:LONG:h20` lane_not_green
+  - `feat_range_pos_20:2:LONG:h15` lane_not_green
+  - `feat_range_pos_50:0:LONG:h24` lane_not_green
+  - `feat_range_pos_50:2:SHORT:h24` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h14` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h20` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h21` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h22` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h23` lane_not_green
+  - `feat_realized_vol_20:2:LONG:h24` lane_not_green
+  - `feat_ret_1:2:LONG:h24` lane_not_green
+  - `feat_ret_20:0:LONG:h24` lane_not_green
+  - `feat_ret_vol:0:LONG:h24` lane_not_green
+  - `feat_time_since_high_20:0:LONG:h12` lane_not_green
+  - `feat_trend_slope_20:2:SHORT:h24` lane_not_green
+  - `feat_trend_strength_20:2:SHORT:h24` lane_not_green
+  - `feat_vol_breakout:2:LONG:h15` lane_not_green
+  - `feat_vol_of_vol:1:LONG:h24` lane_not_green
+  - `feat_vol_of_vol:2:LONG:h12` lane_not_green
+  - `feat_vol_of_vol:2:LONG:h15` lane_not_green
+  - `feat_vol_sma_ratio:0:LONG:h24` lane_not_green
+  - `feat_vol_trend:0:LONG:h24` lane_not_green
+  - `feat_williams_r_14:0:SHORT:h24` lane_not_green
   - `hip3_para_equity_c0:feat_ret_20:2:SHORT:h21` lane_not_green
   - `hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20` lane_not_green
   - `hip3_para_equity_c0:feat_trend_strength_20:1:SHORT:h20` lane_not_green
@@ -206,12 +243,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-25T08:03:26: errors=0 signals=51 regime_blocked=58
-- this cycle: closed=0 new_signals=51 skipped=51 slot_full=0 slice_full=0 pair_held=0
-- Action funnel: regime_blocked=58 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=0 | cluster_cap=0 | family_vetoed=0 | slot_full=0 | skipped=51
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 0, "lane_gate_blocked": 1, "pair_held": 0, "regime_blocked": 58, "skipped": 51, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-11-25T09:04:47: errors=0 signals=56 regime_blocked=76
+- this cycle: closed=1 new_signals=56 skipped=49 slot_full=0 slice_full=0 pair_held=1
+- Action funnel: regime_blocked=76 | lane_gate_blocked=1 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=1 | cluster_cap=5 | family_vetoed=0 | slot_full=0 | skipped=49
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 5, "family_vetoed": 0, "lane_gate_blocked": 1, "pair_held": 1, "regime_blocked": 76, "skipped": 49, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=True hip3_green=False frozen=hip3 islands=2 blocks=52
-- aggregate_risk: ok open=9.2432 cap=172.7663 used=0.0589 remaining=162.5970 replayed=3 no_new_bars=0
+- aggregate_risk: ok open=4.7452 cap=172.9584 used=0.0549 remaining=163.4615 replayed=3 no_new_bars=0
 - pair_errors: []
 
 ---
