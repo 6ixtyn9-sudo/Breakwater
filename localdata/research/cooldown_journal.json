@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:COHR",
-    "pnl_zar": "-3.4660",
-    "reason": "stop",
-    "signal_id": "8ca44e7e94782484",
-    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
-    "stopped_at": "2026-09-17T00:00:33+00:00"
-  },
-  {
     "pair": "PARA:MELI",
     "pnl_zar": "-1.7984",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "393591f853f0c1b6",
     "slice_id": "feat_vwap_dist:0:SHORT:h24",
     "stopped_at": "2026-11-25T18:01:11+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "-4.6460",
+    "reason": "stop",
+    "signal_id": "b13e4183e265e6ea",
+    "slice_id": "feat_rsi_divergence:0:SHORT:h20",
+    "stopped_at": "2026-11-25T19:01:21+00:00"
   }
 ]
