@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:AVGO",
-    "pnl_zar": "-0.6008",
-    "reason": "stop",
-    "signal_id": "2cf309710f526532",
-    "slice_id": "hip3_para_equity_c0:feat_ret_vol:2:SHORT:h20",
-    "stopped_at": "2026-09-17T09:00:33+00:00"
-  },
-  {
     "pair": "PARA:IREN",
     "pnl_zar": "-2.8387",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "ce565156a3920b44",
     "slice_id": "feat_vwap_dist:0:SHORT:h24",
     "stopped_at": "2026-11-26T01:01:20+00:00"
+  },
+  {
+    "pair": "HYPEUSDC",
+    "pnl_zar": "-4.9955",
+    "reason": "stop",
+    "signal_id": "2580d802d6c97631",
+    "slice_id": "feat_gap_fill_ratio:0:SHORT:h24",
+    "stopped_at": "2026-11-26T21:01:19+00:00"
   }
 ]
