@@ -1,4 +1,4 @@
-# Breakwater daily print — 2026-11-26 19:38 UTC
+# Breakwater daily print — 2026-11-26 20:04 UTC
 
 > Observation mode. Read-only digest of committed state. Nothing here trades or promotes.
 
@@ -59,12 +59,12 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 ## 4. Open positions & risk
 
 - **NATIVE**: 6 open, stop-risk **23.27 ZAR**
-  - AAVEUSDC SELL ntl=123 risk=4.82 bars=5 stop=98.7469999999999875 peak=95.359
-  - HYPEUSDC SELL ntl=123 risk=4.69 bars=7 stop=62.92900000000000275 peak=61.849
-  - XRPUSDC SELL ntl=123 risk=3.61 bars=6 stop=0.9786400000000000090 peak=0.95713
-  - SOLUSDC SELL ntl=123 risk=3.60 bars=10 stop=73.14899999999999210 peak=71.56
-  - BTCUSDC SELL ntl=123 risk=3.30 bars=8 stop=62102.000000000000095 peak=60949.0
-  - ETHUSDC SELL ntl=123 risk=3.25 bars=9 stop=1748.0999999999999470 peak=1711.0
+  - AAVEUSDC SELL ntl=123 risk=4.82 bars=6 stop=98.7469999999999875 peak=95.359
+  - HYPEUSDC SELL ntl=123 risk=4.69 bars=8 stop=62.92900000000000275 peak=62.397
+  - XRPUSDC SELL ntl=123 risk=3.61 bars=7 stop=0.9786400000000000090 peak=0.95713
+  - SOLUSDC SELL ntl=123 risk=3.60 bars=11 stop=73.14899999999999210 peak=71.563
+  - BTCUSDC SELL ntl=123 risk=3.30 bars=9 stop=62102.000000000000095 peak=60949.0
+  - ETHUSDC SELL ntl=123 risk=3.25 bars=10 stop=1748.0999999999999470 peak=1711.0
 
 - **HIP3**: 0 open, stop-risk **0.00 ZAR**
 
@@ -74,7 +74,7 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 - Computed open stop-risk (section 4): **23.27 ZAR** (informational only, no cap applied)
 - Paper shadow ledger (gates paper entries only, nothing live): **23.27 / 172.41 ZAR | 14.6% | ok**
 - Remaining: 147.2883 | cap skips: 0 | unknown skips: 0
-- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 72, "skipped": 72, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 0, "lane_gate_blocked": 3, "opened": 0, "pair_held": 21, "signals": 38, "skipped": 14, "slice_full": 0, "slot_full": 0}}
+- booked stats: {"hip3": {"cluster_cap": 0, "lane_gate_blocked": 0, "opened": 0, "pair_held": 0, "signals": 60, "skipped": 60, "slice_full": 0, "slot_full": 0}, "native": {"cluster_cap": 0, "lane_gate_blocked": 3, "opened": 0, "pair_held": 11, "signals": 30, "skipped": 16, "slice_full": 0, "slot_full": 0}}
 - Highest-risk: **AAVEUSDC** 4.8196 ZAR
 - positions without bars: 0 | replayed: 6 | invalid: 0
 
@@ -132,13 +132,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 - Label: **neutral** | breadth bear=0.0667 bull=0.0667 neutral=0.8667 | symbols=15
 - confirmed_bear: **False** | confirmed_bull: **False** | flip: **False** | flipped_from: bear | consecutive_bear: 0 / bull 0
-- as_of: 2026-11-26T19:35:32Z
+- as_of: 2026-11-26T20:01:22Z
 - Defensive gate: off (no confirmed flip)
 
 ## 11. Short inventory
 
 - confirmed_bear: **False** | promote_env: ON
-- candidates: 1120 | eligible: 946 | observations: 4896 | armable: **0**
+- candidates: 1120 | eligible: 946 | observations: 4915 | armable: **0**
 - No armable short today (no validated SHORT slice clears the floor).
   - `feat_oi_chg_24@oi_mid:2:SHORT:h20` edge=159.1b n=1885 breadth=12 validated=True prov=False armable=False (not_confirmed_bear)
   - `feat_oi_chg_24@oi_mid:2:SHORT:h24` edge=157.9b n=1749 breadth=11 validated=True prov=False armable=False (not_confirmed_bear)
@@ -247,13 +247,13 @@ _Read-only and advisory: this section feeds no gate, admission decision or promo
 
 ## 13. Signal activity
 
-- Latest scan 2026-11-26T19:04:36: errors=1 signals=110 regime_blocked=124
-- this cycle: closed=0 new_signals=110 skipped=89 slot_full=0 slice_full=0 pair_held=21
-- Action funnel: regime_blocked=124 | lane_gate_blocked=2 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=21 | cluster_cap=0 | family_vetoed=4 | slot_full=0 | skipped=89
-- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 4, "lane_gate_blocked": 2, "pair_held": 21, "regime_blocked": 124, "skipped": 89, "slice_full": 0, "slot_full": 0})
+- Latest scan 2026-11-26T20:04:44: errors=0 signals=90 regime_blocked=114
+- this cycle: closed=0 new_signals=90 skipped=79 slot_full=0 slice_full=0 pair_held=11
+- Action funnel: regime_blocked=114 | lane_gate_blocked=2 | aggregate_risk_cap_skips=0 | aggregate_risk_unknown_skips=0 | slice_full=0 | pair_held=11 | cluster_cap=0 | family_vetoed=4 | slot_full=0 | skipped=79
+- **NO ACTION:** dominant blocker = `regime_blocked` (funnel={"aggregate_risk_cap_skips": 0, "aggregate_risk_unknown_skips": 0, "cluster_cap": 0, "family_vetoed": 4, "lane_gate_blocked": 2, "pair_held": 11, "regime_blocked": 114, "skipped": 79, "slice_full": 0, "slot_full": 0})
 - green_gate: native_green=False hip3_green=False frozen=hip3,native islands=31 blocks=54
 - aggregate_risk: ok open=23.2741 cap=172.4097 used=0.1457 remaining=147.2883 replayed=6 no_new_bars=0
-- pair_errors: [{"error": "HTTPError: 429 Client Error: Too Many Requests for url: https://api.hyperliquid.xyz/info", "pair": "XYZ:USAR"}]
+- pair_errors: []
 
 ---
 _Generated by scripts/daily_print.py. Read-only. Trades are paper observation only._
