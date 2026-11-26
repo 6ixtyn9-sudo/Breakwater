@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PUMPUSDC",
-    "pnl_zar": "-3.8755",
-    "reason": "stop",
-    "signal_id": "da659539cc1fdda0",
-    "slice_id": "engine_mean_reversion:rsi:2:SELL:h10:PUMPUSDC",
-    "stopped_at": "2026-09-17T03:00:29+00:00"
-  },
-  {
     "pair": "PARA:AVGO",
     "pnl_zar": "-0.6008",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "731ce1c0a479ffef",
     "slice_id": "feat_vwap_dist:0:SHORT:h24",
     "stopped_at": "2026-11-25T20:01:14+00:00"
+  },
+  {
+    "pair": "ETHUSDC",
+    "pnl_zar": "-4.1294",
+    "reason": "stop",
+    "signal_id": "ce565156a3920b44",
+    "slice_id": "feat_vwap_dist:0:SHORT:h24",
+    "stopped_at": "2026-11-26T01:01:20+00:00"
   }
 ]
