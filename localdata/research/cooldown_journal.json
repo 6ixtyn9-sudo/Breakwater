@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:TER",
-    "pnl_zar": "-1.7980",
-    "reason": "stop",
-    "signal_id": "3dc97c3809321996",
-    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:2:SHORT:h20",
-    "stopped_at": "2026-09-17T16:00:31+00:00"
-  },
-  {
     "pair": "PARA:CRDO",
     "pnl_zar": "-2.3173",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "a175d42f229268f0",
     "slice_id": "feat_gap_fill_ratio:0:SHORT:h24",
     "stopped_at": "2026-11-27T08:01:08+00:00"
+  },
+  {
+    "pair": "BTCUSDC",
+    "pnl_zar": "-3.6027",
+    "reason": "stop",
+    "signal_id": "f2fb06502c8270b3",
+    "slice_id": "feat_squeeze:2:SHORT:h24",
+    "stopped_at": "2026-11-27T09:01:10+00:00"
   }
 ]
