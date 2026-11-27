@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:SMCI",
-    "pnl_zar": "-0.7191",
-    "reason": "slice_gap",
-    "signal_id": "ceef8d37b83acdaf",
-    "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
-    "stopped_at": "2026-09-17T10:00:35+00:00"
-  },
-  {
     "pair": "PARA:TER",
     "pnl_zar": "-1.7980",
     "reason": "stop",
@@ -1598,5 +1590,13 @@
     "signal_id": "acdd290d3a1489bd",
     "slice_id": "feat_book_imb_5@oi_mid:2:SHORT:h20",
     "stopped_at": "2026-11-27T06:01:16+00:00"
+  },
+  {
+    "pair": "XRPUSDC",
+    "pnl_zar": "-3.9166",
+    "reason": "stop",
+    "signal_id": "a175d42f229268f0",
+    "slice_id": "feat_gap_fill_ratio:0:SHORT:h24",
+    "stopped_at": "2026-11-27T08:01:08+00:00"
   }
 ]
