@@ -1,5 +1,5 @@
 slice_id,kind,feature,state,side,status,validated_at,last_signal_bar,paper_trades,paper_wins,paper_losses,paper_pnl_zar,cooldown_until,mean_ret_costadj,n,p_value,horizon_bars,stop_atr_mult,source,hostile_unproven,edge_is_directional_net,n_green,green_frac
-feat_gap_fill_ratio:0:SHORT:h24,PERP,feat_gap_fill_ratio,0,SHORT,cooldown,2026-11-26T00:32:23.819733+00:00,1795723200,1,0,1,-4.9955,1795809600,0.007838,10920,0.807665,24,3.500,validated_walk_forward,False,True,23,0.365
+feat_gap_fill_ratio:0:SHORT:h24,PERP,feat_gap_fill_ratio,0,SHORT,cooldown,2026-11-26T00:32:23.819733+00:00,1795744800,2,0,2,-8.5514,1795831200,0.007838,10920,0.807665,24,3.500,validated_walk_forward,False,True,23,0.365
 feat_trend_slope_20:0:SHORT:h24,PERP,feat_trend_slope_20,0,SHORT,monitored,2026-11-26T00:32:23.819733+00:00,,0,0,0,0,,0.005232,10112,0.661690,24,3.500,validated_walk_forward,False,True,26,0.347
 feat_ext_strength:0:SHORT:h24,PERP,feat_ext_strength,0,SHORT,monitored,2026-11-26T00:32:23.819733+00:00,,0,0,0,0,,0.005050,10861,0.463591,24,3.500,validated_walk_forward,False,True,26,0.347
 feat_ext_vs_ma_20:0:SHORT:h24,PERP,feat_ext_vs_ma_20,0,SHORT,monitored,2026-11-26T00:32:23.819733+00:00,,0,0,0,0,,0.005190,10176,0.559451,24,3.500,validated_walk_forward,False,True,24,0.320
