@@ -1,13 +1,5 @@
 [
   {
-    "pair": "PARA:GLW",
-    "pnl_zar": "-0.9990",
-    "reason": "slice_gap",
-    "signal_id": "4acf0c9fc91c47a3",
-    "slice_id": "hip3_para_equity_c0:feat_ret_20:2:SHORT:h21",
-    "stopped_at": "2026-09-17T10:00:35+00:00"
-  },
-  {
     "pair": "PARA:SMCI",
     "pnl_zar": "-0.7191",
     "reason": "slice_gap",
@@ -1598,5 +1590,13 @@
     "signal_id": "199f16cee78e874b",
     "slice_id": "feat_gap_fill_ratio:0:SHORT:h24",
     "stopped_at": "2026-11-27T04:01:20+00:00"
+  },
+  {
+    "pair": "ENAUSDC",
+    "pnl_zar": "-5.1289",
+    "reason": "stop",
+    "signal_id": "acdd290d3a1489bd",
+    "slice_id": "feat_book_imb_5@oi_mid:2:SHORT:h20",
+    "stopped_at": "2026-11-27T06:01:16+00:00"
   }
 ]
