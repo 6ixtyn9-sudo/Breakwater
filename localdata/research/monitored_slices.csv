@@ -45,4 +45,4 @@ feat_funding_cum_24@oi_lo:1:SHORT:h24,PERP,feat_funding_cum_24,1,SHORT,monitored
 feat_oi_chg_24@oi_mid:2:SHORT:h12,PERP,feat_oi_chg_24,2,SHORT,decayed,2026-11-25T01:42:04.192856+00:00,1795438800,2,1,1,-3.6915,,0.007654,2096,0.194980,12,3.500,validated_walk_forward,False,True,7,0.538
 feat_rsi_14:0:SHORT:h20,PERP,feat_rsi_14,0,SHORT,monitored,2026-11-25T01:42:04.192856+00:00,,0,0,0,0,,0.003633,10230,0.652712,20,3.500,validated_walk_forward,False,True,18,0.240
 feat_funding_cum_24@oi_hi:2:SHORT:h24,PERP,feat_funding_cum_24,2,SHORT,monitored,2026-11-25T01:42:04.192856+00:00,,0,0,0,0,,0.005314,2577,0.589952,24,3.500,validated_walk_forward,False,True,7,0.538
-feat_vwap_dist:0:SHORT:h24,PERP,feat_vwap_dist,0,SHORT,cooldown,2026-11-24T00:33:09.857231+00:00,1795651200,3,0,3,-13.0399,1795737600,0.004973,9726,0.427406,24,3.500,validated_walk_forward,False,True,27,0.360
+feat_vwap_dist:0:SHORT:h24,PERP,feat_vwap_dist,0,SHORT,monitored,2026-11-24T00:33:09.857231+00:00,1795651200,3,0,3,-13.0399,,0.004973,9726,0.427406,24,3.500,validated_walk_forward,False,True,27,0.360
