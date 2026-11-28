@@ -1,21 +1,5 @@
 [
   {
-    "pair": "PARA:CRDO",
-    "pnl_zar": "-2.3173",
-    "reason": "slice_gap",
-    "signal_id": "decab0017d5ff666",
-    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:2:SHORT:h20",
-    "stopped_at": "2026-09-18T09:32:28+00:00"
-  },
-  {
-    "pair": "PARA:GLW",
-    "pnl_zar": "0.3086",
-    "reason": "slice_gap",
-    "signal_id": "a5d2a0fca17f5cc9",
-    "slice_id": "hip3_para_equity_c0:feat_trend_strength_20:2:SHORT:h20",
-    "stopped_at": "2026-09-18T09:32:28+00:00"
-  },
-  {
     "pair": "PARA:RDDT",
     "pnl_zar": "-1.7593",
     "reason": "slice_gap",
@@ -1598,5 +1582,21 @@
     "signal_id": "f2fb06502c8270b3",
     "slice_id": "feat_squeeze:2:SHORT:h24",
     "stopped_at": "2026-11-27T09:01:10+00:00"
+  },
+  {
+    "pair": "SOLUSDC",
+    "pnl_zar": "1.5985",
+    "reason": "slice_gap",
+    "signal_id": "223cbba4874d682d",
+    "slice_id": "feat_donchian_width_20:1:SHORT:h24",
+    "stopped_at": "2026-11-28T12:01:12+00:00"
+  },
+  {
+    "pair": "ADAUSDC",
+    "pnl_zar": "2.2486",
+    "reason": "slice_gap",
+    "signal_id": "78fd201ef901a79c",
+    "slice_id": "feat_donchian_width_20:1:SHORT:h24",
+    "stopped_at": "2026-11-28T12:01:12+00:00"
   }
 ]
