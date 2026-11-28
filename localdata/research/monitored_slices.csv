@@ -4,7 +4,7 @@ feat_ext_vs_ma_50:2:SHORT:h20,PERP,feat_ext_vs_ma_50,2,SHORT,monitored,2026-11-2
 feat_bb_width_20:2:SHORT:h20,PERP,feat_bb_width_20,2,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,,0,0,0,0,,0.006606,10732,0.072568,20,3.500,validated_walk_forward,False,True,30,0.395
 feat_macd_12_26:2:SHORT:h20,PERP,feat_macd_12_26,2,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,,0,0,0,0,,0.006290,9172,0.258311,20,3.500,validated_walk_forward,False,True,38,0.500
 feat_vol_regime:2:SHORT:h24,PERP,feat_vol_regime,2,SHORT,decayed,2026-11-28T00:29:59.867464+00:00,1794823283,2,2,0,3.0173,,0.008686,10303,0.260297,24,3.500,validated_walk_forward,False,True,31,0.408
-feat_vol_contraction:2:SHORT:h24,PERP,feat_vol_contraction,2,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,,0,0,0,0,,0.008686,10303,0.260297,24,3.500,validated_walk_forward,False,True,31,0.408
+feat_vol_contraction:2:SHORT:h24,PERP,feat_vol_contraction,2,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,1795881600,1,1,0,0.6658,,0.008686,10303,0.260297,24,3.500,validated_walk_forward,False,True,31,0.408
 feat_stoch_d_14:0:SHORT:h15,PERP,feat_stoch_d_14,0,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,,0,0,0,0,,0.004318,10474,0.147139,15,3.500,validated_walk_forward,False,True,29,0.387
 feat_vwap_upper_dist:0:SHORT:h20,PERP,feat_vwap_upper_dist,0,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,,1,0,1,-0.0484,,0.006610,9748,0.250909,20,3.500,validated_walk_forward,False,True,25,0.329
 feat_vol_breakout:0:SHORT:h24,PERP,feat_vol_breakout,0,SHORT,monitored,2026-11-28T00:29:59.867464+00:00,,0,0,0,0,,0.003843,11326,0.556153,24,3.500,validated_walk_forward,False,True,17,0.224
